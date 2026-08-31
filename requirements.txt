@@ -1,0 +1,4 @@
+# Python 依赖
+# 运行时流水线（validate_xml / run_deploy）只用标准库，无需额外安装。
+# 以下是开发/测试依赖：
+pytest>=7.0

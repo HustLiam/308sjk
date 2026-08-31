@@ -1,0 +1,12 @@
+# 构建产物与本地工作区
+workspace/
+*.project
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# IDE / 系统
+Thumbs.db
+.DS_Store
