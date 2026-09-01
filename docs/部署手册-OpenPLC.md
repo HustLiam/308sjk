@@ -33,7 +33,7 @@ agent 生成 XML ──> xml2st（校验+转换）──> program.st
 2. 启动运行时：
 
 ```bash
-docker run -d --name openplc -p 8080:8080 -p 502:502 openplc/openplc-v3
+docker run -d --name openplc -p 8080:8080 -p 502:502 fdamador/openplc
 ```
 
 3. 浏览器打开 http://localhost:8080（默认账号密码 `openplc` / `openplc`）确认能登录即就绪。
@@ -123,7 +123,20 @@ Isaac Sim 侧用 pymodbus 连 502 端口读写线圈/寄存器即可替换 verif
 | cnt 读出来乱码大数 | 字序解释不一致 | verify 默认小端字序（低字在前）；对调可用 `--help` 查看后改 `read_counter` |
 | Web 页面能开但 502 拒绝 | Modbus 未随启动 | 运行时设置页确认 Modbus 已启用（默认启用） |
 
-## 6. 设计约定（与 CODESYS 版的差异）
+## 6. 关键踩坑结论（实测得出，agent 契约的一部分）
+
+- **镜像名是 `fdamador/openplc`**（Docker Hub 上没有 openplc/openplc-v3）
+- **AT 地址位宽必须匹配**：BOOL→`%QX`，INT/UINT/WORD→`%QW`；
+  **`%QD`（双字）不映射 Modbus 缓冲区，编译能过但外部读不到——校验器直接禁用**，
+  32 位值请用两个连续 `%QW` 由客户端拼接
+- **matiec 要求定位变量独立 VAR 块**：FB 实例与 `AT` 变量混在一个 VAR 块会报
+  invalid variable(s) declaration——转换器已自动分块
+- **上传表单字段**：`prog_name`/`prog_descr`/`prog_file`/`epoch_time`（源码实测）
+- **编译成败标记**：`Compilation finished successfully!` / `... with errors!`
+- **换程序后必须 stop→start**：仅 start 不会加载新编译的二进制（run_deploy 已按
+  编译自动停机、启动时拉起新二进制的顺序执行）
+
+## 7. 设计约定（与 CODESYS 版的差异）
 
 | | CODESYS 版（历史） | OpenPLC 版（当前） |
 |---|---|---|
