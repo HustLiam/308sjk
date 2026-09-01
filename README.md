@@ -54,6 +54,10 @@ docs/                       # 方案与详细设计文档
 workspace/                  # 本地生成物（不入库）
 ```
 
+## 协作开发
+
+分支模型、合入流程、契约变更（RFC）、按侧速查约定与求助路径见 **[CONTRIBUTING.md](CONTRIBUTING.md)**；三人实时进度与待配合事项见 `docs/协作看板.md`。
+
 ## 设计约定（agent 生成契约）
 
 - **XML 是唯一源码**：只产出 PLCopen XML；可执行 .st 由 xml2st 机械推导
