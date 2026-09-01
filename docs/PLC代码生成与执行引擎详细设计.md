@@ -13,7 +13,7 @@
 | ② PLC 代码生成契约 | PLCopen XML（IEC 61131-10）结构契约、静态校验、XML→ST 机械转换 | `src/pipeline/xml2st.py` + `tests/test_xml2st.py` | ✅ 完成 |
 | ④a 执行引擎（链路 B） | 校验→转换→上传→编译→启动的全脚本化部署编排 + HTTP 服务化 | `run_deploy.py` / `openplc_client.py` / `serve.py` | ✅ 已打通 |
 | ⑤ PLC 侧行为验收 | Modbus 安全 IO 层、冒烟验证、场景验收脚本 | `modbus_io.py` / `verify_modbus.py` / `scenario_*.py` | ✅ 4 场景全过 |
-| 运行时工程资产 | 已验收的 PLCopen XML 场景库 + 运行时部署手册 | `src/plc/*.xml` / `docs/部署手册-OpenPLC.md` | ✅ |
+| 运行时工程资产 | 已验收的 PLCopen XML 场景库 | `src/plc/*.xml` | ✅ |
 
 ## 1. 在总体架构中的位置
 
@@ -146,7 +146,7 @@ curl -X POST http://127.0.0.1:8600/deploy --data-binary @src/plc/counter.xml
 docker run -d --name openplc -p 8080:8080 -p 502:502 fdamador/openplc
 ```
 
-Web API :8080、Modbus TCP :502；URL 与账号可经环境变量 `OPENPLC_URL / OPENPLC_USER / OPENPLC_PASS` 覆盖。安装三方案（Docker Desktop / WSL2 原生 / 远程 Linux）与排障见《部署手册-OpenPLC》§1、§5。
+Web API :8080、Modbus TCP :502；URL 与账号可经环境变量 `OPENPLC_URL / OPENPLC_USER / OPENPLC_PASS` 覆盖。
 
 ## 5. Modbus IO 与行为验收
 
@@ -205,7 +205,6 @@ src/pipeline/verify_modbus.py   ⑤ Modbus 冒烟验证
 src/pipeline/scenario_*.py      ⑤ 场景验收（sorting / pump / traffic）
 src/plc/*.xml                   交付物：4 个 61131-10 场景
 tests/test_xml2st.py            转换器单测（pytest，无需运行时）
-docs/部署手册-OpenPLC.md        运行时安装 / 排障 / 踩坑结论
 workspace/                      本地生成物（不入库）
 ```
 

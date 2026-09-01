@@ -27,7 +27,7 @@ verify_modbus.py（冒烟验证）/ 未来的 Isaac Sim 桥接
 pip install -r requirements.txt
 python -m pytest tests/ -v                # ① 转换器单测（无需运行时）
 python src/pipeline/xml2st.py src/plc/counter.xml   # ② 看转换出的 .st
-# ③ 启动运行时后（见 docs/部署手册-OpenPLC.md）：
+# ③ 启动运行时后（docker run -d --name openplc -p 8080:8080 -p 502:502 fdamador/openplc）：
 python src/pipeline/run_deploy.py         # 部署+编译+启动
 python src/pipeline/verify_modbus.py      # Modbus 读 cnt，确认每秒 +1
 ```
@@ -50,7 +50,7 @@ src/
   pipeline/verify_modbus.py # Modbus 冒烟验证
   pipeline/serve.py         # POST /deploy HTTP 服务
 tests/                      # pytest 单测
-docs/部署手册-OpenPLC.md    # 运行时安装与排障
+docs/                       # 方案与详细设计文档
 workspace/                  # 本地生成物（不入库）
 ```
 
