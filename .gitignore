@@ -1,0 +1,11 @@
+# 本地工作区（生成的 .st / 部署结果）
+workspace/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# IDE / 系统
+Thumbs.db
+.DS_Store
