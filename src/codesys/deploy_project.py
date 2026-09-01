@@ -27,6 +27,7 @@ each step is written to the JSON report for the orchestrator to inspect.
 """
 
 import os
+import io
 import json
 import traceback
 
@@ -57,7 +58,9 @@ def step(name, ok, detail=""):
 def write_result(status):
     if RESULT_PATH:
         try:
-            with open(RESULT_PATH, "w") as f:
+            # IronPython 的 open() 默认 ASCII 编码，遇到 CODESYS 返回的中文
+            # 错误消息会 UnicodeEncodeError，必须显式指定编码
+            with io.open(RESULT_PATH, "w", encoding="utf-8") as f:
                 json.dump({"status": status, "steps": steps, "errors": errors},
                           f, indent=2)
         except Exception:
@@ -135,6 +138,28 @@ def main():
         step("ensure device", False, DEVICE_NAME)
         finish("FAILED")
 
+    # 网关/地址保存在工程文件里。SP22 无头模式下 online.gateways 为空集合、
+    # set_gateway_and_address 需要网关 GUID，均无法自动获取——首次需在 IDE 中
+    # 打开本工程设置一次通信（见部署手册 §2.3），此后配置随工程持久保存。
+    try:
+        gw = None
+        for g in online.gateways:
+            gw = g
+            break
+        if gw is not None:
+            dev = project.find(DEVICE_NAME, True)[0]
+            try:
+                dev.set_gateway_and_address(gw, DEVICE_NAME)
+                step("configure gateway", True)
+            except Exception:
+                step("configure gateway", False, "set_gateway_and_address failed (non-fatal)")
+        else:
+            step("gateway via project settings", True,
+                 "headless gateway list empty; using gateway persisted in project "
+                 "(one-time IDE seed, see manual 2.3)")
+    except Exception:
+        step("configure gateway", False, "unexpected error (non-fatal)")
+
     # -----------------------------------------------------------------------
     # 3. locate application, replace PLC_PRG with the imported PLCopen XML POU
     # -----------------------------------------------------------------------
@@ -181,25 +206,36 @@ def main():
         if len(project.find("Symbol Configuration", True)) > 0:
             step("symbol configuration present", True)
         else:
+            # 泛型 ScriptObject 不能做符号配置的父对象，需取 active_application
+            sym_parent = app
+            try:
+                if hasattr(project, "active_application"):
+                    cand = project.active_application
+                    if callable(cand):
+                        cand = cand()
+                    if cand is not None:
+                        sym_parent = cand
+            except Exception:
+                pass
             created = False
-            err1 = err2 = None
+            err = None
             try:
                 from System import Guid
-                app.create_symbol_config(False, True, Guid.Empty)
+                sym_parent.create_symbol_config(False, True, Guid.Empty)
                 created = True
             except Exception as e1:
-                err1 = e1
+                err = e1
                 try:
-                    app.create_symbol_config(False, False)
+                    sym_parent.create_symbol_config(False, False, Guid.Empty)
                     created = True
                 except Exception as e2:
-                    err2 = e2
+                    err = e2
             if created:
                 step("create symbol configuration", True)
             else:
                 # non-fatal: the PLC still runs, but variables will not show
                 # up in UaExpert until the symbol config is added manually
-                errors.append("create_symbol_config failed: %s | %s" % (err1, err2))
+                errors.append("create_symbol_config failed: %s" % err)
                 step("create symbol configuration", False,
                      "MANUAL FIX: Application -> Add Object -> Symbol Configuration, "
                      "open it, press 'Prepare...', tick all variables (cnt), rebuild")
@@ -220,16 +256,21 @@ def main():
         finish("FAILED")
 
     try:
-        app.generate_sourcecode()
+        # API 随版本变化：SP22+ 为 build()，旧版为 generate_sourcecode()
+        if hasattr(app, "build"):
+            app.build()
+            step("compile (build)", True)
+        else:
+            app.generate_sourcecode()
+            step("compile (generate_sourcecode)", True)
         compile_errors = collect_compile_errors()
         if compile_errors:
             errors.extend(compile_errors)
-            step("compile (generate_sourcecode)", False, "; ".join(compile_errors[:5]))
+            step("compile error scan", False, "; ".join(compile_errors[:5]))
             finish("FAILED")
-        step("compile (generate_sourcecode)", True)
     except Exception:
         errors.append(traceback.format_exc())
-        step("compile (generate_sourcecode)", False)
+        step("compile", False)
         finish("FAILED")
 
     # -----------------------------------------------------------------------
@@ -256,7 +297,8 @@ def main():
     except Exception:
         errors.append(traceback.format_exc())
         step("login / start", False,
-             "runtime reachable? demo license expired (2h)? restart CODESYS Control Win V3")
+             "若提示网关未配置：在 IDE 中打开工程 -> 双击设备 -> 通信设置 -> 选择本机网关并"
+             "设置设备名称 -> 保存（一次性，见部署手册 2.3）；另检查 runtime 是否运行/demo 是否到期")
         finish("FAILED")
 
     project.save()
