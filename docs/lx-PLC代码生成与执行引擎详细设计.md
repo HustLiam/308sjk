@@ -2,7 +2,7 @@
 
 > 本文档是《总体实施方案》中 **② PLC 控制代码生成模块**、**④a PLC 执行引擎（验收链路 B）**与 **⑤ 验证模块的 PLC 侧行为验收**的详细设计与实施记录，负责人 **lx**。
 >
-> 与仿真侧（《仿真环境与IO闭环详细设计》，负责 ①③④b⑤ 及主链路 A）的衔接方式：**同一份 PLCopen XML + io_map.json**。链路 A（matiec 编译为 C 库、Isaac Sim 进程内 lockstep）与链路 B（OpenPLC 软 PLC + Modbus TCP）跑同一份代码，本文档负责其中的代码契约与链路 B 的全部实现。
+> 与仿真验证侧（csk，《csk-仿真环境与IO闭环详细设计》，负责 ①③④b⑤ 及链路 A）的衔接方式：**同一份 PLCopen XML + io_map.json**。链路 A（matiec 编译为 C 库、Isaac Sim 进程内 lockstep）与链路 B（OpenPLC 软 PLC + Modbus TCP）跑同一份代码，本文档负责其中的代码契约与链路 B 的全部实现。
 
 ---
 
