@@ -223,12 +223,13 @@ def parse(xml_path):
                         parts.append(":= " + init)
                     (decls_located if addr else decls_plain).append(" ".join(parts) + ";")
                 # matiec 语法怪癖：同一个 VAR 块内，FB 实例等普通声明与带 AT 的
-                # 定位声明混放会报 invalid variable(s) declaration——必须分块
+                # 定位声明混放会报 invalid variable(s) declaration——必须分块；
+                # 且所有变量块的结束符统一为 END_VAR（无 END_VAR_INPUT 等变体）
                 for decls in (decls_plain, decls_located):
                     if decls:
                         iface_lines.append("  " + kw)
                         iface_lines.extend(decls)
-                        iface_lines.append("  END_" + st_kw)
+                        iface_lines.append("  END_VAR")
 
         ret_type = ""
         if ptype == "function":

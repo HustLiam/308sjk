@@ -133,6 +133,10 @@ Isaac Sim 侧用 pymodbus 连 502 端口读写线圈/寄存器即可替换 verif
   invalid variable(s) declaration——转换器已自动分块
 - **上传表单字段**：`prog_name`/`prog_descr`/`prog_file`/`epoch_time`（源码实测）
 - **编译成败标记**：`Compilation finished successfully!` / `... with errors!`
+- **窄范围线圈写入会破坏相邻位**（fc05/少量 fc15）：写 %QX0.3 会把 %QX1.0 的自锁打掉；
+  客户端必须**读-改-写整组线圈**（fc15 覆盖完整 16 位跨度）——已封装为
+  `src/pipeline/modbus_io.py` 的 SafeCoilIO，Isaac Sim 桥接一律经由此层
+- **变量块结束符统一为 END_VAR**（无 END_VAR_INPUT 等变体，转换器已处理）
 - **换程序后必须 stop→start**：仅 start 不会加载新编译的二进制（run_deploy 已按
   编译自动停机、启动时拉起新二进制的顺序执行）
 
