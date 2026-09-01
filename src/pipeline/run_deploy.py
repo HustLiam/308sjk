@@ -1,172 +1,124 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-XML → CODESYS 部署编排器（闭环的第①段：把 PLCopen XML 部署到软 PLC 并运行）。
+部署编排器（OpenPLC 版）：XML → .st → 上传编译 → 启动。
 
-职责：
-  1. 定位 CODESYS.exe（环境变量 CODESYS_EXE 优先，否则扫描 Program Files）
-  2. 无头拉起 CODESYS 执行 src/codesys/deploy_project.py（--noUI --runscript）
-  3. 透传子进程日志，解析 deploy_result.json 汇总各步骤成败
-  4. 以 0/1 退出码把结果交给上层（未来 agent 的迭代编排循环）
+链路：
+    src/plc/counter.xml (61131-10)
+        │ xml2st 校验+转换
+        ▼
+    workspace/program.st
+        │ openplc_client (HTTP)
+        ▼
+    OpenPLC v3 运行时（Docker/WSL2/远程 Linux）
+        │ 编译失败 → 错误日志回喂 agent ↩
+        ▼
+    start_plc → Modbus TCP :502 → Isaac Sim 桥接 / verify_modbus.py
 
 用法:
-    python src/pipeline/run_deploy.py [--xml path/to/plcopen.xml] [--keep-result]
+    python src/pipeline/run_deploy.py [--xml path.xml] [--url http://127.0.0.1:8080]
+结果写入 workspace/deploy_result.json（status/steps/errors，供 agent 回喂）。
 """
 
 import argparse
-import glob
 import json
 import os
-import shutil
-import subprocess
 import sys
 from pathlib import Path
 
+import requests
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_XML = REPO_ROOT / "src" / "plc" / "counter.xml"
-CODESYS_SCRIPT = REPO_ROOT / "src" / "codesys" / "deploy_project.py"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from xml2st import convert                      # noqa: E402
+from openplc_client import OpenPLCClient, OpenPLCError  # noqa: E402
+
 WORKSPACE = REPO_ROOT / "workspace"
-DEFAULT_PROJECT = WORKSPACE / "counter.project"
 RESULT_JSON = WORKSPACE / "deploy_result.json"
-# 播种好的工程模板（含网关+符号配置）。存在则新建工程时从它复制，避免重复 GUI 播种
-TEMPLATE_PROJECT = REPO_ROOT / "src" / "codesys" / "template.project"
-
-CODESYS_GLOBS = [
-    # 旧版布局（SP17 及以前常见）
-    r"C:\Program Files\CODESYS*\CODESYS\CODESYS.exe",
-    r"C:\Program Files (x86)\CODESYS*\CODESYS\CODESYS.exe",
-    # 新版布局（SP22 起 exe 位于 CODESYS\Common\）
-    r"C:\Program Files\CODESYS*\CODESYS\Common\CODESYS.exe",
-    r"D:\CODESYS*\CODESYS\CODESYS.exe",
-    r"D:\CODESYS*\CODESYS\Common\CODESYS.exe",
-]
-TIMEOUT_SECONDS = 600  # 无头导入+编译+下载的正常耗时在 1~2 分钟，留足余量
-
-
-def find_codesys_exe(cli_override=None):
-    """返回 CODESYS.exe 路径；优先级: --codesys 参数 > CODESYS_EXE 环境变量 > 常见位置扫描。"""
-    for candidate in (cli_override, os.environ.get("CODESYS_EXE")):
-        if candidate:
-            if Path(candidate).exists():
-                return candidate
-            return None  # 显式指定但不存在，直接失败避免误扫到别的版本
-    found = []
-    for pattern in CODESYS_GLOBS:
-        found.extend(glob.glob(pattern))
-    if not found:
-        return None
-    found.sort()  # 目录名含版本号，字典序最新者最后
-    return found[-1]
-
-
-def detect_profile(codesys_exe):
-    """--noUI 模式必须带 --profile。从 <安装目录>\\CODESYS\\Profiles\\*.profile.xml 探测名称。"""
-    override = os.environ.get("CODESYS_PROFILE")
-    if override:
-        return override
-    # exe 位于 ...\CODESYS\Common\CODESYS.exe（新）或 ...\CODESYS\CODESYS.exe（旧）
-    codesys_dir = Path(codesys_exe).resolve().parent
-    if codesys_dir.name.lower() == "common":
-        codesys_dir = codesys_dir.parent
-    profiles_dir = codesys_dir / "Profiles"
-    if profiles_dir.is_dir():
-        for p in sorted(profiles_dir.glob("*.profile.xml")):
-            return p.name[: -len(".profile.xml")]
-    return None
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Deploy PLCopen XML to CODESYS Control Win V3")
-    parser.add_argument("--xml", default=str(DEFAULT_XML), help="待部署的 PLCopen XML 路径")
-    parser.add_argument("--project", default=str(DEFAULT_PROJECT),
-                        help="目标工程文件（不存在时自动从模板创建）")
-    parser.add_argument("--codesys", default=None, help="CODESYS.exe 完整路径（默认自动扫描）")
+    parser = argparse.ArgumentParser(description="Deploy PLCopen XML to OpenPLC runtime")
+    parser.add_argument("--xml", default=str(REPO_ROOT / "src" / "plc" / "counter.xml"))
+    parser.add_argument("--url", default=os.environ.get("OPENPLC_URL", "http://127.0.0.1:8080"))
+    parser.add_argument("--name", default="agent_program")
     args = parser.parse_args()
-    project_path = Path(args.project).resolve()
 
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     except Exception:
         pass
 
-    xml_path = Path(args.xml).resolve()
+    steps, errors = [], []
+
+    def step(name, ok, detail=""):
+        steps.append({"step": name, "ok": bool(ok), "detail": str(detail)})
+        print("  [%s] %s%s" % ("PASS" if ok else "FAIL", name,
+                               ("  -- " + str(detail)) if detail else ""))
+
+    def finish(status, code):
+        WORKSPACE.mkdir(exist_ok=True)
+        RESULT_JSON.write_text(
+            json.dumps({"status": status, "steps": steps, "errors": errors},
+                       ensure_ascii=False, indent=2), encoding="utf-8")
+        print("\n[deploy] RESULT: %s" % status)
+        return code
+
+    # ① 校验 + 转换
+    xml_path = Path(args.xml)
     if not xml_path.exists():
-        print("[orchestrator] 找不到 PLCopen XML: %s" % xml_path)
-        return 1
+        errors.append("XML 不存在: %s" % xml_path)
+        return finish("FAILED", 1)
+    ok, st_text, problems = convert(xml_path)
+    if not ok:
+        errors.extend(problems)
+        step("validate & convert XML", False, "%d 个问题" % len(problems))
+        return finish("FAILED", 1)
+    step("validate & convert XML", True, "%s -> %d 行 ST" % (xml_path.name, st_text.count("\n")))
 
-    codesys_exe = find_codesys_exe(args.codesys)
-    if not codesys_exe:
-        print("[orchestrator] 未找到 CODESYS.exe。")
-        print("  1) 若尚未安装：见 docs/部署手册.md 第 1 节（CODESYS Development System + Control Win V3）")
-        print("  2) 若已安装在非默认位置：python src\\pipeline\\run_deploy.py --codesys D:\\安装目录\\CODESYS.exe")
-        return 1
-
+    st_path = WORKSPACE / "program.st"
     WORKSPACE.mkdir(exist_ok=True)
-    if RESULT_JSON.exists():
-        RESULT_JSON.unlink()
+    st_path.write_text(st_text, encoding="utf-8")
+    step("write program.st", True, str(st_path))
 
-    # 工程不存在时优先从模板复制（模板含网关+符号配置，随播种生成）
-    if not project_path.exists() and TEMPLATE_PROJECT.exists():
-        project_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(TEMPLATE_PROJECT, project_path)
-        print("[orchestrator] 已从模板创建工程: %s" % TEMPLATE_PROJECT.name)
-
-    env = dict(os.environ)
-    env["PLCOPEN_XML"] = str(xml_path)
-    env["CODESYS_PROJECT"] = str(project_path)
-    env["DEPLOY_RESULT"] = str(RESULT_JSON)
-
-    profile = detect_profile(codesys_exe)
-    # 注意：CODESYS 解析原始命令行，要求引号紧贴等号（--profile="name"）。
-    # Python 列表传参会对含空格的参数整体加引号（"--profile=name"），CODESYS 不识别，
-    # 因此这里手工构造原始命令行字符串（Windows 下字符串直接作为 lpCommandLine）。
-    cmd = '"%s"' % codesys_exe
-    if profile:
-        cmd += ' --profile="%s"' % profile
-    cmd += ' --noUI --runscript="%s"' % CODESYS_SCRIPT
-    print("[orchestrator] 启动无头 CODESYS 部署")
-    print("[orchestrator]   CODESYS : %s" % codesys_exe)
-    print("[orchestrator]   PROFILE: %s" % (profile or "(未探测到——若失败请设 CODESYS_PROFILE)"))
-    print("[orchestrator]   XML    : %s" % xml_path)
-    print("[orchestrator]   PROJECT: %s" % project_path)
-    print("-" * 60)
-
+    # ② 上传 + 编译 + 启动
     try:
-        proc = subprocess.run(cmd, env=env, timeout=TIMEOUT_SECONDS,
-                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        try:
-            output = proc.stdout.decode("utf-8")
-        except UnicodeDecodeError:
-            output = proc.stdout.decode("gbk", errors="replace")
-        print(output or "(CODESYS 无标准输出)")
-    except subprocess.TimeoutExpired:
-        print("[orchestrator] 部署超时（>%d 秒），详见 CODESYS 日志" % TIMEOUT_SECONDS)
-        return 1
-    except OSError as e:
-        print("[orchestrator] 无法启动 CODESYS: %s" % e)
-        return 1
+        client = OpenPLCClient(base_url=args.url)
+        client.login()
+        step("login runtime", True, args.url)
 
-    print("-" * 60)
-    if not RESULT_JSON.exists():
-        print("[orchestrator] 未生成 deploy_result.json——脚本可能在早期环境检查处失败，")
-        print("               请检查上方日志与《部署手册》故障排查一节。")
-        return 1
+        st_file = client.upload_and_compile(st_text, args.name)
+        step("upload & trigger compile", True, st_file)
 
-    result = json.loads(RESULT_JSON.read_text(encoding="utf-8"))
-    for s in result.get("steps", []):
-        mark = "PASS" if s.get("ok") else "FAIL"
-        detail = ("  -- " + s["detail"]) if s.get("detail") else ""
-        print("  [%s] %s%s" % (mark, s.get("step"), detail))
-    for err in result.get("errors", []):
-        print("  [ERROR] %s" % err.splitlines()[0])
+        comp_ok, comp_log = client.wait_compilation()
+        if not comp_ok:
+            # 编译日志直接作为 agent 的纠错输入
+            tail = "\n".join(comp_log.splitlines()[-40:])
+            errors.append("matiec 编译失败:\n%s" % tail)
+            step("compile (matiec)", False, "见 errors 中的编译日志")
+            return finish("FAILED", 1)
+        step("compile (matiec)", True)
 
-    status = result.get("status")
-    if status == "OK":
-        print("\n[orchestrator] 部署成功，PLC 已在运行。")
-        print("               用 UaExpert 连接 opc.tcp://localhost:4840 观察 PLC_PRG.cnt 每秒 +1。")
-        return 0
-    print("\n[orchestrator] 部署失败（status=%s），按上面 FAIL/ERROR 行排查，手册含对应处理办法。" % status)
-    return 1
+        status = client.start()
+        if status != "RUNNING":
+            errors.append("start 后状态异常: %s" % status)
+            step("start PLC", False, status)
+            return finish("FAILED", 1)
+        step("start PLC", True, "Modbus TCP :502 已随运行时开启")
+    except OpenPLCError as e:
+        errors.append(str(e))
+        step("runtime interaction", False, str(e))
+        return finish("FAILED", 1)
+    except requests.exceptions.ConnectionError as e:
+        msg = ("无法连接 OpenPLC 运行时 %s —— 是否已启动？"
+               "（Docker: docker run -d -p 8080:8080 -p 502:502 openplc/openplc-v3，"
+               "见 docs/部署手册-OpenPLC.md §1）" % args.url)
+        errors.append(msg + " / " + str(e.__cause__ or e))
+        step("connect runtime", False, msg)
+        return finish("FAILED", 1)
+
+    return finish("OK", 0)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,5 @@
-# 构建产物与本地工作区
+# 本地工作区（生成的 .st / 部署结果）
 workspace/
-*.project
 
 # Python
 __pycache__/

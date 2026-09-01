@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://www.plcopen.org/xml/tc6_0201">
-  <fileHeader companyName="" productName="Agent Pipeline" productVersion="0.1.0"
-              creationDateTime="2026-08-31T17:00:00"
-              description="Smoke-test program: DINT counter incremented by 1 every second (TON pulse generator). Verified via OPC UA in UaExpert." />
-  <contentHeader name="counter.project" modificationDateTime="2026-08-31T17:00:00">
+  <fileHeader companyName="" productName="Agent Pipeline" productVersion="0.2.0"
+              creationDateTime="2026-09-01T10:00:00"
+              description="Smoke test: DINT counter incremented by 1 every second. cnt is bound to Modbus holding register 0 via %QW0 (OpenPLC runtime)." />
+  <contentHeader name="counter.project" modificationDateTime="2026-09-01T10:00:00">
     <coordinateInfo>
       <fbd>
         <scaling x="1" y="1" />
@@ -22,18 +22,19 @@
       <pou name="PLC_PRG" pouType="program">
         <interface>
           <localVars>
-            <variable name="cnt">
+            <variable name="pulse">
+              <type>
+                <derived name="TON" />
+              </type>
+            </variable>
+            <!-- AT 地址即对外接口：%QW0 -> Modbus 保持寄存器 0（DINT 占 0~1） -->
+            <variable name="cnt" address="%QW0">
               <type>
                 <DINT />
               </type>
               <initialValue>
                 <simpleValue value="0" />
               </initialValue>
-            </variable>
-            <variable name="pulse">
-              <type>
-                <derived name="TON" />
-              </type>
             </variable>
           </localVars>
         </interface>

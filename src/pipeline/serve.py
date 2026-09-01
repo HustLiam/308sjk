@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-部署服务：把「XML → CODESYS 运行」暴露成 HTTP API。
+部署服务：把「XML → OpenPLC 运行」暴露成 HTTP API（agent 闭环的部署端点）。
 
 用法:
     python src/pipeline/serve.py [--port 8600]
 
 接口:
     POST /deploy        body 为 PLCopen XML 内容
-                        可选 header: X-Deploy-Xml-Name: myprogram.xml
-    返回: deploy_result.json 同构数据（status/steps/errors）
     GET  /health        存活检查
 
-这就是 agent 闭环的部署端点：
     curl -X POST http://127.0.0.1:8600/deploy --data-binary @src/plc/counter.xml
+返回 deploy_result.json 同构数据（status/steps/errors，errors 可直接回喂 agent）。
 """
 
 import argparse
@@ -86,7 +84,7 @@ class DeployHandler(BaseHTTPRequestHandler):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="PLCopen XML deploy HTTP service")
+    parser = argparse.ArgumentParser(description="PLCopen XML deploy HTTP service (OpenPLC)")
     parser.add_argument("--port", type=int, default=8600)
     args = parser.parse_args()
     (REPO_ROOT / "workspace").mkdir(exist_ok=True)
