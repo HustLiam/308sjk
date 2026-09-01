@@ -143,3 +143,124 @@ def test_extract_bodies_roundtrip(tmp_path):
     problems, sources = extract_st_bodies(_write(tmp_path, GOOD_MINIMAL))
     assert not problems
     assert sources["PLC_PRG"] == "y := y + 1;"
+
+
+# ------------------------------------------------------- 接口完整性（防丢失）
+FB_FIXTURE = """<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0201">
+  <fileHeader companyName="" productName="t" productVersion="1"
+              creationDateTime="2026-01-01T00:00:00" />
+  <contentHeader name="t" modificationDateTime="2026-01-01T00:00:00" />
+  <types>
+    <dataTypes />
+    <pous>
+      <pou name="MotorFB" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="start"><type><BOOL /></type></variable>
+          </inputVars>
+          <outputVars>
+            <variable name="running"><type><BOOL /></type></variable>
+          </outputVars>
+          <localVars>
+            <variable name="speed" address="%QW4"><type><DINT /></type></variable>
+            <variable name="buf"><type><array>
+              <dimension x="1" y="8" />
+              <baseType><INT /></baseType>
+            </array></type></variable>
+          </localVars>
+          <localVars constant="true">
+            <variable name="MAX_SPEED"><type><DINT /></type>
+              <initialValue><simpleValue value="1500" /></initialValue></variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST><xhtml xmlns="http://www.w3.org/1999/xhtml">running := start;</xhtml></ST>
+        </body>
+      </pou>
+      <pou name="PLC_PRG" pouType="program">
+        <interface><localVars>
+          <variable name="m1"><type><derived name="MotorFB" /></type></variable>
+        </localVars></interface>
+        <body>
+          <ST><xhtml xmlns="http://www.w3.org/1999/xhtml">m1();</xhtml></ST>
+        </body>
+      </pou>
+    </pous>
+  </types>
+  <instances><configurations /></instances>
+</project>
+"""
+
+
+class TestInterfaceCompleteness:
+    def _fb_st(self):
+        import tempfile
+        from pathlib import Path
+        p = Path(tempfile.mkdtemp()) / "fb.xml"
+        p.write_text(FB_FIXTURE, encoding="utf-8")
+        return convert(p)
+
+    def test_fb_io_blocks_preserved(self):
+        ok, st, problems = self._fb_st()
+        assert ok, problems
+        assert "VAR_INPUT" in st and "start : BOOL;" in st
+        assert "VAR_OUTPUT" in st and "running : BOOL;" in st
+        assert "FUNCTION_BLOCK MotorFB" in st
+
+    def test_constant_qualifier_preserved(self):
+        _, st, _ = self._fb_st()
+        assert "VAR CONSTANT" in st
+        assert "MAX_SPEED" in st
+
+    def test_array_type_rendered(self):
+        _, st, _ = self._fb_st()
+        assert "ARRAY[1..8] OF INT" in st
+
+
+# ------------------------------------------------------- 防静默丢失（显式拒绝）
+def _wrap(inner):
+    return """<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0201">
+  <fileHeader companyName="" productName="t" productVersion="1"
+              creationDateTime="2026-01-01T00:00:00" />
+  <contentHeader name="t" modificationDateTime="2026-01-01T00:00:00" />
+  <types>%s</types>
+  <instances><configurations /></instances>
+</project>""" % inner
+
+
+POU_MIN = """<dataTypes />
+<pous><pou name="PLC_PRG" pouType="program">
+  <interface><localVars><variable name="x"><type><BOOL /></type></variable></localVars></interface>
+  <body><ST><xhtml xmlns="http://www.w3.org/1999/xhtml">x := TRUE;</xhtml></ST></body>
+</pou></pous>"""
+
+
+def test_data_types_rejected(tmp_path):
+    bad = _wrap('<dataTypes><dataType name="MyStruct"><baseType><DINT /></baseType></dataType></dataTypes>' + POU_MIN)
+    ok, _, problems = convert(_write(tmp_path, bad))
+    assert not ok
+    assert any("dataTypes" in p for p in problems)
+
+
+def test_action_rejected(tmp_path):
+    bad = _wrap(POU_MIN.replace("</pou>", "<action name=\"act1\"></action></pou>"))
+    ok, _, problems = convert(_write(tmp_path, bad))
+    assert not ok
+    assert any("action" in p for p in problems)
+
+
+def test_configuration_content_rejected(tmp_path):
+    xml = _wrap(POU_MIN).replace("<configurations />",
+                                 "<configurations><configuration name=\"C1\"><resource name=\"R1\" /></configuration></configurations>")
+    ok, _, problems = convert(_write(tmp_path, xml))
+    assert not ok
+    assert any("configuration" in p for p in problems)
+
+
+def test_persistent_rejected(tmp_path):
+    bad = _wrap(POU_MIN.replace("<localVars>", "<localVars persistent=\"true\">"))
+    ok, _, problems = convert(_write(tmp_path, bad))
+    assert not ok
+    assert any("PERSISTENT" in p for p in problems)

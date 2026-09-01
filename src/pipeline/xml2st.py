@@ -55,6 +55,25 @@ def _var_type_text(var, ns, problems, ctx):
             length = child.get("length", "")
             base = "STRING" if tag == "string" else "WSTRING"
             return "%s[%s]" % (base, length) if length else base
+        if tag == "array":
+            # <array><dimension x="1" y="5"/><baseType><INT/></baseType></array>
+            dims = []
+            for d in child.findall(ns + "dimension"):
+                x, y = d.get("x", "0"), d.get("y", "0")
+                dims.append("%s..%s" % (x, y))
+            base_el = child.find(ns + "baseType")
+            base = None
+            if base_el is not None:
+                for bc in base_el:
+                    btag = bc.tag.split("}")[-1]
+                    if btag == "derived":
+                        base = bc.get("name", "")
+                    elif btag in PRIMITIVE_TYPES:
+                        base = btag
+            if not dims or base is None:
+                problems.append("%s: 变量 %r 的数组类型不完整" % (ctx, var.get("name")))
+                return None
+            return "ARRAY[%s] OF %s" % (", ".join(dims), base)
         if tag in PRIMITIVE_TYPES:
             return tag
         problems.append("%s: 变量 %r 的类型 %r 不受支持" % (ctx, var.get("name"), tag))
@@ -93,6 +112,31 @@ def parse(xml_path):
     if not pous:
         problems.append("未找到任何 <pou>（至少需要一个程序 POU）")
 
+    # ---- 防静默丢失：未支持的构造一律显式拒绝 ----
+    for dt in root.findall(".//" + ns + "dataTypes/" + ns + "dataType"):
+        problems.append("不支持 <dataTypes> 中的自定义类型 %r（类型请用基本类型/数组/已定义 FB）"
+                        % dt.get("name", "?"))
+    for bad in ("action", "method", "property", "transition", "step"):
+        for el in root.findall(".//" + ns + bad):
+            problems.append("不支持 POU 内的 <%s>（%r）——请把逻辑写进 ST 本体"
+                            % (bad, el.get("name", "?")))
+    for pv in root.findall(".//" + ns + "persistentVars"):
+        problems.append("不支持 <persistentVars>（持久变量块）")
+    for cfg in root.findall(".//" + ns + "configuration"):
+        if len(cfg):
+            problems.append("不支持 <configuration> 内容（任务/资源由流水线模板统一装配）")
+
+    # 变量块种类 -> (ST 关键字, 是否受支持)
+    VAR_BLOCKS = [
+        ("inputVars", "VAR_INPUT", True),
+        ("inOutVars", "VAR_IN_OUT", True),
+        ("outputVars", "VAR_OUTPUT", True),
+        ("localVars", "VAR", True),
+        ("externalVars", "externalVars", False),
+        ("temporaryVars", "temporaryVars", False),
+        ("tempVars", "tempVars", False),
+    ]
+
     has_program = False
     for pou in pous:
         name = pou.get("name", "")
@@ -117,37 +161,43 @@ def parse(xml_path):
             continue
 
         iface_lines = []
-        var_blocks = []
-        for vb in pou.findall(ns + "interface/" + ns + "localVars"):
-            var_blocks.append(("VAR", vb))
-        for vb in pou.findall(ns + "interface/" + ns + "inOutVars"):
-            var_blocks.append(("VAR_IN_OUT", vb))
-        for block_kw, vb in var_blocks:
-            decls = []
-            for var in vb.findall(ns + "variable"):
-                vname = var.get("name", "")
-                if not IDENT_RE.match(vname):
-                    problems.append("%s 中变量名非法: %r" % (ctx, vname))
+        for xml_tag, st_kw, supported in VAR_BLOCKS:
+            for vb in pou.findall(ns + "interface/" + ns + xml_tag):
+                if not supported:
+                    problems.append("%s: 不支持变量块 <%s>" % (ctx, xml_tag))
                     continue
-                vtype = _var_type_text(var, ns, problems, ctx)
-                if vtype is None:
-                    continue
-                addr = var.get("address")
-                if addr is not None and not ADDRESS_RE.match(addr):
-                    problems.append("%s 中变量 %r 的地址 %r 不合法（形如 %%QW0/%%QX0.1）"
-                                    % (ctx, vname, addr))
-                init = _initial_text(var, ns)
-                parts = ["    " + vname]
-                if addr:
-                    parts.append("AT " + addr)
-                parts.append(": " + vtype)
-                if init is not None:
-                    parts.append(":= " + init)
-                decls.append(" ".join(parts) + ";")
-            if decls:
-                iface_lines.append("  " + block_kw)
-                iface_lines.extend(decls)
-                iface_lines.append("  END_" + block_kw)
+                kw = st_kw
+                if vb.get("constant", "false") in ("true", "1"):
+                    kw += " CONSTANT"
+                if vb.get("retain", "false") in ("true", "1"):
+                    kw += " RETAIN"
+                if vb.get("persistent", "false") in ("true", "1"):
+                    problems.append("%s: 不支持 PERSISTENT 限定符（matiec 限制）" % ctx)
+                decls = []
+                for var in vb.findall(ns + "variable"):
+                    vname = var.get("name", "")
+                    if not IDENT_RE.match(vname):
+                        problems.append("%s 中变量名非法: %r" % (ctx, vname))
+                        continue
+                    vtype = _var_type_text(var, ns, problems, ctx)
+                    if vtype is None:
+                        continue
+                    addr = var.get("address")
+                    if addr is not None and not ADDRESS_RE.match(addr):
+                        problems.append("%s 中变量 %r 的地址 %r 不合法（形如 %%QW0/%%QX0.1）"
+                                        % (ctx, vname, addr))
+                    init = _initial_text(var, ns)
+                    parts = ["    " + vname]
+                    if addr:
+                        parts.append("AT " + addr)
+                    parts.append(": " + vtype)
+                    if init is not None:
+                        parts.append(":= " + init)
+                    decls.append(" ".join(parts) + ";")
+                if decls:
+                    iface_lines.append("  " + kw)
+                    iface_lines.extend(decls)
+                    iface_lines.append("  END_" + st_kw)
 
         ret_type = ""
         if ptype == "function":
