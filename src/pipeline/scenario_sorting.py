@@ -19,11 +19,12 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from modbus_io import SafeCoilIO, connect, read_reg  # noqa: E402
+from modbus_io import SafeCoilIO, connect, read_reg, require_program, zero_regs  # noqa: E402
 
 START, STOP, ESTOP, PIN, PREJ = 0, 1, 2, 3, 4
 MOTOR, PUSHER, ALARM = 8, 9, 10
 TOTAL, REJ = 10, 11
+PROG_ID = 2
 
 
 def main():
@@ -34,6 +35,7 @@ def main():
 
     m = connect()
     io = SafeCoilIO(m)
+    require_program(m, PROG_ID, "sorting")
     ok = True
 
     def check(name, cond):
@@ -41,7 +43,8 @@ def main():
         print(("  PASS " if cond else "  FAIL ") + name)
         ok = ok and cond
 
-    # 复位所有输入
+    # 复位所有输入与计数（幂等：重复运行可复现）
+    zero_regs(m, TOTAL, REJ)
     for bit in (START, STOP, ESTOP, PIN, PREJ):
         io.write(bit, False)
     time.sleep(0.3)

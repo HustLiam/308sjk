@@ -57,11 +57,18 @@
               <type><INT /></type>
               <initialValue><simpleValue value="0" /></initialValue>
             </variable>
+            <variable name="prog_id" address="%QW20">
+              <type><INT /></type>
+              <initialValue><simpleValue value="5" /></initialValue>
+            </variable>
           </localVars>
         </interface>
         <body>
           <ST>
-            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* ---- stop / emergency: leave auto cycle, both cylinders driven home ---- *)
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* ---- program identity (scenario = cylinder_seq) ---- *)
+prog_id := 5;
+
+(* ---- stop / emergency: leave auto cycle, both cylinders driven home ---- *)
 IF stop_btn THEN
     running := FALSE;
 END_IF;

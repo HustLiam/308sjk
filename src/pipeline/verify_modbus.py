@@ -48,6 +48,15 @@ def main():
         print("[verify] 无法连接 %s:%d —— OpenPLC 运行时在跑吗？" % (args.host, args.port))
         return 1
 
+    # 程序身份校验：counter 的 prog_id=1（%QW20）
+    got_id = read_register(client, reg=20)
+    if got_id != 1:
+        print("[verify] 程序不匹配：期望 counter (prog_id=1)，当前 prog_id=%r ——"
+              " 请先 python src/pipeline/run_deploy.py --xml src/plc/counter.xml" % got_id)
+        client.close()
+        return 1
+    print("[verify] 程序身份确认: counter (prog_id=1)")
+
     try:
         values = []
         for i in range(args.samples):

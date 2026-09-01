@@ -36,9 +36,15 @@
 - 实现留在 git 历史（`e1bfe94`），需要时找回；
 - 遗留技术要点：多轴步序 + 运动安全互锁的写法（`IF z_up THEN x_fwd := TRUE` 门控）；无料等待步（步 9）放行条件是 `z_up AND part_det`——**先回安全高度再等料**，验收脚本模拟传感器时序必须"料在 Z 高位时到达"，先置 z_dn 会永远卡在等待步（这是脚本时序错误，非逻辑错误）。
 
-### 已知技术债：验收脚本幂等性
+### 验收工具链健壮性（幂等性 + 程序身份 + 停机入口）
 
-sorting（total/rej）、pump（cycles）、traffic（cycle_cnt）的计数寄存器由 PLC 维护，**同一程序重复运行验收脚本会因计数累加而 FAIL**——当前约定"重复验收前重新部署"。候选修复：脚本开头 `write_register` 清零各自计数寄存器，或改增量断言。尚未实施。
+**幂等性修复（清偿上文技术债）**：sorting/pump/traffic 的计数寄存器改为脚本开头 `zero_regs` 清零，实测同程序连续跑两轮验收全部通过，不再依赖"重复验收前重新部署"。`zero_regs` 进 modbus_io 共享层。
+
+**程序身份约定（契约 v1.1 增补）**：每个场景声明 `prog_id AT %QW20 : INT` 常量并在 ST 本体每周期写入编号。实现细节：不依赖 `<initialValue>`（located 变量的初始化在 OpenPLC 冷启动路径上行为未确证），改为本体显式赋值，确定性最高；%QW20 在全部 6 个场景的地址空间中空闲。`modbus_io.require_program()` 读之比对，不匹配 SystemExit(1)。负测试通过：运行时加载 pid(prog_id=6) 时跑 sorting 脚本，输出"程序不匹配…请先 run_deploy --xml"并退出码 1——不再产生一屏莫名 FAIL。
+
+**停机入口**：新增 `stop_plc.py`（login → GET /stop_plc → dashboard 确认 STOPPED），实测通过。停止的是扫描线程：Modbus/Web 保持、%Q 缓冲保持最后状态可读。
+
+**验证矩阵**：6 XML 静态校验全过；pytest 24 绿；counter 部署+verify×2+停机；sorting/pump/traffic 各部署 1 次+连跑 2 次（幂等证明）；cylinder/pid 各部署+验收+身份确认；负测试 1 例。全绿。
 
 ### 协作规范落地（首次许可制合并走查）
 

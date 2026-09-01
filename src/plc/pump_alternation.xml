@@ -52,11 +52,18 @@
               <type><INT /></type>
               <initialValue><simpleValue value="0" /></initialValue>
             </variable>
+            <variable name="prog_id" address="%QW20">
+              <type><INT /></type>
+              <initialValue><simpleValue value="3" /></initialValue>
+            </variable>
           </localVars>
         </interface>
         <body>
           <ST>
-            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* ---- minimum run time: 3s anti short-cycling ---- *)
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* ---- program identity (scenario = pump_alternation) ---- *)
+prog_id := 3;
+
+(* ---- minimum run time: 3s anti short-cycling ---- *)
 min_run(IN := pumping, PT := T#3S);
 
 (* ---- leaving auto mode stops the pumps immediately ---- *)

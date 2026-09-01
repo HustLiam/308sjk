@@ -168,7 +168,10 @@ Web API :8080、Modbus TCP :502；URL 与账号可经环境变量 `OPENPLC_URL /
 ### 5.3 冒烟验证与场景验收
 
 - `verify_modbus.py`：读 `%QW0`（counter 的 cnt），采样 5 次确认每秒 +1，作为链路冒烟；
-- 场景脚本模式：`run_deploy --xml 场景.xml` 部署 → 脚本按地址表注入激励（设液位 / 打脉冲）→ `check()` 逐条断言，PASS/FAIL 打印、退出码汇总。
+- 场景脚本模式：`run_deploy --xml 场景.xml` 部署 → 脚本先过**程序身份校验**（`require_program`，读 %QW20 的 prog_id，不匹配立即终止并提示部署哪个场景）→ 注入激励（设液位 / 打脉冲）→ `check()` 逐条断言，PASS/FAIL 打印、退出码汇总；
+- **身份约定（生成契约 v1.1 增补，向后兼容）**：每个场景程序声明 `prog_id AT %QW20 : INT` 常量并在 ST 本体每周期写入自己的编号（counter=1 / sorting=2 / pump=3 / traffic=4 / cylinder=5 / pid=6，新场景顺延）——验收脚本与未来 gc 编排器据此确认运行时当前加载的程序；
+- **幂等性**：脚本开头 `zero_regs` 清零 PLC 内部维护的计数寄存器（sorting 的 total/rej、pump 的 cycles、traffic 的 cycle_cnt），**同一程序可重复运行验收**，无需重新部署；cylinder/pid 程序自身具备归零语义；
+- 停止扫描：`python src/pipeline/stop_plc.py`（逻辑停跑、定时器冻结；Modbus/Web 服务与 %Q 缓冲保持，仍可读）。
 
 **已验收场景清单**（全部经链路 B 实测通过）：
 
@@ -213,8 +216,9 @@ src/pipeline/xml2st.py          ② 校验+转换（纯标准库）
 src/pipeline/openplc_client.py  ④a OpenPLC v3 HTTP 客户端
 src/pipeline/run_deploy.py      ④a 部署编排器（结果 JSON 供回喂）
 src/pipeline/serve.py           ④a POST /deploy HTTP 服务（agent 端点，:8600）
-src/pipeline/modbus_io.py       ⑤ SafeCoilIO + INT16 寄存器读
-src/pipeline/verify_modbus.py   ⑤ Modbus 冒烟验证
+src/pipeline/modbus_io.py       ⑤ SafeCoilIO + 寄存器读 + require_program 身份校验 + zero_regs
+src/pipeline/verify_modbus.py   ⑤ Modbus 冒烟验证（含身份校验）
+src/pipeline/stop_plc.py        ④a 停止运行时逻辑扫描
 src/pipeline/scenario_*.py      ⑤ 场景验收（sorting / pump / traffic）
 src/plc/*.xml                   交付物：4 个 61131-10 场景
 tests/test_xml2st.py            转换器单测（pytest，无需运行时）

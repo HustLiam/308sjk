@@ -37,11 +37,21 @@
                 <simpleValue value="0" />
               </initialValue>
             </variable>
+            <variable name="prog_id" address="%QW20">
+              <type>
+                <INT />
+              </type>
+              <initialValue>
+                <simpleValue value="1" />
+              </initialValue>
+            </variable>
           </localVars>
         </interface>
         <body>
           <ST>
-            <xhtml xmlns="http://www.w3.org/1999/xhtml">pulse(IN := NOT pulse.Q, PT := T#1S);
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* program identity (scenario = counter) *)
+prog_id := 1;
+pulse(IN := NOT pulse.Q, PT := T#1S);
 IF pulse.Q THEN
     cnt := cnt + 1;
 END_IF;</xhtml>

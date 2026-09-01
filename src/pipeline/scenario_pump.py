@@ -17,11 +17,12 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from modbus_io import SafeCoilIO, connect, read_reg  # noqa: E402
+from modbus_io import SafeCoilIO, connect, read_reg, require_program, zero_regs  # noqa: E402
 
 AUTO = 0
 PUMP1, PUMP2, ALARM = 8, 9, 10
 LEVEL, CYCLES = 0, 10
+PROG_ID = 3
 
 
 def main():
@@ -32,6 +33,7 @@ def main():
 
     m = connect()
     io = SafeCoilIO(m)
+    require_program(m, PROG_ID, "pump_alternation")
     ok = True
 
     def check(name, cond):
@@ -44,6 +46,7 @@ def main():
         time.sleep(0.15)
 
     io.write(AUTO, False)
+    zero_regs(m, CYCLES)
     set_level(50)
     time.sleep(0.3)
 

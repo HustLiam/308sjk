@@ -18,11 +18,12 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from modbus_io import SafeCoilIO, connect, read_reg  # noqa: E402
+from modbus_io import SafeCoilIO, connect, read_reg, require_program  # noqa: E402
 
 START, STOP, A_EXT, A_RET, B_EXT, B_RET = 0, 1, 2, 3, 4, 5
 A_FWD, A_BWD, B_FWD, B_BWD, RUNNING = 8, 9, 10, 11, 12
 STEP = 0
+PROG_ID = 5
 
 
 def main():
@@ -33,6 +34,7 @@ def main():
 
     m = connect()
     io = SafeCoilIO(m)
+    require_program(m, PROG_ID, "cylinder_seq")
     ok = True
 
     def check(name, cond):

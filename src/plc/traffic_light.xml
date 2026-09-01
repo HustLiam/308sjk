@@ -70,11 +70,18 @@
               <type><INT /></type>
               <initialValue><simpleValue value="0" /></initialValue>
             </variable>
+            <variable name="prog_id" address="%QW20">
+              <type><INT /></type>
+              <initialValue><simpleValue value="4" /></initialValue>
+            </variable>
           </localVars>
         </interface>
         <body>
           <ST>
-            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* ---- phase timers, each armed only in its own state ---- *)
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* ---- program identity (scenario = traffic_light) ---- *)
+prog_id := 4;
+
+(* ---- phase timers, each armed only in its own state ---- *)
 (* phase: 0=NS green 5s, 1=NS yellow 2s, 2=all-red 1s, 3=EW green 5s, 4=EW yellow 2s, 5=all-red 1s *)
 t0(IN := run AND (state = 0), PT := T#5S);
 t1(IN := run AND (state = 1), PT := T#2S);

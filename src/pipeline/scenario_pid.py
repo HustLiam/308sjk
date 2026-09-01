@@ -21,11 +21,12 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from modbus_io import SafeCoilIO, connect, read_reg  # noqa: E402
+from modbus_io import SafeCoilIO, connect, read_reg, require_program  # noqa: E402
 
 AUTO = 0
 PV, SP, MV = 0, 1, 10
 ALARM = 8
+PROG_ID = 6
 DT = 0.1
 A_GAIN, B_LEAK = 0.04, 0.04   # dpv/dt = A_GAIN*mv - B_LEAK*pv（τ=25s，满开度平衡液位 100）
 
@@ -38,6 +39,7 @@ def main():
 
     m = connect()
     io = SafeCoilIO(m)
+    require_program(m, PROG_ID, "pid_tank")
     ok = True
 
     def check(name, cond):

@@ -17,12 +17,13 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from modbus_io import SafeCoilIO, connect, read_reg  # noqa: E402
+from modbus_io import SafeCoilIO, connect, read_reg, require_program, zero_regs  # noqa: E402
 
 RUN = 0
 NS_G, NS_Y, NS_R = 8, 9, 10
 EW_G, EW_Y, EW_R = 11, 12, 13
 CYCLE = 10
+PROG_ID = 4
 
 
 def main():
@@ -33,6 +34,7 @@ def main():
 
     m = connect()
     io = SafeCoilIO(m)
+    require_program(m, PROG_ID, "traffic_light")
     ok = True
     violations = []
 
@@ -55,6 +57,7 @@ def main():
         if l["ew_g"] and l["ew_y"]:
             violations.append("EW绿黄同亮")
 
+    zero_regs(m, CYCLE)
     io.write(RUN, False)
     time.sleep(0.3)
     print("[0] 停机态：全部熄灯")
