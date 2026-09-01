@@ -17,6 +17,7 @@ import argparse
 import glob
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -27,6 +28,8 @@ CODESYS_SCRIPT = REPO_ROOT / "src" / "codesys" / "deploy_project.py"
 WORKSPACE = REPO_ROOT / "workspace"
 DEFAULT_PROJECT = WORKSPACE / "counter.project"
 RESULT_JSON = WORKSPACE / "deploy_result.json"
+# 播种好的工程模板（含网关+符号配置）。存在则新建工程时从它复制，避免重复 GUI 播种
+TEMPLATE_PROJECT = REPO_ROOT / "src" / "codesys" / "template.project"
 
 CODESYS_GLOBS = [
     # 旧版布局（SP17 及以前常见）
@@ -75,8 +78,11 @@ def detect_profile(codesys_exe):
 def main():
     parser = argparse.ArgumentParser(description="Deploy PLCopen XML to CODESYS Control Win V3")
     parser.add_argument("--xml", default=str(DEFAULT_XML), help="待部署的 PLCopen XML 路径")
+    parser.add_argument("--project", default=str(DEFAULT_PROJECT),
+                        help="目标工程文件（不存在时自动从模板创建）")
     parser.add_argument("--codesys", default=None, help="CODESYS.exe 完整路径（默认自动扫描）")
     args = parser.parse_args()
+    project_path = Path(args.project).resolve()
 
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -99,9 +105,15 @@ def main():
     if RESULT_JSON.exists():
         RESULT_JSON.unlink()
 
+    # 工程不存在时优先从模板复制（模板含网关+符号配置，随播种生成）
+    if not project_path.exists() and TEMPLATE_PROJECT.exists():
+        project_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(TEMPLATE_PROJECT, project_path)
+        print("[orchestrator] 已从模板创建工程: %s" % TEMPLATE_PROJECT.name)
+
     env = dict(os.environ)
     env["PLCOPEN_XML"] = str(xml_path)
-    env["CODESYS_PROJECT"] = str(DEFAULT_PROJECT)
+    env["CODESYS_PROJECT"] = str(project_path)
     env["DEPLOY_RESULT"] = str(RESULT_JSON)
 
     profile = detect_profile(codesys_exe)
@@ -116,7 +128,7 @@ def main():
     print("[orchestrator]   CODESYS : %s" % codesys_exe)
     print("[orchestrator]   PROFILE: %s" % (profile or "(未探测到——若失败请设 CODESYS_PROFILE)"))
     print("[orchestrator]   XML    : %s" % xml_path)
-    print("[orchestrator]   PROJECT: %s" % DEFAULT_PROJECT)
+    print("[orchestrator]   PROJECT: %s" % project_path)
     print("-" * 60)
 
     try:
