@@ -49,6 +49,10 @@ src/
   pipeline/run_deploy.py    # 部署编排器（结果 JSON 供回喂）
   pipeline/verify_modbus.py # Modbus 冒烟验证
   pipeline/serve.py         # POST /deploy HTTP 服务
+  agent/                    # gc 智能体与闭环侧（spec 校验/生成器/一致性/编排）
+schemas/requirement_spec.schema.json  # 契约① Schema 草案（gc 拥有，待三方评审冻结）
+examples/specs/             # requirement_spec 基准示例（sorting，对齐已验收 XML）
+runs/                       # 编排器每轮产物（iter_NNN/final，全量入 git）
 tests/                      # pytest 单测
 docs/                       # 方案与详细设计文档
 workspace/                  # 本地生成物（不入库）
