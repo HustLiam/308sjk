@@ -12,7 +12,7 @@
 |---|---|---|---|
 | ② PLC 代码生成契约 | PLCopen XML（IEC 61131-10）结构契约、静态校验、XML→ST 机械转换 | `src/pipeline/xml2st.py` + `tests/test_xml2st.py` | ✅ 完成 |
 | ④a 执行引擎（链路 B） | 校验→转换→上传→编译→启动的全脚本化部署编排 + HTTP 服务化 | `run_deploy.py` / `openplc_client.py` / `serve.py` | ✅ 已打通 |
-| ⑤ PLC 侧行为验收 | Modbus 安全 IO 层、冒烟验证、场景验收脚本 | `modbus_io.py` / `verify_modbus.py` / `scenario_*.py` | ✅ 4 场景全过 |
+| ⑤ PLC 侧行为验收 | Modbus 安全 IO 层、冒烟验证、场景验收脚本 | `modbus_io.py` / `verify_modbus.py` / `scenario_*.py` | ✅ 5 场景全过 |
 | 运行时工程资产 | 已验收的 PLCopen XML 场景库 | `src/plc/*.xml` | ✅ |
 
 ## 1. 在总体架构中的位置
@@ -178,6 +178,7 @@ Web API :8080、Modbus TCP :502；URL 与账号可经环境变量 `OPENPLC_URL /
 | 分拣线 | sorting.xml | 自定义 EdgeFB + TON 时序；SafeCoilIO 首个实战 | 13/13 |
 | 双泵交替液位控制 | pump_alternation.xml | 滞后带（<30 启 / >80 停）+ 双泵轮换 + 最小运行 3s + 低液位报警 + 退出自动状态清理 | 12/12 |
 | 交通灯 | traffic_light.xml | 定时器链状态机；对向双绿禁止（安全不变量） | 10/10 |
+| 双缸顺序控制 | cylinder_seq.xml | CASE 步进链状态机；原位启动联锁；双电磁阀防冲突不变量（逐步校验） | 29/29 |
 
 ## 6. 与仿真侧的接口契约
 
@@ -189,7 +190,7 @@ Web API :8080、Modbus TCP :502；URL 与账号可经环境变量 `OPENPLC_URL /
 ## 7. 待办（按优先级）
 
 1. **双链路联调**：同一场景 A/B 双跑、trace 比对行为一致性（总体方案风险表"双链路行为不一致"的应对；**依赖 csk 链路 A 就绪**，已在协作看板提请求）；
-2. **场景库扩充**：气缸顺序控制、机械臂搬运等（总体方案 §5 阶段五的典型场景）；
+2. **场景库扩充**：气缸顺序控制已完成（cylinder_seq.xml，29/29，2026-09-01）；剩余：机械臂搬运（总体方案 §5 阶段五典型场景）；
 3. **配合事项**（非本侧实现）：三方一致性检查器归 gc（复用本侧 `xml2st.parse()`，见其文档 §5）；模拟量 INT 定点换算的量程字段随 io_map 契约定稿（主方案 §3.3，csk 落地），本侧参与评审。
 
 ## 8. 仓库实现索引与快速开始

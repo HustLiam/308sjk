@@ -331,7 +331,7 @@ class IOBridge:
 | 链路 | IO 交换延迟 | 确定性 | 实现工作量 | 适用 |
 |---|---|---|---|---|
 | **A. 进程内共享库**（matiec 编译 ST → C DLL，ctypes 调用） | 微秒级（函数调用） | 完全 lockstep，最佳 | 中（一次性搭好编译流水线） | ✅ 闭环迭代主力 |
-| B. OpenPLC 软 PLC + Modbus TCP | ~1–10ms（本机） | 好（周期轮询） | 低（✅ 已落地，4 场景验收通过） | 工业代表性验收、真实软 PLC 运行时 |
+| B. OpenPLC 软 PLC + Modbus TCP | ~1–10ms（本机） | 好（周期轮询） | 低（✅ 已落地，5 场景验收通过） | 工业代表性验收、真实软 PLC 运行时 |
 | C. OPC UA（CODESYS / 任意软 PLC） | ~10–50ms | 一般 | 中 | 需要开放互操作时 |
 | D. ROS 2 bridge（Isaac 原生 `ros2_bridge`） | ~5–20ms | 一般 | 中 | 已有 ROS 2 生态的团队 |
 
@@ -460,7 +460,7 @@ class SoftPLC:
 - **线圈写入红线**：OpenPLC 的 Modbus 服务端在窄范围线圈写入时会破坏相邻位，必须经 PLC 侧 `modbus_io.SafeCoilIO`（读-改-写整组）访问，禁止裸 write_coil；
 - 轮询周期 10ms 量级即可（工厂级逻辑对抖动不敏感）；本机延迟约 1–10ms。
 
-此链路用于**最终轮验收**：证明生成的代码在真实软 PLC 运行时上可编译、可运行、行为一致（counter / sorting / pump / traffic 四场景已按此链路验收通过）。A/B 两条链路共用同一份 XML→.st 产物与 io_map，差异只在运行时。
+此链路用于**最终轮验收**：证明生成的代码在真实软 PLC 运行时上可编译、可运行、行为一致（counter / sorting / pump / traffic / cylinder 五场景已按此链路验收通过）。A/B 两条链路共用同一份 XML→.st 产物与 io_map，差异只在运行时。
 
 ---
 
