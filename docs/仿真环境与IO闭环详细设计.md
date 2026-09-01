@@ -1,6 +1,6 @@
 # 仿真环境生成与 IO 闭环详细设计
 
-> 本文档是《总体实施方案》第 2.3 / 2.4 / 2.5 节（仿真环境生成、执行与仿真引擎、验证与反馈）的细化，目标是给出**具体、可实现**的工程方案：资产格式选型、Isaac Sim 启动与控制、软 PLC 与仿真之间的 IO 数据交换、结果采集与闭环反馈。
+> 本文档是《总体实施方案》第 3.3 / 3.4 / 3.5 节（仿真环境生成、执行与仿真引擎、验证与反馈）的细化，目标是给出**具体、可实现**的工程方案：资产格式选型、Isaac Sim 启动与控制、软 PLC 与仿真之间的 IO 数据交换、结果采集与闭环反馈。
 >
 > 涉及 Isaac Sim 的 API 在 4.2 前后有过一次包名迁移（`omni.isaac.*` → `isaacsim.*`），文中代码以 **Isaac Sim 4.5（`isaacsim.*` 命名空间）** 为基准编写，旧版本的对应关系在附录 A 给出。
 
@@ -331,7 +331,7 @@ class IOBridge:
 | 链路 | IO 交换延迟 | 确定性 | 实现工作量 | 适用 |
 |---|---|---|---|---|
 | **A. 进程内共享库**（matiec 编译 ST → C DLL，ctypes 调用） | 微秒级（函数调用） | 完全 lockstep，最佳 | 中（一次性搭好编译流水线） | ✅ 闭环迭代主力 |
-| B. CODESYS 软 PLC + Modbus TCP | ~1–10ms（本机） | 好（周期轮询） | 低-中 | 工业代表性验证、真实 CODESYS 工程 |
+| B. OpenPLC 软 PLC + Modbus TCP | ~1–10ms（本机） | 好（周期轮询） | 低（✅ 已落地，4 场景验收通过） | 工业代表性验收、真实软 PLC 运行时 |
 | C. OPC UA（CODESYS / 任意软 PLC） | ~10–50ms | 一般 | 中 | 需要开放互操作时 |
 | D. ROS 2 bridge（Isaac 原生 `ros2_bridge`） | ~5–20ms | 一般 | 中 | 已有 ROS 2 生态的团队 |
 
@@ -341,24 +341,18 @@ class IOBridge:
 
 #### 4.2.1 ST 侧的约定
 
-生成的 ST 代码遵循固定骨架：IO 全部声明为**定位变量（located variables）**，地址与 `io_map.json` 一一对应：
+生成的 ST 遵循固定骨架（CONFIGURATION/任务配置由 xml2st 统一装配，见 PLC 侧文档 §3.3，不手写）：IO 全部声明为**定位变量（located variables）**，地址与 `io_map.json` 一一对应。**统一 IO 约定（双链路一致，契约见 PLC 侧文档 §3.1）**：主 POU 名固定 `PLC_PRG`；对外 IO 一律 `%Q` 区——**方向（输入/输出）由 io_map 声明，不由地址前缀表达**；模拟量一律 `INT @ %QW` + 定点换算（系数写入 io_map）——`REAL` 与 `%I` 区仅链路 A 技术上可行，为保证两条链路跑同一份代码而统一弃用：
 
 ```iecst
-CONFIGURATION Cfg
-  RESOURCE Res ON PLC {
-    PROGRAM main : MainProg;
-  }
-END_CONFIGURATION
-
-PROGRAM MainProg
-  VAR_INPUT
-    PE1_detected AT %IX0.0 : BOOL;    (* 光电传感器 *)
-    Cyl1_pos     AT %IW0   : REAL;    (* 气缸位置反馈 *)
-    Belt1_speed  AT %IW1   : REAL;
+PROGRAM PLC_PRG
+  VAR   (* 输入：传感器，由仿真/验收侧写入注入 *)
+    PE1_detected AT %QX0.0 : BOOL;    (* 光电传感器 → 线圈 0 *)
+    Cyl1_pos     AT %QW0   : INT;     (* 气缸位置反馈，定点 0.1mm/LSB *)
+    Belt1_speed  AT %QW1   : INT;     (* 带速反馈 *)
   END_VAR
-  VAR_OUTPUT
-    Cyl1_extend AT %QX0.0 : BOOL;     (* 气缸推出指令 *)
-    Belt1_run   AT %QX0.1 : BOOL;     (* 传送带运行 *)
+  VAR   (* 输出：PLC → 仿真 *)
+    Cyl1_extend AT %QX1.0 : BOOL;     (* 气缸推出 → 线圈 8 *)
+    Belt1_run   AT %QX1.1 : BOOL;     (* 传送带运行 → 线圈 9 *)
   END_VAR
   (* —— 控制逻辑 —— *)
   ...
@@ -368,14 +362,14 @@ END_PROGRAM
 #### 4.2.2 编译流水线
 
 ```
-plc.st ──(ST→PLCopen XML 包装)──> project.xml
-        ──(matiec iec2c，Beremiz 内部同款调用，如 iec2c -f -l -p Cfg project.xml)──>  POUS.c / POUS.h / LOCATED_VARIABLES.h / accessor.h ...
+plc_project.xml ──(xml2st 校验+转换，复用 PLC 侧，转换点唯一)──> plc.st
+        ──(matiec iec2c，输入为 ST 文本，如 iec2c -f -l -p Cfg plc.st)──>  POUS.c / POUS.h / accessor.h ...
         ──(gcc/clang 编译为共享库)──>  plc_logic.dll（Windows）/ plc_logic.so（Linux）
 ```
 
 说明：
 
-- matiec（Beremiz 项目的 IEC 61131-3 编译器，开源）以 PLCopen XML 为输入，正好与总体方案中"按 IEC 61131-10 输出 PLCopen XML"衔接——**同一份 XML 既能交换给 CODESYS，又能喂给 matiec 编译**；
+- matiec（Beremiz 项目的 IEC 61131-3 编译器，开源）的 iec2c **输入是 ST 文本**（官方说明：接受 ST/IL/SFC 文本，不解析 XML）；XML→ST 统一由 PLC 侧 xml2st 完成——**两条链路编译的是同一份 .st 产物**（链路 B 的 OpenPLC 内置 matiec，编译的正是同一份转换结果），转换点唯一，杜绝双链路语义漂移；
 - 编译在 WSL/Linux 下最顺（gcc 工具链现成）；Windows 侧可用 MinGW 交叉产出 `.dll`，或整个闭环在 Docker 里跑；
 - matiec 生成代码的符号命名（定位变量对应的 C 符号、init/run 函数签名）在不同版本间略有差异，**因此必须有一层 shim 把这些差异隔离掉**，见下。
 
@@ -391,21 +385,22 @@ plc.st ──(ST→PLCopen XML 包装)──> project.xml
 extern void config_init__(void);
 extern void config_run__(unsigned long tick);
 
-/* 定位变量在生成代码中即 C 外部符号（__IX0_0 / __QX0.1 风格），
+/* 定位变量在生成代码中即 C 外部符号（__QX0_0 / __QW0 风格），
    适配层按地址表逐个引用，上层只认下面的稳定接口 */
 void plc_init(void)            { config_init__(); }
 void plc_run(unsigned long t)  { config_run__(t); }
 
 /* 显式 IO 镜像：由构建脚本按 io_map 生成的地址表直接读写定位变量 */
-extern BOOL __IX0_0;  extern BOOL __QX0_0;  extern BOOL __QX0_1;
-extern REAL __IW0;    extern REAL __IW1;
+extern BOOL __QX0_0;                      /* PE1_detected（输入） */
+extern INT  __QW0;  extern INT  __QW1;    /* Cyl1_pos / Belt1_speed（输入） */
+extern BOOL __QX1_0; extern BOOL __QX1_1; /* Cyl1_extend / Belt1_run（输出） */
 
-void plc_write_image(const uint8_t* di, const float* ai) {
-    __IX0_0 = di[0];
-    __IW0   = ai[0];  __IW1 = ai[1];
+void plc_write_image(const uint8_t* di, const int16_t* ai) {
+    __QX0_0 = di[0];                      /* 传感器注入 */
+    __QW0   = ai[0];  __QW1 = ai[1];
 }
-void plc_read_image(uint8_t* dq, float* aq) {
-    dq[0] = __QX0_0;  dq[1] = __QX0_1;
+void plc_read_image(uint8_t* dq, int16_t* aq) {
+    dq[0] = __QX1_0;  dq[1] = __QX1_1;    /* 输出 */
 }
 ```
 
@@ -419,25 +414,25 @@ class SoftPLC:
         self.lib.plc_init.argtypes = []
         self.lib.plc_run.argtypes  = [ctypes.c_ulong]
         self.lib.plc_write_image.argtypes = [ctypes.POINTER(ctypes.c_uint8),
-                                             ctypes.POINTER(ctypes.c_float)]
+                                             ctypes.POINTER(ctypes.c_int16)]
         self.lib.plc_read_image.argtypes  = [ctypes.POINTER(ctypes.c_uint8),
-                                             ctypes.POINTER(ctypes.c_float)]
+                                             ctypes.POINTER(ctypes.c_int16)]
         self.layout = io_layout          # 由 io_map.json 生成的通道表
 
     def init(self): self.lib.plc_init()
 
     def run(self, tick: int, image: dict) -> dict:
         di = (ctypes.c_uint8 * self.layout.n_di)(*image["_di"])
-        ai = (ctypes.c_float  * self.layout.n_ai)(*image["_ai"])
+        ai = (ctypes.c_int16 * self.layout.n_ai)(*image["_ai"])
         self.lib.plc_write_image(di, ai)      # ① 写输入
         self.lib.plc_run(tick)                # ② 一个扫描周期
         dq = (ctypes.c_uint8 * self.layout.n_dq)()
-        aq = (ctypes.c_float  * self.layout.n_aq)()
+        aq = (ctypes.c_int16 * self.layout.n_aq)()
         self.lib.plc_read_image(dq, aq)       # ③ 读输出
         return self.layout.unpack(dq, aq)
 ```
 
-> shim 中的地址表（`__IX0_0` 等）由构建脚本从 `io_map.json` 自动生成，**不手写**；shim 这个文件本身就是代码生成模块的产物之一。
+> shim 中的地址表（`__QX0_0` / `__QW0` 等）由构建脚本从 `io_map.json` 自动生成，**不手写**；shim 这个文件本身就是代码生成模块的产物之一。
 
 ### 4.3 lockstep 时序同步
 
@@ -456,16 +451,16 @@ class SoftPLC:
 - 若要模拟**慢扫描 PLC**（如 10ms/20ms 扫描），按 `tick % N == 0` 降频调用 `plc_run`，输入输出在两次扫描之间保持（零阶保持），更贴近真实行为；
 - 由于 ①②③ 在 ④ 之前顺序执行，**PLC 与物理之间不存在竞态与时钟漂移**，trace 中的时序可以逐 tick 精确对账——这是失败归因可靠性的基础。
 
-### 4.4 备选链路 B：CODESYS 软 PLC + Modbus TCP（工业验收用）
+### 4.4 备选链路 B：OpenPLC 软 PLC + Modbus TCP（工业验收用，已落地）
 
-拓扑：`CODESYS Soft PLC（Modbus TCP 主站） ⇄ Isaac 主进程内嵌 pymodbus 从站（寄存器镜像）`
+拓扑：`OpenPLC v3 运行时（Modbus TCP 服务端 :502）⇄ pymodbus 客户端（Isaac/验证侧，周期轮询）`
 
-- CODESYS 工程中添加 Ethernet 设备 → Modbus TCP Master → 两个 Channel：`INPUTS`（读保持寄存器 0–511，映射 `%IW/%IX`）、`OUTPUTS`（写保持寄存器 1024–1535，映射 `%QW/%QX`）；
-- Isaac 侧 `pymodbus` 异步 TCP Server 持有这 1536 个寄存器：仿真循环每步把传感器值打包写入 `0–511`，从 `1024–1535` 解包出 PLC 输出；
-- CODESYS 主站任务周期设 10ms，与仿真物理步同量级即可（工厂级逻辑对 10ms 抖动不敏感）；
-- Bool 量按 16 个/寄存器 位打包，REAL 按 2 寄存器（浮点字序在适配层统一为大端）。
+- OpenPLC 以 Docker 部署（`fdamador/openplc`，Web API :8080 / Modbus TCP :502），部署编排复用 PLC 侧已实现的 HTTP 流水线（xml2st 校验 → 上传 → 内置 matiec 编译 → 启动，含 POST /deploy 服务化端点）；
+- IO 映射：`%QX` → Modbus 线圈、`%QW` → 保持寄存器；验证/桥接侧按 `io_map.json` 地址表读输出、写传感器注入（同为 %Q 区）；
+- **线圈写入红线**：OpenPLC 的 Modbus 服务端在窄范围线圈写入时会破坏相邻位，必须经 PLC 侧 `modbus_io.SafeCoilIO`（读-改-写整组）访问，禁止裸 write_coil；
+- 轮询周期 10ms 量级即可（工厂级逻辑对抖动不敏感）；本机延迟约 1–10ms。
 
-此链路用于**最终轮验收**：证明生成的 ST 代码在真实商业软 PLC 上同样可编译、可运行、行为一致。A/B 两条链路共用同一份 ST 与 io_map，差异只在运行时。
+此链路用于**最终轮验收**：证明生成的代码在真实软 PLC 运行时上可编译、可运行、行为一致（counter / sorting / pump / traffic 四场景已按此链路验收通过）。A/B 两条链路共用同一份 XML→.st 产物与 io_map，差异只在运行时。
 
 ---
 
@@ -538,7 +533,7 @@ runs/<date>_<task>/
   final/ -> 通过轮次的快照      # 成功后冻结
 ```
 
-- 终止条件：全部准则通过 → 冻结 `final/`，进入链路 B 做 CODESYS 验收；或达到 `max_iters`（默认 6）→ 选**通过准则数最多**的一轮作为 best，输出失败分析报告供人工介入；
+- 终止条件：全部准则通过 → 冻结 `final/`，进入链路 B 做 OpenPLC 软 PLC 验收；或达到 `max_iters`（默认 6）→ 选**通过准则数最多**的一轮作为 best，输出失败分析报告供人工介入；
 - 全部产物入 git（trace 用 parquet），保证**每个结论可回溯复现**。
 
 ### 5.4 端到端编排（伪代码）
@@ -572,7 +567,7 @@ def solve(request):
 ```
 sim-loop/
 ├── orchestrator/          # 端到端编排、迭代管理
-├── codegen/               # ST 生成、PLCopen XML 包装、shim/地址表生成
+├── codegen/               # xml2st 接入（复用 PLC 侧）、shim/地址表生成（ST 生成本体归智能体侧）
 ├── scenegen/              # SceneSpec Schema、校验器、USD 构建器
 ├── components/            # 组件 USD 资产库 + quantity 清单 + 参数规则
 ├── runtime/
@@ -584,7 +579,7 @@ sim-loop/
 └── runs/                  # 迭代产物（git 管理）
 ```
 
-依赖：Isaac Sim 4.5（原生安装或 pip）、matiec（Beremiz 项目）、gcc/MinGW 或 WSL、Python 3.10+（pandas / pyarrow / jsonschema / ctypes）、CODESYS（仅验收链路）、pymodbus（仅链路 B）。
+依赖：Isaac Sim 4.5（原生安装或 pip）、matiec（Beremiz 项目）、gcc/MinGW 或 WSL、Python 3.10+（pandas / pyarrow / jsonschema / ctypes）、OpenPLC v3 Docker 镜像（仅验收链路）、pymodbus（仅链路 B）。
 
 ---
 
