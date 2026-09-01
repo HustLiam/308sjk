@@ -221,12 +221,16 @@ def main():
             err = None
             try:
                 from System import Guid
-                sym_parent.create_symbol_config(False, True, Guid.Empty)
+                # 第三参数是编译器格式 GUID：{0141eb75-...} 是 "optimized" 工厂
+                # （CODESYS Forge 论坛验证的可用值）；Guid.Empty 会被拒绝且报错
+                # 信息误导性地提示"父对象不接受符号配置对象"
+                optimized = Guid('{0141eb75-141b-4ea1-9a8c-75f952b22a6c}')
+                sym_parent.create_symbol_config(False, False, optimized)
                 created = True
             except Exception as e1:
                 err = e1
                 try:
-                    sym_parent.create_symbol_config(False, False, Guid.Empty)
+                    sym_parent.create_symbol_config(False, True, Guid.Empty)
                     created = True
                 except Exception as e2:
                     err = e2
