@@ -26,7 +26,32 @@ PLCOPEN_FAMILY = "{http://www.plcopen.org/xml/"
 XHTML_NS = "{http://www.w3.org/1999/xhtml}"
 POU_TYPES = {"program": "PROGRAM", "functionBlock": "FUNCTION_BLOCK", "function": "FUNCTION"}
 IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
-ADDRESS_RE = re.compile(r"^%[IQ](W|D)?[0-9]+(\.[0-9]+)?$")
+ADDRESS_RE = re.compile(r"^%[IQ]([WDX])?[0-9]+(\.[0-9]+)?$")
+
+# 地址宽度 <-> 类型位宽匹配表（matiec 位宽不匹配会报晦涩错误；%QD/%ID 不映射
+# Modbus 缓冲区，直接禁用，避免"编译通过但外部读不到"的静默故障）
+ADDR_WIDTH = {"X": 1, "W": 16}
+BIT_TYPES = {"BOOL"}
+WORD_TYPES = {"INT", "UINT", "WORD"}
+DWORD_TYPES = {"DINT", "UDINT", "DWORD"}  # 仅用于校验报错提示，不允许 AT %*D
+
+
+def _check_addr_width(addr, vtype, ctx, vname, problems):
+    if addr is None:
+        return
+    m = ADDRESS_RE.match(addr)
+    width = m.group(1) or "X"
+    if width == "D":
+        problems.append("%s: 变量 %r 使用 %r —— 双字地址不映射 OpenPLC 的 Modbus 缓冲区"
+                        "（保持寄存器/线圈只挂 %%QW/%%QX），请改用 INT@%%QW（32位值用两个连续 %%QW 拼接）"
+                        % (ctx, vname, addr))
+        return
+    if width == "X" and vtype not in BIT_TYPES:
+        problems.append("%s: 变量 %r 类型 %s 不能放位地址 %r（%s 只接受 BOOL）"
+                        % (ctx, vname, vtype, addr, addr[:3]))
+    if width == "W" and vtype not in WORD_TYPES:
+        problems.append("%s: 变量 %r 类型 %s 与字地址 %r 位宽不匹配（%s 只接受 INT/UINT/WORD）"
+                        % (ctx, vname, vtype, addr, addr[:3]))
 
 # 支持的基本类型（XML 元素名 -> ST 类型名）
 PRIMITIVE_TYPES = {
@@ -173,7 +198,8 @@ def parse(xml_path):
                     kw += " RETAIN"
                 if vb.get("persistent", "false") in ("true", "1"):
                     problems.append("%s: 不支持 PERSISTENT 限定符（matiec 限制）" % ctx)
-                decls = []
+                decls_plain = []   # 普通变量
+                decls_located = []  # 带 AT 地址的定位变量
                 for var in vb.findall(ns + "variable"):
                     vname = var.get("name", "")
                     if not IDENT_RE.match(vname):
@@ -186,6 +212,8 @@ def parse(xml_path):
                     if addr is not None and not ADDRESS_RE.match(addr):
                         problems.append("%s 中变量 %r 的地址 %r 不合法（形如 %%QW0/%%QX0.1）"
                                         % (ctx, vname, addr))
+                    elif addr is not None:
+                        _check_addr_width(addr, vtype, ctx, vname, problems)
                     init = _initial_text(var, ns)
                     parts = ["    " + vname]
                     if addr:
@@ -193,11 +221,14 @@ def parse(xml_path):
                     parts.append(": " + vtype)
                     if init is not None:
                         parts.append(":= " + init)
-                    decls.append(" ".join(parts) + ";")
-                if decls:
-                    iface_lines.append("  " + kw)
-                    iface_lines.extend(decls)
-                    iface_lines.append("  END_" + st_kw)
+                    (decls_located if addr else decls_plain).append(" ".join(parts) + ";")
+                # matiec 语法怪癖：同一个 VAR 块内，FB 实例等普通声明与带 AT 的
+                # 定位声明混放会报 invalid variable(s) declaration——必须分块
+                for decls in (decls_plain, decls_located):
+                    if decls:
+                        iface_lines.append("  " + kw)
+                        iface_lines.extend(decls)
+                        iface_lines.append("  END_" + st_kw)
 
         ret_type = ""
         if ptype == "function":

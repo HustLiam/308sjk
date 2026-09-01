@@ -25,7 +25,7 @@ class TestCounterArtifact:
     def test_st_contains_program_and_address(self):
         _, st, _ = convert(COUNTER_XML)
         assert "PROGRAM PLC_PRG" in st
-        assert "AT %QW0" in st          # 对外接口：Modbus 保持寄存器 0
+        assert "AT %QW0" in st          # 对外接口：INT -> Modbus 保持寄存器 0
         assert "cnt := cnt + 1" in st   # 每秒自增逻辑
         assert "TON" in st
 
@@ -35,12 +35,15 @@ class TestCounterArtifact:
         assert "PROGRAM instance0 WITH task0 : PLC_PRG;" in st
         assert "END_PROGRAM" in st
 
-    def test_internal_var_not_addressed(self):
+    def test_located_vars_in_separate_block(self):
+        """matiec 要求 AT 定位变量与普通声明（如 FB 实例）分 VAR 块。"""
         _, st, _ = convert(COUNTER_XML)
-        # pulse 是内部状态：出现在声明里，但不带 AT 地址
-        for line in st.splitlines():
-            if "pulse" in line and ":" in line:
-                assert "AT %" not in line
+        blocks = st.split("END_VAR")
+        # pulse 所在块不含 AT；cnt 所在块只有定位变量
+        pulse_block = next(b for b in blocks if "pulse" in b)
+        assert "AT %" not in pulse_block
+        cnt_block = next(b for b in blocks if "cnt AT" in b)
+        assert "TON" not in cnt_block
 
 
 # ---------------------------------------------------------------- 反例用例
@@ -126,6 +129,33 @@ def test_bad_address_rejected(tmp_path):
     assert any("地址" in p for p in problems)
 
 
+# ------------------------------------------------------- 位宽匹配（Modbus 映射）
+def test_dword_address_rejected(tmp_path):
+    """%QD 不映射 Modbus 缓冲区——必须拒绝，防止编译通过但外部读不到。"""
+    bad = GOOD_MINIMAL.replace('name="y" address="%QW2"><type><INT />',
+                               'name="y" address="%QD0"><type><DINT />')
+    ok, _, problems = convert(_write(tmp_path, bad))
+    assert not ok
+    assert any("不映射" in p for p in problems)
+
+
+def test_width_mismatch_rejected(tmp_path):
+    # DINT 放 %QW：位宽不匹配
+    bad = GOOD_MINIMAL.replace('name="y" address="%QW2"><type><INT />',
+                               'name="y" address="%QW2"><type><DINT />')
+    ok, _, problems = convert(_write(tmp_path, bad))
+    assert not ok
+    assert any("位宽不匹配" in p for p in problems)
+
+
+def test_int_on_bit_address_rejected(tmp_path):
+    bad = GOOD_MINIMAL.replace('name="y" address="%QW2"><type><INT />',
+                               'name="y" address="%QX0.1"><type><INT />')
+    ok, _, problems = convert(_write(tmp_path, bad))
+    assert not ok
+    assert any("BOOL" in p for p in problems)
+
+
 def test_unsupported_pou_type_rejected(tmp_path):
     bad = GOOD_MINIMAL.replace('pouType="program"', 'pouType="programX"')
     ok, _, problems = convert(_write(tmp_path, bad))
@@ -163,7 +193,7 @@ FB_FIXTURE = """<?xml version="1.0" encoding="UTF-8"?>
             <variable name="running"><type><BOOL /></type></variable>
           </outputVars>
           <localVars>
-            <variable name="speed" address="%QW4"><type><DINT /></type></variable>
+            <variable name="speed" address="%QW4"><type><INT /></type></variable>
             <variable name="buf"><type><array>
               <dimension x="1" y="8" />
               <baseType><INT /></baseType>

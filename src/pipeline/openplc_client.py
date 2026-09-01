@@ -65,7 +65,12 @@ class OpenPLCClient:
         return True
 
     def upload_and_compile(self, st_text, name):
-        """上传 .st 并触发编译，返回 (st_file, 编译等待回调所需参数)。"""
+        """上传 .st 并触发编译，返回 st_file 名。
+
+        表单字段名以容器内 webserver.py 源码为准（upload-program-action 读取
+        prog_name / prog_descr / prog_file / epoch_time），并从上传响应的
+        隐藏域动态核对，避免字段漂移。
+        """
         files = {"file": (name + ".st", st_text.encode("utf-8"))}
         r = self._request("POST", "/upload-program", files=files)
         if r.status_code != 200:
@@ -74,7 +79,7 @@ class OpenPLCClient:
         # 上传后返回元数据表单：解析其中的隐藏字段（含随机 .st 文件名）
         fields = dict(INPUT_RE.findall(r.text))
         st_file = None
-        for key, val in fields.items():
+        for val in fields.values():
             if val.endswith(".st"):
                 st_file = val
                 break
@@ -84,40 +89,60 @@ class OpenPLCClient:
                 raise OpenPLCError("无法从上传响应中解析 st 文件名")
             st_file = m.group(0)
 
-        data = {"file": st_file,
-                "name": name,
-                "description": "deployed by agent pipeline",
+        data = {"prog_name": name,
+                "prog_descr": "deployed by agent pipeline",
+                "prog_file": st_file,
                 "epoch_time": str(int(time.time()))}
-        # 以服务端表单实际字段为准，缺的补默认
-        for k, v in fields.items():
-            data.setdefault(k, v)
-        self._request("POST", "/upload-program-action", data=data)
+        # 服务端表单里出现的同名字段优先（如隐藏的 epoch_time/prog_file）
+        for k in ("prog_name", "prog_descr", "prog_file", "epoch_time"):
+            if k in fields and k in ("epoch_time", "prog_file"):
+                data[k] = fields[k] if fields[k] else data[k]
+        resp = self._request("POST", "/upload-program-action", data=data)
+        if resp.status_code != 200 or "Error connecting" in resp.text:
+            raise OpenPLCError("程序登记失败: HTTP %d / %s"
+                               % (resp.status_code, resp.text[:200]))
 
         self._request("GET", "/compile-program", params={"file": st_file})
         return st_file
 
+    # 编译页自身使用的判定串（webserver.py draw_compiling_page 的 JS）
+    OK_MARKER = "Compilation finished successfully!"
+    FAIL_MARKER = "Compilation finished with errors!"
+
     def compile_status(self):
-        """返回 'SUCCESS' / 'FAILED' / 'COMPILING'（或原始片段）。"""
+        """返回 'SUCCESS' / 'FAILED' / 'COMPILING' / 'NOT_STARTED'。"""
         r = self._request("GET", "/compilation-logs")
+        if r.status_code == 500:
+            return "NOT_STARTED"   # compilation_object 未定义 = 无编译被触发过
         text = r.text
-        for marker in ("SUCCESS", "FAILED", "COMPILING"):
-            if marker in text:
-                return marker
-        return "COMPILING" if "Compiling" in text else "UNKNOWN"
+        if self.OK_MARKER in text:
+            return "SUCCESS"
+        if self.FAIL_MARKER in text:
+            return "FAILED"
+        return "COMPILING"
 
     def wait_compilation(self, timeout=300, poll=3.0):
         """轮询直到编译结束，返回 (ok, 末次日志文本)。"""
         deadline = time.time() + timeout
         last_text = ""
+        consecutive_500 = 0
         while time.time() < deadline:
             r = self._request("GET", "/compilation-logs")
+            if r.status_code == 500:
+                consecutive_500 += 1
+                if consecutive_500 >= 5:
+                    raise OpenPLCError("编译似乎从未启动（/compilation-logs 持续 500）")
+                time.sleep(poll)
+                continue
+            consecutive_500 = 0
             last_text = r.text
-            if "SUCCESS" in last_text:
+            if self.OK_MARKER in last_text:
                 return True, last_text
-            if "FAILED" in last_text:
+            if self.FAIL_MARKER in last_text:
                 return False, last_text
             time.sleep(poll)
-        raise OpenPLCError("编译超时（>%d 秒）" % timeout)
+        raise OpenPLCError("编译超时（>%d 秒），最后日志: %s"
+                           % (timeout, last_text[-300:]))
 
     def start(self):
         self._request("GET", "/start_plc")

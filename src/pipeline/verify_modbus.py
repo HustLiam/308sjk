@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Modbus 冒烟验证：读 %QW0 (cnt, DINT, 占保持寄存器 0~1)，确认每秒 +1。
+Modbus 冒烟验证：读 %QW0（cnt, INT16, 保持寄存器 0），确认每秒 +1。
 
 用法:
     python src/pipeline/verify_modbus.py [--host 127.0.0.1] [--port 502]
@@ -9,21 +9,19 @@ Modbus 冒烟验证：读 %QW0 (cnt, DINT, 占保持寄存器 0~1)，确认每�
 """
 
 import argparse
-import struct
 import sys
 import time
 
 
-def read_counter(client, reg=0):
-    """读 2 个保持寄存器并按小端字序拼成 int32（OpenPLC 的 %QW DINT 布局）。"""
-    try:  # pymodbus >= 3.x
-        rr = client.read_holding_registers(reg, 2)
-    except TypeError:  # pymodbus 2.x
-        rr = client.read_holding_registers(address=reg, count=2)
+def read_register(client, reg=0):
+    """读单个保持寄存器（pymodbus 2.x/3.x 兼容）。"""
+    try:
+        rr = client.read_holding_registers(address=reg, count=1)
+    except TypeError:
+        rr = client.read_holding_registers(reg, 1)
     if rr.isError():
         raise RuntimeError("Modbus 读失败: %s" % rr)
-    lo, hi = rr.registers[0], rr.registers[1]
-    return struct.unpack("<i", struct.pack("<HH", lo, hi))[0]
+    return rr.registers[0]
 
 
 def main():
@@ -53,7 +51,10 @@ def main():
     try:
         values = []
         for i in range(args.samples):
-            v = read_counter(client)
+            v = read_register(client)
+            # INT16 有符号解释
+            if v > 32767:
+                v -= 65536
             values.append(v)
             print("[verify] sample %d: cnt = %d" % (i + 1, v))
             if i < args.samples - 1:

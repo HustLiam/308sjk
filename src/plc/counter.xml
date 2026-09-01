@@ -27,10 +27,11 @@
                 <derived name="TON" />
               </type>
             </variable>
-            <!-- AT 地址即对外接口：%QW0 -> Modbus 保持寄存器 0（DINT 占 0~1） -->
+            <!-- AT 地址即对外接口：%QW0 -> Modbus 保持寄存器 0（INT 16位，位宽必须匹配：
+                 BOOL->%QX  INT/UINT/WORD->%QW。%QD 不映射 Modbus，禁用） -->
             <variable name="cnt" address="%QW0">
               <type>
-                <DINT />
+                <INT />
               </type>
               <initialValue>
                 <simpleValue value="0" />
