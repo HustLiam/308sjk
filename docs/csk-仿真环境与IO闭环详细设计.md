@@ -509,56 +509,23 @@ class SoftPLC:
 
 ### 5.2 失败归因与反馈 Prompt 的组织
 
-反馈 Prompt 由程序自动拼装，包含四类信息（按优先级）：
-
-1. **失败的准则 + 证据**：上节 `details` 原文；
-2. **相关 trace 窗口**：自动截取失败事件前后 ±1s 的信号曲线（ markdown 表格化），只给相关信号，不倾倒全量数据；
-3. **当前代码**：完整 ST 源码；若只是小改动，附上一轮 diff；
-4. **迭代记忆**：历史各轮"改了什么 → 哪条准则从失败变通过/变失败"，明确指示"不要回退已通过的修改"。
-
-归因会区分**代码问题**与**场景问题**（如物料初始位置摆错导致永远检测不到——这是 SceneSpec 的错，反馈给场景生成而非代码生成），路由到对应的重生成模块。
+**归因、反馈包拼装与路由的实现归 gc**（权威定义见《gc-需求理解与闭环编排详细设计》§3.2 / §4）。本侧职责边界：只产出 §5.1 的确定性 verdict 证据，**不参与归因**；归因所需的 trace 窗口截取（±1s）由本侧 trace 工具提供接口。
 
 ### 5.3 迭代管理与终止条件
 
-```
-runs/<date>_<task>/
-  request.json                 # 用户原始指令 + 结构化需求规格
-  iter_001/
-    plc.st  plcopen.xml        # 生成的代码
-    scene.spec.json  scene.usda  io_map.json
-    build/plc_logic.dll        # 编译产物
-    trace.parquet  events.json  exit.json
-    verdict.json  report.md    # 判定结果 + LLM 归因报告
-  iter_002/ ...
-  final/ -> 通过轮次的快照      # 成功后冻结
-```
+**迭代管理（runs/ 产物目录、终止条件、best-effort）归 gc**（权威定义见 gc 文档 §4）。本侧只约定产物格式：`trace.parquet / events.json / exit.json` 的通道与字段见 §3.5，`verdict.json` 见 §5.1。
 
-- 终止条件：全部准则通过 → 冻结 `final/`，进入链路 B 做 OpenPLC 软 PLC 验收；或达到 `max_iters`（默认 6）→ 选**通过准则数最多**的一轮作为 best，输出失败分析报告供人工介入；
-- 全部产物入 git（trace 用 parquet），保证**每个结论可回溯复现**。
+### 5.4 端到端编排
 
-### 5.4 端到端编排（伪代码）
+**solve() 闭环循环的权威定义在 gc 文档 §4**（编排器实现归 gc）。本侧在该循环中暴露的接口契约（均定义于本文档各节）：
 
-```python
-def solve(request):
-    spec = understand(request)                          # ① 需求理解（含验收准则）
-    history = []
-    for i in range(1, MAX_ITERS + 1):
-        st_code, plc_xml = gen_plc_code(spec, history)  # ② 代码生成
-        if not compile_ok(st_code):                     #    编译失败 → 直接反馈，不进仿真
-            history.append(compile_error(st_code)); continue
-
-        scene = gen_scene_spec(spec, history)           # ③ 场景生成（SceneSpec）
-        if errs := validate_scene(scene):               #    Schema/物理校验
-            history.append(scene_error(errs)); continue
-        usd, io_map = build_usd(scene)                  #    确定性转换
-
-        trace, events, exit_ = run_isaac_headless(usd, io_map, "build/plc_logic.dll")
-        verdict = evaluate(acceptance(spec), trace, events, exit_)   # ⑤ 确定性判定
-        if verdict.ok:
-            return finalize(i)                          # ✅ 成功出口
-        history.append(verdict, analyze(trace, verdict))             # ⑥ 归因入记忆
-    return best_effort()
-```
+| 接口 | 定义处 |
+|---|---|
+| `gen_scene_spec(spec, history)`（SceneSpec LLM 生成） | §2.1 / §2.2 |
+| `validate_scene(scene)`（Schema + 物理校验） | §2.5 |
+| `build_usd(scene)` → `scene.usda + io_map.json` | §2.4 |
+| `run_isaac_headless(usd, io_map, dll)` → trace/events/exit | §3.3 / §3.5 |
+| `evaluate(acceptance, trace, ...)` → `verdict.json` | §5.1 |
 
 ---
 

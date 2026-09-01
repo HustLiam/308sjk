@@ -58,12 +58,7 @@ workspace/                  # 本地生成物（不入库）
 
 分支模型、合入流程、契约变更（RFC）、按侧速查约定与求助路径见 **[CONTRIBUTING.md](CONTRIBUTING.md)**；三人实时进度与待配合事项见 `docs/协作看板.md`。
 
-## 设计约定（agent 生成契约）
+## 设计约定（agent 生成契约，摘要）
 
-- **XML 是唯一源码**：只产出 PLCopen XML；可执行 .st 由 xml2st 机械推导
-- **ST 本体子集**：POU 一律 ST 语言本体，类型限 PROGRAM / FUNCTION_BLOCK / FUNCTION
-- **主 POU 固定 `PLC_PRG`**：CONFIGURATION 模板按名挂载任务（20ms 周期）
-- **对外接口 = AT 地址变量**：`%QX0.1`（线圈）、`%QW0`（保持寄存器，DINT 占 2 个）；
-  不带 AT 的变量为内部状态，不进 Modbus 表
-- **编译错误回喂**：matiec 日志写入 `workspace/deploy_result.json` 的 errors，可直接进
-  agent 纠错 prompt
+- **XML 是唯一源码**：只产出 PLCopen XML，`.st` 由 xml2st 机械推导；对外接口 = `AT %QX/%QW` 定位变量（统一 %Q 区），编译错误回喂 agent 纠错
+- 完整契约（ST 子集、位宽表、显式拒绝清单）的权威定义见 `docs/lx-PLC代码生成与执行引擎详细设计.md` §3
