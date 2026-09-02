@@ -1,0 +1,58 @@
+{
+  "scene_id": "conveyor_sort_001",
+  "spec_version": "1.1",
+  "units": "m",
+  "physics": { "gravity": [0, 0, -9.81], "physics_dt": 0.00833, "solver": "tgs" },
+  "ground": { "size": [20, 20], "friction": 0.8 },
+  "lighting": "warehouse_preset",
+
+  "assets": [
+    {
+      "id": "belt_1",
+      "type": "conveyor_belt",
+      "pose": { "position": [0, 0, 0.5], "rpy_deg": [0, 0, 0] },
+      "params": { "length": 3.0, "width": 0.6, "height": 0.1, "max_speed": 0.8 }
+    },
+    {
+      "id": "cyl_1",
+      "type": "pneumatic_cylinder",
+      "parent": "belt_1",
+      "pose": { "position": [2.0, -0.35, 0.1] },
+      "params": { "axis": "y", "stroke": 0.4, "rod_diameter": 0.02, "extend_speed": 1.0, "retract_speed": 1.0 }
+    },
+    {
+      "id": "pe_1",
+      "type": "photoelectric_sensor",
+      "parent": "belt_1",
+      "pose": { "position": [1.8, -0.25, 0.1] },
+      "params": { "beam_direction": [0, 1, 0], "beam_length": 0.5 }
+    },
+    {
+      "id": "chute_1",
+      "type": "bin_chute",
+      "pose": { "position": [2.0, 0.75, 0.0] },
+      "params": { "size": [0.4, 0.4, 0.5] }
+    },
+    {
+      "id": "box_a",
+      "type": "rigid_box",
+      "pose": { "position": [0, 0, 0.62] },
+      "params": { "size": 0.1, "mass": 0.5, "color": "#d9534f" }
+    }
+  ],
+
+  "io_map": [
+    { "plc_var": "PE1_detected", "dir": "input",  "type": "bool",  "bind": { "asset": "pe_1",  "quantity": "beam_broken" } },
+    { "plc_var": "Cyl1_extend",  "dir": "output", "type": "bool",  "bind": { "asset": "cyl_1", "quantity": "extend_cmd" } },
+    { "plc_var": "Cyl1_pos",     "dir": "input",  "type": "float", "bind": { "asset": "cyl_1", "quantity": "position", "range": [0, 0.4] } },
+    { "plc_var": "Belt1_run",    "dir": "output", "type": "bool",  "bind": { "asset": "belt_1", "quantity": "run_cmd" } }
+  ],
+
+  "script": {
+    "spawn_schedule": [
+      { "asset_template": "box_a", "at_time": [0.0], "position": [0, 0, 0.62] }
+    ],
+    "perturbations": [],
+    "termination": { "max_sim_time": 30.0, "early_stop": "all_boxes_settled" }
+  }
+}

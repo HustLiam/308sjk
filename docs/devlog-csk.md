@@ -2,7 +2,73 @@
 
 > 仅技术说明（改了什么 / 为什么 / 如何验证 / 技术坑）。进度协调内容一律写 `docs/协作看板.md`。本文件在 master 合入前移除，永不进 master。
 
-## 2026-09-02 模块 ③ 职责收窄：SceneSpec JSON 生成移交给 gc
+## 2026-09-02 (2) 龙门场景三缺陷修复 + 运行时回环切 Modbus
+
+### 缺陷与根因
+
+1. **部件"飘移"、手改 translate 弹回**：`_build_gantry` 的 `joint_x` body0 指向
+   `x_rail`，而它只有 CollisionAPI 没有 RigidBodyAPI——PhysX 拒用 body 非刚体的关节，
+   整条链（y_bridge/z_carriage/pen）成自由体，重力下悬挂倾斜（截图：pen 下坠 0.14m
+   且带 9° 倾斜）。播放中物理每帧覆写位姿，手动改 translate 自然弹回。
+   `_build_cylinder` 的 base 同病。
+2. **X 轴"只是物体"**：运动链没有显式 x_carriage（导轨是纯静态件、桥身叫 y_bridge
+   却沿 X 动），命名与结构都不能自解释。
+3. **Z 轴语义反 + 参数不稳**：q∈[0,tz] 沿 +Z 只能上抬，笔尖永远够不到纸面；
+   k=6000/m=0.3 在 60Hz 下 dt·ω≈2.36>2（违反本文件自家整定准则），会抖。
+4. **jog 环路断连报错 + Isaac 卡死**（problem.txt）：asyncua sync 包装在 Isaac 进程内
+   的会话/超时语义（3600000→600000ms 截断、CloseSession 超时、Unhandled exception），
+   与 GUI/物理线程争用 GIL，断连时互等。主路线已定 Modbus，直接结构性消灭该类故障。
+
+### 修法（scenegen）
+
+- 新增 `_kinematic_body`：关节固定端 = kinematic 锚刚体（USD 的固定锚标准做法），
+  静态几何（base_plate/paper/立柱/x_rail）挂其下成为 kinematic 形状；
+- `_prismatic_joint` 增加 `target` 参数（开场驱动目标）；
+- `_build_gantry` 重构为显式三轴链 `base→joint_x→x_carriage→joint_y→y_carriage→
+  joint_z→z_carriage`；Z 轴语义翻转：**q=0 落笔（笔尖距台面 2mm）、q=tz 抬笔**，
+  开场 target=tz 保持抬笔（视觉上笔插在主轴头/滑块里，全行程不脱接）；
+- joint_z 整定：m=0.4、k=4000、d=80、F=300 → dt·ω=1.67<2、ζ=1、重力下坠 0.98mm<1mm；
+- pen 无碰撞（避免与台面接触抖动，绘图验收走 trace 坐标不受影响）；
+- 新增 `simio:posBody`（StringArray）+ `simio:posRest`（FloatArray）：运行时桥按
+  "刚体 translate 分量 − 关节零位坐标"回读关节坐标 q，不依赖 PhysX 专有 state API；
+- io_map 绑定的 usd_prim（joint_x/y/z）路径不变，旧 io_map/spec 契约兼容。
+
+### 防复发
+
+- `smoke.structural_check` 增加黄金规则：关节 body0/body1 指向的 prim 必须有
+  RigidBodyAPI（本次缺陷正是"只查 rel 存在、不查目标是刚体"漏掉的）；
+- `test_scenegen.py` 新增 7 组断言：关节两端全刚体、base kinematic、Z 轴语义
+  （limits/target/落笔位笔尖 2mm）、三轴刚体齐全、io_map 绑定、posBody/posRest；
+  全套 22 组断言绿，`out/gantry`、`out/example` 已重生成。
+
+### 运行时切 Modbus（runtime/）
+
+- 新核心 `gantry_bridge.py`：布局从 io_map.json 推导（位置区=契约 server_register，
+  指令区紧随传感区块），float32 大端与 %QW REAL 编码一致；服务端线程独立事件循环
+  （Windows 用 SelectorEventLoop，Proactor 关停噪声大）；就绪判据 = TCP 探活 +
+  0.25s 稳定（TCP 背板队列会先于应用层可服务，纯探活会假就绪）；
+- `isaac_modbus_server.py` 替代 opcua 服务端：20Hz 指令变化才写
+  `drive:trans*:physics:targetPosition`（沿用已验证的机制），每帧回写位置反馈；
+- `gantry_jog_gui.py` 重写为 pymodbus 客户端：拖画笔写 X/Y、Z 抬/落笔按钮、
+  5Hz 读反馈寄存器让画笔跟随**实际位置**（跟随误差直观可见）；
+- 旧 asyncua 三件套移入 `runtime/legacy_opcua/`（v4 备选链路评估时再参考）；
+- **版本坑**：pymodbus 3.13+ 移除 ModbusSlaveContext.get/setValues，3.8 的
+  get/setValues 内部固定地址 +1（服务端请求与本类数据面走同一方法故一致，datastore
+  多留 1 字覆盖）；`requirements.txt` 锁服务端 `>=3.7,<3.9`，GUI 客户端任意 3.x；
+- 回环测试 `tests/test_modbus_loop.py`（独立脚本+pytest 双模式，6 项）：地址推导、
+  FC16→桥、超程钳位、FC03 反馈回读、**断开重连**（asyncua 痛点回归）、迷你闭环。
+  专用 venv（pymodbus 3.8.6）全绿。
+
+### 验证汇总
+
+- `python scenegen/scenegen/tests/test_scenegen.py` → 22 组全绿；
+- `python scenegen/scenegen/tests/test_agent.py`（离线 MockLLM）→ 4 组全绿；
+- `venv(pymodbus3.8.6) runtime/tests/test_modbus_loop.py` → 6 项全绿（pytest 模式亦绿）；
+- 重生成产物关节核验：6 个 body 引用全部 rigid=True，base kinematic=True。
+- 待真机：Linux Isaac 6.0 上重开 scene.usda，Play 后确认部件不再漂移、
+  jog GUI 走 Modbus 全程无卡死（本机无 Isaac，无法替代）。
+
+## 2026-09-02 (1) 模块 ③ 职责收窄：SceneSpec JSON 生成移交给 gc
 
 ### 改了什么
 

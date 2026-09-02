@@ -1,0 +1,5 @@
+# runtime（Isaac 侧 Modbus 桥 + 示教器）依赖
+# 服务端从站 API（ModbusSlaveContext.getValues/setValues）在 pymodbus 3.13+ 被移除，
+# 因此服务端锁经典 3.x 线；GUI 客户端只用 ModbusTcpClient，任意 3.x 均可。
+pymodbus>=3.7,<3.9
+# tkinter 为 Python 自带，无需安装
