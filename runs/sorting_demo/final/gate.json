@@ -1,0 +1,10 @@
+{
+  "gate": "all",
+  "ok": true,
+  "gates": {
+    "xml2st": true,
+    "consistency": [
+      "SKIP: io_map 未提供（仿真侧尚未产出）——仅对账 XML ↔ io_list 两方"
+    ]
+  }
+}
