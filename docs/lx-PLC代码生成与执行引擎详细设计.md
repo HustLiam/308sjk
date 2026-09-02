@@ -12,7 +12,7 @@
 |---|---|---|---|
 | ②a PLC 代码生成契约 | PLCopen XML（IEC 61131-10）结构契约、静态校验、XML→ST 机械转换 | `src/pipeline/xml2st.py` + `tests/test_xml2st.py` | ✅ 完成 |
 | ③a 执行引擎（链路 B） | 校验→转换→上传→编译→启动的全脚本化部署编排 + HTTP 服务化 | `run_deploy.py` / `openplc_client.py` / `serve.py` | ✅ 已打通 |
-| ④ PLC 侧行为验收 | Modbus 安全 IO 层、冒烟验证、场景验收脚本 | `modbus_io.py` / `verify_modbus.py` / `scenario_*.py` | ✅ 6 场景全过 |
+| ④ PLC 侧行为验收 | Modbus 安全 IO 层、场景验收脚本 | `modbus_io.py` / `scenario_motion3axis.py` | ✅ 场景全过 |
 | 运行时工程资产 | 已验收的 PLCopen XML 场景库 | `src/plc/*.xml` | ✅ |
 
 ## 1. 在总体架构中的位置
@@ -31,7 +31,7 @@ xml2st 静态校验 + XML→ST ──► OpenPLC v3（Docker）：上传 / matie
         ▼                         ▼
 workspace/program.st       Modbus TCP :502
                                  │
-                    SafeCoilIO / verify_modbus / scenario_*（行为验收）
+                    SafeCoilIO / scenario_motion3axis（行为验收）
 ```
 
 两链路分工（总体方案 §3.4）：**A 做开发/CI 闭环**（lockstep、无通信抖动、归因可排除通信因素），**B 做工业代表性验收**（真实软 PLC 运行时）。本侧的 xml2st 契约即"matiec 可编译子集"，保证同一份 XML 两条链路都能编译。
@@ -135,7 +135,7 @@ GET  /health    存活检查
 
 ```bash
 python src/pipeline/serve.py --port 8600
-curl -X POST http://127.0.0.1:8600/deploy --data-binary @src/plc/counter.xml
+curl -X POST http://127.0.0.1:8600/deploy --data-binary @src/plc/motion3axis.xml
 ```
 
 成功返回 200 + deploy_result 同构 JSON；校验/编译失败返回 500 + errors——上层编排器据此走"回喂重生成"分支，不进仿真。
@@ -157,7 +157,7 @@ Web API :8080、Modbus TCP :502；URL 与账号可经环境变量 `OPENPLC_URL /
 | `%QX0.3` | 线圈 3 | PLC 输出读 / 按钮类输入注入（脉冲） |
 | `%QW0` | 保持寄存器 0 | PLC 输出读 / 模拟量注入（如液位 0~100 定点值） |
 
-链路 B 的传感器注入不走 `%I` 区，而是**外部直接写 `%QX/%QW`、PLC 程序读回**（pump 场景的液位 set_level 即写保持寄存器 0；sorting 场景的光电即 SafeCoilIO 脉冲打线圈位）。这是 OpenPLC Modbus 映射下的实测可行通道，场景均按此约定。
+链路 B 的传感器注入不走 `%I` 区，而是**外部直接写 `%QX/%QW`、PLC 程序读回**（motion3axis 的位置反馈即写 %QW0~2、启停按钮即 SafeCoilIO 脉冲打线圈位；连续量场景的脚本侧伺服积分同理）。这是 OpenPLC Modbus 映射下的实测可行通道，场景均按此约定。
 
 ### 5.2 SafeCoilIO：线圈安全访问层（modbus_io.py）
 
@@ -167,34 +167,20 @@ Web API :8080、Modbus TCP :502；URL 与账号可经环境变量 `OPENPLC_URL /
 
 ### 5.3 冒烟验证与场景验收
 
-- `verify_modbus.py`：读 `%QW0`（counter 的 cnt），采样 5 次确认每秒 +1，作为链路冒烟；
-- 场景脚本模式：`run_deploy --xml 场景.xml` 部署 → 脚本先过**程序身份校验**（`require_program`，读 %QW20 的 prog_id，不匹配立即终止并提示部署哪个场景）→ 注入激励（设液位 / 打脉冲）→ `check()` 逐条断言，PASS/FAIL 打印、退出码汇总；
-- **身份约定（生成契约 v1.1 增补，向后兼容）**：每个场景程序声明 `prog_id AT %QW20 : INT` 常量并在 ST 本体每周期写入自己的编号（counter=1 / sorting=2 / pump=3 / traffic=4 / cylinder=5 / pid=6，新场景顺延）——验收脚本与未来 gc 编排器据此确认运行时当前加载的程序；
-- **幂等性**：脚本开头 `zero_regs` 清零 PLC 内部维护的计数寄存器（sorting 的 total/rej、pump 的 cycles、traffic 的 cycle_cnt），**同一程序可重复运行验收**，无需重新部署；cylinder/pid 程序自身具备归零语义；
+- 场景脚本模式：`run_deploy --xml 场景.xml` 部署 → 脚本先过**程序身份校验**（`require_program`，读 %QW20 的 prog_id，不匹配立即终止并提示部署哪个场景）→ 注入激励 → `check()` 逐条断言，PASS/FAIL 打印、退出码汇总；
+- **身份约定（生成契约 v1.1 增补，向后兼容）**：每个场景程序声明 `prog_id AT %QW20 : INT` 常量并在 ST 本体每周期写入自己的编号（motion3axis=1，新场景从 2 顺延）——验收脚本与未来 gc 编排器据此确认运行时当前加载的程序；
+- **幂等性**：motion3axis 停止即安全态（驱动全关、状态自含），脚本伺服状态从寄存器初值重建，**同一程序可重复运行验收**，无需重新部署；
 - 停止扫描：`python src/pipeline/stop_plc.py`（逻辑停跑、定时器冻结；Modbus/Web 服务与 %Q 缓冲保持，仍可读）。
 
-**已验收场景清单**（全部经链路 B 实测通过）：
+**已验收场景清单**（全部经链路 B 实测通过；2026-09-02 场景库重组，历史六场景见 git 记录与 changelog）：
 
 | 场景 | XML | 考察点 | 结果 |
 |---|---|---|---|
-| 计数器 | counter.xml | 链路冒烟：%QW 每秒 +1 | ✅ |
-| 分拣线 | sorting.xml | 自定义 EdgeFB + TON 时序；SafeCoilIO 首个实战 | 13/13 |
-| 双泵交替液位控制 | pump_alternation.xml | 滞后带（<30 启 / >80 停）+ 双泵轮换 + 最小运行 3s + 低液位报警 + 退出自动状态清理 | 12/12 |
-| 交通灯 | traffic_light.xml | 定时器链状态机；对向双绿禁止（安全不变量） | 10/10 |
-| 双缸顺序控制 | cylinder_seq.xml | CASE 步进链状态机；原位启动联锁；双电磁阀防冲突不变量（逐步校验） | 29/29 |
-| PID 液位连续调节 | pid_tank.xml | PI 位置式 + 条件积分抗饱和；INT 定点对外 / REAL 内部计算混合模式；偏差报警 | 9/9 |
+| 三轴运动控制 | motion3axis.xml | 三轴 PTP 定位（逐轴 ±2 死区闭环）；**Z 安全区互锁**（z_fb≤30 才允许 X/Y 运动）；**双驱互斥不变量**（每轴 fwd/rev 不同时）；到位汇总 in_pos 与运动指示；停止安全态 | 23/23 |
 
-**场景覆盖度（工业应用域映射，counter 为链路冒烟不计入业务域）**：
+验收脚本 `scenario_motion3axis.py` 扮演三轴伺服形成**位置闭环**（按 PLC 方向输出以 30 单位/s 积分位置反馈），航点序列覆盖：并发定位 → 仅 Z 下探 → **互锁负测试**（Z 低位直接给 XY 目标应被封锁）→ 先抬 Z 再平移 → 死区内微调不动 → 停止安全态；安全不变量全程逐拍采样。
 
-| 工业应用域 | 场景 | 代表性控制模式 |
-|---|---|---|
-| 离散制造 / 分拣物流 | sorting | 启保停自锁、边沿检测 + TON 时序 |
-| 顺序控制 | cylinder_seq | CASE 步进链、安全联锁 |
-| 过程控制——开关量调节 | pump_alternation | 滞后带、设备轮换、最小运行时间 |
-| 过程控制——连续量调节 | pid_tank | PID（PI）闭环、抗饱和、定点/浮点混合 |
-| 时序逻辑（市政/交通） | traffic_light | 定时器链状态机、冲突禁止不变量 |
-
-主方案 §5 阶段五典型场景中的传送带分拣、气缸顺序控制已落地；机械臂搬运场景按决策移除（运动控制域暂不覆盖，列入后续按需）；pid_tank 为覆盖度增强（gc 模式库点名的 PID 模式的可行性验证）。
+**场景覆盖度**：当前覆盖**运动控制（多轴定位）**域。此前六场景曾覆盖分拣/顺序/开关过程/连续过程（PID）/时序五域（历史验收记录见 git），场景库重组后其余应用域按需求重建——prog_id 从 2 顺延分配。
 
 ## 6. 与仿真侧的接口契约
 
@@ -206,7 +192,7 @@ Web API :8080、Modbus TCP :502；URL 与账号可经环境变量 `OPENPLC_URL /
 ## 7. 待办（按优先级）
 
 1. **双链路联调**：同一场景 A/B 双跑、trace 比对行为一致性（总体方案风险表"双链路行为不一致"的应对；**依赖 csk 链路 A 就绪**，已在协作看板提请求）；
-2. **场景库扩充**：气缸顺序（cylinder_seq 29/29）与 PID 连续调节（pid_tank 9/9）已落地；机械臂搬运按决策移除；后续按 gc 模式库需求扩充；
+2. **场景库扩充**：2026-09-02 重组后仅存 motion3axis（运动控制域），其余应用域（分拣/顺序/过程/时序）按 gc 模式库需求重建，prog_id 从 2 顺延；
 3. **配合事项**（非本侧实现）：三方一致性检查器归 gc（复用本侧 `xml2st.parse()`，见其文档 §5）；模拟量 INT 定点换算的量程字段随 io_map 契约定稿（主方案 §3.3，csk 落地），本侧参与评审。
 
 ## 8. 仓库实现索引与快速开始
@@ -217,9 +203,8 @@ src/pipeline/openplc_client.py  ③a OpenPLC v3 HTTP 客户端
 src/pipeline/run_deploy.py      ③a 部署编排器（结果 JSON 供回喂）
 src/pipeline/serve.py           ③a POST /deploy HTTP 服务（agent 端点，:8600）
 src/pipeline/modbus_io.py       ④ SafeCoilIO + 寄存器读 + require_program 身份校验 + zero_regs
-src/pipeline/verify_modbus.py   ④ Modbus 冒烟验证（含身份校验）
 src/pipeline/stop_plc.py        ③a 停止运行时逻辑扫描
-src/pipeline/scenario_*.py      ④ 场景验收（sorting / pump / traffic）
+src/pipeline/scenario_motion3axis.py  ④ 三轴运动控制场景验收（含身份校验）
 src/plc/*.xml                   交付物：4 个 61131-10 场景
 tests/test_xml2st.py            转换器单测（pytest，无需运行时）
 workspace/                      本地生成物（不入库）
@@ -228,6 +213,6 @@ workspace/                      本地生成物（不入库）
 ```bash
 pip install -r requirements.txt
 python -m pytest tests/ -v                                            # ① 转换器单测
-python src/pipeline/run_deploy.py --xml src/plc/pump_alternation.xml  # ② 部署（需运行时）
-python src/pipeline/scenario_pump.py                                  # ③ 场景验收
+python src/pipeline/run_deploy.py                                     # ② 部署（需运行时，默认 motion3axis）
+python src/pipeline/scenario_motion3axis.py                           # ③ 场景验收
 ```

@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0201">
+  <fileHeader companyName="" productName="Agent Pipeline" productVersion="0.4.0"
+              creationDateTime="2026-09-02T15:00:00"
+              description="Motion-control demo: three-axis gantry PTP positioning. Per-axis dead-band closed-loop positioning (INT fixed-point feedback/target), Z safe-zone interlock (X/Y move only while Z is in the upper safe zone), dual-solenoid mutex per axis, in-position aggregate and stop-safe state." />
+  <contentHeader name="motion3axis.project" modificationDateTime="2026-09-02T15:00:00">
+    <coordinateInfo>
+      <fbd><scaling x="1" y="1" /></fbd>
+      <ld><scaling x="1" y="1" /></ld>
+      <sfc><scaling x="1" y="1" /></sfc>
+    </coordinateInfo>
+  </contentHeader>
+  <types>
+    <dataTypes />
+    <pous>
+      <pou name="PLC_PRG" pouType="program">
+        <interface>
+          <!-- 对外接口-输入：启停按钮（仿真/验收侧写入） -->
+          <localVars>
+            <variable name="start_btn" address="%QX0.0">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="stop_btn" address="%QX0.1">
+              <type><BOOL /></type>
+            </variable>
+          </localVars>
+          <!-- 对外接口-输入：三轴位置反馈与目标（0~100 INT 定点；Z 轴 0=上死点 100=下死点） -->
+          <localVars>
+            <variable name="x_fb" address="%QW0">
+              <type><INT /></type>
+              <initialValue><simpleValue value="0" /></initialValue>
+            </variable>
+            <variable name="y_fb" address="%QW1">
+              <type><INT /></type>
+              <initialValue><simpleValue value="0" /></initialValue>
+            </variable>
+            <variable name="z_fb" address="%QW2">
+              <type><INT /></type>
+              <initialValue><simpleValue value="0" /></initialValue>
+            </variable>
+            <variable name="x_sp" address="%QW10">
+              <type><INT /></type>
+              <initialValue><simpleValue value="0" /></initialValue>
+            </variable>
+            <variable name="y_sp" address="%QW11">
+              <type><INT /></type>
+              <initialValue><simpleValue value="0" /></initialValue>
+            </variable>
+            <variable name="z_sp" address="%QW12">
+              <type><INT /></type>
+              <initialValue><simpleValue value="0" /></initialValue>
+            </variable>
+          </localVars>
+          <!-- 对外接口-输出：六向轴驱动、三轴到位汇总、运动中指示 -->
+          <localVars>
+            <variable name="x_fwd" address="%QX1.0">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="x_rev" address="%QX1.1">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="y_fwd" address="%QX1.2">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="y_rev" address="%QX1.3">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="z_fwd" address="%QX1.4">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="z_rev" address="%QX1.5">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="in_pos" address="%QX1.6">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="moving" address="%QX1.7">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="prog_id" address="%QW20">
+              <type><INT /></type>
+              <initialValue><simpleValue value="1" /></initialValue>
+            </variable>
+          </localVars>
+          <!-- 内部状态 -->
+          <localVars>
+            <variable name="running">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="xy_enable">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="x_ok">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="y_ok">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="z_ok">
+              <type><BOOL /></type>
+            </variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* ---- program identity (scenario = motion3axis) ---- *)
+prog_id := 1;
+
+(* ---- stop: all axis drives off, in-position dropped ---- *)
+IF stop_btn THEN
+    running := FALSE;
+END_IF;
+
+IF NOT running THEN
+    x_fwd := FALSE; x_rev := FALSE;
+    y_fwd := FALSE; y_rev := FALSE;
+    z_fwd := FALSE; z_rev := FALSE;
+    in_pos := FALSE;
+    IF start_btn THEN
+        running := TRUE;
+    END_IF;
+ELSE
+    (* ---- Z safe-zone interlock: X/Y axes may move only while Z is in the upper safe zone ---- *)
+    xy_enable := z_fb &lt;= 30;
+
+    (* ---- X axis: dead-band positioning (±2) ---- *)
+    IF x_sp - x_fb &gt; 2 THEN
+        x_fwd := TRUE;  x_rev := FALSE;
+    ELSIF x_sp - x_fb &lt; -2 THEN
+        x_fwd := FALSE; x_rev := TRUE;
+    ELSE
+        x_fwd := FALSE; x_rev := FALSE;
+    END_IF;
+    IF NOT xy_enable THEN
+        x_fwd := FALSE; x_rev := FALSE;
+    END_IF;
+
+    (* ---- Y axis: dead-band positioning (±2) ---- *)
+    IF y_sp - y_fb &gt; 2 THEN
+        y_fwd := TRUE;  y_rev := FALSE;
+    ELSIF y_sp - y_fb &lt; -2 THEN
+        y_fwd := FALSE; y_rev := TRUE;
+    ELSE
+        y_fwd := FALSE; y_rev := FALSE;
+    END_IF;
+    IF NOT xy_enable THEN
+        y_fwd := FALSE; y_rev := FALSE;
+    END_IF;
+
+    (* ---- Z axis: dead-band positioning (±2), no interlock ---- *)
+    IF z_sp - z_fb &gt; 2 THEN
+        z_fwd := TRUE;  z_rev := FALSE;
+    ELSIF z_sp - z_fb &lt; -2 THEN
+        z_fwd := FALSE; z_rev := TRUE;
+    ELSE
+        z_fwd := FALSE; z_rev := FALSE;
+    END_IF;
+END_IF;
+
+(* ---- in-position aggregate: all three axes inside dead band while running ---- *)
+x_ok := ABS(x_sp - x_fb) &lt;= 2;
+y_ok := ABS(y_sp - y_fb) &lt;= 2;
+z_ok := ABS(z_sp - z_fb) &lt;= 2;
+in_pos := running AND x_ok AND y_ok AND z_ok;
+moving := running AND (x_fwd OR x_rev OR y_fwd OR y_rev OR z_fwd OR z_rev);</xhtml>
+          </ST>
+        </body>
+      </pou>
+    </pous>
+  </types>
+  <instances>
+    <configurations />
+  </instances>
+</project>

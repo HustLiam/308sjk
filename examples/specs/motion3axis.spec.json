@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0.0-draft.1",
+  "task_id": "motion3axis_demo",
+  "task_goal": "三轴龙门运动控制：X/Y/Z 三轴点到点定位，逐轴死区（±2）闭环；Z 轴处于上部安全区（z≤30）才允许 X/Y 运动（安全互锁）；每轴正反驱动互斥；三轴同时进入死区给出到位汇总 in_pos；停止后全部驱动进入安全态。",
+  "io_list": [
+    { "name": "start_btn", "dir": "input",  "type": "BOOL", "range": null,    "device": "启动按钮（常开脉冲）" },
+    { "name": "stop_btn",  "dir": "input",  "type": "BOOL", "range": null,    "device": "停止按钮（常开脉冲，安全态）" },
+    { "name": "x_fb",      "dir": "input",  "type": "INT",  "range": [0,100], "unit": "%", "device": "X 轴位置反馈（编码器定点）" },
+    { "name": "y_fb",      "dir": "input",  "type": "INT",  "range": [0,100], "unit": "%", "device": "Y 轴位置反馈" },
+    { "name": "z_fb",      "dir": "input",  "type": "INT",  "range": [0,100], "unit": "%", "device": "Z 轴位置反馈（0=上死点）" },
+    { "name": "x_sp",      "dir": "input",  "type": "INT",  "range": [0,100], "unit": "%", "device": "X 轴目标位置（上位设定）" },
+    { "name": "y_sp",      "dir": "input",  "type": "INT",  "range": [0,100], "unit": "%", "device": "Y 轴目标位置" },
+    { "name": "z_sp",      "dir": "input",  "type": "INT",  "range": [0,100], "unit": "%", "device": "Z 轴目标位置" },
+    { "name": "x_fwd",     "dir": "output", "type": "BOOL", "range": null,    "device": "X 轴正向驱动" },
+    { "name": "x_rev",     "dir": "output", "type": "BOOL", "range": null,    "device": "X 轴反向驱动" },
+    { "name": "y_fwd",     "dir": "output", "type": "BOOL", "range": null,    "device": "Y 轴正向驱动" },
+    { "name": "y_rev",     "dir": "output", "type": "BOOL", "range": null,    "device": "Y 轴反向驱动" },
+    { "name": "z_fwd",     "dir": "output", "type": "BOOL", "range": null,    "device": "Z 轴向下驱动" },
+    { "name": "z_rev",     "dir": "output", "type": "BOOL", "range": null,    "device": "Z 轴向上驱动（回安全区）" },
+    { "name": "in_pos",    "dir": "output", "type": "BOOL", "range": null,    "device": "三轴到位汇总指示" },
+    { "name": "moving",    "dir": "output", "type": "BOOL", "range": null,    "device": "任一轴运动中指示" }
+  ],
+  "constraints": [
+    { "id": "C1", "kind": "interlock", "desc": "Z 安全区互锁：Z 轴不在上部安全区（z_fb>30）期间，X/Y 驱动必须为 FALSE——平移前先抬 Z" },
+    { "id": "C2", "kind": "interlock", "desc": "双驱互斥：任一轴的正向与反向驱动任何时刻不得同时为 TRUE" },
+    { "id": "C3", "kind": "exception", "desc": "停止/急停：全部驱动立即失电进入安全态，到位指示撤销" }
+  ],
+  "acceptance": [
+    {
+      "id": "AC1", "desc": "启动后 0.5s 内输出运动中指示",
+      "type": "event_delay",
+      "from": { "signal": "start_btn", "edge": "rising" },
+      "to":   { "signal": "moving",    "edge": "rising" },
+      "op": "<=", "value": 0.5, "unit": "s"
+    },
+    {
+      "id": "AC2", "desc": "X 轴双驱互斥（反向驱动期间禁止正向驱动）",
+      "type": "forbidden_state",
+      "when":   { "signal": "x_rev", "equals": true },
+      "forbid": { "signal": "x_fwd", "equals": true }
+    },
+    {
+      "id": "AC3", "desc": "停止期间禁止任何轴运动（安全联锁）",
+      "type": "forbidden_state",
+      "when":   { "signal": "stop_btn", "equals": true },
+      "forbid": { "signal": "moving",   "equals": true }
+    },
+    {
+      "id": "AC4", "desc": "三轴点到点定位精度：到位后各轴 |反馈-目标| ≤ 2",
+      "type": "region_containment",
+      "asset": "gantry_head",
+      "region_center": [0, 0, 0], "tolerance": 2,
+      "check_at": "end"
+    },
+    {
+      "id": "AC5", "desc": "仿真无发散、轴行程未越界（0~100）",
+      "type": "sim_health"
+    }
+  ]
+}

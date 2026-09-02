@@ -12,7 +12,7 @@
 |---|---|---|---|
 | 用户交互层 | 自然语言输入、多轮澄清、规格回显确认、结果展示 | 对话协议 / CLI | 🚧 未启动（编排 CLI 已有，澄清协议未接） |
 | ① 需求理解模块 | 自然语言 → 结构化需求规格；**requirement_spec.json Schema 的定义权** | `requirement_spec.json` + JSON Schema | 🟨 Schema 草案 v1.0.0-draft.1 已出（`schemas/requirement_spec.schema.json` + `src/agent/spec_validator.py`），**待三方评审冻结**；LLM 澄清未接 |
-| ②a/②b 的 LLM 生成本体 | PLCopen XML 生成器（在 lx 契约上）、失败归因分析 LLM | 生成器 Prompt 工程 + ST 模式库 | 🟨 生成器 v0 已实现（`src/agent/pipeline.py` + `patternlib.py` + `prompts/plcgen_skill.md`，种子=已验收 6 场景，xml2st+一致性双闸门回灌）；归因 LLM 未启动 |
+| ②a/②b 的 LLM 生成本体 | PLCopen XML 生成器（在 lx 契约上）、失败归因分析 LLM | 生成器 Prompt 工程 + ST 模式库 | 🟨 生成器 v0 已实现（`src/agent/pipeline.py` + `patternlib.py` + `prompts/plcgen_skill.md`，种子=motion3axis（场景库重组后），xml2st+一致性双闸门回灌）；归因 LLM 未启动 |
 | 闭环编排器 | solve 循环、两个编译/校验短路、迭代记忆、终止与 best-effort、反馈包拼装与路由 | `orchestrator/` | 🟨 半环骨架已实现（`src/agent/orchestrator.py`：生成→xml2st 闸门→一致性→部署可选；runs/ 落盘与 final 冻结已跑通；仿真全环等 csk 接口） |
 | 跨模块一致性 | io_list 单一源头的落地：**三方一致性检查器**（定位变量 ≡ io_list ≡ io_map） | `consistency_check.py` | ✅ 原型完成（`src/agent/consistency_check.py`，R1~R5；io_map 腿接口就绪，csk 产出后自动生效） |
 
@@ -49,7 +49,7 @@
 
 > **落地状态**：草案 v1.0.0-draft.1 已实现——评审视图 `schemas/requirement_spec.schema.json`，
 > 运行权威 `src/agent/spec_validator.py`（两者同一 RFC 内同步修改），基准示例
-> `examples/specs/sorting.spec.json`（io_list 与 sorting.xml 定位变量逐字对齐）。
+> `examples/specs/motion3axis.spec.json`（io_list 与 motion3axis.xml 定位变量逐字对齐）。
 > Schema 文件表达不了的语义规则：S1 唯一性（io 名/AC id/C id）、S2 量程（INT 必带
 > range、BOOL 禁带）、S3 信号引用必须落在 io_list、S4 时间阈值 ≥100ms——均在校验器实现。
 
@@ -159,7 +159,7 @@ io_map.json（仿真侧产出）------------------------------------┤
 | 阶段 | 本侧工作 | 依赖 |
 |---|---|---|
 | 一（1–2 周） | requirement_spec Schema + acceptance 四类结构定稿，**三方接口契约冻结（联签）** | 无（最先动工） |
-| 三（5–9 周） | 需求理解 Agent、PLC 生成器（Prompt + ST 模式库，种子=已验收 6 场景）、一致性检查器 | lx 契约已冻结 ✅；仿真侧 SceneSpec Schema |
+| 三（5–9 周） | 需求理解 Agent、PLC 生成器（Prompt + ST 模式库，种子=motion3axis）、一致性检查器 | lx 契约已冻结 ✅；仿真侧 SceneSpec Schema |
 | 四（9–13 周） | 编排器串联全链路、反馈包拼装、归因路由、迭代收敛性调优 | 两端引擎打通（阶段二，各自进行） |
 | 五（13–16 周） | 典型场景（分拣/顺序控制/搬运）三端联合测试与指标评估 | 全部 |
 

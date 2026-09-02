@@ -9,7 +9,7 @@ CODESYS 版本的历史实现见 git 历史（保留作标准符合性验收参�
 ## 链路
 
 ```
-src/plc/counter.xml (61131-10, 唯一源码)
+src/plc/motion3axis.xml (61131-10, 唯一源码)
         │ ① xml2st 校验+转换（不合法直接拒，错误回喂 agent）
         ▼
 workspace/program.st
@@ -18,7 +18,7 @@ workspace/program.st
 OpenPLC v3 运行时（Docker / WSL2 / 远程 Linux）
         │ ③ Modbus TCP :502（%QX→线圈 %QW→保持寄存器）
         ▼
-verify_modbus.py（冒烟验证）/ 未来的 Isaac Sim 桥接
+scenario_motion3axis.py（验收）/ 未来的 Isaac Sim 桥接
 ```
 
 ## 快速开始
@@ -26,28 +26,27 @@ verify_modbus.py（冒烟验证）/ 未来的 Isaac Sim 桥接
 ```bash
 pip install -r requirements.txt
 python -m pytest tests/ -v                # ① 转换器单测（无需运行时）
-python src/pipeline/xml2st.py src/plc/counter.xml   # ② 看转换出的 .st
+python src/pipeline/xml2st.py src/plc/motion3axis.xml   # ② 看转换出的 .st
 # ③ 启动运行时后（docker run -d --name openplc -p 8080:8080 -p 502:502 fdamador/openplc）：
-python src/pipeline/run_deploy.py         # 部署+编译+启动
-python src/pipeline/verify_modbus.py      # Modbus 读 cnt，确认每秒 +1
+python src/pipeline/run_deploy.py                  # 部署+编译+启动
+python src/pipeline/scenario_motion3axis.py         # 三轴定位闭环验收
 ```
 
 HTTP API 方式（agent 闭环的部署端点）：
 
 ```bash
 python src/pipeline/serve.py &            # 起服务
-curl -X POST http://127.0.0.1:8600/deploy --data-binary @src/plc/counter.xml
+curl -X POST http://127.0.0.1:8600/deploy --data-binary @src/plc/motion3axis.xml
 ```
 
 ## 目录结构
 
 ```
 src/
-  plc/counter.xml           # 61131-10 交付物（agent 未来产出的形态）
+  plc/motion3axis.xml       # 61131-10 交付物（agent 未来产出的形态）
   pipeline/xml2st.py        # 校验 + XML→ST 转换（纯标准库）
   pipeline/openplc_client.py# OpenPLC v3 HTTP 客户端
   pipeline/run_deploy.py    # 部署编排器（结果 JSON 供回喂）
-  pipeline/verify_modbus.py # Modbus 冒烟验证
   pipeline/serve.py         # POST /deploy HTTP 服务
   agent/                    # gc 智能体与闭环侧（spec 校验/生成器/一致性/编排）
 schemas/requirement_spec.schema.json  # 契约① Schema 草案（gc 拥有，待三方评审冻结）
