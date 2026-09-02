@@ -22,7 +22,7 @@ MOTION_XML = REPO / "src" / "plc" / "motion3axis.xml"
 
 def mismatched_seed(tmp_path):
     """负例种子：把到位变量改名，与 spec 的 io_list 对不上 → 一致性闸门失败。"""
-    text = MOTION_XML.read_text(encoding="utf-8").replace('"in_pos"', '"at_pos"')
+    text = MOTION_XML.read_text(encoding="utf-8").replace('"move_done"', '"done_flag"')
     path = tmp_path / "mismatch.xml"
     path.write_text(text, encoding="utf-8")
     return path

@@ -36,18 +36,18 @@ def io_map_from(io_list, **overrides):
 
 
 class TestExtractLocatedVars:
-    def test_motion3axis_has_sixteen_external_vars(self):
+    def test_motion3axis_has_24_external_vars(self):
         located = extract_located_vars(MOTION_XML)
-        assert len(located) == 16  # 22 个定位变量 - prog_id（契约 v1.1 元信息豁免）
+        assert len(located) == 24  # 25 个定位变量 - prog_id（契约 v1.1 元信息豁免）
         by_name = {v["name"]: v for v in located}
-        assert by_name["start_btn"] == {"name": "start_btn", "addr": "%QX0.0", "type": "BOOL"}
+        assert by_name["run"] == {"name": "run", "addr": "%QX0.0", "type": "BOOL"}
         assert by_name["x_fb"] == {"name": "x_fb", "addr": "%QW0", "type": "INT"}
-        assert by_name["in_pos"] == {"name": "in_pos", "addr": "%QX1.6", "type": "BOOL"}
+        assert by_name["x_sw"] == {"name": "x_sw", "addr": "%QW6", "type": "WORD"}
 
     def test_internal_vars_not_extracted(self):
         located = extract_located_vars(MOTION_XML)
         names = {v["name"] for v in located}
-        assert "running" not in names and "xy_enable" not in names and "x_ok" not in names
+        assert "ax_x" not in names and "x_cw" not in names  # FB 实例/内部信号
 
 
 class TestTwoPartyCheck:
@@ -63,16 +63,16 @@ class TestTwoPartyCheck:
         assert ok1 == ok2 == True and p1 == p2
 
     def test_r2_var_renamed_in_xml(self):
-        xml_text = MOTION_XML.read_text(encoding="utf-8").replace('"x_fwd"', '"x_drive"')
+        xml_text = MOTION_XML.read_text(encoding="utf-8").replace('"x_fb"', '"x_enc"')
         ok, problems = consistency_check(xml_text, IO_LIST)
         assert not ok
-        assert any("R2" in p and "x_fwd" in p for p in problems)      # io_list 侧缺
-        assert any("R2" in p and "x_drive" in p for p in problems)    # XML 侧多
+        assert any("R2" in p and "x_fb" in p for p in problems)      # io_list 侧缺
+        assert any("R2" in p and "x_enc" in p for p in problems)    # XML 侧多
 
     def test_r4_duplicate_address(self):
-        xml_text = MOTION_XML.read_text(encoding="utf-8").replace('address="%QX1.1"', 'address="%QX1.0"')
+        xml_text = MOTION_XML.read_text(encoding="utf-8").replace('address="%QX0.4"', 'address="%QX0.0"')
         ok, problems = consistency_check(xml_text, IO_LIST)
-        assert not ok and any("R4" in p and "%QX1.0" in p for p in problems)
+        assert not ok and any("R4" in p and "%QX0.0" in p for p in problems)
 
     def test_r3_spec_type_outside_closed_set(self):
         io_list = [dict(p) for p in IO_LIST]
@@ -95,12 +95,12 @@ class TestIoMapLeg:
         assert not any(p.startswith("SKIP") for p in problems)
 
     def test_r5_missing_binding(self):
-        io_map = io_map_from(IO_LIST, drop=8)  # x_fwd 无绑定
+        io_map = io_map_from(IO_LIST, drop=14)  # x_sw 无绑定
         ok, problems = consistency_check(MOTION_XML, IO_LIST, io_map)
-        assert not ok and any("R5" in p and "x_fwd" in p for p in problems)
+        assert not ok and any("R5" in p and "x_sw" in p for p in problems)
 
     def test_r5_direction_mismatch(self):
-        io_map = io_map_from(IO_LIST, patches=[(8, {"dir": "input"})])  # x_fwd 方向反转
+        io_map = io_map_from(IO_LIST, patches=[(14, {"dir": "input"})])  # x_sw 方向反转
         ok, problems = consistency_check(MOTION_XML, IO_LIST, io_map)
         assert any("R5" in p and "方向不一致" in p for p in problems)
 

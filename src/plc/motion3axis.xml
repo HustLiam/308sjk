@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://www.plcopen.org/xml/tc6_0201">
-  <fileHeader companyName="" productName="Agent Pipeline" productVersion="0.4.0"
-              creationDateTime="2026-09-02T15:00:00"
-              description="Motion-control demo: three-axis gantry PTP positioning. Per-axis dead-band closed-loop positioning (INT fixed-point feedback/target), Z safe-zone interlock (X/Y move only while Z is in the upper safe zone), dual-solenoid mutex per axis, in-position aggregate and stop-safe state." />
-  <contentHeader name="motion3axis.project" modificationDateTime="2026-09-02T15:00:00">
+  <fileHeader companyName="" productName="Agent Pipeline" productVersion="0.6.0"
+              creationDateTime="2026-09-02T19:00:00"
+              description="Motion control per CiA 402 (IEC 61800-7 subset) + PLCopen MC API (IEC 61131-4 subset), fully self-contained in ST. Layer 1: AXIS402 drive model per axis (drive state machine SOD/RTSO/SO/OE/QSA/FRA/FA on control-word commands, Profile Position mode with trapezoidal profile and position servo loop: demand vs encoder feedback -> signed velocity command). Layer 2: MC_Power / MC_Reset / MC_Home / MC_MoveAbsolute / MC_MoveJog / MC_Stop with standard Execute/Done/Busy/Error interfaces driving the CiA 402 words. Layer 3: PLC_PRG application (enable, home, goto setpoint, jog, quick stop, fault injection + reset). No vendor motion kernel required." />
+  <contentHeader name="motion3axis.project" modificationDateTime="2026-09-02T19:00:00">
     <coordinateInfo>
       <fbd><scaling x="1" y="1" /></fbd>
       <ld><scaling x="1" y="1" /></ld>
@@ -13,68 +13,612 @@
   <types>
     <dataTypes />
     <pous>
-      <pou name="PLC_PRG" pouType="program">
+      <pou name="AXIS402" pouType="functionBlock">
         <interface>
-          <!-- 对外接口-输入：启停按钮（仿真/验收侧写入） -->
-          <localVars>
-            <variable name="start_btn" address="%QX0.0">
-              <type><BOOL /></type>
+          <inputVars>
+            <variable name="cw">
+              <type><WORD /></type>
             </variable>
-            <variable name="stop_btn" address="%QX0.1">
+            <variable name="target">
+              <type><INT /></type>
+            </variable>
+            <variable name="pos_fb">
+              <type><INT /></type>
+            </variable>
+          </inputVars>
+          <outputVars>
+            <variable name="sw">
+              <type><WORD /></type>
+            </variable>
+            <variable name="v_cmd">
+              <type><INT /></type>
+            </variable>
+          </outputVars>
+          <localVars>
+            <variable name="SCAN_T">
+              <type><REAL /></type>
+              <initialValue><simpleValue value="0.02" /></initialValue>
+            </variable>
+            <variable name="VMAX">
+              <type><REAL /></type>
+              <initialValue><simpleValue value="40.0" /></initialValue>
+            </variable>
+            <variable name="ACCEL">
+              <type><REAL /></type>
+              <initialValue><simpleValue value="80.0" /></initialValue>
+            </variable>
+            <variable name="QS_DECEL">
+              <type><REAL /></type>
+              <initialValue><simpleValue value="120.0" /></initialValue>
+            </variable>
+            <variable name="POSWIN">
+              <type><REAL /></type>
+              <initialValue><simpleValue value="2.0" /></initialValue>
+            </variable>
+            <variable name="KP">
+              <type><REAL /></type>
+              <initialValue><simpleValue value="25.0" /></initialValue>
+            </variable>
+          </localVars>
+          <localVars>
+            <variable name="state">
+              <type><INT /></type>
+              <initialValue><simpleValue value="1" /></initialValue>
+            </variable>
+            <variable name="v">
+              <type><REAL /></type>
+            </variable>
+            <variable name="demand">
+              <type><REAL /></type>
+            </variable>
+            <variable name="tgt">
+              <type><REAL /></type>
+            </variable>
+            <variable name="dist">
+              <type><REAL /></type>
+            </variable>
+            <variable name="stop_d">
+              <type><REAL /></type>
+            </variable>
+            <variable name="err">
+              <type><REAL /></type>
+            </variable>
+            <variable name="v_out">
+              <type><REAL /></type>
+            </variable>
+            <variable name="cmd">
+              <type><WORD /></type>
+            </variable>
+            <variable name="sp_ack">
               <type><BOOL /></type>
             </variable>
           </localVars>
-          <!-- 对外接口-输入：三轴位置反馈与目标（0~100 INT 定点；Z 轴 0=上死点 100=下死点） -->
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* ================= AXIS402: CiA 402 drive model (subset) ================= *)
+(* state: 1=SOD 2=RTSO 3=SO 4=OE 5=QSA 6=FaultReaction 7=FaultActive         *)
+(* cw bits used: 0..3 command | 4 new setpoint | 7 fault reset | 8 halt      *)
+(* sw bits used: 0 ready |1 switched on |2 op-enabled |3 fault |4 volt |5 qs *)
+(*              inactive |6 SOD |10 target reached |12 setpoint acknowledge  *)
+
+cmd := cw AND 16#000F;
+
+(* ---- fault reset (cw bit7) ---- *)
+IF state = 7 AND (cw AND 16#0080) &lt;&gt; 0 THEN
+    state := 1;
+    v := 0.0;
+END_IF;
+
+(* ---- drive state machine on cw low-nibble commands ---- *)
+CASE state OF
+    1:  IF cmd = 16#06 THEN state := 2; END_IF;
+    2:  IF cmd = 16#07 THEN state := 3;
+        ELSIF cmd = 16#0F THEN state := 4;
+        ELSIF cmd = 16#00 THEN state := 1;
+        END_IF;
+    3:  IF cmd = 16#0F THEN state := 4;
+        ELSIF cmd = 16#06 THEN state := 2;
+        ELSIF cmd = 16#00 THEN state := 1;
+        ELSIF cmd = 16#02 THEN state := 5;
+        END_IF;
+    4:  IF cmd = 16#07 THEN state := 3;
+        ELSIF cmd = 16#06 THEN state := 2;
+        ELSIF cmd = 16#00 THEN state := 1;
+        ELSIF cmd = 16#02 THEN state := 5;
+        END_IF;
+    5:  IF v = 0.0 THEN
+            IF cmd = 16#0F THEN state := 4;
+            ELSIF cmd = 16#06 THEN state := 2;
+            ELSIF cmd = 16#00 THEN state := 1;
+            END_IF;
+        END_IF;
+    6:  IF v = 0.0 THEN state := 7; END_IF;
+END_CASE;
+
+(* ---- Profile Position: 电平锁存（OE 且 bit4=1 时，目标有变化或未被确认即锁存） ---- *)
+IF state = 4 AND (cw AND 16#0010) &lt;&gt; 0 THEN
+    IF target &lt; 0 OR target &gt; 100 THEN
+        state := 6;                       (* target outside travel -> fault reaction *)
+    ELSIF (INT_TO_REAL(target) &lt;&gt; tgt) OR NOT sp_ack THEN
+        tgt := INT_TO_REAL(target);
+        sp_ack := TRUE;
+    END_IF;
+END_IF;
+IF sp_ack AND (cw AND 16#0010) = 0 THEN
+    sp_ack := FALSE;                      (* acknowledge drops after master clears bit4 *)
+END_IF;
+
+(* ---- trapezoidal trajectory generator (runs in OE; halt on cw bit8) ---- *)
+IF state = 4 THEN
+    IF (cw AND 16#0100) &lt;&gt; 0 THEN
+        IF v &gt; 0.0 THEN v := MAX(0.0, v - ACCEL * SCAN_T);
+        ELSIF v &lt; 0.0 THEN v := MIN(0.0, v + ACCEL * SCAN_T);
+        END_IF;
+    ELSE
+        dist := tgt - demand;
+        stop_d := (v * v) / (2.0 * ACCEL);
+        IF ABS(dist) &lt;= stop_d THEN
+            IF dist &gt;= 0.0 THEN v := MAX(0.0, v - ACCEL * SCAN_T);
+            ELSE v := MIN(0.0, v + ACCEL * SCAN_T);
+            END_IF;
+            IF v = 0.0 AND ABS(dist) &lt;= POSWIN THEN demand := tgt; END_IF;
+        ELSE
+            IF dist &gt; 0.0 THEN v := MIN(VMAX, v + ACCEL * SCAN_T);
+            ELSE v := MAX(-VMAX, v - ACCEL * SCAN_T);
+            END_IF;
+        END_IF;
+    END_IF;
+    (* target-reached 由状态字 bit10 报告；ack 不在此清除 *)
+ELSIF state = 5 OR state = 6 THEN
+    IF v &gt; 0.0 THEN v := MAX(0.0, v - QS_DECEL * SCAN_T);
+    ELSIF v &lt; 0.0 THEN v := MIN(0.0, v + QS_DECEL * SCAN_T);
+    END_IF;
+ELSE
+    v := 0.0;                             (* not enabled: no motion *)
+END_IF;
+
+(* demand 随速度推进（OE 定位与 QSA/FRA 减速路径都随动，误差不累积） *)
+IF state &gt;= 4 AND state &lt;= 6 THEN
+    demand := demand + v * SCAN_T;
+END_IF;
+
+(* ---- position servo loop: demand vs encoder -> signed motor velocity cmd ---- *)
+(* 仅 OE/QSA/FRA 输出（快停与故障反应按减速曲线走）；失能/故障锁定状态电机指令为零 *)
+IF state &gt;= 4 AND state &lt;= 6 THEN
+    err := demand - INT_TO_REAL(pos_fb);
+    IF v = 0.0 AND ABS(err) &lt;= 1.5 THEN
+        v_out := 0.0;   (* 静止死区：消除编码器量化的保持抖动 *)
+    ELSE
+    v_out := v + KP * err;
+    IF v_out &gt; 120.0 THEN v_out := 120.0; END_IF;
+    IF v_out &lt; -120.0 THEN v_out := -120.0; END_IF;
+    END_IF;
+ELSE
+    v_out := 0.0;
+END_IF;
+v_cmd := REAL_TO_INT(v_out);
+
+(* ---- status word (subset encoding) ---- *)
+sw := 0;
+CASE state OF
+    1: sw := 16#0040;
+    2: sw := 16#0031;
+    3: sw := 16#0033;
+    4: sw := 16#0037;
+    5: sw := 16#0014;
+    7: sw := 16#0018;
+END_CASE;
+IF state = 4 THEN
+    IF ABS(tgt - demand) &lt;= POSWIN AND v = 0.0 AND (cw AND 16#0100) = 0 THEN
+        sw := sw OR 16#0400;
+    END_IF;
+    IF sp_ack THEN
+        sw := sw OR 16#1000;
+    END_IF;
+END_IF;</xhtml>
+          </ST>
+        </body>
+      </pou>
+      <pou name="MC_POWER" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="Enable">
+              <type><BOOL /></type>
+            </variable>
+          </inputVars>
+          <inOutVars>
+            <variable name="cw">
+              <type><WORD /></type>
+            </variable>
+            <variable name="sw">
+              <type><WORD /></type>
+            </variable>
+          </inOutVars>
+          <outputVars>
+            <variable name="Status">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="Error">
+              <type><BOOL /></type>
+            </variable>
+          </outputVars>
+          <localVars>
+            <variable name="pstep">
+              <type><INT /></type>
+            </variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* MC_Power (IEC 61131-4 subset): auto power-up sequence *)
+(* SOD --0x06--> RTSO --0x07--> SO --0x0F--> OE ; Disable -> shutdown 0x06 *)
+IF Enable AND pstep = 4 AND (sw AND 16#0004) = 0 AND (sw AND 16#0008) = 0 THEN
+    pstep := 0;                             (* lost OE without fault -> restart sequence *)
+END_IF;
+IF Enable THEN
+    CASE pstep OF
+        0: cw := (cw AND 16#00F0) OR 16#0006;  pstep := 1;
+        1: IF (sw AND 16#0001) &lt;&gt; 0 THEN cw := (cw AND 16#00F0) OR 16#0007; pstep := 2; END_IF;
+        2: IF (sw AND 16#0002) &lt;&gt; 0 THEN cw := (cw AND 16#00F0) OR 16#000F; pstep := 3; END_IF;
+        3: IF (sw AND 16#0004) &lt;&gt; 0 THEN pstep := 4; END_IF;
+    END_CASE;
+ELSE
+    cw := (cw AND 16#00F0) OR 16#0006;       (* shutdown *)
+    pstep := 0;
+END_IF;
+Status := (sw AND 16#0004) &lt;&gt; 0;           (* operation enabled *)
+Error := (sw AND 16#0008) &lt;&gt; 0;</xhtml>
+          </ST>
+        </body>
+      </pou>
+      <pou name="MC_RESET" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="Execute">
+              <type><BOOL /></type>
+            </variable>
+          </inputVars>
+          <inOutVars>
+            <variable name="cw">
+              <type><WORD /></type>
+            </variable>
+            <variable name="sw">
+              <type><WORD /></type>
+            </variable>
+          </inOutVars>
+          <outputVars>
+            <variable name="Done">
+              <type><BOOL /></type>
+            </variable>
+          </outputVars>
+          <localVars>
+            <variable name="exe_prev">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="busy">
+              <type><BOOL /></type>
+            </variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* MC_Reset: CiA 402 fault reset (cw bit7 pulse) *)
+IF Execute AND NOT exe_prev THEN
+    busy := TRUE;
+END_IF;
+exe_prev := Execute;
+IF busy THEN
+    IF (sw AND 16#0008) &lt;&gt; 0 THEN
+        cw := cw OR 16#0080;                 (* reset fault *)
+    ELSE
+        cw := cw AND 16#FF7F;                (* fault cleared -> drop bit7 *)
+        busy := FALSE;
+    END_IF;
+END_IF;
+Done := busy = FALSE AND (sw AND 16#0008) = 0 AND NOT Execute;</xhtml>
+          </ST>
+        </body>
+      </pou>
+      <pou name="MC_MOVEABSOLUTE" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="Execute">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="Position">
+              <type><INT /></type>
+            </variable>
+          </inputVars>
+          <inOutVars>
+            <variable name="cw">
+              <type><WORD /></type>
+            </variable>
+            <variable name="sw">
+              <type><WORD /></type>
+            </variable>
+            <variable name="target">
+              <type><INT /></type>
+            </variable>
+          </inOutVars>
+          <outputVars>
+            <variable name="Done">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="Busy">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="Error">
+              <type><BOOL /></type>
+            </variable>
+          </outputVars>
+          <localVars>
+            <variable name="exe_prev">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="mov_busy">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="ack_seen">
+              <type><BOOL /></type>
+            </variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* MC_MoveAbsolute: CiA 402 profile-position handshake *)
+(* master: set new-setpoint(bit4) -> drive acknowledges(bit12) -> clear bit4  *)
+(* Done on target-reached(bit10) *)
+IF Execute AND NOT exe_prev THEN
+    target := Position;                      (* 边沿扫描立即落目标并请求设定点 *)
+    cw := (cw AND 16#FFEF) OR 16#0010;
+    mov_busy := TRUE;
+    ack_seen := FALSE;
+END_IF;
+exe_prev := Execute;
+
+IF busy THEN
+    IF (sw AND 16#0004) = 16#0000 OR (sw AND 16#0008) &lt;&gt; 0 THEN
+        cw := cw AND 16#FFEF;                (* abort: leave no pending setpoint *)
+        mov_busy := FALSE;                   (* not enabled / fault -> abort *)
+    ELSIF NOT ack_seen THEN
+        IF (cw AND 16#0010) = 0 THEN
+            cw := cw OR 16#0010;             (* retry setpoint request *)
+        END_IF;
+        IF (sw AND 16#1000) &lt;&gt; 0 THEN
+            cw := cw AND 16#FFEF;            (* acknowledge seen -> clear bit4 *)
+            ack_seen := TRUE;
+        END_IF;
+    ELSIF (sw AND 16#0400) &lt;&gt; 0 THEN
+        mov_busy := FALSE;                   (* target reached -> command complete *)
+    END_IF;
+END_IF;
+Busy := mov_busy;
+Done := ack_seen AND (sw AND 16#0400) &lt;&gt; 0 AND NOT busy;
+Error := (sw AND 16#0008) &lt;&gt; 0;</xhtml>
+          </ST>
+        </body>
+      </pou>
+      <pou name="MC_MOVEJOG" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="JogForward">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="JogBackward">
+              <type><BOOL /></type>
+            </variable>
+          </inputVars>
+          <inOutVars>
+            <variable name="cw">
+              <type><WORD /></type>
+            </variable>
+            <variable name="sw">
+              <type><WORD /></type>
+            </variable>
+            <variable name="target">
+              <type><INT /></type>
+            </variable>
+            <variable name="pos_fb">
+              <type><INT /></type>
+            </variable>
+          </inOutVars>
+          <outputVars>
+            <variable name="Busy">
+              <type><BOOL /></type>
+            </variable>
+          </outputVars>
+          <localVars>
+            <variable name="last_tgt">
+              <type><INT /></type>
+            </variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* MC_MoveJog: chase-target jog (target rides ahead of *)
+(* feedback while a jog input is held; drive decelerates on release).       *)
+IF (JogForward OR JogBackward) AND (sw AND 16#0004) &lt;&gt; 0 THEN
+    IF JogForward AND pos_fb &lt; 95 THEN
+        target := pos_fb + 6;
+    ELSIF JogBackward AND pos_fb &gt; 5 THEN
+        target := pos_fb - 6;
+    END_IF;
+    last_tgt := target;
+    IF (cw AND 16#0010) = 0 THEN
+        cw := cw OR 16#0010;
+    END_IF;
+    Busy := TRUE;
+ELSE
+    (* 所有权判定：仅当挂起的设定点是本块上次追赶值时才收尾，避免误杀其他块的新指令 *)
+    IF (cw AND 16#0010) &lt;&gt; 0 AND target = last_tgt THEN
+        target := pos_fb;                    (* release: hold where we are *)
+        cw := cw AND 16#FFEF;                (* and drop new-setpoint bit *)
+    END_IF;
+    Busy := FALSE;
+END_IF;</xhtml>
+          </ST>
+        </body>
+      </pou>
+      <pou name="MC_STOP" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="Execute">
+              <type><BOOL /></type>
+            </variable>
+          </inputVars>
+          <inOutVars>
+            <variable name="cw">
+              <type><WORD /></type>
+            </variable>
+            <variable name="sw">
+              <type><WORD /></type>
+            </variable>
+          </inOutVars>
+          <outputVars>
+            <variable name="Done">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="Busy">
+              <type><BOOL /></type>
+            </variable>
+          </outputVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* MC_Stop: CiA 402 quick stop (cw = 0x02), controlled *)
+(* deceleration; axis re-enabled by MC_Power once Execute drops.            *)
+IF Execute THEN
+    cw := (cw AND 16#00F0) OR 16#0002;
+    Busy := TRUE;
+    Done := FALSE;
+ELSIF Busy THEN
+    Busy := FALSE;                           (* quick stop latched in drive until re-command *)
+    Done := TRUE;
+END_IF;</xhtml>
+          </ST>
+        </body>
+      </pou>
+      <pou name="MC_HOME" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="Execute">
+              <type><BOOL /></type>
+            </variable>
+          </inputVars>
+          <inOutVars>
+            <variable name="cw">
+              <type><WORD /></type>
+            </variable>
+            <variable name="sw">
+              <type><WORD /></type>
+            </variable>
+            <variable name="target">
+              <type><INT /></type>
+            </variable>
+          </inOutVars>
+          <outputVars>
+            <variable name="Done">
+              <type><BOOL /></type>
+            </variable>
+          </outputVars>
+          <localVars>
+            <variable name="mv">
+              <type><derived name="MC_MOVEABSOLUTE" /></type>
+            </variable>
+            <variable name="exe_prev">
+              <type><BOOL /></type>
+            </variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* MC_Home (simplified): absolute move to machine zero 0. *)
+mv(Execute := Execute, Position := 0, cw := cw, sw := sw, target := target);
+Done := mv.Done AND NOT Execute;
+exe_prev := Execute;</xhtml>
+          </ST>
+        </body>
+      </pou>
+      <pou name="PLC_PRG" pouType="program">
+        <interface>
+          <!-- 对外接口-输入：主站指令（应用级）与电机编码器反馈（仿真侧写） -->
+          <localVars>
+            <variable name="run" address="%QX0.0">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="cmd_home" address="%QX0.1">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="cmd_go" address="%QX0.2">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="jog_fwd" address="%QX0.3">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="jog_rev" address="%QX0.4">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="quickstop" address="%QX0.5">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="inject_fault" address="%QX0.6">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="cmd_reset" address="%QX0.7">
+              <type><BOOL /></type>
+            </variable>
+          </localVars>
           <localVars>
             <variable name="x_fb" address="%QW0">
               <type><INT /></type>
-              <initialValue><simpleValue value="0" /></initialValue>
             </variable>
             <variable name="y_fb" address="%QW1">
               <type><INT /></type>
-              <initialValue><simpleValue value="0" /></initialValue>
             </variable>
             <variable name="z_fb" address="%QW2">
               <type><INT /></type>
-              <initialValue><simpleValue value="0" /></initialValue>
             </variable>
             <variable name="x_sp" address="%QW10">
               <type><INT /></type>
-              <initialValue><simpleValue value="0" /></initialValue>
             </variable>
             <variable name="y_sp" address="%QW11">
               <type><INT /></type>
-              <initialValue><simpleValue value="0" /></initialValue>
             </variable>
             <variable name="z_sp" address="%QW12">
               <type><INT /></type>
-              <initialValue><simpleValue value="0" /></initialValue>
             </variable>
           </localVars>
-          <!-- 对外接口-输出：六向轴驱动、三轴到位汇总、运动中指示 -->
+          <!-- 对外接口-输出：驱动诊断（状态字/速度指令）与应用状态 -->
           <localVars>
-            <variable name="x_fwd" address="%QX1.0">
+            <variable name="x_sw" address="%QW6">
+              <type><WORD /></type>
+            </variable>
+            <variable name="y_sw" address="%QW7">
+              <type><WORD /></type>
+            </variable>
+            <variable name="z_sw" address="%QW8">
+              <type><WORD /></type>
+            </variable>
+            <variable name="x_v" address="%QW13">
+              <type><INT /></type>
+            </variable>
+            <variable name="y_v" address="%QW14">
+              <type><INT /></type>
+            </variable>
+            <variable name="z_v" address="%QW15">
+              <type><INT /></type>
+            </variable>
+            <variable name="all_oe" address="%QX1.0">
               <type><BOOL /></type>
             </variable>
-            <variable name="x_rev" address="%QX1.1">
+            <variable name="move_done" address="%QX1.1">
               <type><BOOL /></type>
             </variable>
-            <variable name="y_fwd" address="%QX1.2">
+            <variable name="any_moving" address="%QX1.2">
               <type><BOOL /></type>
             </variable>
-            <variable name="y_rev" address="%QX1.3">
-              <type><BOOL /></type>
-            </variable>
-            <variable name="z_fwd" address="%QX1.4">
-              <type><BOOL /></type>
-            </variable>
-            <variable name="z_rev" address="%QX1.5">
-              <type><BOOL /></type>
-            </variable>
-            <variable name="in_pos" address="%QX1.6">
-              <type><BOOL /></type>
-            </variable>
-            <variable name="moving" address="%QX1.7">
+            <variable name="fault_any" address="%QX1.3">
               <type><BOOL /></type>
             </variable>
             <variable name="prog_id" address="%QW20">
@@ -82,87 +626,130 @@
               <initialValue><simpleValue value="1" /></initialValue>
             </variable>
           </localVars>
-          <!-- 内部状态 -->
+          <!-- 内部：三轴驱动实例 + MC 功能块实例 + 应用内部状态 -->
           <localVars>
-            <variable name="running">
-              <type><BOOL /></type>
+            <variable name="ax_x">
+              <type><derived name="AXIS402" /></type>
             </variable>
-            <variable name="xy_enable">
-              <type><BOOL /></type>
+            <variable name="ax_y">
+              <type><derived name="AXIS402" /></type>
             </variable>
-            <variable name="x_ok">
-              <type><BOOL /></type>
+            <variable name="ax_z">
+              <type><derived name="AXIS402" /></type>
             </variable>
-            <variable name="y_ok">
-              <type><BOOL /></type>
+            <variable name="x_cw">
+              <type><WORD /></type>
             </variable>
-            <variable name="z_ok">
-              <type><BOOL /></type>
+            <variable name="y_cw">
+              <type><WORD /></type>
+            </variable>
+            <variable name="z_cw">
+              <type><WORD /></type>
+            </variable>
+            <variable name="x_tgt">
+              <type><INT /></type>
+            </variable>
+            <variable name="y_tgt">
+              <type><INT /></type>
+            </variable>
+            <variable name="z_tgt">
+              <type><INT /></type>
+            </variable>
+            <variable name="pwr_x">
+              <type><derived name="MC_POWER" /></type>
+            </variable>
+            <variable name="pwr_y">
+              <type><derived name="MC_POWER" /></type>
+            </variable>
+            <variable name="pwr_z">
+              <type><derived name="MC_POWER" /></type>
+            </variable>
+            <variable name="go_x">
+              <type><derived name="MC_MOVEABSOLUTE" /></type>
+            </variable>
+            <variable name="go_y">
+              <type><derived name="MC_MOVEABSOLUTE" /></type>
+            </variable>
+            <variable name="go_z">
+              <type><derived name="MC_MOVEABSOLUTE" /></type>
+            </variable>
+            <variable name="hm_x">
+              <type><derived name="MC_HOME" /></type>
+            </variable>
+            <variable name="hm_y">
+              <type><derived name="MC_HOME" /></type>
+            </variable>
+            <variable name="hm_z">
+              <type><derived name="MC_HOME" /></type>
+            </variable>
+            <variable name="jg_x">
+              <type><derived name="MC_MOVEJOG" /></type>
+            </variable>
+            <variable name="st_x">
+              <type><derived name="MC_STOP" /></type>
+            </variable>
+            <variable name="st_y">
+              <type><derived name="MC_STOP" /></type>
+            </variable>
+            <variable name="st_z">
+              <type><derived name="MC_STOP" /></type>
+            </variable>
+            <variable name="rs_x">
+              <type><derived name="MC_RESET" /></type>
+            </variable>
+            <variable name="fx">
+              <type><derived name="MC_MOVEABSOLUTE" /></type>
             </variable>
           </localVars>
         </interface>
         <body>
           <ST>
-            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* ---- program identity (scenario = motion3axis) ---- *)
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* ---- program identity ---- *)
 prog_id := 1;
 
-(* ---- stop: all axis drives off, in-position dropped ---- *)
-IF stop_btn THEN
-    running := FALSE;
-END_IF;
+(* ---- 扫描头：采样各驱动上一扫描的状态字到诊断字（MC 块与主站共用） ---- *)
+x_sw := ax_x.sw;
+y_sw := ax_y.sw;
+z_sw := ax_z.sw;
 
-IF NOT running THEN
-    x_fwd := FALSE; x_rev := FALSE;
-    y_fwd := FALSE; y_rev := FALSE;
-    z_fwd := FALSE; z_rev := FALSE;
-    in_pos := FALSE;
-    IF start_btn THEN
-        running := TRUE;
-    END_IF;
-ELSE
-    (* ---- Z safe-zone interlock: X/Y axes may move only while Z is in the upper safe zone ---- *)
-    xy_enable := z_fb &lt;= 30;
+(* ---- 应用层：使能 / 故障复位 / 快停（顺序即优先级：快停最后落笔，覆盖使能命令） ---- *)
+pwr_x(Enable := run AND NOT quickstop, cw := x_cw, sw := x_sw);
+pwr_y(Enable := run AND NOT quickstop, cw := y_cw, sw := y_sw);
+pwr_z(Enable := run AND NOT quickstop, cw := z_cw, sw := z_sw);
 
-    (* ---- X axis: dead-band positioning (±2) ---- *)
-    IF x_sp - x_fb &gt; 2 THEN
-        x_fwd := TRUE;  x_rev := FALSE;
-    ELSIF x_sp - x_fb &lt; -2 THEN
-        x_fwd := FALSE; x_rev := TRUE;
-    ELSE
-        x_fwd := FALSE; x_rev := FALSE;
-    END_IF;
-    IF NOT xy_enable THEN
-        x_fwd := FALSE; x_rev := FALSE;
-    END_IF;
+rs_x(Execute := cmd_reset, cw := x_cw, sw := x_sw);
 
-    (* ---- Y axis: dead-band positioning (±2) ---- *)
-    IF y_sp - y_fb &gt; 2 THEN
-        y_fwd := TRUE;  y_rev := FALSE;
-    ELSIF y_sp - y_fb &lt; -2 THEN
-        y_fwd := FALSE; y_rev := TRUE;
-    ELSE
-        y_fwd := FALSE; y_rev := FALSE;
-    END_IF;
-    IF NOT xy_enable THEN
-        y_fwd := FALSE; y_rev := FALSE;
-    END_IF;
+st_x(Execute := quickstop, cw := x_cw, sw := x_sw);
+st_y(Execute := quickstop, cw := y_cw, sw := y_sw);
+st_z(Execute := quickstop, cw := z_cw, sw := z_sw);
 
-    (* ---- Z axis: dead-band positioning (±2), no interlock ---- *)
-    IF z_sp - z_fb &gt; 2 THEN
-        z_fwd := TRUE;  z_rev := FALSE;
-    ELSIF z_sp - z_fb &lt; -2 THEN
-        z_fwd := FALSE; z_rev := TRUE;
-    ELSE
-        z_fwd := FALSE; z_rev := FALSE;
-    END_IF;
-END_IF;
+(* ---- 应用层：定位 / 回零 / 点动 / 故障注入 ---- *)
+go_x(Execute := cmd_go, Position := x_sp, cw := x_cw, sw := x_sw, target := x_tgt);
+go_y(Execute := cmd_go, Position := y_sp, cw := y_cw, sw := y_sw, target := y_tgt);
+go_z(Execute := cmd_go, Position := z_sp, cw := z_cw, sw := z_sw, target := z_tgt);
 
-(* ---- in-position aggregate: all three axes inside dead band while running ---- *)
-x_ok := ABS(x_sp - x_fb) &lt;= 2;
-y_ok := ABS(y_sp - y_fb) &lt;= 2;
-z_ok := ABS(z_sp - z_fb) &lt;= 2;
-in_pos := running AND x_ok AND y_ok AND z_ok;
-moving := running AND (x_fwd OR x_rev OR y_fwd OR y_rev OR z_fwd OR z_rev);</xhtml>
+hm_x(Execute := cmd_home, cw := x_cw, sw := x_sw, target := x_tgt);
+hm_y(Execute := cmd_home, cw := y_cw, sw := y_sw, target := y_tgt);
+hm_z(Execute := cmd_home, cw := z_cw, sw := z_sw, target := z_tgt);
+
+jg_x(JogForward := jog_fwd, JogBackward := jog_rev,
+     cw := x_cw, sw := x_sw, target := x_tgt, pos_fb := x_fb);
+
+fx(Execute := inject_fault, Position := 150, cw := x_cw, sw := x_sw, target := x_tgt);
+
+(* ---- 驱动器实例（读 cw/target/fb，写 sw/v_cmd） ---- *)
+ax_x(cw := x_cw, target := x_tgt, pos_fb := x_fb);
+x_sw := ax_x.sw;  x_v := ax_x.v_cmd;
+ax_y(cw := y_cw, target := y_tgt, pos_fb := y_fb);
+y_sw := ax_y.sw;  y_v := ax_y.v_cmd;
+ax_z(cw := z_cw, target := z_tgt, pos_fb := z_fb);
+z_sw := ax_z.sw;  z_v := ax_z.v_cmd;
+
+(* ---- 应用状态汇总 ---- *)
+all_oe := pwr_x.Status AND pwr_y.Status AND pwr_z.Status;
+move_done := go_x.Done AND go_y.Done AND go_z.Done;
+any_moving := (x_v &lt;&gt; 0) OR (y_v &lt;&gt; 0) OR (z_v &lt;&gt; 0);
+fault_any := (x_sw AND 16#0008) &lt;&gt; 0 OR (y_sw AND 16#0008) &lt;&gt; 0 OR (z_sw AND 16#0008) &lt;&gt; 0;</xhtml>
           </ST>
         </body>
       </pou>

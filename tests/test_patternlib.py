@@ -35,7 +35,7 @@ class TestCardContent:
     def test_cards_carry_st_and_summary(self):
         card = pattern_cards("定位")[0]
         assert card["summary"] and "--- POU" in card["st"]
-        assert "in_pos" in card["st"]  # motion3axis 种子的到位汇总变量
+        assert "prog_id" in card["st"]  # motion3axis 种子的身份常量
 
     def test_render_contains_st_fences(self):
         text = render_cards(pattern_cards("运动"))
