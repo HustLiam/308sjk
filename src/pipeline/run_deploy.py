@@ -4,7 +4,7 @@
 部署编排器（OpenPLC 版）：XML → .st → 上传编译 → 启动。
 
 链路：
-    src/plc/counter.xml (61131-10)
+    src/plc/motion3axis.xml (61131-10)
         │ xml2st 校验+转换
         ▼
     workspace/program.st
