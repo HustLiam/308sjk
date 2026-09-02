@@ -1,8 +1,8 @@
 # PLC 代码生成与执行引擎详细设计（lx 负责部分）
 
-> 本文档是《总体实施方案》中 **② PLC 控制代码生成模块**、**④a PLC 执行引擎（验收链路 B）**与 **⑤ 验证模块的 PLC 侧行为验收**的详细设计与实施记录，负责人 **lx**。
+> 本文档是《总体实施方案》中 **②a PLC 代码生成模块（生成契约与闸门）**、**③a PLC 执行引擎（链路 B）**与 **④ 验证模块的 PLC 侧行为验收**的详细设计与实施记录，负责人 **lx**。
 >
-> 与仿真验证侧（csk，《csk-仿真环境与IO闭环详细设计》，负责 ①③④b⑤ 及链路 A）的衔接方式：**同一份 PLCopen XML + io_map.json**。链路 A（matiec 编译为 C 库、Isaac Sim 进程内 lockstep）与链路 B（OpenPLC 软 PLC + Modbus TCP）跑同一份代码，本文档负责其中的代码契约与链路 B 的全部实现。
+> 与仿真验证侧（csk，《csk-仿真环境与IO闭环详细设计》，负责 ①/②b/③b/④ 及链路 A 构建）的衔接方式：**同一份 PLCopen XML + io_map.json**。链路 A（matiec 编译为 C 库、Isaac Sim 进程内 lockstep）与链路 B（OpenPLC 软 PLC + Modbus TCP）跑同一份代码，本文档负责其中的代码契约与链路 B 的全部实现。
 
 ---
 
@@ -10,9 +10,9 @@
 
 | 总体方案模块 | 本侧职责 | 仓库实现 | 状态 |
 |---|---|---|---|
-| ② PLC 代码生成契约 | PLCopen XML（IEC 61131-10）结构契约、静态校验、XML→ST 机械转换 | `src/pipeline/xml2st.py` + `tests/test_xml2st.py` | ✅ 完成 |
-| ④a 执行引擎（链路 B） | 校验→转换→上传→编译→启动的全脚本化部署编排 + HTTP 服务化 | `run_deploy.py` / `openplc_client.py` / `serve.py` | ✅ 已打通 |
-| ⑤ PLC 侧行为验收 | Modbus 安全 IO 层、冒烟验证、场景验收脚本 | `modbus_io.py` / `verify_modbus.py` / `scenario_*.py` | ✅ 6 场景全过 |
+| ②a PLC 代码生成契约 | PLCopen XML（IEC 61131-10）结构契约、静态校验、XML→ST 机械转换 | `src/pipeline/xml2st.py` + `tests/test_xml2st.py` | ✅ 完成 |
+| ③a 执行引擎（链路 B） | 校验→转换→上传→编译→启动的全脚本化部署编排 + HTTP 服务化 | `run_deploy.py` / `openplc_client.py` / `serve.py` | ✅ 已打通 |
+| ④ PLC 侧行为验收 | Modbus 安全 IO 层、冒烟验证、场景验收脚本 | `modbus_io.py` / `verify_modbus.py` / `scenario_*.py` | ✅ 6 场景全过 |
 | 运行时工程资产 | 已验收的 PLCopen XML 场景库 | `src/plc/*.xml` | ✅ |
 
 ## 1. 在总体架构中的位置
@@ -21,7 +21,7 @@
 需求规格 requirement_spec.json
         │  io_list（IO 清单：变量名/方向/类型/量程 —— 三方一致性源头）
         ▼
-② 代码生成（agent 产出 plc_project.xml —— 唯一源码，强制 61131-10）
+②a 代码生成（agent 产出 plc_project.xml —— 唯一源码，强制 61131-10）
         │
         ├──► 【链路 A · 仿真侧负责】matiec iec2c → plc_logic.dll → Isaac 进程内 lockstep
         │
@@ -213,13 +213,13 @@ Web API :8080、Modbus TCP :502；URL 与账号可经环境变量 `OPENPLC_URL /
 
 ```
 src/pipeline/xml2st.py          ② 校验+转换（纯标准库）
-src/pipeline/openplc_client.py  ④a OpenPLC v3 HTTP 客户端
-src/pipeline/run_deploy.py      ④a 部署编排器（结果 JSON 供回喂）
-src/pipeline/serve.py           ④a POST /deploy HTTP 服务（agent 端点，:8600）
-src/pipeline/modbus_io.py       ⑤ SafeCoilIO + 寄存器读 + require_program 身份校验 + zero_regs
-src/pipeline/verify_modbus.py   ⑤ Modbus 冒烟验证（含身份校验）
-src/pipeline/stop_plc.py        ④a 停止运行时逻辑扫描
-src/pipeline/scenario_*.py      ⑤ 场景验收（sorting / pump / traffic）
+src/pipeline/openplc_client.py  ③a OpenPLC v3 HTTP 客户端
+src/pipeline/run_deploy.py      ③a 部署编排器（结果 JSON 供回喂）
+src/pipeline/serve.py           ③a POST /deploy HTTP 服务（agent 端点，:8600）
+src/pipeline/modbus_io.py       ④ SafeCoilIO + 寄存器读 + require_program 身份校验 + zero_regs
+src/pipeline/verify_modbus.py   ④ Modbus 冒烟验证（含身份校验）
+src/pipeline/stop_plc.py        ③a 停止运行时逻辑扫描
+src/pipeline/scenario_*.py      ④ 场景验收（sorting / pump / traffic）
 src/plc/*.xml                   交付物：4 个 61131-10 场景
 tests/test_xml2st.py            转换器单测（pytest，无需运行时）
 workspace/                      本地生成物（不入库）

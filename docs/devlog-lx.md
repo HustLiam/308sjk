@@ -46,6 +46,15 @@
 
 **验证矩阵**：6 XML 静态校验全过；pytest 24 绿；counter 部署+verify×2+停机；sorting/pump/traffic 各部署 1 次+连跑 2 次（幂等证明）；cylinder/pid 各部署+验收+身份确认；负测试 1 例。全绿。
 
+## 2026-09-02
+
+### 架构 v1.1 修订落地（编号体系 + USD 构建归属）
+
+- 模块编号 ①②③④a④b⑤ → ①②a②b③a③b④，四文档 + 看板全量替换（python 批量 + grep 终检零残留）；
+- 职责变化仅一处实质：SceneSpec→USD 确定性构建从②b移到③b——对代码零影响（csk 一人覆盖②b③b），只改文档叙事：主方案 §3.3 输出表重排（scene.usda 生产者改③b）、§3.4.3 补"json→USD 构建→冒烟→headless 启动"链首；
+- 图中③a框"Xml→st→matiec编译→C + OpenPLC运行"与现双链路一致，仅表述紧凑化；③a⇄③b标注"进程IO/Modbus TCP"对应链路A/B——与既有实现无冲突；
+- 建立 docs/changelog.md，补记契约②v1.1（prog_id）与架构 v1.1 两笔。
+
 ### 协作规范落地（首次许可制合并走查）
 
 - 流程实测：`git rm devlog → commit → push lx → merge master → push master → 分支重建日志`，全程无障碍；master 树核对无 devlog ✓；
