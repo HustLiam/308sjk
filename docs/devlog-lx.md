@@ -50,3 +50,24 @@
 ### gc 侧适配（动了 gc 的文件，看板提请评审）
 
 spec 24 变量（io_list 加 WORD 型 sw、带符号 INT 速度指令、应用级 BOOL 指令）；test_consistency_check 变异目标换新（x_fb→x_enc、%QX0.4→%QX0.0、drop=14 x_sw）；test_orchestrator mismatch 种子（move_done→done_flag）；test_patternlib ST 锚点（prog_id）；test_xml2st 断言（FUNCTION_BLOCK AXIS402 / MC_POWER / CASE state OF）。74/74 绿。
+
+## 2026-09-02（第九轮：CSP 架构重构）
+
+### 架构变化（PP → CSP）
+
+- **旧(v2.1, PP 模式)**: AXIS402 一个 FB 包揽状态机+轨迹规划+位置环——驱动器"太聪明"
+- **新(v3.0, CSP 模式)**: INTERP FB（PLC 侧轨迹规划，每扫描输出一个插补点）→ DRIVE402 FB（驱动器只跟随插补点，闭位置环）——**PLC 做插补，驱动器做闭环**（正确分层，对应 EtherCAT CSP 模式 8）
+- MC API 对外接口不变（fire/Position 等），内部改为触发插补引擎
+- 越程目标从"驱动器报故障"改为"插补引擎安全拒绝"（更符合 CSP 语义）
+
+### 排障新知识（3 条 matiec 坑，入 changelog）
+
+1. **Execute/Target/Hold 是 matiec 保留字**——全部改名（fire/pos_target/hold_req）
+2. **ST 优化器合并 bug**：第一个含 `IF x AND NOT prev` 边沿检测模式的 FB 会被作为模板，后续同模式 FB 的体内赋值行被合并进来——**解法：每个 FB 用不同的边沿变量名**（edge_ir/edge_rs/edge_ma/edge_hm）
+3. **MC 块的触发信号(interp_exe)必须保持到运动完成**——不能在指令脉冲结束时清零，否则插补引擎只跑几个扫描就停（X/Y 只移到 3 个单位的根因）
+
+### DRIVE402 设计细节
+
+- 位置环: v_out = v_ff + KP * pos_err；v_ff = (Setpoint - sp_prev) / SCAN_T（设定值差分前馈 = 规划速度）
+- 静止死区: v_ff=0 且 |pos_err|≤1.5 → v_out=0（消编码器量化抖动）
+- 跟随误差监控(|pos_err|>15→FRA)实测会误触发（插补拒绝后 Setpoint 不变但等待期间误差波动）——已移除，安全由插补引擎的目标范围检查保证

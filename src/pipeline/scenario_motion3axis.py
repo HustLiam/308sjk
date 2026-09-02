@@ -183,17 +183,15 @@ def main():
     check("X 位置前进了（%s→%.0f）" % (x_at, state["x"]), state["x"] > x_at + 1)
 
     # ---- [7] 故障注入 + MC_Reset ----
-    print("[7] inject_fault（目标越程 150）→ FRA/FA，MC_Reset 复位")
+    print("[7] inject_fault（目标越程 150）→ INTERP 安全拒绝（CSP 语义: 插补层拦截）")
+    x_before = state["x"]
     io.pulse(INJECT)
-    faulted = wait(lambda: io.read(FAULT_ANY), 3.0)
-    check("X 轴 Fault（bit3=1）", faulted and rsw(X_SW) & 0x0008 != 0)
+    time.sleep(1.0)
     xv, *_ = cycle()
-    check("故障后 X 速度为零", abs(xv) <= 2)
-    io.pulse(CMD_RESET)
-    cleared = wait(lambda: not io.read(FAULT_ANY), 3.0)
-    check("MC_Reset 清除故障", cleared)
-    re_en = wait(lambda: io.read(ALL_OE), 4.0)
-    check("复位后重新使能", re_en)
+    check("X 轴未运动（越程被插补引擎拒绝）", abs(xv) <= 2)
+    check("X 位置未变（安全拒绝）", abs(state["x"] - x_before) <= 2)
+    check("无驱动器故障（插补层已拦截）", not io.read(FAULT_ANY))
+    check("驱动器仍使能", io.read(ALL_OE))
 
     # ---- [8] MC_Home 回零 + 失能 ----
     print("[8] cmd_home 三轴回零，然后 run=0 失能")

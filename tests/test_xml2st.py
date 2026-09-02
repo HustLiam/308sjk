@@ -24,12 +24,12 @@ class TestMotion3AxisArtifact:
 
     def test_st_contains_program_and_address(self):
         _, st, _ = convert(MOTION_XML)
-        assert "FUNCTION_BLOCK AXIS402" in st   # CiA 402 驱动模型 FB
+        assert "FUNCTION_BLOCK INTERP" in st      # CSP 插补引擎 FB
         assert "PROGRAM PLC_PRG" in st
         assert "AT %QW0" in st          # x_fb 对外接口：INT -> Modbus 保持寄存器 0
-        assert "FUNCTION_BLOCK MC_POWER" in st # PLCopen MC API 层
+        assert "FUNCTION_BLOCK DRIVE402" in st  # CSP 驱动器 FB
         assert "FUNCTION_BLOCK MC_MOVEABSOLUTE" in st
-        assert "CASE state OF" in st    # 驱动状态机
+        assert "CASE state OF" in st    # CiA 402 状态机
 
     def test_st_has_configuration(self):
         _, st, _ = convert(MOTION_XML)
@@ -42,10 +42,10 @@ class TestMotion3AxisArtifact:
         _, st, _ = convert(MOTION_XML)
         blocks = st.split("END_VAR")
         # FB 实例块（ax_x 等）不含 AT；x_fb 所在块只有定位变量
-        fb_block = next(b for b in blocks if "ax_x" in b)
+        fb_block = next(b for b in blocks if "ix_x" in b or "dv_x" in b)
         assert "AT %" not in fb_block
         located_block = next(b for b in blocks if "x_fb AT" in b)
-        assert "ax_x" not in located_block
+        assert "ix_x" not in located_block and "dv_x" not in located_block
 
 
 # ---------------------------------------------------------------- 反例用例

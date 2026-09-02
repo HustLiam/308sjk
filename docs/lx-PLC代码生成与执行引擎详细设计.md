@@ -176,9 +176,9 @@ Web API :8080、Modbus TCP :502；URL 与账号可经环境变量 `OPENPLC_URL /
 
 | 场景 | XML | 考察点 | 结果 |
 |---|---|---|---|
-| 三轴运动控制（CiA 402 + PLCopen MC） | motion3axis.xml | **三层自包含运动栈**：AXIS402 驱动模型（状态机 SOD/RTSO/SO/OE/QSA/FRA/FA + Profile Position 梯形规划 + 位置伺服环）→ MC_Power/MC_Reset/MC_Home/MC_MoveAbsolute/MC_MoveJog/MC_Stop API → 应用层；**全程不变量**：失能态零速/速度限幅 ±120/行程 0~100 | 36/36 |
+| 三轴运动控制（CSP 架构） | motion3axis.xml | **CSP（Cyclic Synchronous Position）四层**：INTERP 插补引擎（PLC 侧梯形轨迹规划，每扫描输出一个插补点）→ DRIVE402 驱动器（位置环 P + 设定值差分前馈 + CiA 402 状态机）→ MC API → 应用层。**PLC 只做插补和周期发点，驱动器做闭环**（正确分层）；目标越程由插补引擎安全拒绝 | 35/35 |
 
-验收脚本 `scenario_motion3axis.py` 一身两角——CiA 402 主站（应用指令+读状态字位）+ 三轴电机仿真（按速度指令积分编码器），覆盖 8 组 36 项：上电 RTSO → MC_Power 使能序列（bit0→bit1→bit2）→ 三轴并发定位 → 仅 Z 轴运动 → 快停 QSA 受控减速+释放重使能+重发指令 → 点动按住移动/松开停止 → 故障注入 FRA/FA+MC_Reset 复位+重使能 → 回零+失能。
+验收脚本 `scenario_motion3axis.py` 一身两角——CiA 402 主站（应用指令+读状态字位）+ 三轴电机仿真（按速度指令积分编码器），覆盖 8 组 35 项（CSP 语义：越程由插补层安全拒绝）：上电 RTSO → MC_Power 使能序列（bit0→bit1→bit2）→ 三轴并发定位 → 仅 Z 轴运动 → 快停 QSA 受控减速+释放重使能+重发指令 → 点动按住移动/松开停止 → 故障注入 FRA/FA+MC_Reset 复位+重使能 → 回零+失能。
 
 **场景覆盖度**：当前覆盖**运动控制（多轴定位）**域。此前六场景曾覆盖分拣/顺序/开关过程/连续过程（PID）/时序五域（历史验收记录见 git），场景库重组后其余应用域按需求重建——prog_id 从 2 顺延分配。
 
