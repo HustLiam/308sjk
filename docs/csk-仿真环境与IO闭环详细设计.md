@@ -2,6 +2,8 @@
 
 > 本文档是《总体实施方案》第 3.3 / 3.4 / 3.5 节（仿真环境生成、执行与仿真引擎、验证与反馈）的细化，**负责人：csk（仿真验证侧）**，目标是给出**具体、可实现**的工程方案：资产格式选型、Isaac Sim 启动与控制、软 PLC 与仿真之间的 IO 数据交换、结果采集与闭环反馈。
 >
+> **职责边界（2026-09 收窄）**：模块 ③ 中 SceneSpec（JSON）的 **LLM 生成与按校验反馈重生成归 gc 侧**（见 gc 文档 §3）。本侧自其产物 **`scene.spec.json`** 起接手，负责 JSON 之后的全部仿真工作：SceneSpec Schema 契约与静态校验闸门 → SceneSpec→USD 确定性构建 → 组件资产库 → io_map 落地 → Isaac Sim 运行时与 IO 数据交换（链路 A/B）→ trace 采集 → 确定性判定引擎。一句话：**"LLM 生成到 JSON 为止（gc），JSON 之后仿真全链路（csk）"**。
+>
 > 涉及 Isaac Sim 的 API 在 4.2 前后有过一次包名迁移（`omni.isaac.*` → `isaacsim.*`），文中代码以 **Isaac Sim 4.5（`isaacsim.*` 命名空间）** 为基准编写，旧版本的对应关系在附录 A 给出。
 
 ---
@@ -10,8 +12,9 @@
 
 | 决策点 | 结论 |
 |---|---|
+| **职责起点（上游接口）** | **`scene.spec.json`**（gc 侧 LLM 生成，Schema 本文 §2.2 定义）——本侧负责 JSON 之后的全部仿真工作：校验 → USD → Isaac 仿真 → IO 闭环 → 判定 |
 | 仿真资产最终格式 | **USD**（Isaac Sim 原生格式），不用 URDF 作为最终格式 |
-| LLM 直接生成什么 | 不直接写 USD，而是生成**场景中间表示 SceneSpec（JSON）**，由确定性代码转换成 USD |
+| LLM 直接生成什么 | 不直接写 USD——**gc 侧 LLM 生成场景中间表示 SceneSpec（JSON）**（生成与重生成归 gc，见 gc 文档 §3），由本侧确定性代码转换成 USD |
 | URDF 的角色 | 降级为**组件库的输入格式之一**（复用现成机器人/设备 URDF，导入后转 USD 存入组件库） |
 | 软 PLC 与 Isaac Sim 的耦合方式 | **matiec 把 ST 编译成 C 共享库，加载进仿真主进程，用 ctypes 逐物理步调用**（函数调用级 IO 交换，无网络开销） |
 | 同步机制 | **lockstep 锁步**：每个物理步先采输入 → 跑一个 PLC 扫描 → 写输出 → 再推物理 |
@@ -41,15 +44,15 @@
 ### 1.2 三层资产策略
 
 ```
-第 1 层  SceneSpec（JSON，中间表示）
-         LLM 生成的目标格式；人可读、可 diff、可校验（JSON Schema）
-                │  确定性转换器（无 LLM 参与）
+第 1 层  SceneSpec（JSON，中间表示）        ← gc 侧 LLM 生成
+         人可读、可 diff、可校验（JSON Schema 与校验器归本侧维护）
+                │  确定性转换器（无 LLM 参与，本侧）
                 ▼
-第 2 层  场景 USD（.usda）
+第 2 层  场景 USD（.usda）                  ← 本侧构建
          由转换器用 pxr API 构建或拼装，是仿真实际加载的文件
                 │  reference 引用
                 ▼
-第 3 层  组件资产库（.usd，预制作、人工校核过）
+第 3 层  组件资产库（.usd，预制作、人工校核过） ← 本侧维护
          传送带 / 气缸 / 光电传感器 / 夹爪 / 机械臂 / 标准物料箱 …
 ```
 
@@ -59,30 +62,32 @@
 
 ## 2. 仿真环境生成模块详细设计
 
+> **本章职责划分**：① LLM 生成 SceneSpec 归 **gc 侧**（生成智能体，含按校验错误重生成，见 gc 文档 §3）；本侧拥有 **② Schema + 静态校验闸门、③ SceneSpec→USD 构建器、④ 冒烟测试**。本侧在此环节不做任何 LLM 调用——校验失败以结构化错误列表回传 gc 重生成。
+
 ### 2.1 生成流水线
 
 ```
-结构化需求（来自需求理解模块）
+requirement_spec.json（需求理解模块输出，io_list 为 IO 单一源头）
    │
    ▼
-① LLM 生成 SceneSpec（JSON）────────────┐
+① LLM 生成 SceneSpec（JSON）────────────┐  ← gc 侧（生成智能体，见 gc 文档 §3）
    │                                     │ 校验失败（Schema/物理参数）
    ▼                                     │
-② JSON Schema 校验 + 静态物理校验 ───────┘→ 错误信息反馈 LLM 重新生成
-   │ 通过
+② JSON Schema 校验 + 静态物理校验 ───────┘→ 结构化错误列表反馈 gc 重新生成
+   │ 通过                                    ← 本侧闸门（确定性代码，无 LLM）
    ▼
-③ SceneSpec → USD 构建器（pxr 确定性代码）
+③ SceneSpec → USD 构建器（pxr 确定性代码）  ← 本侧
    │ 产出 scene.usda + io_map.json + scene_meta.json
    ▼
 ④ 场景冒烟测试（headless 加载 + 空 PLC 跑 2 秒，检查加载无错、无 NaN、设备在位）
-   │ 失败 → 归因（资产缺失 / 布局穿模 / 参数非法）反馈重生成
+   │ 失败 → 归因（资产缺失 / 布局穿模 / 参数非法）反馈重生成   ← 本侧
    ▼
-   交付仿真引擎使用
+   交付仿真引擎使用（④b，本侧）
 ```
 
-### 2.2 SceneSpec 规范
+### 2.2 SceneSpec 规范（gc⇄csk 接口契约）
 
-一个完整的示例（传送带分拣场景）：
+SceneSpec Schema 是 gc（生成方）与本侧（校验/消费方）的接口契约：gc 按本节结构生成 `scene.spec.json`，本侧按同一结构校验。**修改本节结构走主方案 §8.3 契约变更流程**。一个完整的示例（传送带分拣场景）：
 
 ```json
 {
@@ -140,7 +145,7 @@
 
 设计要点：
 
-- **`type` 是封闭枚举**，每个取值对应组件库里的一个 USD 资产 + 一段参数校验规则，LLM 不能发明新类型（发明了会在 Schema 校验被拒，错误信息直接回喂）；
+- **`type` 是封闭枚举**，每个取值对应组件库里的一个 USD 资产 + 一段参数校验规则，生成方不能发明新类型（发明了会在 Schema 校验被拒，错误信息直接回喂 gc）；
 - **`io_map` 是仿真与 PLC 的单一契约**：`plc_var` 必须与 ST 代码中的变量声明一致（由代码生成模块与场景生成模块共享同一份需求规格中的 IO 清单来保证），`bind.asset + quantity` 指向组件暴露的物理量；
 - **`script` 定义激励与终止**：物料何时投放、扰动注入、仿真何时结束——这使同一个场景可以反复、确定地复现，是闭环可比较的前提。
 
@@ -202,7 +207,7 @@ def build(spec: dict, out_path: str):
 3. 布局粗查：资产包围盒两两不相交（穿模检测）；`pose` 在地面范围内；
 4. 物理量纲：质量 > 0、惯量张量正定（组件库参数范围内）、速度/行程在合理区间。
 
-校验失败的具体条目（`"cyl_1.stroke=0 超出 (0,1]"` 这类）拼进反馈 Prompt，LLM 只需做定向修改。
+校验失败的具体条目（`"cyl_1.stroke=0 超出 (0,1]"` 这类）以结构化列表返回编排器，由 gc 拼进反馈 Prompt（gc 文档 §3.2）做定向重生成——本侧只产出确定性校验结论，不参与归因。
 
 ---
 
@@ -521,11 +526,12 @@ class SoftPLC:
 
 | 接口 | 定义处 |
 |---|---|
-| `gen_scene_spec(spec, history)`（SceneSpec LLM 生成） | §2.1 / §2.2 |
-| `validate_scene(scene)`（Schema + 物理校验） | §2.5 |
+| `validate_scene(scene)`（Schema + 物理校验闸门） | §2.5 |
 | `build_usd(scene)` → `scene.usda + io_map.json` | §2.4 |
 | `run_isaac_headless(usd, io_map, dll)` → trace/events/exit | §3.3 / §3.5 |
 | `evaluate(acceptance, trace, ...)` → `verdict.json` | §5.1 |
+
+> `gen_scene_spec(spec, history)`（SceneSpec LLM 生成与重生成）**归 gc 侧**（gc 文档 §3/§4），其产物 `scene.spec.json` 经上表 `validate_scene` 闸门进入本侧。
 
 ---
 
@@ -533,15 +539,15 @@ class SoftPLC:
 
 ```
 sim-loop/
-├── orchestrator/          # 端到端编排、迭代管理
+├── orchestrator/          # 端到端编排、迭代管理（归 gc 侧，此处仅指其落盘位置）
 ├── codegen/               # xml2st 接入（复用 PLC 侧）、shim/地址表生成（ST 生成本体归智能体侧）
-├── scenegen/              # SceneSpec Schema、校验器、USD 构建器
+├── scenegen/              # ✅ 本侧：SceneSpec Schema、校验器、USD 构建器（SceneSpec LLM 生成器归 gc 侧 src/agent/）
 ├── components/            # 组件 USD 资产库 + quantity 清单 + 参数规则
 ├── runtime/
 │   ├── run_sim.py         # Isaac headless 主脚本（lockstep 循环）
 │   ├── iobridge/          # IOBridge 各类 binding
 │   └── plc_binding.py     # ctypes 封装
-├── verifier/              # 判定引擎 + trace 分析 + 反馈 Prompt 拼装
+├── verifier/              # 判定引擎 + trace 分析（反馈 Prompt 拼装归 gc 侧）
 ├── toolchain/             # matiec 构建脚本、Dockerfile
 └── runs/                  # 迭代产物（git 管理）
 ```
@@ -556,9 +562,9 @@ sim-loop/
 |---|---|---|
 | D1–2 | 手工制作首个场景：气缸 + 光电 + 传送带组件 USD，`run_sim.py` 能 headless 跑完并出 trace | 人工写的 ST（气缸推箱）仿真通过 |
 | D3–4 | matiec 流水线打通：示例 ST → DLL → ctypes 在循环内 lockstep 跑 | 逻辑改动能反映到仿真行为 |
-| D5–7 | SceneSpec Schema + 构建器 + 校验器；LLM 接入生成 SceneSpec | LLM 生成的场景加载成功 |
-| D8–10 | 判定引擎 4 种准则类型 + 反馈 Prompt 拼装 | 人为埋错能被正确判 FAIL 并归因 |
-| D11–14 | 编排器串起全流程，跑通"故意给错代码 → 闭环修正 → 通过"的演示 | 无人干预完成一次收敛 |
+| D5–7 | SceneSpec Schema + 构建器 + 校验器（SceneSpec LLM 生成接入归 gc 侧） | 手写 spec 走通"校验→构建→仿真→判定"全链；gc 生成的 spec 过本侧闸门后加载成功 |
+| D8–10 | 判定引擎 4 种准则类型 + trace 窗口截取接口（归因素材） | 人为埋错能被正确判 FAIL 并交 gc 归因 |
+| D11–14 | 配合 gc 编排器串起全流程，跑通"故意给错代码 → 闭环修正 → 通过"的演示 | 无人干预完成一次收敛 |
 
 ---
 

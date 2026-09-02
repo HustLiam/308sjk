@@ -12,7 +12,7 @@
 |---|---|---|---|
 | 用户交互层 | 自然语言输入、多轮澄清、规格回显确认、结果展示 | 对话协议 / CLI | 🚧 未启动（编排 CLI 已有，澄清协议未接） |
 | ① 需求理解模块 | 自然语言 → 结构化需求规格；**requirement_spec.json Schema 的定义权** | `requirement_spec.json` + JSON Schema | 🟨 Schema 草案 v1.0.0-draft.1 已出（`schemas/requirement_spec.schema.json` + `src/agent/spec_validator.py`），**待三方评审冻结**；LLM 澄清未接 |
-| ② ③ 的 LLM 生成本体 | PLCopen XML 生成器（在 lx 契约上）、失败归因分析 LLM | 生成器 Prompt 工程 + ST 模式库 | 🟨 生成器 v0 已实现（`src/agent/pipeline.py` + `patternlib.py` + `prompts/plcgen_skill.md`，种子=已验收 6 场景，xml2st+一致性双闸门回灌）；归因 LLM 未启动 |
+| ② ③ 的 LLM 生成本体 | PLCopen XML 生成器（在 lx 契约上）、**SceneSpec 生成器（在 csk Schema 上，校验错误回喂重生成）**、失败归因分析 LLM | 生成器 Prompt 工程 + ST 模式库 + SceneSpec 生成 Prompt | 🟨 PLC 生成器 v0 已实现（`src/agent/pipeline.py` + `patternlib.py` + `prompts/plcgen_skill.md`，种子=已验收 6 场景，xml2st+一致性双闸门回灌）；SceneSpec 生成器与归因 LLM 未启动 |
 | 闭环编排器 | solve 循环、两个编译/校验短路、迭代记忆、终止与 best-effort、反馈包拼装与路由 | `orchestrator/` | 🟨 半环骨架已实现（`src/agent/orchestrator.py`：生成→xml2st 闸门→一致性→部署可选；runs/ 落盘与 final 冻结已跑通；仿真全环等 csk 接口） |
 | 跨模块一致性 | io_list 单一源头的落地：**三方一致性检查器**（定位变量 ≡ io_list ≡ io_map） | `consistency_check.py` | ✅ 原型完成（`src/agent/consistency_check.py`，R1~R5；io_map 腿接口就绪，csk 产出后自动生效） |
 
@@ -30,8 +30,8 @@
 【本侧】编排器 solve() 循环 ──────────────────────────────────┐
    │  ② PLC 代码生成（本侧 LLM，产出受 lx 契约约束）           │
    │     └► 编译闸门：lx 的 xml2st / POST /deploy（失败即短路） │
-   │  ③ 场景生成（仿真侧 SceneSpec LLM + 确定性构建器）         │
-   │     └► 校验闸门：仿真侧 Schema/物理校验（失败即短路）      │
+   │  ③ 场景生成（本侧 SceneSpec LLM 生成 + 仿真侧确定性构建）   │
+   │     └► 校验闸门：仿真侧 Schema/物理校验（失败回喂本侧重生成）│
    │  ④ 仿真执行：仿真侧 run_isaac_headless（链路 A DLL）      │
    │  ⑤ 判定：仿真侧确定性规则引擎 ──► verdict.json             │
    │  归因（本侧 LLM）：区分代码问题 / 场景问题，路由重生成      │
@@ -92,7 +92,7 @@ solve(request):
     xml = gen_plc_code(spec, history)                 # ② 本侧生成器
     if not compile_gate(xml):                         # 短路①：lx xml2st/--check 或 /deploy
         history.append(compile_error); continue       #   不进仿真，省最贵一步
-    scene = gen_scene_spec(spec, history)             # ③ 仿真侧 LLM
+    scene = gen_scene_spec(spec, history)             # ③ 本侧 LLM（Schema/校验归 csk）
     if errs := validate_scene(scene):                 # 短路②：仿真侧校验器
         history.append(scene_error); continue
     usd, io_map = build_usd(scene)                    # 仿真侧确定性构建
@@ -144,7 +144,8 @@ io_map.json（仿真侧产出）------------------------------------┤
 |---|---|---|
 | lx（PLC 侧） | `xml2st --check`（本地快速闸门）；`POST /deploy` :8600（真编译+部署，返回 deploy_result.json，errors 原样进反馈包） | 本侧调用 |
 | lx（PLC 侧） | 契约文档 §3：ST 子集 / 定位变量位宽 / 显式拒绝清单 —— 生成器 Prompt 的硬约束 | 本侧遵守 |
-| 仿真侧 | requirement_spec → SceneSpec 生成与 USD 构建；`run_isaac_headless(usd, io_map, dll)`；`evaluate()` → verdict.json | 本侧调用 |
+| 仿真侧 | `gen_scene_spec` 按其 SceneSpec Schema（csk 文档 §2.2）生成，校验失败错误列表回喂重生成 | 本侧遵守 |
+| 仿真侧 | `validate_scene` 校验闸门、`build_usd` → `scene.usda + io_map.json`；`run_isaac_headless(usd, io_map, dll)`；`evaluate()` → verdict.json | 本侧调用 |
 | 仿真侧 | acceptance 四类准则结构（其 §5.1）——需求 Schema 与判定引擎逐字对齐 | 双方共守 |
 | 跨链路 | 模拟量统一 **INT @ %QW + 定点换算**（双链路一致约定）——生成器负责落码，换算系数写入 io_map（量程换算字段） | 本侧落实 |
 
