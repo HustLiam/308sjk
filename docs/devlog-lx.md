@@ -1,0 +1,20 @@
+# lx 本地开发日志
+
+> 仅存在于 `lx` 个人分支，只做代码上的技术说明；**合并 master 前移除**（分支历史保留可回溯）。进度协调类内容写 `docs/协作看板.md`，不写这里。
+> 历史记录：2026-09-01 首轮日志（`5bed60b` 入库 / `2e7a88b` 合并前移除）；2026-09-02 第二轮（`141a2e8` 重建 / `b4d643a` 合并前移除）。`git show <commit>:docs/devlog-lx.md` 可回溯各轮内容。
+
+## 2026-09-02（下午：许可制合并 + 首次跨方集成）
+
+### 与 gc 首批实现的合并（发现→诊断→修复）
+
+- **现象**：本地 master 推送被拒（非快进）——gc 已按新协作规范开工（origin 出现 csk/gc 分支）并把首批实现合入远端 master（Schema 草案 + 一致性检查器 + 生成器 v0 + 编排器半环，pytest 75 例）。双方各自全绿，**合并后 9 个测试红**。
+- **根因**：prog_id@%QW20（09-01 的契约 v1.1 增补）与 gc 已写好的一致性检查器冲突——`extract_located_vars` 把 prog_id 当"XML 有而 io_list 无"的业务 IO，判不一致 → gate 红 → orchestrator 半环连带挂。教训：契约增补登记看板≠协作者实现已同步，时序差在下次合并时爆雷——这正是集成合并必须跑全量测试的原因。
+- **修复（契约侧导出知识，消费侧一行引用）**：`xml2st.py` 新增 `META_VARS = {"prog_id"}`（契约 v1.1 元变量名单，归契约方维护）；gc 的 `consistency_check.extract_located_vars` 加一行 `if var.get("name") in xml2st.META_VARS: continue`。不改 gc 的对账规则本身，豁免名单单一来源在 lx 侧——未来再加元变量只改 xml2st 一处。修复后 **75/75 全绿**。
+- 文档冲突两处（gc 文档/看板）：均为"我改编号×他改状态"的双向修改，合并保留双方（新编号+新状态）；变更记录按时间排序双方条目。
+- 合并做在 lx 分支再快进 master——等价且省一次冲突解决；master 树核对无 devlog ✓。
+
+### 对 gc 请求的评审响应（技术要点）
+
+- Schema io_list 封闭集 {BOOL,INT}：与链路 B 位宽契约（BOOL@%QX/INT@%QW，REAL 弃用）完全一致，同意；补充建议 range raw 区间按 INT16 有符号域校验（-32768..32767）。
+- 双闸门语义（deploy_result.json 的 status/errors 消费 + 离线 skipped）：与 serve 设计意图一致，确认。
+
