@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0201">
+  <fileHeader companyName="" productName="Agent Pipeline" productVersion="0.9.0"
+              creationDateTime="2026-09-03T14:00:00"
+              description="Z-axis lift with safety" />
+  <contentHeader name="z_lift.project" modificationDateTime="2026-09-03T14:00:00">
+    <coordinateInfo>
+      <fbd><scaling x="1" y="1" /></fbd>
+      <ld><scaling x="1" y="1" /></ld>
+      <sfc><scaling x="1" y="1" /></sfc>
+    </coordinateInfo>
+  </contentHeader>
+  <types>
+    <dataTypes />
+    <pous>
+      <pou name="INTERP" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="pos_target"><type><INT /></type></variable>
+            <variable name="hold_req"><type><BOOL /></type></variable>
+          </inputVars>
+          <outputVars>
+            <variable name="Setpoint"><type><INT /></type></variable>
+            <variable name="Busy"><type><BOOL /></type></variable>
+            <variable name="Done"><type><BOOL /></type></variable>
+          </outputVars>
+          <localVars>
+            <variable name="pos"><type><REAL /></type></variable>
+            <variable name="vel"><type><REAL /></type></variable>
+            <variable name="tgt"><type><REAL /></type></variable>
+            <variable name="dist"><type><REAL /></type></variable>
+            <variable name="stop_d"><type><REAL /></type></variable>
+            <variable name="SCAN_T"><type><REAL /></type><initialValue><simpleValue value="0.02" /></initialValue></variable>
+            <variable name="VMAX"><type><REAL /></type><initialValue><simpleValue value="25.0" /></initialValue></variable>
+            <variable name="ACCEL"><type><REAL /></type><initialValue><simpleValue value="60.0" /></initialValue></variable>
+            <variable name="POSWIN"><type><REAL /></type><initialValue><simpleValue value="1.0" /></initialValue></variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">tgt := INT_TO_REAL(pos_target);
+IF NOT Busy AND ABS(tgt - pos) &gt; POSWIN THEN
+    Busy := TRUE;
+    Done := FALSE;
+END_IF;
+IF hold_req THEN
+    IF vel &gt; 0.0 THEN vel := MAX(0.0, vel - ACCEL * SCAN_T);
+    ELSIF vel &lt; 0.0 THEN vel := MIN(0.0, vel + ACCEL * SCAN_T);
+    END_IF;
+ELSIF Busy THEN
+    dist := tgt - pos;
+    stop_d := (vel * vel) / (2.0 * ACCEL);
+    IF ABS(dist) &lt;= stop_d THEN
+        IF dist &gt;= 0.0 THEN vel := MAX(0.0, vel - ACCEL * SCAN_T);
+        ELSE vel := MIN(0.0, vel + ACCEL * SCAN_T);
+        END_IF;
+        IF vel = 0.0 AND ABS(dist) &lt;= POSWIN THEN
+            pos := tgt; Busy := FALSE; Done := TRUE;
+        END_IF;
+    ELSE
+        IF dist &gt; 0.0 THEN vel := MIN(VMAX, vel + ACCEL * SCAN_T);
+        ELSE vel := MAX(-VMAX, vel - ACCEL * SCAN_T);
+        END_IF;
+    END_IF;
+END_IF;
+pos := pos + vel * SCAN_T;
+Setpoint := REAL_TO_INT(pos);</xhtml>
+          </ST>
+        </body>
+      </pou>
+      <pou name="PLC_PRG" pouType="program">
+        <interface>
+          <localVars>
+            <variable name="quickstop" address="%QX0.0"><type><BOOL /></type></variable>
+            <variable name="cmd_up" address="%QX0.1"><type><BOOL /></type></variable>
+            <variable name="cmd_down" address="%QX0.2"><type><BOOL /></type></variable>
+            <variable name="part_present" address="%QX0.3"><type><BOOL /></type></variable>
+            <variable name="ls_upper" address="%QX0.4"><type><BOOL /></type></variable>
+            <variable name="ls_lower" address="%QX0.5"><type><BOOL /></type></variable>
+          </localVars>
+          <localVars>
+            <variable name="z_fb" address="%QW0"><type><INT /></type></variable>
+            <variable name="z_target" address="%QW10"><type><INT /></type></variable>
+            <variable name="z_cmd" address="%QW12"><type><INT /></type></variable>
+          </localVars>
+          <localVars>
+            <variable name="at_upper" address="%QX1.0"><type><BOOL /></type></variable>
+            <variable name="at_lower" address="%QX1.1"><type><BOOL /></type></variable>
+            <variable name="clamped" address="%QX1.2"><type><BOOL /></type></variable>
+            <variable name="any_moving" address="%QX1.3"><type><BOOL /></type></variable>
+            <variable name="prog_id" address="%QW20"><type><INT /></type><initialValue><simpleValue value="4" /></initialValue></variable>
+          </localVars>
+          <localVars>
+            <variable name="ix_z"><type><derived name="INTERP" /></type></variable>
+            <variable name="z_hold"><type><BOOL /></type></variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">prog_id := 4;
+at_upper := ls_upper;
+at_lower := ls_lower;
+z_hold := quickstop;
+IF cmd_up AND part_present THEN
+    z_target := 80;
+ELSIF cmd_down THEN
+    z_target := 5;
+END_IF;
+ix_z(pos_target := z_target, hold_req := z_hold);
+z_cmd := ix_z.Setpoint;
+clamped := at_lower AND part_present;
+any_moving := ix_z.Busy;</xhtml>
+          </ST>
+        </body>
+      </pou>
+    </pous>
+  </types>
+  <instances>
+    <configurations />
+  </instances>
+</project>
