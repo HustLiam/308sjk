@@ -172,19 +172,15 @@ Web API :8080、Modbus TCP :502；URL 与账号可经环境变量 `OPENPLC_URL /
 - **幂等性**：motion3axis 失能即安全态（伺服环零输出、状态机回 SOD/RTSO），脚本伺服从编码器寄存器重建，**同一程序可重复运行验收**；主站时序注意：目标寄存器先于指令上升沿建立（≥1 扫描周期），否则驱动锁存旧值；
 - 停止扫描：`python src/pipeline/stop_plc.py`（逻辑停跑、定时器冻结；Modbus/Web 服务与 %Q 缓冲保持，仍可读）。
 
-**已验收场景清单**（全部经链路 B 实测通过；当前场景库仅含运动控制，历史非运动场景见 git）：
+**已验收场景清单**（经链路 B 实测通过；2026-09-03 按负责人指令精简为 motion3axis 单场景，被删场景与历史验收记录见 git）：
 
 | 场景 | XML | 轴配置 | 考察点 | 结果 |
 |---|---|---|---|---|
 | 三轴运动控制（CSP 完整版） | motion3axis.xml | 3× 直线 | CSP 四层：INTERP→DRIVE402(CiA 402 状态机+位置环)→MC API→应用层 | 35/35 |
-| 单轴连续跟踪 | axis_osc.xml | 1× 直线 | 目标自动检测、连续跟踪、多次目标切换 | 4/4 |
-| 双轴+联锁 | xy_pick.xml | 2× 直线 | 双轴独立、Y 轴安全封锁（X<20 时 Y 禁动） | 2/2 |
-| Z 轴+安全 | z_lift.xml | 1× 直线 | 无料上升拒绝、限位保护、夹紧状态 | 3/3 |
-| **混合直线/旋转** | mixed_lin_rot.xml | 直线+环形+有限转角 | **转盘最短路径回绕**（350°→10° 经零点）、肘关节超程 hold | 6/6 |
 
 验收脚本 `scenario_motion3axis.py` 一身两角——CiA 402 主站（应用指令+读状态字位）+ 三轴电机仿真（按速度指令积分编码器），覆盖 8 组 35 项（CSP 语义：越程由插补层安全拒绝）：上电 RTSO → MC_Power 使能序列（bit0→bit1→bit2）→ 三轴并发定位 → 仅 Z 轴运动 → 快停 QSA 受控减速+释放重使能+重发指令 → 点动按住移动/松开停止 → 故障注入 FRA/FA+MC_Reset 复位+重使能 → 回零+失能。
 
-**场景覆盖度**：当前仅覆盖**运动控制**域（连续跟踪 / 多轴并发 / 联锁 / 安全 / 直线+旋转混合）。场景库定位为纯运动控制（见《运动控制代码生成方案》）；非运动场景（分拣/液位/交通/PID）已按决策移除，历史见 git。prog_id 分配：motion3axis=1, axis_osc=2, xy_pick=3, z_lift=4, mixed_lin_rot=5。
+**场景覆盖度**：当前场景库为 motion3axis 单场景（三轴运动控制 CSP 完整栈，作为双链路联调基准）。其余运动场景（axis_osc / xy_pick / z_lift / mixed_lin_rot）与非运动场景（分拣/液位/交通/PID）均按决策移除，历史见 git；《运动控制代码生成方案》与 `tools/gen_scenarios.py` 生成器保留，场景可按需再生。prog_id 分配：motion3axis=1，新场景从 2 顺延。
 
 ## 6. 与仿真侧的接口契约
 
@@ -196,7 +192,7 @@ Web API :8080、Modbus TCP :502；URL 与账号可经环境变量 `OPENPLC_URL /
 ## 7. 待办（按优先级）
 
 1. **双链路联调**：同一场景 A/B 双跑、trace 比对行为一致性（总体方案风险表"双链路行为不一致"的应对；**依赖 csk 链路 A 就绪**，已在协作看板提请求）；
-2. **场景库扩充**：2026-09-02 重组后仅存 motion3axis（运动控制域），其余应用域（分拣/顺序/过程/时序）按 gc 模式库需求重建，prog_id 从 2 顺延；
+2. **场景库扩充**：2026-09-03 按指令精简为 motion3axis 单场景（三轴运动控制基线）；后续场景（运动扩展与其余应用域）按 gc 模式库需求重建，prog_id 从 2 顺延；
 3. **配合事项**（非本侧实现）：三方一致性检查器归 gc（复用本侧 `xml2st.parse()`，见其文档 §5）；模拟量 INT 定点换算的量程字段随 io_map 契约定稿（主方案 §3.3，csk 落地），本侧参与评审。
 
 ## 8. 仓库实现索引与快速开始
@@ -209,7 +205,7 @@ src/pipeline/serve.py           ③a POST /deploy HTTP 服务（agent 端点，:
 src/pipeline/modbus_io.py       ④ SafeCoilIO + 寄存器读 + require_program 身份校验 + zero_regs
 src/pipeline/stop_plc.py        ③a 停止运行时逻辑扫描
 src/pipeline/scenario_motion3axis.py  ④ 三轴运动控制场景验收（含身份校验）
-src/plc/*.xml                   交付物：4 个 61131-10 场景
+src/plc/motion3axis.xml         交付物：61131-10 场景（当前场景库唯一场景）
 tests/test_xml2st.py            转换器单测（pytest，无需运行时）
 workspace/                      本地生成物（不入库）
 ```
