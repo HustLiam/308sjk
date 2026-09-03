@@ -131,14 +131,18 @@ python src/pipeline/xml2st.py <file.xml> --out workspace/program.st
 ```
 POST /deploy    body 为 PLCopen XML 内容（应以 <?xml 开头，否则 400 REJECTED）
 GET  /health    存活检查
+GET  /status    运行时状态 + 当前程序身份（gc 编排半环一站式确认）
 ```
 
 ```bash
 python src/pipeline/serve.py --port 8600
 curl -X POST http://127.0.0.1:8600/deploy --data-binary @src/plc/motion3axis.xml
+curl http://127.0.0.1:8600/status
 ```
 
 成功返回 200 + deploy_result 同构 JSON；校验/编译失败返回 500 + errors——上层编排器据此走"回喂重生成"分支，不进仿真。
+
+`/status` 返回 `{runtime: {url, status}, prog_id, program}`：Web 状态腿走 OpenPLC dashboard（RUNNING/STOPPED/COMPILING，自动重登录），程序身份腿经 Modbus 读 %QW20（契约② v1.1 prog_id 约定；STOPPED 下 %Q 缓冲保持仍可读）；任一腿失败不 500，如实报字段（UNREACHABLE / null + error）。prog_id→场景名映射表在 serve.py 顶部 `PROG_NAMES`（新场景在此顺延登记）。
 
 ### 4.4 运行时形态
 
@@ -147,6 +151,21 @@ docker run -d --name openplc -p 8080:8080 -p 502:502 fdamador/openplc
 ```
 
 Web API :8080、Modbus TCP :502；URL 与账号可经环境变量 `OPENPLC_URL / OPENPLC_USER / OPENPLC_PASS` 覆盖。
+
+### 4.5 一键回归（run_regression.py，主方案 §8.4 CI 门禁实体）
+
+三层按序执行，前置层失败即止（便宜层拦截原则，见协作指南 §3.2）：
+
+```
+L1 静态校验   src/plc/*.xml 逐个过 xml2st 契约校验（无需运行时，<1s）
+L2 单元测试   python -m pytest tests/（无需运行时，<3s）
+L3 在线验收   逐场景 run_deploy 部署 + scenario_<场景>.py 验收（需运行时，分钟级）
+```
+
+- 场景自动发现：`src/plc/<name>.xml` × `src/pipeline/scenario_<name>.py` 配对，缺验收脚本记 SKIP 并提示；
+- 运行时不可达时 L3 整层 SKIP（exit 0）；`--require-online` 把 SKIP 视为失败（exit 1，完整合入门禁用）；`--skip-online` 只跑本地两层；
+- 结果写 `workspace/regression_result.json`（`{status, layers{static,pytest,online}, errors, duration_sec}`）供 CI 消费；
+- 基准：motion3axis 三层全绿约 25~30s。
 
 ## 5. Modbus IO 与行为验收
 
@@ -201,9 +220,10 @@ Web API :8080、Modbus TCP :502；URL 与账号可经环境变量 `OPENPLC_URL /
 src/pipeline/xml2st.py          ② 校验+转换（纯标准库）
 src/pipeline/openplc_client.py  ③a OpenPLC v3 HTTP 客户端
 src/pipeline/run_deploy.py      ③a 部署编排器（结果 JSON 供回喂）
-src/pipeline/serve.py           ③a POST /deploy HTTP 服务（agent 端点，:8600）
+src/pipeline/serve.py           ③a 部署 HTTP 服务（agent 端点，:8600：/deploy /health /status）
 src/pipeline/modbus_io.py       ④ SafeCoilIO + 寄存器读 + require_program 身份校验 + zero_regs
 src/pipeline/stop_plc.py        ③a 停止运行时逻辑扫描
+src/pipeline/run_regression.py  ④ 一键回归（L1 静态+L2 单测+L3 在线验收，§4.5/主方案 §8.4）
 src/pipeline/scenario_motion3axis.py  ④ 三轴运动控制场景验收（含身份校验）
 src/plc/motion3axis.xml         交付物：61131-10 场景（当前场景库唯一场景）
 tests/test_xml2st.py            转换器单测（pytest，无需运行时）
@@ -215,4 +235,5 @@ pip install -r requirements.txt
 python -m pytest tests/ -v                                            # ① 转换器单测
 python src/pipeline/run_deploy.py                                     # ② 部署（需运行时，默认 motion3axis）
 python src/pipeline/scenario_motion3axis.py                           # ③ 场景验收
+python src/pipeline/run_regression.py                                 # ④ 一键回归（①~③ 全含，CI 门禁）
 ```
