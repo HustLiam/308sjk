@@ -10,10 +10,10 @@
 
 | 总体方案模块 | 本侧职责 | 关键产物 | 状态 |
 |---|---|---|---|
-| ⓪ AutomationML 解析 | IEC 62714 AML → device_model.json（设备/IO/拓扑/运动学） | `tools/aml_parser.py` | 🚧 未启动 |
-| ① 需求理解模块 | 自然语言 → 结构化需求规格；**requirement_spec.json Schema 的定义权** | `requirement_spec.json` + JSON Schema | 🟨 Schema 草案 v1.0.0-draft.1 已出（`schemas/requirement_spec.schema.json` + `src/agent/spec_validator.py`），**待三方评审冻结**；LLM 澄清未接 |
+| ⓪ AutomationML 解析 | IEC 62714 AML → device_model.json（设备/IO/拓扑/运动学） | `src/agent/aml_parser.py` + CLI `tools/aml_parser.py` | ✅ 完成（`schemas/device_model.schema.json` v1.0.0-draft.1 + 示例 `examples/aml/motion3axis_station.aml`，24 IO/3 轴与 motion3axis 逐字对齐——io_list 预填契约测试保证） |
+| ① 需求理解模块 | 自然语言 → 结构化需求规格；**requirement_spec.json Schema 的定义权** | `requirement_spec.json` + JSON Schema | 🟨 Schema 草案 **v1.0.0-draft.2**（draft.1 + lx INT16 域建议落实：S2 量程限定 16 位寄存器域），**待 csk 评审后冻结**；io_list 自动填充已接（`build_io_list`，⓪→① 数据流）；LLM 澄清未接 |
 | ②a/②b 的 LLM 生成本体 | PLCopen XML 生成器（在 lx 契约上）、失败归因分析 LLM | 生成器 Prompt 工程 + ST 模式库 | 🟨 生成器 v0 已实现（`src/agent/pipeline.py` + `patternlib.py` + `prompts/plcgen_skill.md`，种子=motion3axis（场景库重组后），xml2st+一致性双闸门回灌）；归因 LLM 未启动 |
-| 闭环编排器 | solve 循环、两个编译/校验短路、迭代记忆、终止与 best-effort、反馈包拼装与路由 | `orchestrator/` | 🟨 半环骨架已实现（`src/agent/orchestrator.py`：生成→xml2st 闸门→一致性→部署可选；runs/ 落盘与 final 冻结已跑通；仿真全环等 csk 接口） |
+| 闭环编排器 | solve 循环、两个编译/校验短路、迭代记忆、终止与 best-effort、反馈包拼装与路由 | `orchestrator/` | 🟨 半环四闸门齐（`src/agent/orchestrator.py`：生成→xml2st→一致性→部署可选→**链路 B 验收可选**（闸门4，`scenario_<场景>.py` 子进程，OpenPLC 离线记 skipped）；runs/ 落盘与 final 冻结已跑通；仿真全环等 csk 接口） |
 | 跨模块一致性 | io_list 单一源头的落地：**三方一致性检查器**（定位变量 ≡ io_list ≡ io_map） | `consistency_check.py` | ✅ 原型完成（`src/agent/consistency_check.py`，R1~R5；io_map 腿接口就绪，csk 产出后自动生效） |
 
 不归本侧的：xml2st 校验/部署/Modbus 验收（PLC 侧）；SceneSpec→USD 构建、Isaac lockstep 运行、trace 采集、**确定性判定引擎**（仿真验证侧）。判定引擎给出 PASS/FAIL，本侧消费它并决定下一步。
@@ -50,11 +50,18 @@ AutomationML(设备描述)              用户（自然语言）
 
 **requirement_spec.json（本侧拥有 Schema 定义权，冻结前需三方联签）**：
 
-> **落地状态**：草案 v1.0.0-draft.1 已实现——评审视图 `schemas/requirement_spec.schema.json`，
+> **落地状态**：草案 **v1.0.0-draft.2** 已实现——评审视图 `schemas/requirement_spec.schema.json`，
 > 运行权威 `src/agent/spec_validator.py`（两者同一 RFC 内同步修改），基准示例
 > `examples/specs/motion3axis.spec.json`（io_list 与 motion3axis.xml 定位变量逐字对齐）。
 > Schema 文件表达不了的语义规则：S1 唯一性（io 名/AC id/C id）、S2 量程（INT 必带
-> range、BOOL 禁带）、S3 信号引用必须落在 io_list、S4 时间阈值 ≥100ms——均在校验器实现。
+> range 且落在 16 位寄存器域 [-32768,65535]——lx 位宽表 %QW 承载 INT/UINT/WORD 的
+> 并集域，draft.2 落实 lx 评审建议、BOOL 禁带）、S3 信号引用必须落在 io_list、
+> S4 时间阈值 ≥100ms——均在校验器实现。
+>
+> **io_list 自动填充（⓪→① 数据流，主方案 §3.1）**：`aml_parser.build_io_list(model)`
+> 把 device_model 的 IO 点位确定性映射为 io_list 初始值（name/dir/type/range/unit/
+> device=信号语义）；INT 缺量程的条目进 pending 列表显式提示补充——LLM 校验和补充
+> 而非从零生成。契约测试：示例 AML 的预填与基准 spec 的 io_list 逐字等价。
 
 | 字段 | 内容 | 约束 |
 |---|---|---|
@@ -175,8 +182,11 @@ io_map.json（仿真侧产出）------------------------------------┤
 
 ## 9. 待办（按优先级）
 
-1. ~~requirement_spec JSON Schema 草案 + 三方评审冻结~~ → 草案已出（见 §2 落地状态），**评审冻结进行中**（RFC 流程，主方案 §8.3）；
+1. ~~requirement_spec JSON Schema 草案 + 三方评审冻结~~ → 草案 v1.0.0-draft.2（见 §2 落地状态；draft.2 落实 lx 的 INT16 域建议），**评审冻结进行中**——lx ✅、待 csk（RFC 流程，主方案 §8.3）；
 2. ~~与仿真侧确认 acceptance 四类准则的最终字段结构（以 csk §7.1 为底稿）~~ → 字段已逐字对齐其 §7.1，待其评审确认（`check_at` 冻结 "end"，扩展走 RFC）；
 3. ~~PLC 生成器 v0：模式库整理 + Prompt 骨架 + xml2st 错误回喂通路联调~~ → 已完成（`src/agent/`：pipeline / patternlib / prompts；xml2st+一致性双闸门回灌；LLM 真实调用待 API Key 端到端联调）；
 4. ~~一致性检查器原型（可直接复用 lx 的 `xml2st.parse()`）~~ → 已完成（`src/agent/consistency_check.py`，R1 复用 xml2st.parse；io_map 腿接口就绪待 csk 产出）；
-5. ~~编排器骨架：先串"生成→编译闸门→部署→链路 B 验收"的半环（不含 Isaac）~~ → 半环已跑通（`src/agent/orchestrator.py`；部署闸门连不上记 skipped；链路 B 验收脚本接入与仿真全环待两端就绪）。
+5. ~~编排器骨架：先串"生成→编译闸门→部署→链路 B 验收"的半环（不含 Isaac）~~ → 半环四闸门齐（生成→xml2st→一致性→部署可选→链路 B 验收可选，闸门4 已接 `scenario_<场景>.py`，OpenPLC 离线记 skipped 不阻塞）；仿真全环待 csk 判定引擎与 ③b 接口；
+6. ~~⓪ AutomationML 解析模块（架构 v2.0 新增职责）~~ → 已完成（`src/agent/aml_parser.py` + `tools/aml_parser.py` CLI + `schemas/device_model.schema.json` + 示例 `examples/aml/motion3axis_station.aml`；确定性解析 + io_list 预填，19 例单测）；
+7. 需求理解 LLM 澄清回路（多轮提问/规格回显确认，人工介入点 1 的 LLM 形态）；
+8. 归因分析 LLM（消费 verdict.json → report.md，区分代码/场景问题并路由）——待 csk 判定引擎。

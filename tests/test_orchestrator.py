@@ -7,6 +7,7 @@ spec 校验失败即拒绝（人工介入点 1）/ runs 产物布局（gc 文档
 """
 
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -87,6 +88,59 @@ class TestDeployGate:
         assert result["status"] == "final"
         gate = json.loads((Path(result["run_dir"]) / "final" / "gate.json").read_text(encoding="utf-8"))
         assert gate["gates"]["deploy"]["state"] == "skipped"
+
+
+class TestAcceptanceGate:
+    """闸门4：链路 B 在线验收（scenario_<场景>.py 子进程调用）。"""
+
+    def test_missing_scenario_script_is_skipped(self, tmp_path):
+        orch = Orchestrator(runs_root=tmp_path, project_root=REPO)
+        state, detail = orch.acceptance_gate("no_such_scenario")
+        assert state == "skipped" and "无验收脚本" in detail
+
+    def test_offline_runtime_is_skipped(self, tmp_path, monkeypatch):
+        # OpenPLC/Modbus 不在线（脚本打印"无法连接"）→ skipped，与闸门3 同语义
+        orch = Orchestrator(runs_root=tmp_path, project_root=REPO)
+        fake = subprocess.CompletedProcess([], returncode=1,
+                                           stdout="Traceback ... ConnectionError: 无法连接 Modbus 127.0.0.1:502")
+        monkeypatch.setattr(orch, "_run_acceptance", lambda script: fake)
+        state, detail = orch.acceptance_gate("motion3axis")
+        assert state == "skipped" and "不在线" in detail
+
+    def test_acceptance_ok_reaches_final(self, tmp_path, monkeypatch):
+        orch = Orchestrator(runs_root=tmp_path, project_root=REPO)
+        monkeypatch.setattr(orch, "acceptance_gate",
+                            lambda scenario: ("ok", "场景验收: 全部通过 ✅"))
+        result = orch.solve(SPEC, PLCGenerator(client=None, seed_xml=MOTION_XML),
+                            acceptance="motion3axis")
+        assert result["status"] == "final"
+        gate = json.loads((Path(result["run_dir"]) / "final" / "gate.json").read_text(encoding="utf-8"))
+        assert gate["gates"]["acceptance"]["state"] == "ok"
+
+    def test_acceptance_fail_feeds_back_and_best_effort(self, tmp_path, monkeypatch):
+        # 真失败（exit 1 的 PASS/FAIL 明细）→ 回喂下一轮，6 轮不过取 best_effort
+        orch = Orchestrator(runs_root=tmp_path, project_root=REPO, max_iters=2)
+        monkeypatch.setattr(orch, "acceptance_gate",
+                            lambda scenario: ("failed", ["  FAIL X 回零（实际 37）",
+                                                         "场景验收: 存在失败 ❌"]))
+        events = []
+        result = orch.solve(SPEC, PLCGenerator(client=None, seed_xml=MOTION_XML),
+                            acceptance="motion3axis",
+                            echo=lambda ev, p: events.append(ev))
+        assert result["status"] == "best_effort"
+        assert events.count("gate_failed") == 2
+        gate = json.loads((Path(result["run_dir"]) / "iter_001" / "gate.json").read_text(encoding="utf-8"))
+        assert gate["gate"] == "acceptance" and "FAIL" in gate["errors"][0]
+
+    def test_skipped_acceptance_does_not_block_final(self, tmp_path, monkeypatch):
+        orch = Orchestrator(runs_root=tmp_path, project_root=REPO)
+        monkeypatch.setattr(orch, "acceptance_gate",
+                            lambda scenario: ("skipped", "OpenPLC/Modbus 不在线"))
+        result = orch.solve(SPEC, PLCGenerator(client=None, seed_xml=MOTION_XML),
+                            acceptance="motion3axis")
+        assert result["status"] == "final"
+        gate = json.loads((Path(result["run_dir"]) / "final" / "gate.json").read_text(encoding="utf-8"))
+        assert gate["gates"]["acceptance"]["state"] == "skipped"
 
 
 class TestGeneratorSeedGate:

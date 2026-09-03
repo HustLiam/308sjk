@@ -71,3 +71,69 @@
   从 1.0.0-draft.1 升 1.0.0；
 - 推送远端失败：当前 GitHub 凭据（1433223-ysy）对 HustLiam/308sjk 无写权限，
   本地 gc 分支就绪，待权限后 push。
+
+## 2026-09-03 第二批：⓪ AML 解析 + draft.2 + 闸门4（pytest 74→100）
+
+背景：合并 origin/master（场景库重组为 motion3axis 单场景 + 架构 v2.0 新增 ⓪）。
+本批三件事：⓪ AML 解析模块（架构 v2.0 新职责）、Schema draft.2（lx INT16 域建议）、
+编排器闸门4（链路 B 验收）。
+
+### ⓪ AML 解析器（src/agent/aml_parser.py + tools/aml_parser.py CLI）
+
+- **关键词误判坑**：接口识别最初对 RefBaseClassPath 整串做子串匹配，
+  "308sjkInterfaceClassLib" 里的 "interface" 含 "int" 子串 → 所有 DigitalInput 被
+  判成"数字/模拟并存"。修正：只按类路径**末段**（接口类名本身）判
+  input/output/digital/analog——库名永远不该参与信号语义判定。
+- **xmlns 不敏感**：CAEX 按标签 localname 匹配（剥 `{ns}` 前缀）。真实 AML 工具
+  导出带 xmlns="http://www.dke.de/CAEX"，手写示例常不带，两种形态必须等价解析
+  （单测 test_xmlns_invariant 保证）。
+- **确定性**：文档先序遍历、JSON 输出无时间戳/路径无关字段——同输入同输出逐字节
+  相同（单测保证）。这是主方案 §3.0 "确定性代码（非 LLM）"的可测试化表达。
+- **错误语义分层**：结构错误（非 CAEXFile/无 InstanceHierarchy/坏 XML）抛
+  AMLParseError（CLI exit 2）；内容问题（IO 重名/地址冲突/方向不可判定/%I 区/
+  BOOL 带量程/axis_type 非法/断链）收集进 problems 返回（exit 1），模型 best-effort
+  产出——闸门语义与生成器双闸门一致，问题文本可直接进反馈包。
+- **%I 区地址**：记 problem 而非抛错——lx 位宽契约统一 %Q 区，⓪ 作为第一道闸门
+  尽早暴露工程侧映射问题，但不该崩掉整个解析。
+- **axis_type 必须显式声明**才入 kinematics.axes（有 stroke/vmax 无 axis_type 记
+  问题不猜测）——轴类型（linear/rotary_modulo/rotary_finite）决定 lx INTERP 的
+  WRAP 参数语义，猜错会静默生成错误回绕行为。
+- **地址 ↔ 类型交叉校验**：%QX↔BOOL、%QW↔INT，接口关键词与地址矛盾记 problem
+  （比单源校验强，且不加任何猜测）。
+- **预填契约测试**（test_prefill_equals_spec_io_list）：示例 AML
+  examples/aml/motion3axis_station.aml 的 build_io_list 预填与
+  motion3axis.spec.json 的 io_list **逐字等价**（name/dir/type/range/device/unit，
+  顺序无关——AML 按设备分组、spec 按功能分组）。AML 的 description 属性即 spec
+  的 device 语义串来源。这条测试把 ⓪→① 数据流钉死：任何一侧漂移立刻红。
+
+### Schema draft.2：lx INT16 域建议的落实口径
+
+- lx 建议字面是"INT16 域"，但 motion3axis 状态字 x_sw=[0,65535] 是**在用事实**
+  （UINT16 满量程），按字面 [-32768,32767] 收紧会打红基准示例。
+- 落实口径：**%QW 字并集域 [-32768,65535]**——依据 lx 自己的位宽表（%QW 承载
+  INT/UINT/WORD，同一 16 位寄存器），INT16 下界 + UINT16 上界。已在看板向 lx
+  说明并请确认（如要收紧到纯 INT16 需先改 motion3axis 状态字语义，属契约联动）。
+- 校验顺序：min<max → 域检查（elif 链，一次只报最具体的错）。
+
+### 编排器闸门4（链路 B 在线验收）
+
+- 场景名→脚本映射：src/pipeline/scenario_<名>.py；CLI --acceptance + --scenario
+  （缺省取 --seed 文件名茎，否则 task_id——task_id 是 runs 目录名带 _demo 后缀，
+  不天然等于场景名，不猜）。
+- 离线判定：验收脚本连不上 Modbus 时输出含"无法连接"/"ConnectionError"
+  （lx modbus_io.connect 的 ConnectionError 语义），闸门读输出特征记 skipped——
+  与闸门3 的半环约定一致：环境缺失不阻塞 final，真失败（exit 1 的 PASS/FAIL
+  明细尾部 40 行）才回喂重试。
+- 验收不必先过闸门3：serve :8600（deploy）与 OpenPLC Modbus :502（验收）是两个
+  服务，serve 不在线不代表运行时没有已部署程序；require_program 读 %QW20 兜底
+  程序身份，陈旧程序不会被误验收。
+- 可注入性：subprocess 调用收敛到 _run_acceptance 单方法，monkeypatch 它即可
+  模拟离线/成功/失败三态，不碰真子进程。
+
+### 验证
+
+- pytest 100/100（新增 19 AML + 5 闸门4 + 2 S2 域）；
+- CLI 冒烟：--deploy --acceptance 双离线 → deploy/acceptance 双 skipped、final
+  达成，gate.json 语义正确；
+- 本机无 OpenPLC/serve（502/8600 均关），在线链路的真验收留待运行时环境
+  （lx 的 run_regression.py L3 同源场景脚本）。
