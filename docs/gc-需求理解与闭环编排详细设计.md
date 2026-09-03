@@ -10,7 +10,7 @@
 
 | 总体方案模块 | 本侧职责 | 关键产物 | 状态 |
 |---|---|---|---|
-| 用户交互层 | 自然语言输入、多轮澄清、规格回显确认、结果展示 | 对话协议 / CLI | 🚧 未启动（编排 CLI 已有，澄清协议未接） |
+| ⓪ AutomationML 解析 | IEC 62714 AML → device_model.json（设备/IO/拓扑/运动学） | `tools/aml_parser.py` | 🚧 未启动 |
 | ① 需求理解模块 | 自然语言 → 结构化需求规格；**requirement_spec.json Schema 的定义权** | `requirement_spec.json` + JSON Schema | 🟨 Schema 草案 v1.0.0-draft.1 已出（`schemas/requirement_spec.schema.json` + `src/agent/spec_validator.py`），**待三方评审冻结**；LLM 澄清未接 |
 | ②a/②b 的 LLM 生成本体 | PLCopen XML 生成器（在 lx 契约上）、失败归因分析 LLM | 生成器 Prompt 工程 + ST 模式库 | 🟨 生成器 v0 已实现（`src/agent/pipeline.py` + `patternlib.py` + `prompts/plcgen_skill.md`，种子=motion3axis（场景库重组后），xml2st+一致性双闸门回灌）；归因 LLM 未启动 |
 | 闭环编排器 | solve 循环、两个编译/校验短路、迭代记忆、终止与 best-effort、反馈包拼装与路由 | `orchestrator/` | 🟨 半环骨架已实现（`src/agent/orchestrator.py`：生成→xml2st 闸门→一致性→部署可选；runs/ 落盘与 final 冻结已跑通；仿真全环等 csk 接口） |
@@ -21,10 +21,13 @@
 ## 1. 在总体架构中的位置
 
 ```
-用户（自然语言）
-   │
-   ▼
-【本侧】① 需求理解 ──► requirement_spec.json（io_list 是三方共同源头）
+AutomationML(设备描述)              用户（自然语言）
+   │                                    │
+   ▼                                    ▼
+【本侧】⓪ AML 解析器                ① 需求理解
+   │ device_model.json ──────────────► │（自然语言 + 设备模型）
+                                      ▼
+                              requirement_spec.json（io_list 从设备模型自动填充）
    │
    ▼
 【本侧】编排器 solve() 循环 ──────────────────────────────────┐
