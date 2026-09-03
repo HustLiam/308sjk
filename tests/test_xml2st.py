@@ -13,37 +13,39 @@ sys.path.insert(0, str(REPO / "src" / "pipeline"))
 
 from xml2st import convert, extract_st_bodies, parse  # noqa: E402
 
-COUNTER_XML = REPO / "src" / "plc" / "counter.xml"
+MOTION_XML = REPO / "src" / "plc" / "motion3axis.xml"
 
 
 # ---------------------------------------------------------------- 交付物回归
-class TestCounterArtifact:
+class TestMotion3AxisArtifact:
     def test_valid(self):
-        ok, _, problems = convert(COUNTER_XML)
+        ok, _, problems = convert(MOTION_XML)
         assert ok, problems
 
     def test_st_contains_program_and_address(self):
-        _, st, _ = convert(COUNTER_XML)
+        _, st, _ = convert(MOTION_XML)
+        assert "FUNCTION_BLOCK INTERP" in st      # CSP 插补引擎 FB
         assert "PROGRAM PLC_PRG" in st
-        assert "AT %QW0" in st          # 对外接口：INT -> Modbus 保持寄存器 0
-        assert "cnt := cnt + 1" in st   # 每秒自增逻辑
-        assert "TON" in st
+        assert "AT %QW0" in st          # x_fb 对外接口：INT -> Modbus 保持寄存器 0
+        assert "FUNCTION_BLOCK DRIVE402" in st  # CSP 驱动器 FB
+        assert "FUNCTION_BLOCK MC_MOVEABSOLUTE" in st
+        assert "CASE state OF" in st    # CiA 402 状态机
 
     def test_st_has_configuration(self):
-        _, st, _ = convert(COUNTER_XML)
+        _, st, _ = convert(MOTION_XML)
         assert "CONFIGURATION Config0" in st
         assert "PROGRAM instance0 WITH task0 : PLC_PRG;" in st
         assert "END_PROGRAM" in st
 
     def test_located_vars_in_separate_block(self):
-        """matiec 要求 AT 定位变量与普通声明（如 FB 实例）分 VAR 块。"""
-        _, st, _ = convert(COUNTER_XML)
+        """matiec 要求 AT 定位变量与普通声明（FB 实例等）分 VAR 块。"""
+        _, st, _ = convert(MOTION_XML)
         blocks = st.split("END_VAR")
-        # pulse 所在块不含 AT；cnt 所在块只有定位变量
-        pulse_block = next(b for b in blocks if "pulse" in b)
-        assert "AT %" not in pulse_block
-        cnt_block = next(b for b in blocks if "cnt AT" in b)
-        assert "TON" not in cnt_block
+        # FB 实例块（ax_x 等）不含 AT；x_fb 所在块只有定位变量
+        fb_block = next(b for b in blocks if "ix_x" in b or "dv_x" in b)
+        assert "AT %" not in fb_block
+        located_block = next(b for b in blocks if "x_fb AT" in b)
+        assert "ix_x" not in located_block and "dv_x" not in located_block
 
 
 # ---------------------------------------------------------------- 反例用例

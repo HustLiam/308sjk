@@ -10,7 +10,7 @@
     POST /deploy        body 为 PLCopen XML 内容
     GET  /health        存活检查
 
-    curl -X POST http://127.0.0.1:8600/deploy --data-binary @src/plc/counter.xml
+    curl -X POST http://127.0.0.1:8600/deploy --data-binary @src/plc/motion3axis.xml
 返回 deploy_result.json 同构数据（status/steps/errors，errors 可直接回喂 agent）。
 """
 

@@ -4,7 +4,7 @@
 部署编排器（OpenPLC 版）：XML → .st → 上传编译 → 启动。
 
 链路：
-    src/plc/counter.xml (61131-10)
+    src/plc/motion3axis.xml (61131-10)
         │ xml2st 校验+转换
         ▼
     workspace/program.st
@@ -40,7 +40,7 @@ RESULT_JSON = WORKSPACE / "deploy_result.json"
 
 def main():
     parser = argparse.ArgumentParser(description="Deploy PLCopen XML to OpenPLC runtime")
-    parser.add_argument("--xml", default=str(REPO_ROOT / "src" / "plc" / "counter.xml"))
+    parser.add_argument("--xml", default=str(REPO_ROOT / "src" / "plc" / "motion3axis.xml"))
     parser.add_argument("--url", default=os.environ.get("OPENPLC_URL", "http://127.0.0.1:8080"))
     parser.add_argument("--name", default="agent_program")
     args = parser.parse_args()

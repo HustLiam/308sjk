@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.0.0-draft.1",
+  "task_id": "motion3axis_demo",
+  "task_goal": "三轴龙门运动控制（CiA 402 驱动模型 + PLCopen MC API，纯 ST 自包含实现）：PLC 内嵌三台伺服驱动器模型（状态机 SOD/RTSO/SO/OE/QSA/FRA/FA、Profile Position 模式梯形速度规划、位置伺服环），对外暴露 MC 级应用接口（使能/回零/定位/点动/快停/故障注入与复位）与驱动级诊断（状态字/速度指令）；外部扮演主站与电机仿真（按速度指令积分编码器反馈）。目标越程触发故障反应，快停为受控减速。",
+  "io_list": [
+    { "name": "run",         "dir": "input",  "type": "BOOL", "range": null,    "device": "MC_Power 总使能（低=shutdown 命令）" },
+    { "name": "cmd_home",    "dir": "input",  "type": "BOOL", "range": null,    "device": "MC_Home 回零指令（上升沿）" },
+    { "name": "cmd_go",      "dir": "input",  "type": "BOOL", "range": null,    "device": "MC_MoveAbsolute 三轴并发定位指令（上升沿）" },
+    { "name": "jog_fwd",     "dir": "input",  "type": "BOOL", "range": null,    "device": "X 轴 MC_MoveJog 正向（电平）" },
+    { "name": "jog_rev",     "dir": "input",  "type": "BOOL", "range": null,    "device": "X 轴 MC_MoveJog 反向（电平）" },
+    { "name": "quickstop",   "dir": "input",  "type": "BOOL", "range": null,    "device": "MC_Stop 快停（电平，QSA 受控减速）" },
+    { "name": "inject_fault","dir": "input",  "type": "BOOL", "range": null,    "device": "故障注入（目标越程 150 → FRA/FA）" },
+    { "name": "cmd_reset",   "dir": "input",  "type": "BOOL", "range": null,    "device": "MC_Reset 故障复位（上升沿）" },
+    { "name": "x_fb",        "dir": "input",  "type": "INT",  "range": [0,100], "unit": "%", "device": "X 轴编码器反馈（电机仿真写入）" },
+    { "name": "y_fb",        "dir": "input",  "type": "INT",  "range": [0,100], "unit": "%", "device": "Y 轴编码器反馈" },
+    { "name": "z_fb",        "dir": "input",  "type": "INT",  "range": [0,100], "unit": "%", "device": "Z 轴编码器反馈" },
+    { "name": "x_sp",        "dir": "input",  "type": "INT",  "range": [0,100], "unit": "%", "device": "X 轴目标位置（主站写，先于 cmd_go 建立）" },
+    { "name": "y_sp",        "dir": "input",  "type": "INT",  "range": [0,100], "unit": "%", "device": "Y 轴目标位置" },
+    { "name": "z_sp",        "dir": "input",  "type": "INT",  "range": [0,100], "unit": "%", "device": "Z 轴目标位置" },
+    { "name": "x_sw",        "dir": "output", "type": "INT",  "range": [0,65535], "device": "X 驱动状态字（CiA 402 编码：bit0/1/2/3/4/5/6/10/12）" },
+    { "name": "y_sw",        "dir": "output", "type": "INT",  "range": [0,65535], "device": "Y 驱动状态字" },
+    { "name": "z_sw",        "dir": "output", "type": "INT",  "range": [0,65535], "device": "Z 驱动状态字" },
+    { "name": "x_v",         "dir": "output", "type": "INT",  "range": [-120,120], "unit": "%/s", "device": "X 电机速度指令（带符号，伺服环输出）" },
+    { "name": "y_v",         "dir": "output", "type": "INT",  "range": [-120,120], "unit": "%/s", "device": "Y 电机速度指令" },
+    { "name": "z_v",         "dir": "output", "type": "INT",  "range": [-120,120], "unit": "%/s", "device": "Z 电机速度指令" },
+    { "name": "all_oe",      "dir": "output", "type": "BOOL", "range": null,    "device": "三轴全部 Operation Enabled" },
+    { "name": "move_done",   "dir": "output", "type": "BOOL", "range": null,    "device": "MC_MoveAbsolute 三轴 Done 汇总" },
+    { "name": "any_moving",  "dir": "output", "type": "BOOL", "range": null,    "device": "任一轴速度指令非零" },
+    { "name": "fault_any",   "dir": "output", "type": "BOOL", "range": null,    "device": "任一轴故障（sw bit3）" }
+  ],
+  "constraints": [
+    { "id": "C1", "kind": "interlock", "desc": "快停优先于使能：MC_Stop 生效期间 MC_Power 禁止发使能命令；释放后自动重新上电序列" },
+    { "id": "C2", "kind": "interlock", "desc": "非 OE 状态电机速度指令必须为零（伺服环仅在 OE/QSA/FRA 输出，后者走减速曲线）；全程速度限幅 ±120" },
+    { "id": "C3", "kind": "timing",    "desc": "主站时序：目标位置寄存器先于 cmd_go 上升沿建立（≥1 扫描周期），否则驱动锁存旧值" },
+    { "id": "C4", "kind": "exception", "desc": "目标越程（<0 或 >100）触发故障反应：受控减速 → FA 状态，需 MC_Reset 复位后重新使能" }
+  ],
+  "acceptance": [
+    {
+      "id": "AC1", "desc": "使能后 0.5s 内三轴进入 Operation Enabled",
+      "type": "event_delay",
+      "from": { "signal": "run", "edge": "rising" },
+      "to":   { "signal": "all_oe", "edge": "rising" },
+      "op": "<=", "value": 0.5, "unit": "s"
+    },
+    {
+      "id": "AC2", "desc": "快停期间禁止运动（安全联锁）",
+      "type": "forbidden_state",
+      "when":   { "signal": "quickstop", "equals": true },
+      "forbid": { "signal": "any_moving", "equals": true }
+    },
+    {
+      "id": "AC3", "desc": "故障未复位期间禁止运动",
+      "type": "forbidden_state",
+      "when":   { "signal": "fault_any", "equals": true },
+      "forbid": { "signal": "any_moving", "equals": true }
+    },
+    {
+      "id": "AC4", "desc": "三轴定位精度：到位后各轴 |编码器-目标| ≤ 3（含伺服滞后）",
+      "type": "region_containment",
+      "asset": "gantry_head",
+      "region_center": [0, 0, 0], "tolerance": 3,
+      "check_at": "end"
+    },
+    {
+      "id": "AC5", "desc": "仿真无发散、轴行程未越界（0~100）",
+      "type": "sim_health"
+    }
+  ]
+}

@@ -10,44 +10,39 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
-from agent.patternlib import DEFAULT_PICKS, pattern_cards, render_cards  # noqa: E402
+from agent.patternlib import CATALOG, DEFAULT_PICKS, pattern_cards, render_cards  # noqa: E402
 
 
 class TestSelection:
-    def test_sorting_keywords(self):
-        cards = pattern_cards("传送带分拣线，光电检测后气缸剔除")
-        assert cards and cards[0]["key"] == "sorting"
+    def test_motion_keywords(self):
+        cards = pattern_cards("三轴龙门点到点定位，Z 轴安全互锁")
+        assert cards and cards[0]["key"] == "motion3axis"
 
-    def test_pid_keywords(self):
-        cards = pattern_cards("单容水箱液位连续 PID 调节，积分抗饱和")
-        assert cards[0]["key"] == "pid_tank"
-
-    def test_sequence_keywords(self):
-        cards = pattern_cards("双气缸顺序动作循环控制")
-        assert cards[0]["key"] == "cylinder_seq"
+    def test_axis_keywords(self):
+        cards = pattern_cards("多轴伺服平移到位控制")
+        assert cards[0]["key"] == "motion3axis"
 
     def test_no_hit_falls_back_to_defaults(self):
         cards = pattern_cards("煮咖啡")
         assert [c["key"] for c in cards] == list(DEFAULT_PICKS)
 
-    def test_two_cards_returned(self):
-        assert len(pattern_cards("传送带分拣")) == 2
+    def test_single_seed_returns_one_card(self):
+        # 场景库重组后仅一种子：picks=2 也只返回 1 张
+        assert len(pattern_cards("三轴运动")) == 1
 
 
 class TestCardContent:
     def test_cards_carry_st_and_summary(self):
-        card = pattern_cards("计数")[0]
+        card = pattern_cards("定位")[0]
         assert card["summary"] and "--- POU" in card["st"]
-        assert "cnt" in card["st"]  # counter 种子的定位变量
+        assert "prog_id" in card["st"]  # motion3axis 种子的身份常量
 
     def test_render_contains_st_fences(self):
-        text = render_cards(pattern_cards("分拣"))
-        assert "```st" in text and "### 模式卡：sorting" in text
+        text = render_cards(pattern_cards("运动"))
+        assert "```st" in text and "### 模式卡：motion3axis" in text
 
-    def test_all_six_seeds_extractable(self):
-        # 六个种子全部可提取（任一失败说明 src/plc 被破坏，模式库会显式抛错）
-        for key in ("counter", "sorting", "pump_alternation", "traffic_light", "cylinder_seq", "pid_tank"):
-            from agent.patternlib import CATALOG
-            fname = next(f for k, f, _s, _t in CATALOG if k == key)
+    def test_all_seeds_extractable(self):
+        # 全部种子可提取（任一失败说明 src/plc 被破坏，模式库会显式抛错）
+        for key, fname, _s, _t in CATALOG:
             cards = pattern_cards(key)
             assert cards, fname

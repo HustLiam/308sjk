@@ -1,8 +1,8 @@
 # 需求理解与闭环编排详细设计（gc 负责部分）
 
-> 本文档是《总体实施方案》中 **① 需求理解模块**、**②③ 生成智能体的 LLM 本体**、**端到端闭环编排器（solve 循环、迭代管理、归因反馈的权威定义在本档 §3.2 / §4，csk 文档 §5.2–5.4 指向此处）**与**跨模块契约一致性**的详细设计，负责人：gc（智能体与闭环侧）。
+> 本文档是《总体实施方案》中 **① 需求理解模块**、**②a/②b 生成智能体的 LLM 本体**、**端到端闭环编排器（solve 循环、迭代管理、归因反馈的权威定义在本档 §3.2 / §4，csk 文档 §7.2–7.4 指向此处）**与**跨模块契约一致性**的详细设计，负责人：gc（智能体与闭环侧）。
 >
-> 三人分工全景：**PLC 执行侧（lx，见《lx-PLC代码生成与执行引擎详细设计》）** 负责代码契约与链路 B；**仿真验证侧（csk，见《csk-仿真环境与IO闭环详细设计》）** 负责场景生成、Isaac 运行时、判定引擎与链路 A；**本侧（gc）** 负责让这两端被同一个大脑串成闭环——听懂需求、生成代码、判定后归因、定向重生成、管住迭代直至收敛。
+> 三人分工全景：**PLC 执行侧（lx，见《lx-PLC代码生成与执行引擎详细设计》）** 负责代码契约与链路 B；**仿真验证侧（csk，见《csk-仿真环境与IO闭环详细设计》）** 负责 SceneSpec 规范/校验器、USD 构建与组件库（③b）、Isaac 运行时、判定引擎与链路 A 构建，兼 ②b 场景描述的**评审方**；**本侧（gc）** 负责双生成本体（②a PLC 代码 + ②b 场景描述）与闭环大脑——听懂需求、生成代码与场景、判定后归因、定向重生成、管住迭代直至收敛。
 
 ---
 
@@ -10,9 +10,9 @@
 
 | 总体方案模块 | 本侧职责 | 关键产物 | 状态 |
 |---|---|---|---|
-| 用户交互层 | 自然语言输入、多轮澄清、规格回显确认、结果展示 | 对话协议 / CLI | 🚧 未启动（编排 CLI 已有，澄清协议未接） |
+| ⓪ AutomationML 解析 | IEC 62714 AML → device_model.json（设备/IO/拓扑/运动学） | `tools/aml_parser.py` | 🚧 未启动 |
 | ① 需求理解模块 | 自然语言 → 结构化需求规格；**requirement_spec.json Schema 的定义权** | `requirement_spec.json` + JSON Schema | 🟨 Schema 草案 v1.0.0-draft.1 已出（`schemas/requirement_spec.schema.json` + `src/agent/spec_validator.py`），**待三方评审冻结**；LLM 澄清未接 |
-| ② ③ 的 LLM 生成本体 | PLCopen XML 生成器（在 lx 契约上）、失败归因分析 LLM | 生成器 Prompt 工程 + ST 模式库 | 🟨 生成器 v0 已实现（`src/agent/pipeline.py` + `patternlib.py` + `prompts/plcgen_skill.md`，种子=已验收 6 场景，xml2st+一致性双闸门回灌）；归因 LLM 未启动 |
+| ②a/②b 的 LLM 生成本体 | PLCopen XML 生成器（在 lx 契约上）、失败归因分析 LLM | 生成器 Prompt 工程 + ST 模式库 | 🟨 生成器 v0 已实现（`src/agent/pipeline.py` + `patternlib.py` + `prompts/plcgen_skill.md`，种子=motion3axis（场景库重组后），xml2st+一致性双闸门回灌）；归因 LLM 未启动 |
 | 闭环编排器 | solve 循环、两个编译/校验短路、迭代记忆、终止与 best-effort、反馈包拼装与路由 | `orchestrator/` | 🟨 半环骨架已实现（`src/agent/orchestrator.py`：生成→xml2st 闸门→一致性→部署可选；runs/ 落盘与 final 冻结已跑通；仿真全环等 csk 接口） |
 | 跨模块一致性 | io_list 单一源头的落地：**三方一致性检查器**（定位变量 ≡ io_list ≡ io_map） | `consistency_check.py` | ✅ 原型完成（`src/agent/consistency_check.py`，R1~R5；io_map 腿接口就绪，csk 产出后自动生效） |
 
@@ -21,19 +21,22 @@
 ## 1. 在总体架构中的位置
 
 ```
-用户（自然语言）
-   │
-   ▼
-【本侧】① 需求理解 ──► requirement_spec.json（io_list 是三方共同源头）
+AutomationML(设备描述)              用户（自然语言）
+   │                                    │
+   ▼                                    ▼
+【本侧】⓪ AML 解析器                ① 需求理解
+   │ device_model.json ──────────────► │（自然语言 + 设备模型）
+                                      ▼
+                              requirement_spec.json（io_list 从设备模型自动填充）
    │
    ▼
 【本侧】编排器 solve() 循环 ──────────────────────────────────┐
-   │  ② PLC 代码生成（本侧 LLM，产出受 lx 契约约束）           │
+   │  ②a PLC 代码生成（本侧 LLM，产出受 lx 契约约束）          │
    │     └► 编译闸门：lx 的 xml2st / POST /deploy（失败即短路） │
-   │  ③ 场景生成（仿真侧 SceneSpec LLM + 确定性构建器）         │
+   │  ②b 场景生成（仿真侧 SceneSpec LLM）                      │
    │     └► 校验闸门：仿真侧 Schema/物理校验（失败即短路）      │
-   │  ④ 仿真执行：仿真侧 run_isaac_headless（链路 A DLL）      │
-   │  ⑤ 判定：仿真侧确定性规则引擎 ──► verdict.json             │
+   │  ③ 仿真执行：③a DLL + ③b json→USD→run_isaac_headless    │
+   │  ④ 判定：仿真侧确定性规则引擎 ──► verdict.json             │
    │  归因（本侧 LLM）：区分代码问题 / 场景问题，路由重生成      │
    └── 未通过：带迭代记忆进入下一轮（≤6 轮）◄──────────────────┘
         通过：冻结 final/ → 转 lx 的链路 B（OpenPLC）做软 PLC 验收
@@ -43,22 +46,22 @@
 
 ## 2. ① 需求理解模块
 
-**功能**：把用户自然语言指令变成机器可执行、可验证的结构化需求规格；歧义主动追问。
+**功能**：把用户自然语言指令 + ⓪ 输出的设备模型（device_model.json）变成机器可执行、可验证的结构化需求规格；歧义主动追问；io_list 从设备模型自动填充。
 
 **requirement_spec.json（本侧拥有 Schema 定义权，冻结前需三方联签）**：
 
 > **落地状态**：草案 v1.0.0-draft.1 已实现——评审视图 `schemas/requirement_spec.schema.json`，
 > 运行权威 `src/agent/spec_validator.py`（两者同一 RFC 内同步修改），基准示例
-> `examples/specs/sorting.spec.json`（io_list 与 sorting.xml 定位变量逐字对齐）。
+> `examples/specs/motion3axis.spec.json`（io_list 与 motion3axis.xml 定位变量逐字对齐）。
 > Schema 文件表达不了的语义规则：S1 唯一性（io 名/AC id/C id）、S2 量程（INT 必带
 > range、BOOL 禁带）、S3 信号引用必须落在 io_list、S4 时间阈值 ≥100ms——均在校验器实现。
 
 | 字段 | 内容 | 约束 |
 |---|---|---|
-| `task_goal` | 被对象与工艺动作序列描述 | 自然语言，供②③共享 |
+| `task_goal` | 被对象与工艺动作序列描述 | 自然语言，供②a/②b共享 |
 | `io_list` | IO 清单：`name / dir(input\|output) / type / range / device` | **三方一致性唯一源头**（②ST 定位变量、③io_map、④地址映射）；跨链路类型规则见 §6 |
-| `constraints` | 时序约束、互锁条件、异常处理策略 | 供②生成逻辑与⑤映射为 forbidden_state 类准则 |
-| `acceptance` | 可量化验收准则，**封闭四类**：`event_delay` / `region_containment` / `forbidden_state` / `sim_health` | 结构与仿真侧判定引擎逐字对齐（其 §5.1 的 JSON 即权威结构）；落不进四类的一律退回重新组织 |
+| `constraints` | 时序约束、互锁条件、异常处理策略 | 供②a生成逻辑与④映射为 forbidden_state 类准则 |
+| `acceptance` | 可量化验收准则，**封闭四类**：`event_delay` / `region_containment` / `forbidden_state` / `sim_health` | 结构与仿真侧判定引擎逐字对齐（csk 文档 §7.1 的 JSON 即权威结构）；落不进四类的一律退回重新组织 |
 
 **处理要点**：
 
@@ -82,6 +85,12 @@
 - 输出：`report.md` 归因报告，**区分代码问题（→②）与场景问题（→③）**并路由；
 - 红线：归因不改变 PASS/FAIL 结论；判定永远由仿真侧确定性引擎做出，LLM 不判卷。
 
+### 3.3 场景描述生成器（②b 的 LLM 本体）
+
+- **输入**：requirement_spec（task_goal / io_list）+ 组件类型清单（csk 维护的封闭枚举，来自组件库 quantity 清单）+ 场景类失败反馈（迭代时）；
+- **输出**：`scene.spec.json`（场景描述）+ `io_map.json`——先过 csk 的 SceneSpec Schema 与物理校验闸门（失败即短路回喂），再交 ③b 确定性构建；
+- **约定**：LLM 不写 USD；`type` 封闭枚举由评审方（csk）维护，发明新类型在校验被拒；规范与校验器的权威定义在 csk 文档 §4。
+
 ## 4. 端到端编排器（闭环本体——本节为 solve 循环的权威定义）
 
 ```
@@ -89,16 +98,16 @@ solve(request):
   spec = understand(request)                          # ① 含用户确认
   history = []                                        # 迭代记忆
   for i in 1..MAX_ITERS(默认 6):
-    xml = gen_plc_code(spec, history)                 # ② 本侧生成器
+    xml = gen_plc_code(spec, history)                 # ②a 本侧生成器
     if not compile_gate(xml):                         # 短路①：lx xml2st/--check 或 /deploy
         history.append(compile_error); continue       #   不进仿真，省最贵一步
-    scene = gen_scene_spec(spec, history)             # ③ 仿真侧 LLM
-    if errs := validate_scene(scene):                 # 短路②：仿真侧校验器
+    scene = gen_scene_spec(spec, history)             # ②b 仿真侧 LLM
+    if errs := validate_scene(scene):                 # 短路②：仿真侧校验器（②b 产物）
         history.append(scene_error); continue
-    usd, io_map = build_usd(scene)                    # 仿真侧确定性构建
+    usd, io_map = build_usd(scene)                    # ③b 确定性构建（json→USD）
     consistency_check(xml, spec.io_list, io_map)      # 本侧：三方一致性（见 §5）
-    trace = run_isaac_headless(usd, io_map, dll)      # ④ 仿真侧链路 A
-    verdict = evaluate(spec.acceptance, trace)        # ⑤ 仿真侧确定性判定
+    trace = run_isaac_headless(usd, io_map, dll)      # ③ 仿真执行（③a DLL × ③b）
+    verdict = evaluate(spec.acceptance, trace)        # ④ 仿真侧确定性判定
     if verdict.ok: return finalize(i)                 # 冻结 final/ → 链路 B 验收
     history.append(verdict, analyze(trace, verdict))  # 归因入记忆 → 下一轮
   return best_effort()                                # 最优轮 + 失败报告 → 人工介入
@@ -145,7 +154,7 @@ io_map.json（仿真侧产出）------------------------------------┤
 | lx（PLC 侧） | `xml2st --check`（本地快速闸门）；`POST /deploy` :8600（真编译+部署，返回 deploy_result.json，errors 原样进反馈包） | 本侧调用 |
 | lx（PLC 侧） | 契约文档 §3：ST 子集 / 定位变量位宽 / 显式拒绝清单 —— 生成器 Prompt 的硬约束 | 本侧遵守 |
 | 仿真侧 | requirement_spec → SceneSpec 生成与 USD 构建；`run_isaac_headless(usd, io_map, dll)`；`evaluate()` → verdict.json | 本侧调用 |
-| 仿真侧 | acceptance 四类准则结构（其 §5.1）——需求 Schema 与判定引擎逐字对齐 | 双方共守 |
+| 仿真侧 | acceptance 四类准则结构（csk 文档 §7.1）——需求 Schema 与判定引擎逐字对齐 | 双方共守 |
 | 跨链路 | 模拟量统一 **INT @ %QW + 定点换算**（双链路一致约定）——生成器负责落码，换算系数写入 io_map（量程换算字段） | 本侧落实 |
 
 ## 7. 实施计划（对齐总体方案 §5）
@@ -153,7 +162,7 @@ io_map.json（仿真侧产出）------------------------------------┤
 | 阶段 | 本侧工作 | 依赖 |
 |---|---|---|
 | 一（1–2 周） | requirement_spec Schema + acceptance 四类结构定稿，**三方接口契约冻结（联签）** | 无（最先动工） |
-| 三（5–9 周） | 需求理解 Agent、PLC 生成器（Prompt + ST 模式库，种子=已验收 6 场景）、一致性检查器 | lx 契约已冻结 ✅；仿真侧 SceneSpec Schema |
+| 三（5–9 周） | 需求理解 Agent、PLC 生成器（Prompt + ST 模式库，种子=motion3axis）、一致性检查器 | lx 契约已冻结 ✅；仿真侧 SceneSpec Schema |
 | 四（9–13 周） | 编排器串联全链路、反馈包拼装、归因路由、迭代收敛性调优 | 两端引擎打通（阶段二，各自进行） |
 | 五（13–16 周） | 典型场景（分拣/顺序控制/搬运）三端联合测试与指标评估 | 全部 |
 
@@ -167,7 +176,7 @@ io_map.json（仿真侧产出）------------------------------------┤
 ## 9. 待办（按优先级）
 
 1. ~~requirement_spec JSON Schema 草案 + 三方评审冻结~~ → 草案已出（见 §2 落地状态），**评审冻结进行中**（RFC 流程，主方案 §8.3）；
-2. ~~与仿真侧确认 acceptance 四类准则的最终字段结构（以其 §5.1 为底稿）~~ → 字段已逐字对齐其 §5.1，待其评审确认（`check_at` 冻结 "end"，扩展走 RFC）；
+2. ~~与仿真侧确认 acceptance 四类准则的最终字段结构（以 csk §7.1 为底稿）~~ → 字段已逐字对齐其 §7.1，待其评审确认（`check_at` 冻结 "end"，扩展走 RFC）；
 3. ~~PLC 生成器 v0：模式库整理 + Prompt 骨架 + xml2st 错误回喂通路联调~~ → 已完成（`src/agent/`：pipeline / patternlib / prompts；xml2st+一致性双闸门回灌；LLM 真实调用待 API Key 端到端联调）；
 4. ~~一致性检查器原型（可直接复用 lx 的 `xml2st.parse()`）~~ → 已完成（`src/agent/consistency_check.py`，R1 复用 xml2st.parse；io_map 腿接口就绪待 csk 产出）；
 5. ~~编排器骨架：先串"生成→编译闸门→部署→链路 B 验收"的半环（不含 Isaac）~~ → 半环已跑通（`src/agent/orchestrator.py`；部署闸门连不上记 skipped；链路 B 验收脚本接入与仿真全环待两端就绪）。

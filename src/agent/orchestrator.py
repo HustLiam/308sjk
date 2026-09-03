@@ -18,8 +18,8 @@
   runs/<task_id>/request.json + iter_NNN/{plcopen.xml, plc.st, gate.json} + final/ + summary.md
 
 用法:
-    python -m src.agent.orchestrator examples/specs/sorting.spec.json            # LLM 生成
-    python -m src.agent.orchestrator examples/specs/sorting.spec.json --seed src/plc/sorting.xml
+    python -m src.agent.orchestrator examples/specs/motion3axis.spec.json        # LLM 生成
+    python -m src.agent.orchestrator examples/specs/motion3axis.spec.json --seed src/plc/motion3axis.xml
     python -m src.agent.orchestrator spec.json --deploy   # 闸门3：需 serve.py 在线
 """
 
