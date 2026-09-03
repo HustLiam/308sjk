@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0.0-draft.1",
+  "schema_version": "1.0.0-draft.2",
   "task_id": "motion3axis_demo",
   "task_goal": "三轴龙门运动控制（CiA 402 驱动模型 + PLCopen MC API，纯 ST 自包含实现）：PLC 内嵌三台伺服驱动器模型（状态机 SOD/RTSO/SO/OE/QSA/FRA/FA、Profile Position 模式梯形速度规划、位置伺服环），对外暴露 MC 级应用接口（使能/回零/定位/点动/快停/故障注入与复位）与驱动级诊断（状态字/速度指令）；外部扮演主站与电机仿真（按速度指令积分编码器反馈）。目标越程触发故障反应，快停为受控减速。",
   "io_list": [

@@ -98,6 +98,23 @@ class TestSemanticRules:
         spec["io_list"][idx]["range"] = [100, 0]
         assert any("min<max" in p for p in validate_requirement_spec(spec))
 
+    def test_s2_int_range_within_16bit_domain(self):
+        # lx 评审建议（draft.2 落实）：INT 量程不得超出 16 位寄存器域
+        #（%QW 承载 INT/UINT/WORD 的并集 [-32768, 65535]）
+        spec = load_spec()
+        idx = next(i for i, p in enumerate(spec["io_list"]) if p["name"] == "x_fb")
+        spec["io_list"][idx]["range"] = [0, 70000]      # 超 UINT16 上界
+        assert any("16 位寄存器域" in p for p in validate_requirement_spec(spec))
+        spec["io_list"][idx]["range"] = [-40000, 0]     # 超 INT16 下界
+        assert any("16 位寄存器域" in p for p in validate_requirement_spec(spec))
+
+    def test_s2_int_range_domain_boundaries_pass(self):
+        # 域端点本身合法（x_sw 的 [0,65535] 即 UINT16 满量程用法）
+        spec = load_spec()
+        idx = next(i for i, p in enumerate(spec["io_list"]) if p["name"] == "x_fb")
+        spec["io_list"][idx]["range"] = [-32768, 65535]
+        assert validate_requirement_spec(spec) == []
+
     def test_s2_bool_forbids_range(self):
         spec = load_spec()
         spec["io_list"][0]["range"] = [0, 1]  # start_btn: BOOL 带量程
