@@ -32,6 +32,7 @@
 """
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -41,6 +42,11 @@ import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "pipeline"))
 import xml2st  # noqa: E402
+
+# 本地服务直连（绕过 Windows 系统代理——同 client.py 的教训：注册表代理会
+# 掐断/劫持 127.0.0.1 请求）
+_LOCAL = requests.Session()
+_LOCAL.trust_env = False
 
 from .config import PROJECT_ROOT, RUNS_DIR, get_api_key  # noqa: E402
 from .consistency_check import consistency_check  # noqa: E402
@@ -67,15 +73,15 @@ class Orchestrator:
         """闸门3：POST /deploy 真编译。返回 (state, detail)：
         state ∈ ok / failed / skipped（服务不在线，半环不阻塞）。"""
         try:
-            resp = requests.post(self.deploy_url, data=xml_path.read_bytes(),
-                                 headers={"Content-Type": "application/xml"}, timeout=120)
+            resp = _LOCAL.post(self.deploy_url, data=xml_path.read_bytes(),
+                               headers={"Content-Type": "application/xml"}, timeout=120)
         except requests.RequestException as exc:
             return "skipped", "deploy 服务不在线（%s）——半环跳过真编译" % exc.__class__.__name__
         if resp.status_code != 200:
             return "failed", "HTTP %d: %s" % (resp.status_code, resp.text[:500])
         result = resp.json()
         status = result.get("status")
-        if status == "ok" or status is True:
+        if str(status).lower() == "ok" or status is True:
             return "ok", result
         return "failed", result  # errors 字段原样进反馈包（lx 约定）
 
@@ -116,7 +122,7 @@ class Orchestrator:
         """
         url = self.deploy_url.rsplit("/", 1)[0] + "/status"
         try:
-            resp = requests.get(url, timeout=5)
+            resp = _LOCAL.get(url, timeout=5)
             if resp.status_code == 200:
                 return resp.json()
         except requests.RequestException:
@@ -318,6 +324,10 @@ def main():
                         help="跳过 ②b 场景描述生成（默认启用：scene.spec.json + io_map.json）")
     parser.add_argument("--aml", default=None,
                         help="AutomationML 设备描述（⓪）——前置 ① 需求理解，需配合 --request")
+    parser.add_argument("--modbus-host", default=None,
+                        help="链路 B Modbus 主机（缺省 127.0.0.1；远程/VM 运行时传 IP，注入环境供验收子进程）")
+    parser.add_argument("--modbus-port", type=int, default=None,
+                        help="链路 B Modbus 端口（缺省 502）")
     parser.add_argument("--request", default=None,
                         help="自然语言需求文本（或 .txt 文件路径），配合 --aml 使用")
     args = parser.parse_args()
@@ -383,6 +393,11 @@ def main():
     scenario = args.scenario
     if scenario is None:
         scenario = (Path(args.seed).stem if args.seed else spec["task_id"])
+    if args.modbus_host:
+        os.environ["MODBUS_HOST"] = args.modbus_host   # 验收子进程经 connect() 读 env
+    if args.modbus_port:
+        os.environ["MODBUS_PORT"] = str(args.modbus_port)
+
     orch = Orchestrator(runs_root=args.runs_root, max_iters=args.max_iters)
     scene_gen = None if args.no_scene else SceneSpecGenerator()
     result = orch.solve(spec, generator, deploy=args.deploy,

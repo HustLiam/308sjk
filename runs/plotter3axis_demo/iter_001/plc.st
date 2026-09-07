@@ -3,6 +3,10 @@ FUNCTION_BLOCK INTERP
     fire : BOOL;
     pos_target : INT;
     hold_req : BOOL;
+    VMAX : REAL := 40.0;
+    ACCEL : REAL := 80.0;
+    POSWIN : REAL := 2.0;
+    MAXPOS : INT;
   END_VAR
   VAR_OUTPUT
     Setpoint : INT;
@@ -17,12 +21,9 @@ FUNCTION_BLOCK INTERP
     dist : REAL;
     stop_d : REAL;
     SCAN_T : REAL := 0.02;
-    VMAX : REAL := 40.0;
-    ACCEL : REAL := 80.0;
-    POSWIN : REAL := 2.0;
   END_VAR
 IF fire AND NOT edge_ir THEN
-    IF pos_target > 100 OR pos_target < 0 THEN
+    IF pos_target > MAXPOS OR pos_target < 0 THEN
         (* 目标越程: 不启动插补, 保持原位 *)
         Done := TRUE;
     ELSE
@@ -30,70 +31,13 @@ IF fire AND NOT edge_ir THEN
         Busy := TRUE;
         Done := FALSE;
     END_IF;
+ELSIF fire AND NOT Busy AND (ABS(INT_TO_REAL(pos_target) - tgt) > 0.499) THEN
+    (* continuous tracking: new target starts new trajectory while fire held *)
+    tgt := INT_TO_REAL(pos_target);
+    Busy := TRUE;
+    Done := FALSE;
 END_IF;
 edge_ir := fire;
-
-IF hold_req THEN
-    IF vel > 0.0 THEN vel := MAX(0.0, vel - ACCEL * SCAN_T);
-    ELSIF vel < 0.0 THEN vel := MIN(0.0, vel + ACCEL * SCAN_T);
-    END_IF;
-ELSIF Busy THEN
-    dist := tgt - pos;
-    stop_d := (vel * vel) / (2.0 * ACCEL);
-    IF ABS(dist) <= stop_d THEN
-        IF dist >= 0.0 THEN vel := MAX(0.0, vel - ACCEL * SCAN_T);
-        ELSE vel := MIN(0.0, vel + ACCEL * SCAN_T);
-        END_IF;
-        IF vel = 0.0 AND ABS(dist) <= POSWIN THEN
-            pos := tgt;
-            Busy := FALSE;
-            Done := TRUE;
-        END_IF;
-    ELSE
-        IF dist > 0.0 THEN vel := MIN(VMAX, vel + ACCEL * SCAN_T);
-        ELSE vel := MAX(-VMAX, vel - ACCEL * SCAN_T);
-        END_IF;
-    END_IF;
-END_IF;
-
-pos := pos + vel * SCAN_T;
-Setpoint := REAL_TO_INT(pos);
-END_FUNCTION_BLOCK
-
-FUNCTION_BLOCK INTERP_Z
-  VAR_INPUT
-    fire : BOOL;
-    pos_target : INT;
-    hold_req : BOOL;
-  END_VAR
-  VAR_OUTPUT
-    Setpoint : INT;
-    Busy : BOOL;
-    Done : BOOL;
-  END_VAR
-  VAR
-    edge_irz : BOOL;
-    pos : REAL;
-    vel : REAL;
-    tgt : REAL;
-    dist : REAL;
-    stop_d : REAL;
-    SCAN_T : REAL := 0.02;
-    VMAX : REAL := 20.0;
-    ACCEL : REAL := 60.0;
-    POSWIN : REAL := 1.0;
-  END_VAR
-IF fire AND NOT edge_irz THEN
-    IF pos_target > 10 OR pos_target < 0 THEN
-        (* 目标越程: 不启动插补, 保持原位 *)
-        Done := TRUE;
-    ELSE
-        tgt := INT_TO_REAL(pos_target);
-        Busy := TRUE;
-        Done := FALSE;
-    END_IF;
-END_IF;
-edge_irz := fire;
 
 IF hold_req THEN
     IF vel > 0.0 THEN vel := MAX(0.0, vel - ACCEL * SCAN_T);
@@ -419,13 +363,7 @@ PROGRAM PLC_PRG
     hm_y_exe : BOOL;
     hm_z_exe : BOOL;
     pen_up : BOOL;
-    pl_edge : BOOL;
-    pl_rise : BOOL;
     pl_step : INT;
-    pl_prev : INT;
-    pl_fire_x : BOOL;
-    pl_fire_y : BOOL;
-    pl_fire_z : BOOL;
     pl_tx : INT;
     pl_ty : INT;
     pl_tz : INT;
@@ -447,7 +385,7 @@ PROGRAM PLC_PRG
     hm_z : MC_HOME;
     ix_x : INTERP;
     ix_y : INTERP;
-    ix_z : INTERP_Z;
+    ix_z : INTERP;
     dv_x : DRIVE402;
     dv_y : DRIVE402;
     dv_z : DRIVE402;
@@ -472,42 +410,48 @@ st_z(fire := quickstop, cw := z_cw, sw := z_sw);
 (* ---- 笔状态（抬笔判定用编码器反馈，pen_down 输出同源） ---- *)
 pen_up := z_fb >= 8;
 
-(* ---- 绘图序列器：cmd_draw 上升沿启动，9 步 CASE 步进 ---- *)
-(* 步序：1 抬笔 2 定位起点(20,20) 3 落笔 4..7 画四边 8 抬笔 9 回中心(50,50) *)
-(* 目标在进入步时锁存到 pl_t*；fire 线保持到对应 INTERP Done 后清除 *)
-pl_rise := cmd_draw AND NOT pl_edge;
-pl_edge := cmd_draw;
-
-IF pl_rise AND (pl_step = 0) AND all_oe AND NOT quickstop AND NOT fault_any THEN
-    plot_done := FALSE;
-    pl_step := 1;
-END_IF;
-
-(* 急停/故障：中止序列（释放后不自动续跑，须重新 cmd_draw） *)
+(* ---- 绘图序列器：cmd_draw（电平门控）启动，9 步目标表 ---- *)
+(* 机制：触发扫描锁存步 1 目标并置 exe 电平（全程保持）；此后每步只改 pl_t* ——
+   INTERP 连续跟踪模式检测目标变化自动起新轨迹；步进条件=三轴 Busy 全落且 Done。
+   全程无单扫描选通/边沿记忆变量（运行时优化器会吞掉这类赋值——避坑#7 变体） *)
 IF (quickstop OR fault_any) AND (pl_step <> 0) THEN
     pl_step := 0;
-    pl_fire_x := FALSE;
-    pl_fire_y := FALSE;
-    pl_fire_z := FALSE;
+    go_x_exe := FALSE;
+    go_y_exe := FALSE;
+    go_z_exe := FALSE;
 END_IF;
 
-IF pl_step <> pl_prev THEN
-    pl_prev := pl_step;
-    IF pl_step <> 0 THEN
-        pl_fire_x := TRUE;
-        pl_fire_y := TRUE;
-        pl_fire_z := TRUE;
-        CASE pl_step OF
-            1: pl_tx := x_interp; pl_ty := y_interp; pl_tz := 10;
-            2: pl_tx := 20; pl_ty := 20; pl_tz := 10;
-            3: pl_tx := 20; pl_ty := 20; pl_tz := 0;
-            4: pl_tx := 80; pl_ty := 20; pl_tz := 0;
-            5: pl_tx := 80; pl_ty := 80; pl_tz := 0;
-            6: pl_tx := 20; pl_ty := 80; pl_tz := 0;
-            7: pl_tx := 20; pl_ty := 20; pl_tz := 0;
-            8: pl_tx := 20; pl_ty := 20; pl_tz := 10;
-            9: pl_tx := 50; pl_ty := 50; pl_tz := 10;
-        END_CASE
+CASE pl_step OF
+    0: IF cmd_draw AND all_oe AND NOT quickstop AND NOT fault_any AND pen_up THEN
+           plot_done := FALSE;
+           pl_tx := x_interp; pl_ty := y_interp; pl_tz := 10;
+           go_x_exe := TRUE;
+           go_y_exe := TRUE;
+           go_z_exe := TRUE;
+           pl_step := 1;
+       END_IF;
+    1: pl_tx := x_interp; pl_ty := y_interp; pl_tz := 10;
+    2: pl_tx := 20; pl_ty := 20; pl_tz := 10;
+    3: pl_tx := 20; pl_ty := 20; pl_tz := 0;
+    4: pl_tx := 80; pl_ty := 20; pl_tz := 0;
+    5: pl_tx := 80; pl_ty := 80; pl_tz := 0;
+    6: pl_tx := 20; pl_ty := 80; pl_tz := 0;
+    7: pl_tx := 20; pl_ty := 20; pl_tz := 0;
+    8: pl_tx := 20; pl_ty := 20; pl_tz := 10;
+    9: pl_tx := 50; pl_ty := 50; pl_tz := 10;
+END_CASE;
+
+(* 步进：三轴插补全部空闲（连续模式下 Busy 落下=到位）且 Done 汇聚 *)
+IF (pl_step <> 0) AND NOT ix_x.Busy AND NOT ix_y.Busy AND NOT ix_z.Busy
+   AND ix_x.Done AND ix_y.Done AND ix_z.Done THEN
+    IF pl_step = 9 THEN
+        plot_done := TRUE;
+        pl_step := 0;
+        go_x_exe := FALSE;
+        go_y_exe := FALSE;
+        go_z_exe := FALSE;
+    ELSE
+        pl_step := pl_step + 1;
     END_IF;
 END_IF;
 
@@ -522,21 +466,21 @@ jg_x(JogForward := jog_fwd AND pen_up AND (pl_step = 0),
      JogBackward := jog_rev AND pen_up AND (pl_step = 0), jog_pos := x_jog_pos);
 
 (* ---- 插补目标路由：序列 > 回零 > 手动；Z 回零位=抬笔安全位 10 ---- *)
-IF pl_fire_x THEN
+IF (pl_step <> 0) THEN
     x_tgt := pl_tx;
 ELSIF hm_x_exe THEN
     x_tgt := 0;
 ELSE
     x_tgt := x_sp;
 END_IF;
-IF pl_fire_y THEN
+IF (pl_step <> 0) THEN
     y_tgt := pl_ty;
 ELSIF hm_y_exe THEN
     y_tgt := 0;
 ELSE
     y_tgt := y_sp;
 END_IF;
-IF pl_fire_z THEN
+IF (pl_step <> 0) THEN
     z_tgt := pl_tz;
 ELSIF hm_z_exe THEN
     z_tgt := 10;
@@ -544,20 +488,23 @@ ELSE
     z_tgt := z_sp;
 END_IF;
 
-ix_x(fire := go_x_exe OR hm_x_exe OR pl_fire_x, pos_target := x_tgt, hold_req := FALSE);
-ix_y(fire := go_y_exe OR hm_y_exe OR pl_fire_y, pos_target := y_tgt, hold_req := FALSE);
-ix_z(fire := go_z_exe OR hm_z_exe OR pl_fire_z, pos_target := z_tgt, hold_req := FALSE);
+ix_x(fire := go_x_exe OR hm_x_exe, pos_target := x_tgt, hold_req := FALSE,
+     VMAX := 40.0, ACCEL := 80.0, POSWIN := 2.0, MAXPOS := 100);
+ix_y(fire := go_y_exe OR hm_y_exe, pos_target := y_tgt, hold_req := FALSE,
+     VMAX := 40.0, ACCEL := 80.0, POSWIN := 2.0, MAXPOS := 100);
+ix_z(fire := go_z_exe OR hm_z_exe, pos_target := z_tgt, hold_req := FALSE,
+     VMAX := 20.0, ACCEL := 60.0, POSWIN := 1.0, MAXPOS := 10);
 
-(* ---- 触发线清除（必须在 ix 调用之后：Done 由本次扫描的上升沿复位） ---- *)
-IF ix_x.Done THEN go_x_exe := FALSE; hm_x_exe := FALSE; END_IF;
-IF ix_y.Done THEN go_y_exe := FALSE; hm_y_exe := FALSE; END_IF;
-IF ix_z.Done THEN go_z_exe := FALSE; hm_z_exe := FALSE; END_IF;
-IF pl_fire_x AND ix_x.Done THEN pl_fire_x := FALSE; END_IF;
-IF pl_fire_y AND ix_y.Done THEN pl_fire_y := FALSE; END_IF;
-IF pl_fire_z AND ix_z.Done THEN pl_fire_z := FALSE; END_IF;
+(* ---- 触发线清除（m3a 语义：exe 保持到 Done；序列期间 exe 为序列持有，仅清手动/回零线） ---- *)
+IF ix_x.Done AND (pl_step = 0) THEN go_x_exe := FALSE; END_IF;
+IF ix_y.Done AND (pl_step = 0) THEN go_y_exe := FALSE; END_IF;
+IF ix_z.Done AND (pl_step = 0) THEN go_z_exe := FALSE; END_IF;
+IF ix_x.Done THEN hm_x_exe := FALSE; END_IF;
+IF ix_y.Done THEN hm_y_exe := FALSE; END_IF;
+IF ix_z.Done THEN hm_z_exe := FALSE; END_IF;
 
-(* ---- 步进：三轴插补全部完成且触发线已清 ---- *)
-IF (pl_step <> 0) AND NOT pl_fire_x AND NOT pl_fire_y AND NOT pl_fire_z
+(* ---- 步进：三轴插补全部完成且 exe 线已清（m3a 握手） ---- *)
+IF (pl_step <> 0) AND NOT go_x_exe AND NOT go_y_exe AND NOT go_z_exe
    AND ix_x.Done AND ix_y.Done AND ix_z.Done THEN
     IF pl_step = 9 THEN
         plot_done := TRUE;

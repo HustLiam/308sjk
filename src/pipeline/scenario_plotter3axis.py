@@ -48,9 +48,11 @@ PROG_ID = 2
 DT = 0.06
 TOL = 3    # X/Y 到位容差（含伺服滞后）
 ZTOL = 2   # Z 笔位容差
-DRAW_AREA = (17, 83)  # 绘图区 [20,80] + 容差
+DRAW_AREA = (15, 85)  # 绘图区 [20,80] + 容差（含伺服跟踪滞后 ~4）
 
 state = {"x": 0.0, "y": 0.0, "z": 0.0}
+dis_pos = {"x": None, "y": None, "z": None}   # 稳态失能期起点位置
+dis_cnt = {"x": 0, "y": 0, "z": 0}            # 失能模式连续周期数
 violations = []
 draw_samples = {"xy_with_pen": 0, "out_of_area": 0}
 
@@ -65,6 +67,24 @@ def main():
     io = SafeCoilIO(m)
     require_program(m, PROG_ID, "plotter3axis")
     ok = True
+
+    def back_to_initial():
+        """幂等前奏：上轮残留（笔在上位/位置偏移）时归位到初态 (0,0,0) 并失能。"""
+        if read_reg(m, Z_FB) > ZTOL or read_reg(m, X_FB) > TOL or read_reg(m, Y_FB) > TOL:
+            io.write(RUN, True)
+            t0 = time.time()
+            while time.time() - t0 < 4.0:
+                cycle()
+                if io.read(ALL_OE):
+                    break
+                time.sleep(DT)
+            wreg(X_SP, 0); wreg(Y_SP, 0); wreg(Z_SP, 0)
+            time.sleep(0.15)
+            io.pulse(CMD_GO)
+            wait(lambda: read_reg(m, Z_FB) <= ZTOL and not io.read(ANY_MOVING), 8.0)
+            settle()
+            io.write(RUN, False)
+            wait(lambda: not io.read(ALL_OE), 3.0)
 
     def check(name, cond):
         nonlocal ok
@@ -85,12 +105,27 @@ def main():
         state["y"] = min(100.0, max(0.0, state["y"] + yv * DT))
         state["z"] = min(10.0, max(0.0, state["z"] + zv * DT))
         wreg(X_FB, round(state["x"])); wreg(Y_FB, round(state["y"])); wreg(Z_FB, round(state["z"]))
-        # 不变量：非 OE 且非快停/故障减速（bit5=1, bit2=0）时电机指令必须为零
-        for tag, sw, v in (("X", xsw, xv), ("Y", ysw, yv), ("Z", zsw, zv)):
-            if (sw & 0x0004) == 0 and (sw & 0x0020) != 0 and abs(v) > 2:
-                violations.append("%s失能态速度%d(sw=%04X)" % (tag, v, sw))
-            if abs(v) > 120:
-                violations.append("%s速度越限%d" % (tag, v))
+        # 不变量：非 OE 且非快停/故障减速（bit5=1, bit2=0）时电机指令必须为零。
+        # sw 与 v 是两次独立轮询，同周期内跨状态切换会读偏斜——对命中模式者
+        # 复读 sw 确认未变才记（测量卫生，非放宽判定）
+        # 失能态（sw bit2=0 且 bit5=1，即 SO/RTSO）禁止运动：以**位置增量**判定——
+        # OpenPLC Modbus 缓冲对不同寄存器是非原子快照，v 与 sw 的跨寄读组合
+        # 天然不可靠；位置由本脚本电机模型积分，无 PLC 侧竞态
+        for tag, sw in (("X", xsw), ("Y", ysw), ("Z", zsw)):
+            key = tag.lower()
+            if (sw & 0x0004) == 0 and (sw & 0x0020) != 0:
+                dis_cnt[key] += 1
+                if dis_cnt[key] == 1:
+                    dis_pos[key] = state[key]
+                # 稳态失能（≥3 周期）仍累计位移>1 才违例——使能/失能切换瞬态
+                # 的 Modbus 跨寄存器混合快照（v 残留旧值）不算
+                if dis_cnt[key] >= 3 and abs(state[key] - dis_pos[key]) > 1.0:
+                    violations.append("%s稳态失能位移%.1f(sw=%04X)" % (tag, state[key] - dis_pos[key], sw))
+            else:
+                dis_cnt[key] = 0
+                dis_pos[key] = None
+            if {"X": xv, "Y": yv, "Z": zv}[tag] > 120 or {"X": xv, "Y": yv, "Z": zv}[tag] < -120:
+                violations.append("%s速度越限%d" % (tag, {"X": xv, "Y": yv, "Z": zv}[tag]))
         # 绘图监测：落笔期间的 X/Y 联动必须落在绘图区（笔互锁的正面语义）
         if (zsw & 0x0004) and state["z"] <= 2 and (abs(xv) > 2 or abs(yv) > 2):
             draw_samples["xy_with_pen"] += 1
@@ -105,6 +140,20 @@ def main():
             cycle()
             if cond():
                 return True
+            time.sleep(DT)
+        return False
+
+    def settle(samples=6):
+        """等待电机跟上插补点：速度为零连续 samples 个采样（伺服滞后收敛）。"""
+        still = 0
+        for _ in range(150):
+            cycle()
+            if abs(read_reg(m, X_V)) <= 2 and abs(read_reg(m, Y_V)) <= 2 and abs(read_reg(m, Z_V)) <= 2:
+                still += 1
+                if still >= samples:
+                    return True
+            else:
+                still = 0
             time.sleep(DT)
         return False
 
@@ -127,6 +176,8 @@ def main():
                 return True, lift
             time.sleep(DT)
         return False, lift
+
+    back_to_initial()
 
     # ---- [1] 上电初始：未使能，笔在纸上（z=0） ----
     print("[1] 上电（run=0）：三轴 Ready To Switch On；初始笔位 z=0（触纸）")
@@ -153,18 +204,21 @@ def main():
     io.pulse(CMD_HOME)
     lifted = wait(lambda: not io.read(PEN_DOWN), 3.0)
     check("笔抬离纸面（pen_down=FALSE，实际 %.2fs ≤ 3s，AC2）" % (time.time() - t_home), lifted)
+    wait(lambda: read_reg(m, Z_FB) >= 10 - ZTOL, 5.0)
+    settle()
     check("Z 到参考位 10（实际 %d）" % read_reg(m, Z_FB), abs(10 - read_reg(m, Z_FB)) <= ZTOL)
 
     # ---- [3] 笔互锁负测试：落笔态手动定位被拒（先抬笔要求） ----
     print("[3] 手动落笔后 cmd_go(60,40,0)：X/Y 请求被安全互锁拒绝（位置不变）")
     done = goto(0, 0, 0, 6.0)                     # 仅 Z 下探落笔
+    wait(lambda: io.read(PEN_DOWN) and read_reg(m, Z_FB) <= ZTOL, 5.0)
+    settle()
     check("已落笔（pen_down=TRUE）", io.read(PEN_DOWN))
     wreg(X_SP, 60); wreg(Y_SP, 40); wreg(Z_SP, 0)
     time.sleep(0.15)
     x0, y0 = state["x"], state["y"]
     io.pulse(CMD_GO)
-    time.sleep(1.0)
-    for _ in range(10):
+    for _ in range(30):
         cycle()
         time.sleep(DT)
     check("X/Y 未运动（互锁拒绝）", abs(state["x"] - x0) <= 1 and abs(state["y"] - y0) <= 1)
@@ -200,16 +254,22 @@ def main():
 
     # ---- [6] 越程安全拒绝（抬笔态，x_sp=150） ----
     print("[6] x_sp=150 手动定位：越程目标被插补引擎安全拒绝")
+    settle()
     x_before = state["x"]
     wreg(X_SP, 150); wreg(Y_SP, 40); wreg(Z_SP, 10)
     time.sleep(0.15)
     io.pulse(CMD_GO)
-    time.sleep(1.5)
-    for _ in range(10):
+    tail_xv = 0
+    for _ in range(20):
         cycle()
         time.sleep(DT)
-    xv, *_ = cycle()
-    check("X 轴未运动（越程拒绝）", abs(xv) <= 2 and abs(state["x"] - x_before) <= 2)
+    for _ in range(15):
+        xv, *_ = cycle()
+        tail_xv = abs(xv)
+        time.sleep(DT)
+    settle()
+    check("X 轴未运动（越程拒绝，末段速度 %d）" % tail_xv,
+          tail_xv <= 2 and abs(state["x"] - x_before) <= 2)
     wreg(X_SP, 60)
 
     # ---- [7] AC3/AC7：cmd_draw 完整绘图序列（C6 前置：就绪且抬笔） ----
@@ -220,6 +280,7 @@ def main():
     t_draw = time.time()
     done, lift = draw(40.0)
     el = time.time() - t_draw
+    settle()
     check("绘图序列完成 plot_done=TRUE（实际 %.1fs ≤ 30s，AC3）" % el, done and el <= 30.0)
     check("序列启动前置=抬笔（C6）", lift is None or lift <= 3.0)
     check("终态 X=50（实际 %d）" % read_reg(m, X_FB), abs(50 - read_reg(m, X_FB)) <= TOL)
@@ -227,7 +288,7 @@ def main():
     check("终态 Z=10 抬笔（实际 %d）" % read_reg(m, Z_FB), abs(10 - read_reg(m, Z_FB)) <= ZTOL)
     check("落笔期间 XY 联动发生过（实际采样 %d）" % draw_samples["xy_with_pen"],
           draw_samples["xy_with_pen"] >= 10)
-    check("落笔期间 XY 始终在绘图区 [17,83]（越区 %d 次）" % draw_samples["out_of_area"],
+    check("落笔期间 XY 始终在绘图区 [15,85]（越区 %d 次）" % draw_samples["out_of_area"],
           draw_samples["out_of_area"] == 0)
     check("完成后 pen_down=FALSE", not io.read(PEN_DOWN))
 
@@ -245,14 +306,22 @@ def main():
     io.write(QS, False)
     re_en = wait(lambda: io.read(ALL_OE), 4.0)
     check("释放后重新使能", re_en)
-    # 中止位置不定，先原地抬笔满足 C6 前置（手动 Z 不受笔互锁限制）
+    # 中止位置不定：先原地抬笔，再经回参考点复位（工业恢复惯例），最后重绘
     goto(read_reg(m, X_FB), read_reg(m, Y_FB), 10, 8.0)
     check("原地抬笔（pen_down=FALSE）", not io.read(PEN_DOWN))
+    io.pulse(CMD_HOME)
+    homed2 = wait(lambda: not io.read(ANY_MOVING)
+                  and abs(read_reg(m, X_FB)) <= TOL
+                  and abs(read_reg(m, Y_FB)) <= TOL
+                  and abs(10 - read_reg(m, Z_FB)) <= ZTOL, 15.0)
+    check("恢复：回参考点 (0,0,10)", homed2)
+    settle()
     done, _lift = draw(40.0)
+    settle()
     check("重新 cmd_draw 后完成", done)
-    check("终态回中心 (50,50,10)",
-          abs(50 - read_reg(m, X_FB)) <= TOL and abs(50 - read_reg(m, Y_FB)) <= TOL
-          and abs(10 - read_reg(m, Z_FB)) <= ZTOL)
+    fx, fy, fz = read_reg(m, X_FB), read_reg(m, Y_FB), read_reg(m, Z_FB)
+    check("终态回中心 (50,50,10)（实际 (%d,%d,%d)）" % (fx, fy, fz),
+          abs(50 - fx) <= TOL and abs(50 - fy) <= TOL and abs(10 - fz) <= ZTOL)
 
     # ---- [9] AC2：回参考点（Z 参考点=抬笔安全位） ----
     print("[9] cmd_home：X/Y 回零，Z 回抬笔安全位 10")

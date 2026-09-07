@@ -318,3 +318,65 @@
   留待在线环境（登记看板）。
 - 产物链：runs/plotter3axis_llm（final 冻结，闸门3/4 skipped）；
   种子对照 runs/plotter3axis_demo。两份 final 的 scene 闸门均 r5=active/26 映射。
+
+## 2026-09-07（下）在线联调：VM 运行时搭建 + 闸门3/4 真实化 + ST 三层深挖
+
+### 环境自建（无管理员、无 Docker Desktop）
+
+- 本机无 Docker/WSL（非管理员装不了），但发现 **E:\ubuntu 与 D:\Ubuntu24.0 是 VMware
+  虚拟机**且 24.04 那台正在运行——vmrun/DHCP 租约定位到 NAT IP 192.168.12.131，
+  本机 SSH 密钥已被 VM 信任（yushanyue@，免密直连）。
+- VM 内装 docker：sudo 密码经用户授权；`apt install docker.io`（Ubuntu 官方源 29.1.3，
+  download.docker.com 被 DNS 污染用不了）；daemon.json 配 daocloud/1ms 镜像加速
+  （Docker Hub 直连同样被污染；中途 EOF 断流重试即续传）。
+- `docker run fdamador/openplc`（-p 8080/502）——lx 文档的标准部署形态原样落地。
+- Windows 侧接入：serve.py 起在宿主机（OPENPLC_URL 指 VM）；**modbus_io.connect
+  增加 MODBUS_HOST/MODBUS_PORT 环境变量**（与 serve.py 既有 env 约定对齐，缺省
+  127.0.0.1 完全向后兼容——lx 文件最小增量，看板知会）；编排器 CLI 加
+  --modbus-host/--modbus-port 注入验收子进程。
+
+### ST 三层深挖（本批最有价值的知识，均已看板移交 lx）
+
+**坑9（matiec 语法层）**：CASE 最后一个分支后的 `END_CASE` 必须带分号
+（`END_CASE;`）——xml2st 静态层不解析 ST 语法拦不住，matiec 报
+"';' missing"。
+
+**坑10（优化器层，避坑7 的变体）**：INTERP_Z（与 INTERP 同模式的第二个 FB）
+运行时无输出——按避坑7 处方"共用一个 FB"：**INTERP 参数化**（VMAX/ACCEL/POSWIN/
+MAXPOS 提为 VAR_INPUT 按轴传参，Z 轴传 20/60/1/10），删除子类。但随后发现更深的
+变体：**PLC_PRG 内的单扫描选通/边沿记忆变量（pl_go/pl_armed/pl_fire*）的赋值
+会被优化器静默吞掉**——诊断口（%QW16-18 直出内部状态，lx 排障方法论第4步）
+实锤：pl_armed 置位可见、下一扫描 ELSIF 分支的 pl_go:=TRUE 消失、ix.Done 永不
+回落、9 步序列 0.3s 空转。手动路径（%QX 线圈信号驱动的 MC 层）一切正常——
+**运行时只信任线圈级信号与 FB 内部的边沿，PLC_PRG 级选通不可用**。
+解法（即 lx《运动控制代码生成方案》v2 的"连续跟踪模式"设计）：INTERP 增
+`ELSIF fire AND NOT Busy AND 目标变化 THEN 起新轨迹`——序列器全程持有 exe
+电平、步进只改目标值，零选通零边沿记忆。绘图序列 7.1s 真实执行。
+
+**坑11（Modbus 观测层）**：OpenPLC Modbus 服务对不同寄存器的快照**非原子**
+（v 寄存器可能来自上一扫描）——使能/失能切换窗口里 sw=0x33 配 v=120 的"违例"
+是读偏斜伪影。验收脚本的跨寄存器组合判定需：切换瞬态排除（模式连续 ≥3 周期）
+或改位置增量判定；裸 time.sleep 会冻结电机仿真反馈引发伺服修正脉冲，等待期间
+必须持续 cycle()。
+
+### 修复过程中的其他真 bug
+
+- 编排器 deploy_gate 只认小写 "ok"（serve 返回 "OK"）——此前一直离线 skipped
+  从未触发；大小写归一修复。
+- 编排器 requests 走 Windows 系统代理（127.0.0.1 也被劫持）——本地服务直连
+  Session(trust_env=False)（与 client.py 同款根因，两处都修了）。
+- LLM 生成版 plotter 产物在闸门3 被 matiec 拒（多处 invalid declaration——静态
+  双闸门查不出的语法层问题），错误已留存待作为反馈包回喂（闸门3 的设计场景）。
+
+### 验收结论（在线）
+
+- **scenario_plotter3axis：45/45 连续 4 次全过**（含幂等前奏、急停中止+经参考点
+  恢复+复跑、笔互锁负测试、越程拒绝、绘图区 containment 采样）。
+- **编排器全闭环**：⓪(AML)→①(spec)→②a(种子)→②b(scene+io_map)→闸门1/2(xml2st+
+  一致性)→闸门2b(R5 全腿)→闸门3(POST /deploy 真编译+GET /status 观测
+  prog_id=2)→闸门4(scenario 45/45)→**final**。
+- **run_regression L1+L2+L3 双场景全 PASS**（motion3axis 在 VM 时延下有个别
+  边际时序项抖动——lx 本机 35/35，已看板登记供 lx 评估阈值）。
+- pytest 129 全绿。
+- 已知细节（待 lx 复核时裁决）：连续跟踪分支不做 MAXPOS 检查（当前用法安全：
+  序列目标在量程内、手动路径 Busy/exe 时序天然屏蔽，devlog 留档）。
