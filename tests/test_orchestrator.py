@@ -153,3 +153,65 @@ class TestGeneratorSeedGate:
     def test_seed_with_wrong_spec_fails_gate(self, tmp_path):
         out = PLCGenerator(client=None, seed_xml=mismatched_seed(tmp_path)).generate(SPEC)
         assert not out["ok"] and any("R2" in e for e in out["errors"])
+
+
+class TestSceneGate:
+    """闸门2b：②b 场景描述生成（确定性）+ R5 全腿一致性。"""
+
+    PLOTTER_SPEC = json.loads((REPO / "examples" / "specs" / "plotter3axis.spec.json")
+                              .read_text(encoding="utf-8"))
+    PLOTTER_XML = REPO / "src" / "plc" / "plotter3axis.xml"
+
+    def test_scene_artifacts_written_and_r5_active(self, tmp_path):
+        from agent.aml_parser import parse_aml
+        from agent.scene_gen import SceneSpecGenerator
+        model, _ = parse_aml(REPO / "examples" / "aml" / "plotter3axis_station.aml")
+        orch = Orchestrator(runs_root=tmp_path)
+        gen = PLCGenerator(client=None, seed_xml=self.PLOTTER_XML)
+        result = orch.solve(self.PLOTTER_SPEC, gen,
+                            scene_generator=SceneSpecGenerator(), device_model=model)
+        assert result["status"] == "final"
+        iter1 = Path(result["run_dir"]) / "iter_001"
+        scene = json.loads((iter1 / "scene.spec.json").read_text(encoding="utf-8"))
+        io_map = json.loads((iter1 / "io_map.json").read_text(encoding="utf-8"))
+        assert scene["scene_id"] == self.PLOTTER_SPEC["task_id"]
+        assert len(io_map["mappings"]) == len(self.PLOTTER_SPEC["io_list"])
+        gate = json.loads((iter1 / "gate.json").read_text(encoding="utf-8"))
+        assert gate["gates"]["scene"]["r5"] == "active"
+        assert (Path(result["run_dir"]) / "final" / "io_map.json").is_file()  # 冻结含 ②b 产物
+
+    def test_scene_gate_failure_goes_best_effort(self, tmp_path):
+        class BrokenGen:
+            def generate(self, spec, device_model=None):
+                raise ValueError("V4: 生成自检失败（注入）")
+        orch = Orchestrator(runs_root=tmp_path, max_iters=2)
+        gen = PLCGenerator(client=None, seed_xml=MOTION_XML)
+        result = orch.solve(SPEC, gen, scene_generator=BrokenGen())
+        assert result["status"] == "best_effort"
+        gate = json.loads((Path(result["run_dir"]) / "iter_001" / "gate.json").read_text(encoding="utf-8"))
+        assert gate["gate"] == "scene" and not gate["ok"]
+
+    def test_scene_off_by_default_backward_compatible(self, tmp_path):
+        """不传 scene_generator：行为与旧半环一致（无 scene 产物）。"""
+        orch = Orchestrator(runs_root=tmp_path)
+        result = orch.solve(SPEC, PLCGenerator(client=None, seed_xml=MOTION_XML))
+        assert result["status"] == "final"
+        assert not (Path(result["run_dir"]) / "iter_001" / "io_map.json").exists()
+
+
+class TestStatusProbe:
+    def test_offline_returns_none(self, tmp_path):
+        orch = Orchestrator(runs_root=tmp_path, deploy_url="http://127.0.0.1:1/deploy")
+        assert orch.status_probe() is None
+
+    def test_online_json_recorded_in_deploy_gate(self, tmp_path):
+        """deploy ok 后 /status 观测写入 gate（不裁定）。"""
+        orch = Orchestrator(runs_root=tmp_path)
+        monkey_probe = {"serve": "ok", "runtime": {"status": "RUNNING"},
+                        "prog_id": 2, "program": "plotter3axis"}
+        orch.status_probe = lambda: monkey_probe
+        orch.deploy_gate = lambda xml: ("ok", {"status": "OK"})
+        result = orch.solve(SPEC, PLCGenerator(client=None, seed_xml=MOTION_XML), deploy=True)
+        assert result["status"] == "final"
+        gate = json.loads((Path(result["run_dir"]) / "final" / "gate.json").read_text(encoding="utf-8"))
+        assert gate["gates"]["deploy"]["detail"]["runtime_status"]["prog_id"] == 2

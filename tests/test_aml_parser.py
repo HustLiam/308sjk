@@ -194,3 +194,59 @@ class TestCLI:
         assert proc.returncode == 0, proc.stderr
         items = json.loads(proc.stdout)
         assert len(items) == 24 and items[0]["name"] == "run"
+
+
+# ---------------- 三轴绘图仪示例（IEC 62714/CAEX 3.0 全结构） ----------------
+
+PLOTTER_AML = REPO / "examples" / "aml" / "plotter3axis_station.aml"
+PLOTTER_SPEC = json.loads((REPO / "examples" / "specs" / "plotter3axis.spec.json")
+                          .read_text(encoding="utf-8"))
+
+
+class TestPlotterStation:
+    """标准结构 AML：io_list 唯一来源 = PLC 通道接口；拓扑含电气接线。"""
+
+    def test_parse_clean(self):
+        model, problems = parse_aml(PLOTTER_AML)
+        assert problems == []
+        assert model["source"]["caex_schema_version"] == "3.0"
+        assert model["station"] == "PlotterCell"
+        assert len(model["io_points"]) == 26
+        assert all(p["address"] for p in model["io_points"])
+
+    def test_io_list_prefill_matches_frozen_spec(self):
+        """⓪→① 契约：预填与冻结 spec 的 io_list 逐字段等价（按名对齐）。"""
+        model, _ = parse_aml(PLOTTER_AML)
+        io_items, pending = build_io_list(model)
+        assert pending == []
+        by_name = {i["name"]: i for i in PLOTTER_SPEC["io_list"]}
+        assert len(by_name) == len(io_items) == 26
+        for item in io_items:
+            spec_item = by_name[item["name"]]
+            for key in ("dir", "type", "range"):
+                assert item[key] == spec_item[key], (item["name"], key)
+            assert item.get("unit") == spec_item.get("unit")
+
+    def test_kinematics_and_topology(self):
+        model, _ = parse_aml(PLOTTER_AML)
+        axes = {a["axis"]: a for a in model["kinematics"]["axes"]}
+        assert set(axes) == {"x_axis", "y_axis", "z_axis"}
+        assert axes["z_axis"]["stroke"] == [0.0, 10.0]      # 笔轴短行程
+        assert axes["z_axis"]["vmax"] == 20.0
+        links = model["topology"]["links"]
+        elec = [l for l in links if l["name"].startswith("wire_")]
+        assert len(elec) == 26                               # 通道↔现场元件 全接线
+        mech = [l for l in links if l["name"].startswith("mount_")]
+        assert len(mech) == 4
+        # 电气接线两端必须分别是 PLC 通道与现场连接器
+        for l in elec:
+            a_plc = "ControlCabinet/PLC" in l["a"]
+            b_plc = "ControlCabinet/PLC" in l["b"]
+            assert a_plc ^ b_plc, l
+
+    def test_class_libraries_do_not_pollute_io(self):
+        """InterfaceClassLib/SystemUnitClassLib 定义不参与 io_list（仅通道接口计入）。"""
+        model, problems = parse_aml(PLOTTER_AML)
+        assert problems == []
+        names = {p["name"] for p in model["io_points"]}
+        assert "DigitalInput" not in names and "Flange" not in names

@@ -1,0 +1,490 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  三轴绘图仪站 AutomationML 设备描述（IEC 62714 / CAEX 3.0，⓪ 模块解析输入）。
+
+  建模视角：设备与电气工程（EPLAN 导出风格），不含控制程序实现——
+    · InstanceHierarchy "PlotterCell"：单元拓扑
+        - Plotter3Axis       绘图机本体（三轴 + 笔组件，运动学参数在轴实例上）
+        - OperatorPanel      操作台（按钮/指示灯等现场元件）
+        - ControlCabinet/PLC 控制柜（控制器 + IO 模块，通道=ExternalInterface）
+    · 信号方向按控制器视角命名（IEC 62424 惯例）：DI/DO/AI/AO 类挂在 PLC 通道上；
+      现场侧连接器用中性接口类（ButtonContact/LampCircuit/Encoder/VelocityReference/
+      StatusWord/PositionReference），避免与通道方向语义混淆；
+    · InternalLink = 电气接线（现场元件连接器 ↔ PLC 通道），共 25 条；
+    · 通道 Attribute：address=PLC 通道地址（项目契约②：统一 %Q 区，BOOL↔%QX、
+      INT↔%QW）；模拟通道带 range_min/range_max/unit（通道工程量程）。
+
+  ⓪ 解析约定（src/agent/aml_parser.py）：io_list 唯一来源是 PLC 通道接口
+  （RefBaseClassPath 末段含 input/output 者）；轴参数取自轴实例 Attribute。
+-->
+<CAEXFile FileName="plotter3axis_station.aml" SchemaVersion="3.0"
+          xmlns="http://www.dke.de/CAEX">
+  <SuperiorStandardVersion>AutomationML 2.10</SuperiorStandardVersion>
+
+  <!-- ============ 单元拓扑（设备实例层） ============ -->
+  <InstanceHierarchy Name="PlotterCell">
+
+    <!-- ==== 绘图机本体 ==== -->
+    <InternalElement Name="Plotter3Axis" ID="dev_plotter"
+                     RefBaseSystemUnitPath="PlotterLib/GantryPlotter">
+      <RoleRequirements Role="AutomationMLRoleClassLib/Machine/Plotter"/>
+      <Attribute Name="workspace_x"><Value>100</Value><Unit>%</Unit></Attribute>
+      <Attribute Name="workspace_y"><Value>100</Value><Unit>%</Unit></Attribute>
+      <Attribute Name="drawing_area"><Value>20..80 x 20..80</Value></Attribute>
+
+      <!-- X 轴：横梁直线轴 -->
+      <InternalElement Name="x_axis" ID="dev_x_axis"
+                       RefBaseSystemUnitPath="PlotterLib/LinearAxis">
+        <RoleRequirements Role="AutomationMLRoleClassLib/Machine/Axis/Linear"/>
+        <Attribute Name="axis_type"><Value>linear</Value></Attribute>
+        <Attribute Name="stroke_min"><Value>0.0</Value></Attribute>
+        <Attribute Name="stroke_max"><Value>100.0</Value></Attribute>
+        <Attribute Name="unit"><Value>%</Value></Attribute>
+        <Attribute Name="vmax"><Value>40.0</Value></Attribute>
+        <Attribute Name="accel"><Value>80.0</Value></Attribute>
+        <Attribute Name="poswin"><Value>2.0</Value></Attribute>
+        <Attribute Name="voltage"><Value>24.0</Value></Attribute>
+        <Attribute Name="power"><Value>200.0</Value></Attribute>
+        <ExternalInterface Name="mech_flange" ID="if_x_flange"
+                           RefBaseClassPath="AutomationMLInterfaceClassLib/Mechanical/Flange"/>
+        <ExternalInterface Name="x_encoder" ID="if_x_enc"
+                           RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/Encoder">
+          <Attribute Name="resolution"><Value>1</Value><Unit>%</Unit></Attribute>
+        </ExternalInterface>
+        <ExternalInterface Name="x_vel_ref" ID="if_x_vref"
+                           RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/VelocityReference"/>
+        <ExternalInterface Name="x_drive_status" ID="if_x_dstat"
+                           RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/StatusWord"/>
+      </InternalElement>
+
+      <!-- Y 轴：纵梁直线轴 -->
+      <InternalElement Name="y_axis" ID="dev_y_axis"
+                       RefBaseSystemUnitPath="PlotterLib/LinearAxis">
+        <RoleRequirements Role="AutomationMLRoleClassLib/Machine/Axis/Linear"/>
+        <Attribute Name="axis_type"><Value>linear</Value></Attribute>
+        <Attribute Name="stroke_min"><Value>0.0</Value></Attribute>
+        <Attribute Name="stroke_max"><Value>100.0</Value></Attribute>
+        <Attribute Name="unit"><Value>%</Value></Attribute>
+        <Attribute Name="vmax"><Value>40.0</Value></Attribute>
+        <Attribute Name="accel"><Value>80.0</Value></Attribute>
+        <Attribute Name="poswin"><Value>2.0</Value></Attribute>
+        <Attribute Name="voltage"><Value>24.0</Value></Attribute>
+        <Attribute Name="power"><Value>200.0</Value></Attribute>
+        <ExternalInterface Name="mech_flange" ID="if_y_flange"
+                           RefBaseClassPath="AutomationMLInterfaceClassLib/Mechanical/Flange"/>
+        <ExternalInterface Name="y_encoder" ID="if_y_enc"
+                           RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/Encoder"/>
+        <ExternalInterface Name="y_vel_ref" ID="if_y_vref"
+                           RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/VelocityReference"/>
+        <ExternalInterface Name="y_drive_status" ID="if_y_dstat"
+                           RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/StatusWord"/>
+      </InternalElement>
+
+      <!-- Z 轴：笔升降短行程轴（0=笔尖触纸，10=抬笔） -->
+      <InternalElement Name="z_axis" ID="dev_z_axis"
+                       RefBaseSystemUnitPath="PlotterLib/PenAxis">
+        <RoleRequirements Role="AutomationMLRoleClassLib/Machine/Axis/Linear"/>
+        <Attribute Name="axis_type"><Value>linear</Value></Attribute>
+        <Attribute Name="stroke_min"><Value>0.0</Value></Attribute>
+        <Attribute Name="stroke_max"><Value>10.0</Value></Attribute>
+        <Attribute Name="unit"><Value>mm</Value></Attribute>
+        <Attribute Name="vmax"><Value>20.0</Value></Attribute>
+        <Attribute Name="accel"><Value>60.0</Value></Attribute>
+        <Attribute Name="poswin"><Value>1.0</Value></Attribute>
+        <Attribute Name="voltage"><Value>24.0</Value></Attribute>
+        <Attribute Name="power"><Value>100.0</Value></Attribute>
+        <ExternalInterface Name="mech_flange" ID="if_z_flange"
+                           RefBaseClassPath="AutomationMLInterfaceClassLib/Mechanical/Flange"/>
+        <ExternalInterface Name="z_encoder" ID="if_z_enc"
+                           RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/Encoder"/>
+        <ExternalInterface Name="z_vel_ref" ID="if_z_vref"
+                           RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/VelocityReference"/>
+        <ExternalInterface Name="z_drive_status" ID="if_z_dstat"
+                           RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/StatusWord"/>
+      </InternalElement>
+
+      <!-- 笔组件：随 Z 轴升降的绘图笔 -->
+      <InternalElement Name="pen" ID="dev_pen"
+                       RefBaseSystemUnitPath="PlotterLib/PenAssembly">
+        <RoleRequirements Role="AutomationMLRoleClassLib/Machine/Tool/Pen"/>
+        <Attribute Name="tip_diameter"><Value>0.5</Value><Unit>mm</Unit></Attribute>
+        <ExternalInterface Name="pen_mount" ID="if_pen_mount"
+                           RefBaseClassPath="AutomationMLInterfaceClassLib/Mechanical/Flange"/>
+      </InternalElement>
+
+      <InternalLink Name="mount_x" RefPartnerSideA="if_x_mount" RefPartnerSideB="if_x_flange"/>
+      <InternalLink Name="mount_y" RefPartnerSideA="if_y_mount" RefPartnerSideB="if_y_flange"/>
+      <InternalLink Name="mount_z" RefPartnerSideA="if_z_mount" RefPartnerSideB="if_z_flange"/>
+      <InternalLink Name="mount_pen" RefPartnerSideA="if_z_tool" RefPartnerSideB="if_pen_mount"/>
+      <ExternalInterface Name="x_mount" ID="if_x_mount"
+                         RefBaseClassPath="AutomationMLInterfaceClassLib/Mechanical/Flange"/>
+      <ExternalInterface Name="y_mount" ID="if_y_mount"
+                         RefBaseClassPath="AutomationMLInterfaceClassLib/Mechanical/Flange"/>
+      <ExternalInterface Name="z_mount" ID="if_z_mount"
+                         RefBaseClassPath="AutomationMLInterfaceClassLib/Mechanical/Flange"/>
+      <ExternalInterface Name="z_tool" ID="if_z_tool"
+                         RefBaseClassPath="AutomationMLInterfaceClassLib/Mechanical/Flange"/>
+    </InternalElement>
+
+    <!-- ==== 操作台（现场操作元件） ==== -->
+    <InternalElement Name="OperatorPanel" ID="dev_panel"
+                     RefBaseSystemUnitPath="PlotterLib/OperatorPanel">
+      <RoleRequirements Role="AutomationMLRoleClassLib/HMI/OperatorPanel"/>
+      <Attribute Name="voltage"><Value>24.0</Value></Attribute>
+      <ExternalInterface Name="run_sw" ID="if_run_sw"
+                         RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/ButtonContact">
+        <Attribute Name="description"><Value>驱动使能主令开关（安全回路就绪后允许三轴驱动器上电；断开=受控断电）</Value></Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="home_btn" ID="if_home_btn"
+                         RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/ButtonContact">
+        <Attribute Name="description"><Value>回参考点按钮（Z 参考点=抬笔安全位）</Value></Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="go_btn" ID="if_go_btn"
+                         RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/ButtonContact">
+        <Attribute Name="description"><Value>手动定位启动按钮（目标位置由 NC 设定值通道给出；落笔状态下 X/Y 请求被安全互锁拒绝）</Value></Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="jog_fwd_btn" ID="if_jog_fwd_btn"
+                         RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/ButtonContact">
+        <Attribute Name="description"><Value>X 轴手动进给正向按钮（电平有效，仅抬笔状态允许）</Value></Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="jog_rev_btn" ID="if_jog_rev_btn"
+                         RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/ButtonContact">
+        <Attribute Name="description"><Value>X 轴手动进给反向按钮（电平有效，仅抬笔状态允许）</Value></Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="estop" ID="if_estop"
+                         RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/ButtonContact">
+        <Attribute Name="description"><Value>急停（安全继电器触点，电平有效；受控减速并中止绘图）</Value></Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="fault_reset_btn" ID="if_fault_reset_btn"
+                         RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/ButtonContact">
+        <Attribute Name="description"><Value>故障复位按钮</Value></Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="draw_btn" ID="if_draw_btn"
+                         RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/ButtonContact">
+        <Attribute Name="description"><Value>绘图启动按钮（抬笔→定位起点→落笔绘制 20..80 正方形→抬笔→回中心）</Value></Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="ready_lamp" ID="if_ready_lamp"
+                         RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/LampCircuit"/>
+      <ExternalInterface Name="done_lamp" ID="if_done_lamp"
+                         RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/LampCircuit"/>
+      <ExternalInterface Name="moving_lamp" ID="if_moving_lamp"
+                         RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/LampCircuit"/>
+      <ExternalInterface Name="fault_lamp" ID="if_fault_lamp"
+                         RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/LampCircuit"/>
+      <ExternalInterface Name="pen_lamp" ID="if_pen_lamp"
+                         RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/LampCircuit"/>
+      <ExternalInterface Name="plot_done_lamp" ID="if_plot_done_lamp"
+                         RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/LampCircuit"/>
+      <ExternalInterface Name="x_ref" ID="if_x_ref"
+                         RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/PositionReference">
+        <Attribute Name="description"><Value>X 轴定位设定值端子（NC 数值录入，行程 0..100%）</Value></Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="y_ref" ID="if_y_ref"
+                         RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/PositionReference">
+        <Attribute Name="description"><Value>Y 轴定位设定值端子（NC 数值录入）</Value></Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="z_ref" ID="if_z_ref"
+                         RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/PositionReference">
+        <Attribute Name="description"><Value>Z 轴笔位设定值端子（NC 数值录入，0..10mm）</Value></Attribute>
+      </ExternalInterface>
+    </InternalElement>
+
+    <!-- ==== 控制柜（PLC + IO 模块；通道=io_list 唯一来源） ==== -->
+    <InternalElement Name="ControlCabinet" ID="dev_cabinet"
+                     RefBaseSystemUnitPath="PlotterLib/ControlCabinet">
+      <RoleRequirements Role="AutomationMLRoleClassLib/AutomationComponents/PLC"/>
+      <Attribute Name="voltage"><Value>230.0</Value></Attribute>
+      <InternalElement Name="PLC" ID="dev_plc"
+                       RefBaseSystemUnitPath="PlotterLib/SoftPLCController">
+        <RoleRequirements Role="AutomationMLRoleClassLib/AutomationComponents/PLC"/>
+        <Attribute Name="scan_cycle"><Value>20</Value><Unit>ms</Unit></Attribute>
+
+        <InternalElement Name="DI_Module" ID="dev_di"
+                         RefBaseSystemUnitPath="PlotterLib/DigitalInputModule">
+          <RoleRequirements Role="AutomationMLRoleClassLib/AutomationComponents/IO-Module"/>
+          <ExternalInterface Name="run" ID="ch_run"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalInput">
+            <Attribute Name="address"><Value>%QX0.0</Value></Attribute>
+            <Attribute Name="description"><Value>驱动使能主令开关（安全回路就绪后允许三轴驱动器上电；断开=受控断电）</Value></Attribute>
+          </ExternalInterface>
+          <ExternalInterface Name="cmd_home" ID="ch_home"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalInput">
+            <Attribute Name="address"><Value>%QX0.1</Value></Attribute>
+            <Attribute Name="description"><Value>回参考点按钮（Z 参考点=抬笔安全位）</Value></Attribute>
+          </ExternalInterface>
+          <ExternalInterface Name="cmd_go" ID="ch_go"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalInput">
+            <Attribute Name="address"><Value>%QX0.2</Value></Attribute>
+            <Attribute Name="description"><Value>手动定位启动按钮（目标位置由 NC 设定值通道给出；落笔状态下 X/Y 请求被安全互锁拒绝）</Value></Attribute>
+          </ExternalInterface>
+          <ExternalInterface Name="jog_fwd" ID="ch_jog_fwd"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalInput">
+            <Attribute Name="address"><Value>%QX0.3</Value></Attribute>
+            <Attribute Name="description"><Value>X 轴手动进给正向按钮（电平有效，仅抬笔状态允许）</Value></Attribute>
+          </ExternalInterface>
+          <ExternalInterface Name="jog_rev" ID="ch_jog_rev"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalInput">
+            <Attribute Name="address"><Value>%QX0.4</Value></Attribute>
+            <Attribute Name="description"><Value>X 轴手动进给反向按钮（电平有效，仅抬笔状态允许）</Value></Attribute>
+          </ExternalInterface>
+          <ExternalInterface Name="quickstop" ID="ch_quickstop"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalInput">
+            <Attribute Name="address"><Value>%QX0.5</Value></Attribute>
+            <Attribute Name="description"><Value>急停（安全继电器触点，电平有效；受控减速并中止绘图）</Value></Attribute>
+          </ExternalInterface>
+          <ExternalInterface Name="cmd_reset" ID="ch_reset"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalInput">
+            <Attribute Name="address"><Value>%QX0.7</Value></Attribute>
+            <Attribute Name="description"><Value>故障复位按钮</Value></Attribute>
+          </ExternalInterface>
+          <ExternalInterface Name="cmd_draw" ID="ch_draw"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalInput">
+            <Attribute Name="address"><Value>%QX2.0</Value></Attribute>
+            <Attribute Name="description"><Value>绘图启动按钮（抬笔→定位起点→落笔绘制 20..80 正方形→抬笔→回中心）</Value></Attribute>
+          </ExternalInterface>
+        </InternalElement>
+
+        <InternalElement Name="DO_Module" ID="dev_do"
+                         RefBaseSystemUnitPath="PlotterLib/DigitalOutputModule">
+          <RoleRequirements Role="AutomationMLRoleClassLib/AutomationComponents/IO-Module"/>
+          <ExternalInterface Name="all_oe" ID="ch_all_oe"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalOutput">
+            <Attribute Name="address"><Value>%QX1.0</Value></Attribute>
+            <Attribute Name="description"><Value>就绪指示灯（三轴驱动器全部使能）</Value></Attribute>
+          </ExternalInterface>
+          <ExternalInterface Name="move_done" ID="ch_move_done"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalOutput">
+            <Attribute Name="address"><Value>%QX1.1</Value></Attribute>
+            <Attribute Name="description"><Value>定位完成指示灯（手动定位完成汇总；绘图序列期间熄灭）</Value></Attribute>
+          </ExternalInterface>
+          <ExternalInterface Name="any_moving" ID="ch_any_moving"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalOutput">
+            <Attribute Name="address"><Value>%QX1.2</Value></Attribute>
+            <Attribute Name="description"><Value>运动中指示灯（任一轴速度指令非零）</Value></Attribute>
+          </ExternalInterface>
+          <ExternalInterface Name="fault_any" ID="ch_fault_any"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalOutput">
+            <Attribute Name="address"><Value>%QX1.3</Value></Attribute>
+            <Attribute Name="description"><Value>故障指示灯（任一驱动器故障位）</Value></Attribute>
+          </ExternalInterface>
+          <ExternalInterface Name="pen_down" ID="ch_pen_down"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalOutput">
+            <Attribute Name="address"><Value>%QX2.1</Value></Attribute>
+            <Attribute Name="description"><Value>笔触纸指示灯（Z 行程下限区，含入场容差）</Value></Attribute>
+          </ExternalInterface>
+          <ExternalInterface Name="plot_done" ID="ch_plot_done"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalOutput">
+            <Attribute Name="address"><Value>%QX2.2</Value></Attribute>
+            <Attribute Name="description"><Value>绘图完成指示灯（抬笔回中心后点亮；急停/故障中止时熄灭）</Value></Attribute>
+          </ExternalInterface>
+        </InternalElement>
+
+        <InternalElement Name="AI_Module" ID="dev_ai"
+                         RefBaseSystemUnitPath="PlotterLib/AnalogInputModule">
+          <RoleRequirements Role="AutomationMLRoleClassLib/AutomationComponents/IO-Module"/>
+          <ExternalInterface Name="x_fb" ID="ch_x_fb"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogInput">
+            <Attribute Name="address"><Value>%QW0</Value></Attribute>
+            <Attribute Name="description"><Value>X 轴位置反馈（编码器当量）</Value></Attribute>
+            <Attribute Name="range_min"><Value>0</Value></Attribute>
+            <Attribute Name="range_max"><Value>100</Value></Attribute>
+            <Attribute Name="unit"><Value>%</Value></Attribute>
+          </ExternalInterface>
+          <ExternalInterface Name="y_fb" ID="ch_y_fb"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogInput">
+            <Attribute Name="address"><Value>%QW1</Value></Attribute>
+            <Attribute Name="description"><Value>Y 轴位置反馈（编码器当量）</Value></Attribute>
+            <Attribute Name="range_min"><Value>0</Value></Attribute>
+            <Attribute Name="range_max"><Value>100</Value></Attribute>
+            <Attribute Name="unit"><Value>%</Value></Attribute>
+          </ExternalInterface>
+          <ExternalInterface Name="z_fb" ID="ch_z_fb"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogInput">
+            <Attribute Name="address"><Value>%QW2</Value></Attribute>
+            <Attribute Name="description"><Value>Z 轴笔位反馈（0=笔尖触纸，10=抬笔）</Value></Attribute>
+            <Attribute Name="range_min"><Value>0</Value></Attribute>
+            <Attribute Name="range_max"><Value>10</Value></Attribute>
+            <Attribute Name="unit"><Value>mm</Value></Attribute>
+          </ExternalInterface>
+          <ExternalInterface Name="x_sp" ID="ch_x_sp"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogInput">
+            <Attribute Name="address"><Value>%QW10</Value></Attribute>
+            <Attribute Name="description"><Value>X 轴定位设定值（NC 写入，先于定位启动建立）</Value></Attribute>
+            <Attribute Name="range_min"><Value>0</Value></Attribute>
+            <Attribute Name="range_max"><Value>100</Value></Attribute>
+            <Attribute Name="unit"><Value>%</Value></Attribute>
+          </ExternalInterface>
+          <ExternalInterface Name="y_sp" ID="ch_y_sp"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogInput">
+            <Attribute Name="address"><Value>%QW11</Value></Attribute>
+            <Attribute Name="description"><Value>Y 轴定位设定值（NC 写入）</Value></Attribute>
+            <Attribute Name="range_min"><Value>0</Value></Attribute>
+            <Attribute Name="range_max"><Value>100</Value></Attribute>
+            <Attribute Name="unit"><Value>%</Value></Attribute>
+          </ExternalInterface>
+          <ExternalInterface Name="z_sp" ID="ch_z_sp"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogInput">
+            <Attribute Name="address"><Value>%QW12</Value></Attribute>
+            <Attribute Name="description"><Value>Z 轴笔位设定值（手动抬/落笔；不受笔互锁限制）</Value></Attribute>
+            <Attribute Name="range_min"><Value>0</Value></Attribute>
+            <Attribute Name="range_max"><Value>10</Value></Attribute>
+            <Attribute Name="unit"><Value>mm</Value></Attribute>
+          </ExternalInterface>
+        </InternalElement>
+
+        <InternalElement Name="AO_Module" ID="dev_ao"
+                         RefBaseSystemUnitPath="PlotterLib/AnalogOutputModule">
+          <RoleRequirements Role="AutomationMLRoleClassLib/AutomationComponents/IO-Module"/>
+          <ExternalInterface Name="x_sw" ID="ch_x_sw"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogOutput">
+            <Attribute Name="address"><Value>%QW6</Value></Attribute>
+            <Attribute Name="description"><Value>X 驱动器状态字（诊断通道；bit3=故障，bit10=到位）</Value></Attribute>
+            <Attribute Name="range_min"><Value>0</Value></Attribute>
+            <Attribute Name="range_max"><Value>65535</Value></Attribute>
+          </ExternalInterface>
+          <ExternalInterface Name="y_sw" ID="ch_y_sw"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogOutput">
+            <Attribute Name="address"><Value>%QW7</Value></Attribute>
+            <Attribute Name="description"><Value>Y 驱动器状态字（诊断通道）</Value></Attribute>
+            <Attribute Name="range_min"><Value>0</Value></Attribute>
+            <Attribute Name="range_max"><Value>65535</Value></Attribute>
+          </ExternalInterface>
+          <ExternalInterface Name="z_sw" ID="ch_z_sw"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogOutput">
+            <Attribute Name="address"><Value>%QW8</Value></Attribute>
+            <Attribute Name="description"><Value>Z 驱动器状态字（诊断通道）</Value></Attribute>
+            <Attribute Name="range_min"><Value>0</Value></Attribute>
+            <Attribute Name="range_max"><Value>65535</Value></Attribute>
+          </ExternalInterface>
+          <ExternalInterface Name="x_v" ID="ch_x_v"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogOutput">
+            <Attribute Name="address"><Value>%QW13</Value></Attribute>
+            <Attribute Name="description"><Value>X 轴速度指令（伺服驱动器给定，带符号）</Value></Attribute>
+            <Attribute Name="range_min"><Value>-120</Value></Attribute>
+            <Attribute Name="range_max"><Value>120</Value></Attribute>
+            <Attribute Name="unit"><Value>%/s</Value></Attribute>
+          </ExternalInterface>
+          <ExternalInterface Name="y_v" ID="ch_y_v"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogOutput">
+            <Attribute Name="address"><Value>%QW14</Value></Attribute>
+            <Attribute Name="description"><Value>Y 轴速度指令（伺服驱动器给定，带符号）</Value></Attribute>
+            <Attribute Name="range_min"><Value>-120</Value></Attribute>
+            <Attribute Name="range_max"><Value>120</Value></Attribute>
+            <Attribute Name="unit"><Value>%/s</Value></Attribute>
+          </ExternalInterface>
+          <ExternalInterface Name="z_v" ID="ch_z_v"
+                             RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogOutput">
+            <Attribute Name="address"><Value>%QW15</Value></Attribute>
+            <Attribute Name="description"><Value>Z 轴速度指令（伺服驱动器给定，带符号；轴组态限速 20）</Value></Attribute>
+            <Attribute Name="range_min"><Value>-120</Value></Attribute>
+            <Attribute Name="range_max"><Value>120</Value></Attribute>
+            <Attribute Name="unit"><Value>mm/s</Value></Attribute>
+          </ExternalInterface>
+        </InternalElement>
+      </InternalElement>
+    </InternalElement>
+
+    <!-- ==== 电气接线：现场元件连接器 ↔ PLC 通道 ==== -->
+    <InternalLink Name="wire_run" RefPartnerSideA="if_run_sw" RefPartnerSideB="ch_run"/>
+    <InternalLink Name="wire_home" RefPartnerSideA="if_home_btn" RefPartnerSideB="ch_home"/>
+    <InternalLink Name="wire_go" RefPartnerSideA="if_go_btn" RefPartnerSideB="ch_go"/>
+    <InternalLink Name="wire_jog_fwd" RefPartnerSideA="if_jog_fwd_btn" RefPartnerSideB="ch_jog_fwd"/>
+    <InternalLink Name="wire_jog_rev" RefPartnerSideA="if_jog_rev_btn" RefPartnerSideB="ch_jog_rev"/>
+    <InternalLink Name="wire_estop" RefPartnerSideA="if_estop" RefPartnerSideB="ch_quickstop"/>
+    <InternalLink Name="wire_fault_reset" RefPartnerSideA="if_fault_reset_btn" RefPartnerSideB="ch_reset"/>
+    <InternalLink Name="wire_draw" RefPartnerSideA="if_draw_btn" RefPartnerSideB="ch_draw"/>
+    <InternalLink Name="wire_ready_lamp" RefPartnerSideA="if_ready_lamp" RefPartnerSideB="ch_all_oe"/>
+    <InternalLink Name="wire_done_lamp" RefPartnerSideA="if_done_lamp" RefPartnerSideB="ch_move_done"/>
+    <InternalLink Name="wire_moving_lamp" RefPartnerSideA="if_moving_lamp" RefPartnerSideB="ch_any_moving"/>
+    <InternalLink Name="wire_fault_lamp" RefPartnerSideA="if_fault_lamp" RefPartnerSideB="ch_fault_any"/>
+    <InternalLink Name="wire_pen_lamp" RefPartnerSideA="if_pen_lamp" RefPartnerSideB="ch_pen_down"/>
+    <InternalLink Name="wire_plot_done_lamp" RefPartnerSideA="if_plot_done_lamp" RefPartnerSideB="ch_plot_done"/>
+    <InternalLink Name="wire_x_fb" RefPartnerSideA="if_x_enc" RefPartnerSideB="ch_x_fb"/>
+    <InternalLink Name="wire_y_fb" RefPartnerSideA="if_y_enc" RefPartnerSideB="ch_y_fb"/>
+    <InternalLink Name="wire_z_fb" RefPartnerSideA="if_z_enc" RefPartnerSideB="ch_z_fb"/>
+    <InternalLink Name="wire_x_v" RefPartnerSideA="if_x_vref" RefPartnerSideB="ch_x_v"/>
+    <InternalLink Name="wire_y_v" RefPartnerSideA="if_y_vref" RefPartnerSideB="ch_y_v"/>
+    <InternalLink Name="wire_z_v" RefPartnerSideA="if_z_vref" RefPartnerSideB="ch_z_v"/>
+    <InternalLink Name="wire_x_sw" RefPartnerSideA="if_x_dstat" RefPartnerSideB="ch_x_sw"/>
+    <InternalLink Name="wire_y_sw" RefPartnerSideA="if_y_dstat" RefPartnerSideB="ch_y_sw"/>
+    <InternalLink Name="wire_z_sw" RefPartnerSideA="if_z_dstat" RefPartnerSideB="ch_z_sw"/>
+    <InternalLink Name="wire_x_sp" RefPartnerSideA="if_x_ref" RefPartnerSideB="ch_x_sp"/>
+    <InternalLink Name="wire_y_sp" RefPartnerSideA="if_y_ref" RefPartnerSideB="ch_y_sp"/>
+    <InternalLink Name="wire_z_sp" RefPartnerSideA="if_z_ref" RefPartnerSideB="ch_z_sp"/>
+  </InstanceHierarchy>
+
+  <!-- ============ 设备类型库（SystemUnitClass） ============ -->
+  <SystemUnitClassLib Name="PlotterLib">
+    <Version>1.0</Version>
+    <SystemUnitClass Name="GantryPlotter">
+      <Attribute Name="workspace_x"><Value>100</Value></Attribute>
+      <Attribute Name="workspace_y"><Value>100</Value></Attribute>
+    </SystemUnitClass>
+    <SystemUnitClass Name="LinearAxis">
+      <Attribute Name="axis_type"><Value>linear</Value></Attribute>
+      <Attribute Name="voltage"><Value>24.0</Value></Attribute>
+    </SystemUnitClass>
+    <SystemUnitClass Name="PenAxis">
+      <Attribute Name="axis_type"><Value>linear</Value></Attribute>
+      <Attribute Name="stroke_max"><Value>10.0</Value></Attribute>
+    </SystemUnitClass>
+    <SystemUnitClass Name="PenAssembly">
+      <Attribute Name="tip_diameter"><Value>0.5</Value></Attribute>
+    </SystemUnitClass>
+    <SystemUnitClass Name="OperatorPanel">
+      <Attribute Name="voltage"><Value>24.0</Value></Attribute>
+    </SystemUnitClass>
+    <SystemUnitClass Name="ControlCabinet">
+      <Attribute Name="voltage"><Value>230.0</Value></Attribute>
+    </SystemUnitClass>
+    <SystemUnitClass Name="SoftPLCController">
+      <Attribute Name="scan_cycle"><Value>20</Value></Attribute>
+    </SystemUnitClass>
+    <SystemUnitClass Name="DigitalInputModule"/>
+    <SystemUnitClass Name="DigitalOutputModule"/>
+    <SystemUnitClass Name="AnalogInputModule"/>
+    <SystemUnitClass Name="AnalogOutputModule"/>
+  </SystemUnitClassLib>
+
+  <!-- ============ 角色类库（RoleClass） ============ -->
+  <RoleClassLib Name="AutomationMLRoleClassLib">
+    <Version>1.0</Version>
+    <RoleClass Name="Machine">
+      <RoleClass Name="Plotter"/>
+      <RoleClass Name="Axis">
+        <RoleClass Name="Linear"/>
+      </RoleClass>
+      <RoleClass Name="Tool">
+        <RoleClass Name="Pen"/>
+      </RoleClass>
+    </RoleClass>
+    <RoleClass Name="HMI">
+      <RoleClass Name="OperatorPanel"/>
+    </RoleClass>
+    <RoleClass Name="AutomationComponents">
+      <RoleClass Name="PLC"/>
+      <RoleClass Name="IO-Module"/>
+    </RoleClass>
+  </RoleClassLib>
+
+  <!-- ============ 接口类库（InterfaceClass）：控制器视角的信号方向 ============ -->
+  <InterfaceClassLib Name="AutomationMLInterfaceClassLib">
+    <Version>1.0</Version>
+    <InterfaceClass Name="Signal">
+      <InterfaceClass Name="DigitalInput"/>
+      <InterfaceClass Name="DigitalOutput"/>
+      <InterfaceClass Name="AnalogInput"/>
+      <InterfaceClass Name="AnalogOutput"/>
+      <!-- 现场侧中性连接器（不含方向语义，不参与 io_list 解析） -->
+      <InterfaceClass Name="ButtonContact"/>
+      <InterfaceClass Name="LampCircuit"/>
+      <InterfaceClass Name="Encoder"/>
+      <InterfaceClass Name="VelocityReference"/>
+      <InterfaceClass Name="StatusWord"/>
+      <InterfaceClass Name="PositionReference"/>
+    </InterfaceClass>
+    <InterfaceClass Name="Mechanical">
+      <InterfaceClass Name="Flange"/>
+    </InterfaceClass>
+  </InterfaceClassLib>
+</CAEXFile>

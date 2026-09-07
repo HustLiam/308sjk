@@ -6,22 +6,29 @@
 当前形态：**半环**（不含 Isaac 仿真侧）——
   ① spec 装载 + 契约校验（需求理解 LLM 澄清后续接入，人工介入点 1 保留为文件确认）
   ② PLC 代码生成（PLCGenerator，LLM 或种子模式）
+  ②b 场景描述生成（SceneSpecGenerator，确定性：scene.spec.json + io_map.json）
   闸门1 xml2st 本地契约校验（毫秒级，失败即短路不进下一环）
-  闸门2 三方一致性（XML 定位变量 ≡ io_list；io_map 腿仿真侧就绪后自动接入）
-  闸门3 部署（可选，POST /deploy :8600 真编译；服务不在线记为 skipped，不阻塞）
+  闸门2 三方一致性（XML 定位变量 ≡ io_list；提供 io_map 后 R5 全腿激活）
+  闸门2b scene 闸门（②b 产物自检 + R5 全腿复跑：XML ≡ io_list ≡ io_map）
+  闸门3 部署（可选，POST /deploy :8600 真编译；服务不在线记为 skipped，不阻塞；
+       成功后 GET /status 做运行时观测——仅记录不参与裁定，程序身份兜底仍在
+       验收脚本 require_program 内，闸门4 消费语义 lx 已确认，编排器不重复校验）
   闸门4 链路 B 验收（可选，scenario_<场景>.py 在线验收；OpenPLC 不在线记 skipped）
   通过 → final/ 冻结；MAX_ITERS(6) 未过 → best_effort（通过准则数最多一轮 + 失败报告）
 
-全环（gen_scene_spec → build_usd → run_isaac_headless → evaluate → verdict 归因路由）
-在仿真侧接口就绪后接入（csk 文档 §7.4 表），本骨架已预留挂点。
+全环（build_usd → run_isaac_headless → evaluate → verdict 归因路由）在仿真侧
+接口就绪后接入（csk 文档 §7.4 表），本骨架已预留挂点。
 
 产物落盘（gc 文档 §4，全量入 git）：
-  runs/<task_id>/request.json + iter_NNN/{plcopen.xml, plc.st, gate.json} + final/ + summary.md
+  runs/<task_id>/request.json + iter_NNN/{plcopen.xml, plc.st, scene.spec.json,
+  io_map.json, gate.json} + final/ + summary.md
 
 用法:
     python -m src.agent.orchestrator examples/specs/motion3axis.spec.json        # LLM 生成
     python -m src.agent.orchestrator examples/specs/motion3axis.spec.json --seed src/plc/motion3axis.xml
     python -m src.agent.orchestrator spec.json --deploy --acceptance             # 闸门3+4：需 OpenPLC 在线
+    python -m src.agent.orchestrator --aml examples/aml/plotter3axis_station.aml \
+        --request "三轴绘图仪：……" --seed src/plc/plotter3axis.xml --acceptance   # ⓪→① 全链
 """
 
 import json
@@ -38,6 +45,7 @@ import xml2st  # noqa: E402
 from .config import PROJECT_ROOT, RUNS_DIR, get_api_key  # noqa: E402
 from .consistency_check import consistency_check  # noqa: E402
 from .pipeline import PLCGenerator  # noqa: E402
+from .scene_gen import SceneSpecGenerator  # noqa: E402
 from .spec_validator import validate_requirement_spec  # noqa: E402
 
 MAX_ITERS = 6
@@ -99,13 +107,33 @@ class Orchestrator:
             return "ok", (out.splitlines() or ["验收通过"])[-1]
         return "failed", out.splitlines()[-40:] or ["验收失败（无输出）"]
 
+    def status_probe(self):
+        """GET /status（lx serve.py）：运行时状态 + 程序身份观测。
+
+        仅记录、不参与闸门裁定——require_program 已内置于验收脚本做身份兜底
+        （闸门4 消费语义 lx 2026-09-03 确认，编排器不重复校验）。服务不在线
+        返回 None。
+        """
+        url = self.deploy_url.rsplit("/", 1)[0] + "/status"
+        try:
+            resp = requests.get(url, timeout=5)
+            if resp.status_code == 200:
+                return resp.json()
+        except requests.RequestException:
+            pass
+        return None
+
     # ---------------- 主循环 ----------------
-    def solve(self, spec, generator, deploy=False, acceptance=None, echo=None):
+    def solve(self, spec, generator, deploy=False, acceptance=None, echo=None,
+              scene_generator=None, device_model=None):
         """执行闭环。返回 {status: final|best, iter, run_dir}。
 
         acceptance: 场景名（None=不跑闸门4）——用于定位 src/pipeline/scenario_<名>.py；
         deploy: 是否先过闸门3（真编译）。两闸门独立可选，验收脚本内 require_program
         自带程序身份校验，直接跑旧部署程序不会误判。
+        scene_generator: ②b 场景描述生成器（None=跳过 ②b；默认建议
+        SceneSpecGenerator()，确定性产物激活一致性 R5 全腿）。
+        device_model: ⓪ 的设备模型（供 ②b 取 IO 地址与轴参数；None=降级分配）。
         echo: 可选回调 fn(event, payload)，供 CLI/测试观察循环过程。
         """
         def notify(event, payload):
@@ -162,11 +190,46 @@ class Orchestrator:
 
             gates = {"xml2st": True, "consistency": [p for p in problems2 if p.startswith("SKIP")] or True}
 
+            # ---- ②b 场景描述生成（确定性）+ 闸门2b：R5 全腿（XML ≡ io_list ≡ io_map）----
+            if scene_generator is not None:
+                try:
+                    scene_out = scene_generator.generate(spec, device_model)
+                except ValueError as exc:  # 生成器自检失败（spec 异常或内部回归）
+                    errs = [str(exc)]
+                    history.append({"iter": i, "gate": "scene", "errors": errs})
+                    feedback = self._pack_feedback(errs, history)
+                    self._dump_gate(iter_dir, "scene", ok=False, errors=errs)
+                    notify("gate_failed", {"iter": i, "gate": "scene"})
+                    continue
+                (iter_dir / "scene.spec.json").write_text(
+                    json.dumps(scene_out["scene"], ensure_ascii=False, indent=2), encoding="utf-8")
+                (iter_dir / "io_map.json").write_text(
+                    json.dumps(scene_out["io_map"], ensure_ascii=False, indent=2), encoding="utf-8")
+                ok5, problems5 = consistency_check(iter_dir / "plcopen.xml",
+                                                   spec["io_list"], scene_out["io_map"])
+                hard5 = [p for p in problems5 if not p.startswith("SKIP")]
+                if not ok5 or hard5:
+                    history.append({"iter": i, "gate": "scene", "errors": hard5})
+                    feedback = self._pack_feedback(hard5, history)
+                    self._dump_gate(iter_dir, "scene", ok=False, errors=hard5)
+                    notify("gate_failed", {"iter": i, "gate": "scene"})
+                    continue
+                gates["scene"] = {"ok": True,
+                                  "assets": len(scene_out["scene"]["assets"]),
+                                  "io_map_vars": len(scene_out["io_map"]["mappings"]),
+                                  "r5": "active"}
+
             if deploy:
                 state, detail = self.deploy_gate(iter_dir / "plcopen.xml")
+                probe = self.status_probe()  # 观测性：运行时状态/程序身份（不裁定）
+                if probe is not None:
+                    detail = dict(detail) if isinstance(detail, dict) else {"result": detail}
+                    detail["runtime_status"] = probe
                 gates["deploy"] = {"state": state, "detail": detail}
                 if state == "failed":
                     errs = detail.get("errors") if isinstance(detail, dict) else [str(detail)]
+                    if isinstance(errs, dict):
+                        errs = [str(errs)]
                     history.append({"iter": i, "gate": "deploy", "errors": errs})
                     feedback = self._pack_feedback(errs, history)
                     self._dump_gate(iter_dir, "deploy", ok=False, errors=errs)
@@ -191,8 +254,8 @@ class Orchestrator:
             return {"status": "final", "iter": i, "run_dir": run_dir}
 
         # ---- best-effort：闸门推进最远的一轮 + 失败报告（人工介入点 2）----
-        order = {"generate": 0, "xml2st": 1, "consistency": 2, "deploy": 3,
-                 "acceptance": 4, "all": 5}
+        order = {"generate": 0, "xml2st": 1, "consistency": 2, "scene": 3, "deploy": 4,
+                 "acceptance": 5, "all": 6}
         best = max(history, key=lambda h: order.get(h.get("gate"), -1)) if history else None
         self._write_summary(run_dir, history, best)
         notify("best_effort", {"run_dir": str(run_dir)})
@@ -241,7 +304,8 @@ class Orchestrator:
 def main():
     import argparse
     parser = argparse.ArgumentParser(description="gc 闭环编排器（半环骨架）")
-    parser.add_argument("spec", help="requirement_spec JSON 路径")
+    parser.add_argument("spec", nargs="?", default=None,
+                        help="requirement_spec JSON 路径（与 --aml 二选一）")
     parser.add_argument("--seed", default=None, help="种子模式：指定已验收 XML 当生成产物（联调/回归）")
     parser.add_argument("--deploy", action="store_true", help="启用闸门3（POST /deploy 真编译）")
     parser.add_argument("--acceptance", action="store_true",
@@ -250,12 +314,63 @@ def main():
                         help="验收场景名（缺省：--seed 的文件名去扩展，否则 spec.task_id）")
     parser.add_argument("--max-iters", type=int, default=MAX_ITERS)
     parser.add_argument("--runs-root", default=None, help="runs/ 根目录（默认仓库 runs/）")
+    parser.add_argument("--no-scene", action="store_true",
+                        help="跳过 ②b 场景描述生成（默认启用：scene.spec.json + io_map.json）")
+    parser.add_argument("--aml", default=None,
+                        help="AutomationML 设备描述（⓪）——前置 ① 需求理解，需配合 --request")
+    parser.add_argument("--request", default=None,
+                        help="自然语言需求文本（或 .txt 文件路径），配合 --aml 使用")
     args = parser.parse_args()
 
+    from .aml_parser import parse_aml
     from .client import BigModelClient
     from .config import MODEL
 
-    spec = json.loads(Path(args.spec).read_text(encoding="utf-8"))
+    device_model = None
+    if args.aml and args.request:
+        if args.spec:
+            print("--aml/--request 与 spec 文件二选一（--aml 仅作设备模型时不要带 --request）。")
+            return 2
+        device_model, problems = parse_aml(args.aml)
+        if problems:
+            print("AML 解析存在问题（best-effort 继续）：")
+            for p in problems:
+                print("  - %s" % p)
+        req = Path(args.request)
+        request_text = req.read_text(encoding="utf-8").strip() if req.is_file() else args.request
+        client = BigModelClient(get_api_key()) if get_api_key() else None
+        from .requirement import RequirementUnderstander
+        print("① 需求理解：模式=%s" % ("llm" if client else "template"))
+        res = RequirementUnderstander(client=client, model=MODEL).understand(
+            request_text, device_model=device_model)
+        report = res["report"]
+        for p in report.get("pending", []):
+            print("  待澄清 - %s" % p)
+        if res["spec"] is None:
+            print("规格组装失败：")
+            for p in (report.get("problems")
+                      or report.get("history", [{}])[-1].get("problems", [])):
+                print("  - %s" % p)
+            return 2
+        spec = res["spec"]
+        print("① 完成（rounds=%s，io_list=%d 条）" % (report.get("rounds", 0), len(spec["io_list"])))
+    elif args.aml:
+        # --aml 仅提供设备模型（⓪）：spec 走冻结文件（可复现联调路径），模型供 ②b 取址
+        if not args.spec:
+            print("--aml 不带 --request 时需要 spec 文件参数（仅作设备模型注入）。")
+            return 2
+        device_model, problems = parse_aml(args.aml)
+        if problems:
+            print("AML 解析存在问题（best-effort 继续）：")
+            for p in problems:
+                print("  - %s" % p)
+        spec = json.loads(Path(args.spec).read_text(encoding="utf-8"))
+    else:
+        if not args.spec:
+            print("需要 spec 文件或 --aml/--request 输入。")
+            return 2
+        spec = json.loads(Path(args.spec).read_text(encoding="utf-8"))
+
     if args.seed:
         generator = PLCGenerator(client=None, seed_xml=args.seed)
     else:
@@ -269,9 +384,11 @@ def main():
     if scenario is None:
         scenario = (Path(args.seed).stem if args.seed else spec["task_id"])
     orch = Orchestrator(runs_root=args.runs_root, max_iters=args.max_iters)
+    scene_gen = None if args.no_scene else SceneSpecGenerator()
     result = orch.solve(spec, generator, deploy=args.deploy,
                         acceptance=scenario if args.acceptance else None,
-                        echo=lambda ev, p: print("[%s] %s" % (ev, p)))
+                        echo=lambda ev, p: print("[%s] %s" % (ev, p)),
+                        scene_generator=scene_gen, device_model=device_model)
     print("\nRESULT: %s (iter=%s) -> %s" % (result["status"], result["iter"], result["run_dir"]))
     return 0 if result["status"] == "final" else 1
 

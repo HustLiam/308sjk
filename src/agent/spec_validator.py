@@ -7,9 +7,10 @@ requirement_spec 校验器（契约①的可执行权威，gc 拥有）。
 跨字段语义规则（S1~S4）在此实现。两者必须同一 RFC 内同步修改（主方案 §8.3）：
 
   S1  唯一性：io_list.name、acceptance.id、constraints.id 各自不得重复
-  S2  量程：type=INT 必须带 range=[min,max] 且 min<max，且落在 16 位寄存器域
-      [-32768,65535]（lx 位宽表 %QW 承载 INT/UINT/WORD 的并集域——lx 评审建议，
-      v1.0.0-draft.2 落实）；type=BOOL 禁止带 range
+  S2  量程：type=INT 必须带 range=[min,max] 且 min<max，且**完整落入**有符号域
+      [-32768,32767] 或无符号域 [0,65535] 之一（lx 位宽表 %QW 承载 INT/UINT/WORD；
+      lx 2026-09-03 收紧建议，v1.0.0-draft.3 落实——跨域混合量程单个 %QW 无法用
+      同一符号解释承载）；type=BOOL 禁止带 range
   S3  信号引用：event_delay 的 from/to、forbidden_state 的 when/forbid 中
       的 signal 必须逐字存在于 io_list（判定引擎按 trace 通道名查找）
   S4  时间阈值：event_delay.value >= 0.1（>=100ms，通信时序约束，主方案 §7）
@@ -36,8 +37,10 @@ EDGES = {"rising", "falling"}
 OPS = {"<=", "<", ">=", ">", "=="}
 MIN_TIME_S = 0.1  # S4
 
-# S2：INT 量程的 16 位寄存器域（lx 位宽表：一个 %QW 字承载 INT/UINT/WORD 的并集）
-WORD_DOMAIN_MIN, WORD_DOMAIN_MAX = -32768, 65535
+# S2：INT 量程的 16 位寄存器域（lx 位宽表：一个 %QW 字承载 INT/UINT/WORD）。
+# draft.3 收紧（lx 建议）：range 须完整落入有符号或无符号域之一——跨域混合量程
+# （如 [-100,65535]）在单个 %QW 无法用同一符号解释承载
+WORD_DOMAINS = {"有符号 INT16": (-32768, 32767), "无符号 UINT16": (0, 65535)}
 
 TOP_REQUIRED = ("schema_version", "task_id", "task_goal", "io_list", "constraints", "acceptance")
 
@@ -84,10 +87,10 @@ def _check_io_point(problems, item, idx):
             _err(problems, path, "type=INT 必须带 range=[min,max]（io_map 定点换算的 raw 区间）")
         elif not rng[0] < rng[1]:
             _err(problems, path, "range 必须 min<max，实际 %r" % (list(rng),))
-        elif not (WORD_DOMAIN_MIN <= rng[0] and rng[1] <= WORD_DOMAIN_MAX):
-            _err(problems, path, "range [%r,%r] 超出 16 位寄存器域 [%d,%d]（lx 位宽表："
-                 "%%QW 承载 INT/UINT/WORD，并集域为 INT16~UINT16）"
-                 % (rng[0], rng[1], WORD_DOMAIN_MIN, WORD_DOMAIN_MAX))
+        elif not any(lo <= rng[0] and rng[1] <= hi for lo, hi in WORD_DOMAINS.values()):
+            _err(problems, path, "range [%r,%r] 未完整落入有符号域 [-32768,32767] 或"
+                 "无符号域 [0,65535] 之一（lx 位宽表：单个 %%QW 只能用一种符号解释承载，"
+                 "S2 draft.3）" % (rng[0], rng[1]))
     elif vtype == "BOOL" and rng is not None:
         _err(problems, path, "type=BOOL 不允许带 range")
     if not isinstance(item.get("device"), str) or not item.get("device"):
