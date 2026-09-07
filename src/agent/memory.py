@@ -32,10 +32,24 @@ class MemoryStore:
     def __init__(self, kb_path=KNOWLEDGE_DIR / "pitfalls.json", episodic_path=_EPISODIC_PATH):
         self.kb_path = Path(kb_path)
         self.episodic_path = Path(episodic_path)
+        self._kb_mtime = None
         self.pitfalls = []
-        if self.kb_path.is_file():
+        self._load_kb()
+
+    def _load_kb(self):
+        """读坑库；文件 mtime 变化时热重载——知识更新对在跑的闭环即时生效。"""
+        try:
+            mtime = self.kb_path.stat().st_mtime
+        except OSError:
+            return
+        if mtime == self._kb_mtime:
+            return
+        try:
             doc = json.loads(self.kb_path.read_text(encoding="utf-8"))
             self.pitfalls = doc.get("pitfalls", [])
+            self._kb_mtime = mtime
+        except (OSError, ValueError):
+            pass
 
     # ---------------- 程序性知识：签名匹配 ----------------
     def match_pitfalls(self, errors, top=3):
