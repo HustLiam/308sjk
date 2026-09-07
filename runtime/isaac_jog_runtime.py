@@ -73,7 +73,7 @@ def main():
         try:
             while True:
                 t0 = time.perf_counter()
-                link.apply_once(verbose=True)
+                link.apply_once(dt=frame, verbose=True)
                 world.step(render=bool(args.window))
                 remain = frame - (time.perf_counter() - t0)
                 if remain > 0:

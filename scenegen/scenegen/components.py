@@ -336,10 +336,13 @@ def _build_gantry(stage, root: str, p: Dict[str, Any], ctx) -> Dict[str, str]:
     _child_cube(stage, f"{root}/z_carriage/slider", (0.06, 0.06, 0.09),
                 translate=(0.0, 0.0, 0.155), color=(0.16, 0.42, 0.66))   # 骑在垂向导轨上的滑块
     _child_cube(stage, f"{root}/z_carriage/pen", (0.015, 0.015, pen_len),
-                color=(0.85, 0.20, 0.20), collision=False)               # 笔：无碰撞，避免与台面接触抖动
+                color=(0.85, 0.20, 0.20))                # 笔有碰撞：任何故障下停在纸面而非穿透
 
     # 关节零位 = authoring 位姿；+q 沿轴正向。
-    # Z 轴语义：q=0 落笔（笔尖贴纸面）、q=tz 抬笔（抬起 tz）→ 开场 target=tz 保持抬笔。
+    # Z 轴语义：q=0 落笔（笔尖距台面 2mm，即场景开场静置位）、q=tz 抬笔。
+    # 开场驱动目标必须为 0（零初始误差）：若 authoring 即写 tz，Play 瞬间 0.2m 误差
+    # 使力饱和（300N）弹射滑块，60Hz 下一步位移厘米级、隧穿限位扎穿纸面（实机复现过）。
+    # 抬笔由运行时按 simio:axisSpeed 速率限制平滑执行，见 stage_link。
     _prismatic_joint(stage, f"{root}/joint_x", f"{root}/base", f"{root}/x_carriage", "x",
                      (-tx / 2, 0.0, H - 0.05), (0.0, 0.0, 0.0),
                      0.0, tx, max_force=1000.0)
@@ -349,7 +352,7 @@ def _build_gantry(stage, root: str, p: Dict[str, Any], ctx) -> Dict[str, str]:
     _prismatic_joint(stage, f"{root}/joint_z", f"{root}/y_carriage", f"{root}/z_carriage", "z",
                      (0.0, 0.0, pen_cz - carriage_z), (0.0, 0.0, 0.0),
                      0.0, tz, max_force=300.0,
-                     stiffness=4000.0, damping=80.0, target=tz)
+                     stiffness=4000.0, damping=80.0)
     # joint_z 整定（m=0.4, 60Hz）：ω=100 → dt·ω=1.67<2；ζ=1 临界阻尼；重力下坠 ≈0.98mm<1mm
 
     _simio_attr(ctx["root_prim"], "assetType", "gantry_xyz")

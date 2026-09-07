@@ -2,6 +2,44 @@
 
 > 仅技术说明（改了什么 / 为什么 / 如何验证 / 技术坑）。进度协调内容一律写 `docs/协作看板.md`。本文件在 master 合入前移除，永不进 master。
 
+## 2026-09-07 真机回归修复：joint_z 开场饱和弹射穿纸
+
+### 现象（真机 Play 复现）
+
+开场位姿正确；Play 后笔直接掉到纸下面，"z 坐标像没固定住"。X/Y 链稳定（bridge 在
+导轨上、carriage 在桥上），只有 z 组件掉落——滑块停在纸面高度、笔穿透纸面。
+
+### 根因
+
+joint_z 是唯一"开场驱动目标 ≠ 作者位姿"的关节：场景从 q=0（落笔位）启动，而
+drive targetPosition authored 为 tz=0.2。Play 瞬间 0.2m 误差 → 力饱和（min(k·e,
+maxForce)=300N）→ 0.4kg 滑块以 ~750m/s² 弹射，60Hz 下单步位移厘米级，直接隧穿
+q≥0 限位与纸面，混沌后卡在纸下。X/Y 目标均为 0（零初始误差）故安然无恙。
+
+### 修法（三层防御，任一层单独即可避免）
+
+1. **场景层**（components._build_gantry）：joint_z 开场 target=0（三轴统一零初始
+   误差），场景开场静置于落笔位（笔尖距纸 2mm）；pen 改为有碰撞——任何残余故障下
+   笔停在纸面而非穿透；抬笔改由运行时完成；
+2. **运行时层**（stage_link.StageLink）：所有指令经 axisSpeed（simio:axisSpeed，
+   默认 0.5m/s）**速率限制**后写驱动目标，_last_cmd 以作者位姿 0 为起点——寄存器
+   阶跃（GUI 抬笔按钮、将来 OpenPLC 一次写 0.2m）都变成 ≤0.5m/s 的斜坡，物理上
+   不可能再弹射；编辑器 20Hz/独立运行时物理帧各自传真实 dt；
+3. **回归层**：test_scenegen 断言三轴开场 target 全 0 + 笔有碰撞；test_stage_link
+   新增抬笔斜坡测试（单帧增量 ≤ axisSpeed·dt、0.2m 恰好 ~24 帧抬完）。
+
+### 技术坑
+
+- 斜坡断言被 USD float32 舍入（~1e-8）击穿 1e-9 容差——stage 回读值做增量断言时
+  容差至少放宽到 1e-6；
+- 0.2m/0.5m/s 抬笔耗时 0.4s ≈ 24 帧（60Hz），测试帧数窗口按此卡。
+
+### 验证
+
+scenegen 22 组 + agent 4 组全绿；venv runtime 测试 9 项全绿（桥回环 6 + StageLink 3，
+含新斜坡测试）；out/gantry、out/agent 已重生成。待真机：Play 后笔应静止于纸面上方
+2mm，GUI 连接后 ~0.4s 平滑抬起，拖动全程无穿透。
+
 ## 2026-09-02 (3) 独立运行时：脱离 Script Editor 的 Modbus 工作流
 
 ### 改了什么

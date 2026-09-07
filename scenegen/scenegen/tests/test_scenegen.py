@@ -180,15 +180,21 @@ def main() -> int:
     assert base.GetAttribute("physics:kinematicEnabled").Get() is True, "base 应为 kinematic"
     n += 1
 
-    # Z 轴：q=0 落笔（笔尖距台面 2mm）、q=tz 抬笔；开场驱动目标 = 抬笔位
+    # Z 轴：q=0 落笔（笔尖距台面 2mm，即开场静置位）、q=tz 抬笔；
+    # 所有驱动目标开场必须为 0（零初始误差）——实机教训：开场非零目标会力饱和弹射
     joint_z = stage.GetPrimAtPath("/World/gantry_1/joint_z")
     assert abs(joint_z.GetAttribute("limit:transZ:physics:low").Get() - 0.0) < 1e-6
     assert abs(joint_z.GetAttribute("limit:transZ:physics:high").Get() - tz) < 1e-6
-    assert abs(joint_z.GetAttribute("drive:transZ:physics:targetPosition").Get() - tz) < 1e-6, \
-        "开场应保持抬笔（target=travel_z）"
+    for j in ("joint_x", "joint_y", "joint_z"):
+        jt = stage.GetPrimAtPath(f"/World/gantry_1/{j}")
+        axis = j[-1].upper()
+        assert abs(jt.GetAttribute(f"drive:trans{axis}:physics:targetPosition").Get() - 0.0) < 1e-6, \
+            f"{j} 开场驱动目标必须为 0"
     pen_cz = 0.04 + 0.002 + 0.27 / 2.0
     z_pos = stage.GetPrimAtPath("/World/gantry_1/z_carriage").GetAttribute("xformOp:translate").Get()
     assert abs((z_pos[2] - 0.135) - 0.042) < 1e-6, "落笔位笔尖应距台面 2mm"
+    assert stage.GetPrimAtPath("/World/gantry_1/z_carriage/pen").HasAPI("PhysicsCollisionAPI"), \
+        "笔应有碰撞（故障时停在纸面而非穿透）"
     n += 1
 
     # 显式三轴刚体齐全，io_map 绑定的关节 prim 存在且驱动可写

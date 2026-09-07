@@ -207,7 +207,9 @@ def Xform "World"
                 uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
             }
 
-            def Cube "pen"
+            def Cube "pen" (
+                prepend apiSchemas = ["PhysicsCollisionAPI"]
+            )
             {
                 color3f[] primvars:displayColor = [(0.85, 0.2, 0.2)]
                 double size = 1
@@ -262,7 +264,7 @@ def Xform "World"
             float drive:transZ:physics:damping = 80
             float drive:transZ:physics:maxForce = 300
             float drive:transZ:physics:stiffness = 4000
-            float drive:transZ:physics:targetPosition = 0.2
+            float drive:transZ:physics:targetPosition = 0
             uniform token drive:transZ:physics:type = "position"
             float limit:transZ:physics:high = 0.2
             float limit:transZ:physics:low = 0

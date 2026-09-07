@@ -55,10 +55,10 @@ _stop = False
 
 
 def _apply_loop():
-    """20Hz：指令变化才写驱动目标；位置每帧回写反馈寄存器。"""
+    """20Hz：指令经 axisSpeed 速率限制写驱动目标；位置每帧回写反馈寄存器。"""
     while not _stop:
         try:
-            link.apply_once(verbose=True)
+            link.apply_once(dt=0.05, verbose=True)
         except Exception as _exc:                     # 单帧异常不终止回环
             print(f"[modbus] loop warn: {_exc}")
         time.sleep(0.05)

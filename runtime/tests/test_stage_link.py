@@ -54,12 +54,19 @@ def test_stage_link_command_to_drive():
         stage = Usd.Stage.Open(SCENE)
         io_map = mb.load_io_map(mb.REPO_IO_MAP)
         link = StageLink(stage, bridge, io_map)
+        dt = 1.0 / 60
 
         cli = mb.make_client(bridge.port)
         try:
             mb.first_write(cli, bridge.layout["X"]["cmd_reg"], mb.pack_f32(0.25))
             mb.first_write(cli, bridge.layout["Z"]["cmd_reg"], mb.pack_f32(0.05))
-            link.apply_once()
+            # 首帧：速率限制生效——单帧只走 axis_speed*dt（0.5/60 ≈ 8.3mm），绝不阶跃
+            link.apply_once(dt=dt)
+            first = _drive_target(stage, "X")
+            assert 0.0 < first <= link.axis_speed * dt + 1e-6, \
+                f"首帧应按速率限制走 {link.axis_speed * dt:.4f} m，实际 {first}"
+            for _ in range(60):                   # 0.25m / (0.5m/s) = 0.5s 内收敛
+                link.apply_once(dt=dt)
             assert abs(_drive_target(stage, "X") - 0.25) < 1e-5, "指令未落到关节驱动属性"
             assert abs(_drive_target(stage, "Z") - 0.05) < 1e-5
         finally:
@@ -69,10 +76,38 @@ def test_stage_link_command_to_drive():
         cli = mb.make_client(bridge.port)
         try:
             mb.first_write(cli, bridge.layout["Y"]["cmd_reg"], mb.pack_f32(9.0))
-            link.apply_once()
+            for _ in range(80):
+                link.apply_once(dt=dt)
             assert abs(_drive_target(stage, "Y") - bridge.layout["Y"]["travel"]) < 1e-5
         finally:
             cli.close()
+    finally:
+        bridge.stop()
+
+
+def test_stage_link_z_raising_ramp():
+    """开场落笔位 + 抬笔指令：驱动目标沿 axisSpeed 渐升，绝无饱和弹射阶跃。"""
+    if not HAVE_PXR:
+        print("SKIP：未安装 usd-core")
+        return
+    bridge = mb.make_bridge()
+    try:
+        stage = Usd.Stage.Open(SCENE)
+        link = StageLink(stage, bridge)
+        dt = 1.0 / 60
+        bridge.set_commands({"Z": bridge.layout["Z"]["travel"]})   # 抬笔 0.2m
+        prev = 0.0
+        frames = 0
+        while True:
+            link.apply_once(dt=dt)
+            cur = _drive_target(stage, "Z")
+            assert cur - prev <= link.axis_speed * dt + 1e-6, "单帧增量超轴速（弹射风险）"
+            prev = cur
+            frames += 1
+            if abs(cur - 0.2) < 1e-5:
+                break
+            assert frames < 120, "0.2m/0.5m/s 应在 24 帧内抬完"
+        assert 20 <= frames <= 30, f"抬笔应耗时 ~0.4s（24 帧），实际 {frames} 帧"
     finally:
         bridge.stop()
 
