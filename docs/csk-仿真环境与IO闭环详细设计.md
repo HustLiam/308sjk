@@ -15,7 +15,7 @@
 | ②b 确定性支撑（兼评审方） | SceneSpec 规范/Schema、静态校验器、组件资产库；②b LLM 本体（归 gc）的评审 | 校验器 + `components/` | ✅ 首批落地（`scenegen/`：Schema/validate/build_usd/iomap/smoke/cli + agent 离线闭环；回归 22+4 绿，见 §4.1） |
 | ③b Isaac Sim 仿真引擎 | json→USD 确定性构建、加载冒烟、headless lockstep 运行、IOBridge、trace 采集 | `run_sim.py` + 构建器 + iobridge | 🟨 部分（json→USD/冒烟随 scenegen ✅；Modbus 运行时桥+独立运行时+示教器 `runtime/` ✅；lockstep 主循环与 trace 待链路 A） |
 | ④ 判定引擎 | 四类验收准则的确定性规则引擎，产出 `verdict.json` | `verifier/` | 🚧 未启动（设计完成，见 §7） |
-| 链路 A 构建流水线 | `plc.st → iec2c → C → DLL` + shim/地址表自动生成（工具链 Docker 锁版本） | `toolchain/` | 🚧 未启动（设计完成，见 §6.2） |
+| 链路 A 构建流水线 | `plc.st → iec2c → C → DLL` + shim/地址表自动生成（工具链 Docker 锁版本） | `toolchain/` | 🟨 代码就绪（shim 生成/构建编排/ctypes 绑定 + L2 全绿；**L3 真编译待 matiec+gcc 工具链**，见 §6.2.4） |
 | 详细设计文档 | 本文档 | — | ✅ 完成 |
 
 不归本侧的：②b 场景描述的 LLM 生成本体（gc，本侧评审）；③a 链路 B 部署编排与 Modbus IO（lx）；④ 的归因/反馈/编排器（gc——本文 §7.2–7.4 为职责边界+指针）。
@@ -484,6 +484,20 @@ class SoftPLC:
 
 > shim 中的地址表（`__QX0_0` / `__QW0` 等）由构建脚本从 `io_map.json` 自动生成，**不手写**；shim 这个文件本身就是代码生成模块的产物之一。
 
+#### 6.2.4 落地状态与契约③（2026-09-07）
+
+**代码已落地（L2 层全绿，L3 待工具链）**：
+
+| 件 | 位置 | 说明 |
+|---|---|---|
+| shim 生成器 | `toolchain/shim_gen.py` | io_map → `plc_shim.c/.h`（extern 符号表 + 紧凑镜像 di/ai/dq/aq + 稳定接口）；符号风格 `__QX0_0`/`__QW0` 是 matiec 版本差异的**隔离点**（`SYMBOL_RULES` 一处可调） |
+| 构建编排 | `toolchain/build_dll.py` | xml→st（复用 lx xml2st，转换点唯一）→ iec2c → shim → gcc 共享库；工具链经 `MATEC`/`CC`/PATH 发现，缺失时优雅降级 + 可操作提示；结果落 `build_result.json` 供编排器消费 |
+| ctypes 绑定 | `runtime/plc_binding.py` | `IOLayout`（镜像索引/定点换算/打包，纯逻辑）+ `SoftPLC`（init/run/write_inputs/read_outputs）；索引规则与 shim **双实现 golden 测试锁定** |
+| 分层测试 | `toolchain/tests/test_link_a.py` | L2：golden/一致性/定点换算/Schema 校验/降级（本机全绿）；L3：minimal.st → DLL → 写读回环（**缺 matiec+gcc 自动 SKIP**，在 WSL/Docker/工具链机上执行——`MATEC_ROOT` 指向 matiec 根目录） |
+
+**契约③ io_map 结构（v1.0.0-draft.1，`schemas/io_map.schema.json`，待三方评审冻结）**：
+每条记录 `plc_var`（≡ ST 定位变量 ≡ io_list，R1/R2 对齐键）/ `dir`（input=传感注入、output=PLC 指令，统一 %Q 区不由前缀表达）/ `type`（bool→%QX；analog→%QW 定点 INT16，`scale`=每 LSB 工程量；word→%QW 原始 16 位如 CiA402 状态字）/ `modbus`（链路 B 地址，scenegen 确定性分配）/ `bind`+`usd_prim`（③b 绑定）。`modbus.encoding` 现状 float32_be、目标 int16_be——**随共同议题"float32/INT16 换算归属"定稿按 §8.3 RFC 收敛**，draft 期并存。约束：%QD 禁用、%I 区不进 io_map（契约②）。
+
 ### 6.3 lockstep 时序同步
 
 ```
@@ -622,7 +636,7 @@ OpenPLC v3 Docker 镜像（仅验收链路）。
 
 ### 待办（按优先级）
 
-1. **D3–4 matiec 流水线（下一优先级）**：链路 A 构建是双链路联调的前置，**lx 在协作看板等待中**；
+1. **D3–4 链路 A（代码就绪，待工具链 L3）**：shim 生成/构建编排/ctypes 绑定已落地（§6.2.4），在 WSL/Docker/工具链机上设 `MATEC_ROOT` 跑 L3 回环（`toolchain/tests/test_link_a.py`），通过即通知 **lx 启动 motion3axis 双链路比对**；
 2. **真机复验收尾**：龙门场景 Play 稳定性与示教（joint_z 弹射穿纸已修复，待 Isaac 实机确认）；随后按 §5.3 骨架把 `isaac_jog_runtime.py` 扩展为带 trace 采集的 `run_sim.py`；
 3. SceneSpec Schema/校验器已落地（`scenegen/`），待与 gc 场景描述生成器对接联调 + acceptance 结构确认冻结；
 4. `io_map` 契约③定稿：实现样例已出（`scenegen/scenegen/iomap.py` + `out/gantry/io_map.json`），**编码（float32 vs 桥侧 INT16 定点）随共同议题"float32/INT16 换算归属"定稿后按 §8.3 RFC 同步**；
