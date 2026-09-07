@@ -71,6 +71,7 @@ class Orchestrator:
         self.acceptance_timeout = acceptance_timeout
         # 归因引擎（确定性坑库优先 / LLM 兜底）——只进反馈包，不参与闸门裁定
         self.attribution = attribution_engine or AttributionEngine()
+        self._addr_table = None
 
     # ---------------- 归因与失败处理 ----------------
     def _fail(self, iter_dir, i, gate, errors, history):
@@ -148,6 +149,31 @@ class Orchestrator:
         except requests.RequestException:
             pass
         return None
+
+    # ---------------- 地址自动纠偏（设备契约的机械执行） ----------------
+    @staticmethod
+    def fix_addresses(xml_path, address_table):
+        """按 ⓪ 地址表改写 XML 定位变量地址属性。返回修正的变量数。
+
+        地址是确定性契约（R6 的权威表），LLM 生成后机械对齐——不进反馈回路
+        （画圆验证实证：LLM 修地址会打转，一次改一条还引入新的错位）。
+        """
+        if not address_table:
+            return 0
+        import xml.etree.ElementTree as ET
+        NS = "http://www.plcopen.org/xml/tc6_0201"
+        tree = ET.parse(xml_path)
+        root = tree.getroot()
+        fixed = 0
+        for var in root.findall(".//{%s}variable" % NS):
+            name = var.get("name")
+            if name in address_table and var.get("address") != address_table[name]:
+                var.set("address", address_table[name])
+                fixed += 1
+        if fixed:
+            ET.register_namespace("", NS)
+            tree.write(xml_path, encoding="UTF-8", xml_declaration=True)
+        return fixed
 
     # ---------------- 运行时透视（诊断口自动注入与采集） ----------------
     _DIAG_KEYWORDS = ("step", "seq", "state", "ck", "phase", "exe", "busy",
@@ -295,7 +321,7 @@ class Orchestrator:
 
     # ---------------- 主循环 ----------------
     def solve(self, spec, generator, deploy=False, acceptance=None, echo=None,
-              scene_generator=None, device_model=None):
+              scene_generator=None, device_model=None, address_table=None):
         """执行闭环。返回 {status: final|best, iter, run_dir}。
 
         acceptance: 场景名（None=不跑闸门4）——用于定位 src/pipeline/scenario_<名>.py；
@@ -319,6 +345,9 @@ class Orchestrator:
         problems = validate_requirement_spec(spec)
         if problems:
             raise ValueError("requirement_spec 校验失败（人工介入点 1）: %s" % problems)
+        self._addr_table = address_table or (
+            {p["name"]: p["address"] for p in (device_model or {}).get("io_points", [])
+             if p.get("address")} or None)
 
         task_id = spec["task_id"]
         run_dir = self.runs_root / task_id
@@ -353,6 +382,13 @@ class Orchestrator:
                 notify("gate_failed", {"iter": i, "gate": "generate", "mode": mode})
                 continue
             (iter_dir / "plcopen.xml").write_text(xml_text, encoding="utf-8")
+
+            # 地址自动纠偏：按 ⓪ 表机械对齐（契约执行，非 LLM 工作）
+            addr_fixed = self.fix_addresses(iter_dir / "plcopen.xml",
+                                            getattr(self, "_addr_table", None))
+            if addr_fixed:
+                xml_text = (iter_dir / "plcopen.xml").read_text(encoding="utf-8")
+                notify("addr_fixed", {"iter": i, "count": addr_fixed})
 
             # 闸门1+2 已在 generator.gate 内完成（xml2st + 一致性），此处复跑留档：
             ok, st_text, problems1 = xml2st.convert(iter_dir / "plcopen.xml")

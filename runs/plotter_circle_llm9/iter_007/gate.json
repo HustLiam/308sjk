@@ -1,0 +1,93 @@
+{
+  "gate": "acceptance",
+  "ok": false,
+  "errors": [
+    "    [trace t=2s] pos=(100,100,10) v=(40,40,20) pen=0 done=0 moving=1",
+    "    [trace t=4s] pos=(33,100,10) v=(-40,40,20) pen=0 done=0 moving=1",
+    "    [trace t=6s] pos=(0,100,10) v=(-40,40,20) pen=0 done=0 moving=1",
+    "    [trace t=8s] pos=(0,100,10) v=(-40,40,20) pen=0 done=0 moving=1",
+    "    [trace t=10s] pos=(10,100,0) v=(40,40,-20) pen=1 done=0 moving=1",
+    "    [trace t=12s] pos=(84,100,0) v=(40,40,-20) pen=1 done=0 moving=1",
+    "    [trace t=14s] pos=(100,100,0) v=(40,40,-20) pen=1 done=0 moving=1",
+    "    [trace t=16s] pos=(100,78,0) v=(40,-40,-20) pen=1 done=0 moving=1",
+    "    [trace t=18s] pos=(50,2,0) v=(-40,-40,-20) pen=1 done=0 moving=1",
+    "    [trace t=20s] pos=(0,0,10) v=(-40,-40,20) pen=0 done=0 moving=1",
+    "    [trace t=22s] pos=(0,0,10) v=(-40,-40,20) pen=0 done=0 moving=1",
+    "    [trace t=24s] pos=(50,0,10) v=(40,-40,20) pen=0 done=0 moving=1",
+    "    [trace t=26s] pos=(100,0,10) v=(40,-40,20) pen=0 done=0 moving=1",
+    "    [trace t=28s] pos=(100,31,0) v=(40,40,-20) pen=1 done=0 moving=1",
+    "    [trace t=30s] pos=(40,100,0) v=(-40,40,-20) pen=1 done=0 moving=1",
+    "    [trace t=32s] pos=(0,100,0) v=(-40,40,-20) pen=1 done=0 moving=1",
+    "    [trace t=34s] pos=(22,100,10) v=(40,40,20) pen=0 done=0 moving=1",
+    "    [trace t=36s] pos=(96,100,10) v=(40,40,20) pen=0 done=0 moving=1",
+    "    [trace t=38s] pos=(100,38,10) v=(40,-40,20) pen=0 done=0 moving=1",
+    "    [trace 超时] pos=(47,0,4) pen=0 done=0",
+    "  FAIL 重新 cmd_draw 后完成（999.0s）",
+    "[6] run=0 失能",
+    "  PASS 失能 all_oe=FALSE",
+    "  PASS 失能后速度为零",
+    "  PASS 全程无越界/超速违例",
+    "      越界样本:",
+    "        [dbg s4] pos=(0.0,34.3,0.0) v=(-40,0,-20)",
+    "        [dbg s4] pos=(0.0,36.7,0.0) v=(-40,40,-20)",
+    "        [dbg s4] pos=(0.0,39.1,0.0) v=(-40,40,-20)",
+    "        [dbg s4] pos=(0.0,40.6,0.0) v=(-40,24,-20)",
+    "        [dbg s4] pos=(0.0,42.0,0.0) v=(-40,24,-20)",
+    "        [dbg s4] pos=(0.0,43.8,0.0) v=(-40,30,-20)",
+    "        [dbg s4] pos=(0.0,46.2,0.0) v=(-40,40,-20)",
+    "        [dbg s4] pos=(0.0,47.6,0.0) v=(-40,24,-20)",
+    "        [dbg s4] pos=(0.0,48.7,0.0) v=(-40,18,-20)",
+    "        [dbg s4] pos=(0.0,49.8,0.0) v=(-40,18,-20)",
+    "        [dbg s4] pos=(0.0,49.8,0.0) v=(-40,0,-20)",
+    "        [dbg s4] pos=(0.0,49.8,0.0) v=(-40,0,-20)",
+    "",
+    "场景验收: 存在失败 ❌",
+    "运行时内部状态时间线（诊断口自动采集）：",
+    "    [diag t=0.5s] pl_step=1 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=1.0s] pl_step=1 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=1.5s] pl_step=1 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=2.0s] pl_step=1 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=2.5s] pl_step=1 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=3.0s] pl_step=1 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=3.5s] pl_step=1 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=4.0s] pl_step=1 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=4.5s] pl_step=1 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=5.0s] pl_step=1 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=5.5s] pl_step=1 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=6.0s] pl_step=1 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=6.5s] pl_step=1 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=7.0s] pl_step=1 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_x_exe=0 hm_y_exe=0"
+  ],
+  "attribution": {
+    "gate": "acceptance",
+    "errors": [
+      "    [trace t=2s] pos=(100,100,10) v=(40,40,20) pen=0 done=0 moving=1",
+      "    [trace t=4s] pos=(33,100,10) v=(-40,40,20) pen=0 done=0 moving=1",
+      "    [trace t=6s] pos=(0,100,10) v=(-40,40,20) pen=0 done=0 moving=1",
+      "    [trace t=8s] pos=(0,100,10) v=(-40,40,20) pen=0 done=0 moving=1",
+      "    [trace t=10s] pos=(10,100,0) v=(40,40,-20) pen=1 done=0 moving=1",
+      "    [trace t=12s] pos=(84,100,0) v=(40,40,-20) pen=1 done=0 moving=1",
+      "    [trace t=14s] pos=(100,100,0) v=(40,40,-20) pen=1 done=0 moving=1",
+      "    [trace t=16s] pos=(100,78,0) v=(40,-40,-20) pen=1 done=0 moving=1"
+    ],
+    "pitfalls": [
+      {
+        "id": "P06",
+        "title": "REAL 初值必须带小数点",
+        "diagnosis": "REAL 变量初值写成整数（40 而非 40.0）",
+        "fix": "REAL 初值必须 50.0 形式；INTERP 类参数逐个核对"
+      },
+      {
+        "id": "P10",
+        "title": "PLC_PRG 内单扫描选通赋值被吞",
+        "diagnosis": "主程序内单扫描选通/边沿记忆变量的赋值被优化器静默丢弃（症状：序列器步进空转、FB 状态不翻转、手动路径正常）",
+        "fix": "改连续跟踪模式：触发线全程电平保持，目标值变化自动起新轨迹（INTERP 增 fire AND NOT Busy AND 目标变化分支）；或经 %QX 线圈级信号驱动。PLC_PRG 内不写单扫描脉冲逻辑"
+      }
+    ],
+    "similar_fixes": [],
+    "repair_hints": [
+      "REAL 初值必须 50.0 形式；INTERP 类参数逐个核对",
+      "改连续跟踪模式：触发线全程电平保持，目标值变化自动起新轨迹（INTERP 增 fire AND NOT Busy AND 目标变化分支）；或经 %QX 线圈级信号驱动。PLC_PRG 内不写单扫描脉冲逻辑"
+    ]
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "gate": "generate",
+  "ok": false,
+  "errors": [
+    "[xml2st] XML 无法解析: mismatched tag: line 354, column 94"
+  ],
+  "attribution": {
+    "gate": "generate",
+    "errors": [
+      "[xml2st] XML 无法解析: mismatched tag: line 354, column 94"
+    ],
+    "pitfalls": [],
+    "similar_fixes": [],
+    "repair_hints": [
+      "检查生成产物 XML 第 354 行附近的标签闭合情况，确认开始标签与结束标签名称、嵌套层级是否匹配",
+      "在 generate 阶段后增加 XML 良构性校验（如 xmllint）作为前置检查，定位具体不匹配标签后再重试",
+      "重新生成时确保自闭合/闭合标签转义正确，且节点属性值中的尖括号已正确转义（&lt; &gt;）"
+    ],
+    "llm_diagnosis": {
+      "root_cause": "证据不足：仅知 XML 在第 354 行第 94 列存在标签不匹配（mismatched tag），无法确定是代码问题、场景问题还是环境问题",
+      "repair_hints": [
+        "检查生成产物 XML 第 354 行附近的标签闭合情况，确认开始标签与结束标签名称、嵌套层级是否匹配",
+        "在 generate 阶段后增加 XML 良构性校验（如 xmllint）作为前置检查，定位具体不匹配标签后再重试",
+        "重新生成时确保自闭合/闭合标签转义正确，且节点属性值中的尖括号已正确转义（&lt; &gt;）"
+      ],
+      "advisory": true
+    }
+  }
+}
