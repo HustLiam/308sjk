@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "io_map.schema.json",
+  "title": "io_map 契约③ v1.0.0-draft.1（csk 拥有；主方案 §3.3 为定义权威）",
+  "description": "三方映射契约：plc_var ≡ ST 定位变量 ≡ io_list（gc 一致性检查器 R1~R5 的检查对象）。每条记录声明一个对外 IO 变量：方向、类型、Modbus 地址（链路 B）、USD 绑定（③b）。统一 %Q 区约定（契约② §3.1）：方向由 dir 声明、不由地址前缀表达；模拟量一律 INT16 定点（%QW），换算系数由 scale 声明；%QD 禁用；%I 区变量不进 io_map。编码字段（modbus.encoding）当前 float32_be（runtime 桥现状），目标 int16_be——随共同议题『float32/INT16 换算归属』定稿后按 §8.3 RFC 收敛，draft 期两者并存。",
+  "type": "object",
+  "required": ["io_map_version", "entries"],
+  "properties": {
+    "io_map_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-draft\\.\\d+)?$",
+      "description": "契约③版本号；兼容变更 +0.1，不兼容升主版本（主方案 §8.3）"
+    },
+    "scene_id": { "type": "string", "description": "关联场景（可选，scenegen 产出时填）" },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["plc_var", "dir", "type"],
+        "properties": {
+          "plc_var": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+            "description": "变量名：≡ ST 定位变量名 ≡ io_list.name（三方一致性 R1/R2 的对齐键），全工程唯一"
+          },
+          "dir": {
+            "enum": ["input", "output"],
+            "description": "input=传感回传（仿真→PLC 注入，PLC 侧只读）；output=PLC 指令（PLC→仿真驱动）"
+          },
+          "type": {
+            "enum": ["bool", "analog", "word"],
+            "description": "bool→%QX 线圈；analog→%QW 定点 INT16（带 scale）；word→%QW 原始 16 位（如 CiA402 状态字），不做工程量换算"
+          },
+          "scale": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "default": 1.0,
+            "description": "analog 专用：每个 LSB 对应的工程量（unit/LSB）。raw=round(eng/scale)，钳位 [-32768,32767]；bool/word 忽略"
+          },
+          "modbus": {
+            "type": "object",
+            "description": "链路 B 地址分配（scenegen iomap.assign_modbus 确定性产出；链路 A 不消费）",
+            "required": ["area", "address", "plc_addr", "length"],
+            "properties": {
+              "area": { "enum": ["coils", "holding_registers", "sensor_block"] },
+              "address": { "type": "integer", "minimum": 0 },
+              "plc_addr": { "type": "string", "pattern": "^%(Q[XW]|IW)\\d+(\\.\\d+)?$" },
+              "length": { "type": "integer", "minimum": 1 },
+              "encoding": { "enum": ["bool01", "float32_be", "int16_be"] }
+            }
+          },
+          "bind": {
+            "type": "object",
+            "description": "USD 语义绑定（③b IOBridge 消费；②b 校验器检查 asset/quantity 存在性）",
+            "required": ["asset", "quantity"],
+            "properties": {
+              "asset": { "type": "string" },
+              "quantity": { "type": "string" },
+              "range": {
+                "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2,
+                "description": "工程量程 [min,max]，min<max；供桥端归一化与钳位"
+              }
+            }
+          },
+          "usd_prim": {
+            "type": "string",
+            "description": "quantity 承载的 USD prim 路径（如关节 prim），scenegen build_usd 富化回填"
+          }
+        }
+      }
+    }
+  }
+}
