@@ -1,0 +1,76 @@
+[
+  {
+    "plc_var": "PE1_detected",
+    "dir": "input",
+    "type": "bool",
+    "bind": {
+      "asset": "pe_1",
+      "quantity": "beam_broken"
+    },
+    "usd_prim": "/World/pe_1",
+    "modbus": {
+      "area": "sensor_block",
+      "server_register": 0,
+      "plc_addr": "%IW0",
+      "length": 1,
+      "encoding": "bool01"
+    },
+    "_asset_type": "photoelectric_sensor"
+  },
+  {
+    "plc_var": "Cyl1_extend",
+    "dir": "output",
+    "type": "bool",
+    "bind": {
+      "asset": "cyl_1",
+      "quantity": "extend_cmd"
+    },
+    "usd_prim": "/World/cyl_1/joint",
+    "modbus": {
+      "area": "coils",
+      "address": 0,
+      "plc_addr": "%QX0.0",
+      "length": 1
+    },
+    "_asset_type": "pneumatic_cylinder"
+  },
+  {
+    "plc_var": "Cyl1_pos",
+    "dir": "input",
+    "type": "float",
+    "bind": {
+      "asset": "cyl_1",
+      "quantity": "position",
+      "range": [
+        0,
+        0.4
+      ]
+    },
+    "usd_prim": "/World/cyl_1/joint",
+    "modbus": {
+      "area": "sensor_block",
+      "server_register": 1,
+      "plc_addr": "%IW1",
+      "length": 2,
+      "encoding": "float32_be"
+    },
+    "_asset_type": "pneumatic_cylinder"
+  },
+  {
+    "plc_var": "Belt1_run",
+    "dir": "output",
+    "type": "bool",
+    "bind": {
+      "asset": "belt_1",
+      "quantity": "run_cmd"
+    },
+    "usd_prim": "/World/belt_1",
+    "modbus": {
+      "area": "coils",
+      "address": 1,
+      "plc_addr": "%QX0.1",
+      "length": 1
+    },
+    "_asset_type": "conveyor_belt"
+  }
+]
