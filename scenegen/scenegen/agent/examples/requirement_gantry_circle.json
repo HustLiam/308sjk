@@ -1,0 +1,34 @@
+{
+  "task_id": "gantry_circle_001",
+  "task_goal": "三轴平面画圆模组（X/Y/Z 直线轴龙门，固定基座，台面为绘图板）：笔针先抬笔移动到圆心上方，落笔后 X/Y 轴按参数方程 x=cx+r·cosθ、y=cy+r·sinθ 连续插补一周画整圆（r=0.08m，圆心位于行程中央），完成后抬笔回到行程中位。Z=0 为抬笔，Z=travel_z 为笔尖触台面。轴速度不超过 speed 上限。",
+  "io_list": [
+    { "name": "AxisX_cmd", "dir": "output", "type": "float", "device": "gantry_xyz", "semantic": "X 轴位置目标（行程内，米）", "range": [0, 0.6] },
+    { "name": "AxisY_cmd", "dir": "output", "type": "float", "device": "gantry_xyz", "semantic": "Y 轴位置目标（行程内，米）", "range": [0, 0.4] },
+    { "name": "AxisZ_cmd", "dir": "output", "type": "float", "device": "gantry_xyz", "semantic": "Z 轴位置目标（0=抬笔，travel_z=落笔）", "range": [0, 0.2] },
+    { "name": "AxisX_pos", "dir": "input",  "type": "float", "device": "gantry_xyz", "semantic": "X 轴实际位置反馈", "range": [0, 0.6] },
+    { "name": "AxisY_pos", "dir": "input",  "type": "float", "device": "gantry_xyz", "semantic": "Y 轴实际位置反馈", "range": [0, 0.4] },
+    { "name": "AxisZ_pos", "dir": "input",  "type": "float", "device": "gantry_xyz", "semantic": "Z 轴实际位置反馈（>0.15 视为落笔）", "range": [0, 0.2] }
+  ],
+  "constraints": [
+    "落笔状态下方可执行 X/Y 插补；抬笔状态禁止横向移动（防划伤台面）",
+    "X/Y 指令不得超出 [0, travel] 行程范围",
+    "轨迹半径误差 ≤ 5mm，画圆相位连续无断点"
+  ],
+  "acceptance": [
+    { "id": "AC1", "desc": "落笔期间实际轨迹与 r=0.08m 理想圆的最大径向偏差 ≤ 5mm",
+      "type": "trajectory_deviation",
+      "signal_x": "AxisX_pos", "signal_y": "AxisY_pos",
+      "when": { "signal": "AxisZ_pos", "above": 0.15 },
+      "radius": 0.08, "op": "<=", "value": 0.005, "unit": "m" },
+    { "id": "AC2", "desc": "画圆相位覆盖完整（≥350°）",
+      "type": "phase_coverage",
+      "signal_x": "AxisX_pos", "signal_y": "AxisY_pos",
+      "when": { "signal": "AxisZ_pos", "above": 0.15 },
+      "min_coverage_deg": 350 },
+    { "id": "AC3", "desc": "抬笔期间 X/Y 位置保持不变",
+      "type": "forbidden_state",
+      "when": { "signal": "AxisZ_pos", "below": 0.05 },
+      "forbid": { "signal_type": "xy_motion" } },
+    { "id": "AC4", "desc": "仿真无发散、轴未超出行程、通信健康", "type": "sim_health" }
+  ]
+}

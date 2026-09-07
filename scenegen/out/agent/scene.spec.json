@@ -1,0 +1,134 @@
+{
+  "spec_version": "1.1",
+  "units": "m",
+  "physics": {
+    "gravity": [
+      0,
+      0,
+      -9.81
+    ],
+    "physics_dt": 0.00833,
+    "solver": "tgs"
+  },
+  "ground": {
+    "size": [
+      20,
+      20
+    ],
+    "friction": 0.8
+  },
+  "lighting": "warehouse_preset",
+  "scene_id": "gantry_circle_001",
+  "assets": [
+    {
+      "id": "gantry_1",
+      "type": "gantry_xyz",
+      "pose": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rpy_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "params": {
+        "travel_x": 0.6,
+        "travel_y": 0.4,
+        "travel_z": 0.2,
+        "speed": 0.5
+      }
+    }
+  ],
+  "io_map": [
+    {
+      "plc_var": "AxisX_cmd",
+      "dir": "output",
+      "type": "float",
+      "bind": {
+        "asset": "gantry_1",
+        "quantity": "x_cmd",
+        "range": [
+          0,
+          0.6
+        ]
+      }
+    },
+    {
+      "plc_var": "AxisY_cmd",
+      "dir": "output",
+      "type": "float",
+      "bind": {
+        "asset": "gantry_1",
+        "quantity": "y_cmd",
+        "range": [
+          0,
+          0.4
+        ]
+      }
+    },
+    {
+      "plc_var": "AxisZ_cmd",
+      "dir": "output",
+      "type": "float",
+      "bind": {
+        "asset": "gantry_1",
+        "quantity": "z_cmd",
+        "range": [
+          0,
+          0.2
+        ]
+      }
+    },
+    {
+      "plc_var": "AxisX_pos",
+      "dir": "input",
+      "type": "float",
+      "bind": {
+        "asset": "gantry_1",
+        "quantity": "x_pos",
+        "range": [
+          0,
+          0.6
+        ]
+      }
+    },
+    {
+      "plc_var": "AxisY_pos",
+      "dir": "input",
+      "type": "float",
+      "bind": {
+        "asset": "gantry_1",
+        "quantity": "y_pos",
+        "range": [
+          0,
+          0.4
+        ]
+      }
+    },
+    {
+      "plc_var": "AxisZ_pos",
+      "dir": "input",
+      "type": "float",
+      "bind": {
+        "asset": "gantry_1",
+        "quantity": "z_pos",
+        "range": [
+          0,
+          0.2
+        ]
+      }
+    }
+  ],
+  "script": {
+    "spawn_schedule": [],
+    "perturbations": [],
+    "termination": {
+      "max_sim_time": 30.0,
+      "early_stop": "all_boxes_settled"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "task_id": "conveyor_sort_001",
+  "task_goal": "传送带输送箱体，光电传感器检测到箱体到位后，气缸将箱体推入侧面料槽，实现分拣。带速 0.8m/s，物料为 0.1m 见方、0.5kg 的箱体。",
+  "io_list": [
+    { "name": "PE1_detected", "dir": "input",  "type": "bool",  "device": "photoelectric_sensor", "semantic": "光电传感器检测到箱体" },
+    { "name": "Cyl1_extend",  "dir": "output", "type": "bool",  "device": "pneumatic_cylinder",  "semantic": "气缸推出指令" },
+    { "name": "Cyl1_pos",     "dir": "input",  "type": "float", "device": "pneumatic_cylinder",  "semantic": "气缸位置反馈", "range": [0, 0.4] },
+    { "name": "Belt1_run",    "dir": "output", "type": "bool",  "device": "conveyor_belt",       "semantic": "传送带运行" }
+  ],
+  "constraints": [
+    "无检测信号时气缸禁止动作（安全联锁）",
+    "箱体落入料槽后方可投放下一箱"
+  ],
+  "acceptance": [
+    { "id": "AC1", "desc": "光电检测到箱体后 0.5s 内气缸推出", "type": "event_delay",
+      "from": { "signal": "PE1_detected", "edge": "rising" },
+      "to":   { "signal": "Cyl1_extend",  "edge": "rising" }, "op": "<=", "value": 0.5, "unit": "s" },
+    { "id": "AC2", "desc": "箱体最终落入料槽", "type": "region_containment",
+      "asset": "box_a", "region_center": [2.0, 0.75, 0.25], "tolerance": 0.25, "check_at": "end" },
+    { "id": "AC3", "desc": "无检测信号时气缸禁止动作", "type": "forbidden_state",
+      "when": { "signal": "PE1_detected", "equals": false },
+      "forbid": { "signal": "Cyl1_extend", "equals": true } },
+    { "id": "AC4", "desc": "仿真健康", "type": "sim_health" }
+  ]
+}

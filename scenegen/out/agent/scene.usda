@@ -1,0 +1,280 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "World"
+{
+    custom string simio:sceneId = "gantry_circle_001"
+
+    def PhysicsScene "PhysicsScene"
+    {
+        vector3f physics:gravityDirection = (0, 0, -1)
+        float physics:gravityMagnitude = 9.81
+    }
+
+    def "Looks"
+    {
+        def Material "GroundMat" (
+            prepend apiSchemas = ["PhysicsMaterialAPI"]
+        )
+        {
+            float physics:dynamicFriction = 0.72
+            float physics:restitution = 0.1
+            float physics:staticFriction = 0.8
+        }
+
+        def Material "BeltMat" (
+            prepend apiSchemas = ["PhysicsMaterialAPI"]
+        )
+        {
+            float physics:dynamicFriction = 1
+            float physics:restitution = 0.1
+            float physics:staticFriction = 1.2
+        }
+    }
+
+    def Xform "Ground"
+    {
+        double3 xformOp:translate = (0, 0, -0.05)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+
+        def Cube "Plate" (
+            prepend apiSchemas = ["PhysicsCollisionAPI", "MaterialBindingAPI"]
+        )
+        {
+            rel material:binding = </World/Looks/GroundMat>
+            color3f[] primvars:displayColor = [(0.32, 0.33, 0.35)]
+            double size = 1
+            float3 xformOp:scale = (20, 20, 0.1)
+            uniform token[] xformOpOrder = ["xformOp:scale"]
+        }
+    }
+
+    def Xform "gantry_1"
+    {
+        custom string simio:assetType = "gantry_xyz"
+        custom float simio:axisSpeed = 0.5
+        custom string[] simio:posBody = ["/World/gantry_1/x_carriage", "/World/gantry_1/y_carriage", "/World/gantry_1/z_carriage"]
+        custom float[] simio:posRest = [-0.3, -0.2, 0.177]
+        custom float simio:travelX = 0.6
+        custom float simio:travelY = 0.4
+        custom float simio:travelZ = 0.2
+        quatf xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:translate = (0, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+        def Xform "base" (
+            prepend apiSchemas = ["PhysicsRigidBodyAPI"]
+        )
+        {
+            bool physics:kinematicEnabled = 1
+            double3 xformOp:translate = (0, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+
+            def Cube "base_plate" (
+                prepend apiSchemas = ["PhysicsCollisionAPI"]
+            )
+            {
+                color3f[] primvars:displayColor = [(0.75, 0.76, 0.78)]
+                double size = 1
+                float3 xformOp:scale = (0.9, 0.7, 0.04)
+                double3 xformOp:translate = (0, 0, 0.02)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+            }
+
+            def Cube "paper"
+            {
+                color3f[] primvars:displayColor = [(0.97, 0.97, 0.94)]
+                double size = 1
+                float3 xformOp:scale = (0.48, 0.32, 0.002)
+                double3 xformOp:translate = (0, 0, 0.041)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+            }
+
+            def Cube "column_0" (
+                prepend apiSchemas = ["PhysicsCollisionAPI"]
+            )
+            {
+                color3f[] primvars:displayColor = [(0.35, 0.36, 0.4)]
+                double size = 1
+                float3 xformOp:scale = (0.06, 0.06, 0.55)
+                double3 xformOp:translate = (-0.38, 0, 0.275)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+            }
+
+            def Cube "column_1" (
+                prepend apiSchemas = ["PhysicsCollisionAPI"]
+            )
+            {
+                color3f[] primvars:displayColor = [(0.35, 0.36, 0.4)]
+                double size = 1
+                float3 xformOp:scale = (0.06, 0.06, 0.55)
+                double3 xformOp:translate = (0.38, 0, 0.275)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+            }
+
+            def Cube "x_rail" (
+                prepend apiSchemas = ["PhysicsCollisionAPI"]
+            )
+            {
+                color3f[] primvars:displayColor = [(0.35, 0.36, 0.4)]
+                double size = 1
+                float3 xformOp:scale = (0.82, 0.07, 0.07)
+                double3 xformOp:translate = (0, 0, 0.55)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+            }
+        }
+
+        def Xform "x_carriage" (
+            prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+        )
+        {
+            float physics:mass = 4
+            double3 xformOp:translate = (-0.3, 0, 0.5)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+
+            def Cube "saddle" (
+                prepend apiSchemas = ["PhysicsCollisionAPI"]
+            )
+            {
+                color3f[] primvars:displayColor = [(0.2, 0.55, 0.85)]
+                double size = 1
+                float3 xformOp:scale = (0.09, 0.42, 0.06)
+                double3 xformOp:translate = (0, 0, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+            }
+
+            def Cube "clamp"
+            {
+                color3f[] primvars:displayColor = [(0.16, 0.42, 0.66)]
+                double size = 1
+                float3 xformOp:scale = (0.1, 0.075, 0.03)
+                double3 xformOp:translate = (0, 0, 0.05)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+            }
+        }
+
+        def Xform "y_carriage" (
+            prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+        )
+        {
+            float physics:mass = 3
+            double3 xformOp:translate = (-0.3, -0.2, 0.49000000000000005)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+
+            def Cube "head" (
+                prepend apiSchemas = ["PhysicsCollisionAPI"]
+            )
+            {
+                color3f[] primvars:displayColor = [(0.2, 0.55, 0.85)]
+                double size = 1
+                float3 xformOp:scale = (0.1, 0.1, 0.08)
+                double3 xformOp:translate = (0, 0, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+            }
+
+            def Cube "z_guide" (
+                prepend apiSchemas = ["PhysicsCollisionAPI"]
+            )
+            {
+                color3f[] primvars:displayColor = [(0.45, 0.46, 0.5)]
+                double size = 1
+                float3 xformOp:scale = (0.035, 0.035, 0.32)
+                double3 xformOp:translate = (0, 0, -0.2)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+            }
+        }
+
+        def Xform "z_carriage" (
+            prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+        )
+        {
+            float physics:mass = 0.4
+            double3 xformOp:translate = (-0.3, -0.2, 0.17700000000000002)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+
+            def Cube "slider" (
+                prepend apiSchemas = ["PhysicsCollisionAPI"]
+            )
+            {
+                color3f[] primvars:displayColor = [(0.16, 0.42, 0.66)]
+                double size = 1
+                float3 xformOp:scale = (0.06, 0.06, 0.09)
+                double3 xformOp:translate = (0, 0, 0.155)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+            }
+
+            def Cube "pen" (
+                prepend apiSchemas = ["PhysicsCollisionAPI"]
+            )
+            {
+                color3f[] primvars:displayColor = [(0.85, 0.2, 0.2)]
+                double size = 1
+                float3 xformOp:scale = (0.015, 0.015, 0.27)
+                double3 xformOp:translate = (0, 0, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+            }
+        }
+
+        def PhysicsPrismaticJoint "joint_x" (
+            prepend apiSchemas = ["PhysicsLimitAPI:transX", "PhysicsDriveAPI:transX"]
+        )
+        {
+            float drive:transX:physics:damping = 250
+            float drive:transX:physics:maxForce = 1000
+            float drive:transX:physics:stiffness = 6000
+            float drive:transX:physics:targetPosition = 0
+            uniform token drive:transX:physics:type = "position"
+            float limit:transX:physics:high = 0.6
+            float limit:transX:physics:low = 0
+            uniform token physics:axis = "X"
+            rel physics:body0 = </World/gantry_1/base>
+            rel physics:body1 = </World/gantry_1/x_carriage>
+            bool physics:collisionEnabled = 0
+            point3f physics:localPos0 = (-0.3, 0, 0.5)
+            point3f physics:localPos1 = (0, 0, 0)
+        }
+
+        def PhysicsPrismaticJoint "joint_y" (
+            prepend apiSchemas = ["PhysicsLimitAPI:transY", "PhysicsDriveAPI:transY"]
+        )
+        {
+            float drive:transY:physics:damping = 250
+            float drive:transY:physics:maxForce = 1000
+            float drive:transY:physics:stiffness = 6000
+            float drive:transY:physics:targetPosition = 0
+            uniform token drive:transY:physics:type = "position"
+            float limit:transY:physics:high = 0.4
+            float limit:transY:physics:low = 0
+            uniform token physics:axis = "Y"
+            rel physics:body0 = </World/gantry_1/x_carriage>
+            rel physics:body1 = </World/gantry_1/y_carriage>
+            bool physics:collisionEnabled = 0
+            point3f physics:localPos0 = (0, -0.2, -0.01)
+            point3f physics:localPos1 = (0, 0, 0)
+        }
+
+        def PhysicsPrismaticJoint "joint_z" (
+            prepend apiSchemas = ["PhysicsLimitAPI:transZ", "PhysicsDriveAPI:transZ"]
+        )
+        {
+            float drive:transZ:physics:damping = 80
+            float drive:transZ:physics:maxForce = 300
+            float drive:transZ:physics:stiffness = 4000
+            float drive:transZ:physics:targetPosition = 0
+            uniform token drive:transZ:physics:type = "position"
+            float limit:transZ:physics:high = 0.2
+            float limit:transZ:physics:low = 0
+            uniform token physics:axis = "Z"
+            rel physics:body0 = </World/gantry_1/y_carriage>
+            rel physics:body1 = </World/gantry_1/z_carriage>
+            bool physics:collisionEnabled = 0
+            point3f physics:localPos0 = (0, 0, -0.313)
+            point3f physics:localPos1 = (0, 0, 0)
+        }
+    }
+}
+
