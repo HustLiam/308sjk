@@ -1,4 +1,10 @@
-"""scenegen 回归测试：python scenegen/tests/test_scenegen.py（无 pytest 依赖）。"""
+"""scenegen 回归测试：python scenegen/tests/test_scenegen.py（无 pytest 依赖）。
+
+场景对齐（2026-09-07 负责人指令）：现役场景 = 运动控制 motion3axis（PLC 侧，双链路联调基准）
++ 三轴绘图仪（gantry_xyz，本侧仿真场景）。滚筒/传送带分拣线等示例已删除；
+②b LLM 生成本体归 gc，本侧不带 agent。
+
+"""
 
 import copy
 import json
@@ -14,7 +20,7 @@ from scenegen import build_usd, smoke  # noqa: E402
 from scenegen.validate import validate  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-EXAMPLE = os.path.normpath(os.path.join(HERE, "..", "examples", "conveyor_sort.json"))
+EXAMPLE = os.path.normpath(os.path.join(HERE, "..", "examples", "gantry_plotter.json"))
 
 # 与 out/gantry 场景一致的龙门三轴规格（回归"部件飘移/够不到纸面"缺陷）
 GANTRY_SPEC = {
@@ -48,6 +54,7 @@ GANTRY_SPEC = {
 
 
 def load_example() -> dict:
+    """规范示例：三轴绘图仪（examples/gantry_plotter.json，与 out/gantry 同源）。"""
     with open(EXAMPLE, encoding="utf-8") as f:
         return json.load(f)
 
@@ -78,24 +85,27 @@ def main() -> int:
     tmp = tempfile.mkdtemp(prefix="scenegen_test_")
     n = 0
 
-    # ---- 校验器 ----
+    # ---- 校验器（组件级规则用微型夹具覆盖，非场景） ----
     spec = load_example()
     errs = validate(spec)
-    assert errs == [], f"示例场景应通过校验: {errs}"
+    assert errs == [], f"三轴绘图仪示例应通过校验: {errs}"
     n += 1
 
     bad = copy.deepcopy(spec)
-    bad["assets"][1]["type"] = "warp_drive"
+    bad["assets"][0]["type"] = "warp_drive"
     expect_error(bad, "未知组件类型")
     n += 1
 
     bad = copy.deepcopy(spec)
-    bad["assets"][1]["params"]["stroke"] = 0
+    bad["assets"][0]["params"]["travel_x"] = 0          # 行程下界（开区间）
     expect_error(bad, "超出区间")
     n += 1
 
     bad = copy.deepcopy(spec)
-    bad["assets"][1]["params"]["axis"] = "w"
+    bad["assets"].append({                              # 枚举校验：借用气缸组件的 axis 枚举
+        "id": "cyl_probe", "type": "pneumatic_cylinder",
+        "pose": {"position": [2.0, 2.0, 0]},
+        "params": {"axis": "w", "stroke": 0.2}})
     expect_error(bad, "不在枚举")
     n += 1
 
@@ -105,50 +115,47 @@ def main() -> int:
     n += 1
 
     bad = copy.deepcopy(spec)
-    bad["assets"].append({**bad["assets"][4], "id": "box_b",
-                          "pose": {"position": [0, 0, 0.62]}})   # 与 box_a 同位 → 穿模
+    bad["assets"].append({**bad["assets"][0], "id": "gantry_2"})   # 同位 → 穿模
     expect_error(bad, "布局穿模")
     n += 1
 
     bad = copy.deepcopy(spec)
-    bad["io_map"][0]["bind"] = {"asset": "cyl_1", "quantity": "extend_cmd"}  # 输入绑了指令型 quantity
+    bad["io_map"][0]["dir"] = "input"                   # 指令量被声明为输入
     expect_error(bad, "应绑定 direction=out")
     n += 1
 
     bad = copy.deepcopy(spec)
-    bad["io_map"][1]["type"] = "float"                            # bool 指令绑 float
-    expect_error(bad, "type=float 与 quantity extend_cmd(bool) 不匹配")
+    bad["io_map"][0]["type"] = "bool"                   # bool 指令绑 float 量
+    expect_error(bad, "与 quantity x_cmd")
     n += 1
 
     bad = copy.deepcopy(spec)
-    bad["assets"][2]["parent"] = "ghost"
+    bad["assets"][0]["parent"] = "ghost"
     expect_error(bad, "未声明")
     n += 1
 
-    # ---- 构建 + Modbus 分配 + 结构冒烟 ----
-    spec = load_example()
+    # ---- 构建 + Modbus 分配 + 结构冒烟（三轴绘图仪） ----
+    spec = copy.deepcopy(GANTRY_SPEC)
     result = build_usd.build(spec, tmp)
     io_map = result["io_map"]
     by_var = {e["plc_var"]: e for e in io_map}
-    assert by_var["PE1_detected"]["modbus"]["plc_addr"] == "%IW0"
-    assert by_var["Cyl1_pos"]["modbus"]["plc_addr"] == "%IW1"
-    assert by_var["Cyl1_pos"]["modbus"]["length"] == 2
-    assert by_var["Cyl1_extend"]["modbus"]["plc_addr"] == "%QX0.0"
-    assert by_var["Belt1_run"]["modbus"]["plc_addr"] == "%QX0.1"
-    n += 1
-
-    assert by_var["Cyl1_extend"]["usd_prim"] == "/World/cyl_1/joint"
-    assert by_var["Belt1_run"]["usd_prim"] == "/World/belt_1"
+    assert by_var["AxisX_cmd"]["modbus"]["plc_addr"] == "%QW0"
+    assert by_var["AxisY_cmd"]["modbus"]["plc_addr"] == "%QW2"
+    assert by_var["AxisZ_cmd"]["modbus"]["plc_addr"] == "%QW4"
+    assert by_var["AxisX_pos"]["modbus"]["server_register"] == 0
+    assert by_var["AxisX_pos"]["modbus"]["length"] == 2
+    assert by_var["AxisX_cmd"]["usd_prim"] == "/World/gantry_1/joint_x"
+    assert by_var["AxisZ_pos"]["usd_prim"] == "/World/gantry_1/joint_z"
     n += 1
 
     st = result["st_declaration"]
-    assert "AT %QX0.0 : BOOL" in st and "AT %IW0 : WORD" in st
+    assert "AT %QW0 : REAL" in st and "AT %IW0 : REAL" in st
     n += 1
 
     summary = result["modbus_summary"]
-    assert summary["plc_output_coils"] == 2
-    assert summary["sensor_block_registers"] == 3               # 1(bool) + 2(real)
-    assert summary["openplc_polling"]["length"] == 3
+    assert summary["plc_output_registers"] == 6
+    assert summary["sensor_block_registers"] == 6
+    assert summary["openplc_polling"]["length"] == 6
     n += 1
 
     issues = smoke.structural_check(result["scene_usd"], io_map)
@@ -161,11 +168,7 @@ def main() -> int:
     n += 1
 
     # ---- 龙门三轴：关节链完整性与 Z 轴语义（回归"部件飘移/够不到纸面"） ----
-    spec = copy.deepcopy(GANTRY_SPEC)
-    assert validate(spec) == [], f"gantry spec 应通过校验: {validate(spec)}"
-    result = build_usd.build(spec, tmp)
-    n += 1
-
+    assert validate(copy.deepcopy(GANTRY_SPEC)) == []
     assert_joints_on_rigid_bodies(result["scene_usd"])          # 关节两端全是刚体
     n += 1
     issues = smoke.structural_check(result["scene_usd"], result["io_map"])
@@ -200,11 +203,6 @@ def main() -> int:
     # 显式三轴刚体齐全，io_map 绑定的关节 prim 存在且驱动可写
     for name in ("x_carriage", "y_carriage", "z_carriage"):
         assert stage.GetPrimAtPath(f"/World/gantry_1/{name}").HasAPI("PhysicsRigidBodyAPI"), name
-    by_var = {e["plc_var"]: e for e in result["io_map"]}
-    assert by_var["AxisX_cmd"]["usd_prim"] == "/World/gantry_1/joint_x"
-    assert by_var["AxisZ_pos"]["usd_prim"] == "/World/gantry_1/joint_z"
-    assert by_var["AxisX_cmd"]["modbus"]["plc_addr"] == "%QW0"
-    assert by_var["AxisX_pos"]["modbus"]["server_register"] == 0
     n += 1
 
     # simio:posBody/posRest 位置回读来源齐全（运行时桥依赖，按 x/y/z 顺序）

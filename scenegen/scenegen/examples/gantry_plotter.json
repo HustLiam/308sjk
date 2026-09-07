@@ -1,4 +1,5 @@
 {
+  "scene_id": "gantry_circle_001",
   "spec_version": "1.1",
   "units": "m",
   "physics": {
@@ -18,16 +19,15 @@
     "friction": 0.8
   },
   "lighting": "warehouse_preset",
-  "scene_id": "gantry_circle_001",
   "assets": [
     {
       "id": "gantry_1",
       "type": "gantry_xyz",
       "pose": {
         "position": [
-          0,
-          0,
-          0
+          -0.3,
+          -0.2,
+          0.0
         ],
         "rpy_deg": [
           0,
@@ -128,7 +128,7 @@
     "perturbations": [],
     "termination": {
       "max_sim_time": 30.0,
-      "early_stop": "all_boxes_settled"
+      "early_stop": "none"
     }
   }
 }

@@ -12,7 +12,7 @@
 
 | 总体方案模块 | 本侧职责 | 关键产物 | 状态 |
 |---|---|---|---|
-| ②b 确定性支撑（兼评审方） | SceneSpec 规范/Schema、静态校验器、组件资产库；②b LLM 本体（归 gc）的评审 | 校验器 + `components/` | ✅ 首批落地（`scenegen/`：Schema/validate/build_usd/iomap/smoke/cli + agent 离线闭环；回归 22+4 绿，见 §4.1） |
+| ②b 确定性支撑（兼评审方） | SceneSpec 规范/Schema、静态校验器、组件资产库；②b LLM 本体（归 gc）的评审 | 校验器 + `components/` | ✅ 首批落地（`scenegen/`：Schema/validate/build_usd/iomap/smoke/cli；回归 20 绿，见 §4.1。**本侧不含 LLM/agent**） |
 | ③b Isaac Sim 仿真引擎 | json→USD 确定性构建、加载冒烟、headless lockstep 运行、IOBridge、trace 采集 | `run_sim.py` + 构建器 + iobridge | 🟨 部分（json→USD/冒烟随 scenegen ✅；Modbus 运行时桥+独立运行时+示教器 `runtime/` ✅；lockstep 主循环与 trace 待链路 A） |
 | ④ 判定引擎 | 四类验收准则的确定性规则引擎，产出 `verdict.json` | `verifier/` | 🚧 未启动（设计完成，见 §7） |
 | 链路 A 构建流水线 | `plc.st → iec2c → C → DLL` + shim/地址表自动生成（工具链 Docker 锁版本） | `toolchain/` | 🟨 代码就绪（shim 生成/构建编排/ctypes 绑定 + L2 全绿；**L3 真编译待 matiec+gcc 工具链**，见 §6.2.4） |
@@ -113,65 +113,148 @@
    交付仿真引擎使用
 ```
 
-> **落地状态（2026-09-07）**：②③④ 已实现于仓库 `scenegen/`（schema/validate/build_usd/iomap/smoke/cli + components 注册表 + agent 离线闭环）。
+> **落地状态（2026-09-07）**：②③④ 已实现于仓库 `scenegen/`（schema/validate/build_usd/iomap/smoke/cli + components 注册表）。
 > 入口：`python -m scenegen.cli all <spec>.json -o out/<场景>`；示例产物 `scenegen/out/{example,gantry}`。
 > smoke 在结构检查中固化了一条黄金规则：**关节 body0/body1 必须指向 RigidBodyAPI 刚体**——
 > 纯静态碰撞体作关节体会被 PhysX 整体拒用、链条散架（实机教训，见 §4.5 注）。
 
 ### 4.2 SceneSpec 规范
 
-一个完整的示例（传送带分拣场景）：
+一个完整的示例（**三轴绘图仪**——现役仿真场景，`scenegen/examples/gantry_plotter.json` 与 `out/gantry/` 同源）：
 
 ```json
 {
-  "scene_id": "conveyor_sort_001",
-  "spec_version": "1.0",
+  "scene_id": "gantry_circle_001",
+  "spec_version": "1.1",
   "units": "m",
-  "physics": { "gravity": [0, 0, -9.81], "physics_dt": 0.005, "solver": "tgs" },
-  "ground": { "size": [20, 20], "friction": 0.8 },
+  "physics": {
+    "gravity": [
+      0,
+      0,
+      -9.81
+    ],
+    "physics_dt": 0.00833,
+    "solver": "tgs"
+  },
+  "ground": {
+    "size": [
+      20,
+      20
+    ],
+    "friction": 0.8
+  },
   "lighting": "warehouse_preset",
-
   "assets": [
     {
-      "id": "belt_1",
-      "type": "conveyor_belt",
-      "pose": { "position": [0, 0, 0.5], "rpy_deg": [0, 0, 0] },
-      "params": { "length": 3.0, "width": 0.6, "height": 0.1, "max_speed": 0.8, "initial_speed": 0.0 }
-    },
-    {
-      "id": "cyl_1",
-      "type": "pneumatic_cylinder",
-      "parent": "belt_1",
-      "pose": { "position": [2.0, 0.45, 0.15], "rpy_deg": [0, 0, 0] },
-      "params": { "stroke": 0.25, "rod_diameter": 0.02, "extend_speed": 1.0, "retract_speed": 1.0 }
-    },
-    {
-      "id": "pe_1",
-      "type": "photoelectric_sensor",
-      "parent": "belt_1",
-      "pose": { "position": [1.8, 0.1, 0.15] },
-      "params": { "beam_direction": [0, 1, 0], "beam_length": 0.4 }
-    },
-    { "id": "chute_1", "type": "bin_chute", "parent": "belt_1",
-      "pose": { "position": [2.0, 0.8, 0.0] }, "params": { "size": [0.4, 0.4, 0.3] } },
-    { "id": "box_a", "type": "rigid_box",
-      "pose": { "position": [0.0, 0, 0.7] }, "params": { "size": [0.1, 0.1, 0.1], "mass": 0.5, "color": "#d9534f" } }
+      "id": "gantry_1",
+      "type": "gantry_xyz",
+      "pose": {
+        "position": [
+          -0.3,
+          -0.2,
+          0.0
+        ],
+        "rpy_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "params": {
+        "travel_x": 0.6,
+        "travel_y": 0.4,
+        "travel_z": 0.2,
+        "speed": 0.5
+      }
+    }
   ],
-
   "io_map": [
-    { "plc_var": "PE1_detected",  "dir": "input",  "type": "bool",  "bind": { "asset": "pe_1",   "quantity": "beam_broken" } },
-    { "plc_var": "Cyl1_extend",   "dir": "output", "type": "bool",  "bind": { "asset": "cyl_1",  "quantity": "extend_cmd" } },
-    { "plc_var": "Cyl1_pos",      "dir": "input",  "type": "float", "bind": { "asset": "cyl_1",  "quantity": "position", "range": [0, 0.25] } },
-    { "plc_var": "Belt1_run",     "dir": "output", "type": "bool",  "bind": { "asset": "belt_1", "quantity": "run_cmd" } },
-    { "plc_var": "Belt1_speed",   "dir": "input",  "type": "float", "bind": { "asset": "belt_1", "quantity": "measured_speed" } }
+    {
+      "plc_var": "AxisX_cmd",
+      "dir": "output",
+      "type": "float",
+      "bind": {
+        "asset": "gantry_1",
+        "quantity": "x_cmd",
+        "range": [
+          0,
+          0.6
+        ]
+      }
+    },
+    {
+      "plc_var": "AxisY_cmd",
+      "dir": "output",
+      "type": "float",
+      "bind": {
+        "asset": "gantry_1",
+        "quantity": "y_cmd",
+        "range": [
+          0,
+          0.4
+        ]
+      }
+    },
+    {
+      "plc_var": "AxisZ_cmd",
+      "dir": "output",
+      "type": "float",
+      "bind": {
+        "asset": "gantry_1",
+        "quantity": "z_cmd",
+        "range": [
+          0,
+          0.2
+        ]
+      }
+    },
+    {
+      "plc_var": "AxisX_pos",
+      "dir": "input",
+      "type": "float",
+      "bind": {
+        "asset": "gantry_1",
+        "quantity": "x_pos",
+        "range": [
+          0,
+          0.6
+        ]
+      }
+    },
+    {
+      "plc_var": "AxisY_pos",
+      "dir": "input",
+      "type": "float",
+      "bind": {
+        "asset": "gantry_1",
+        "quantity": "y_pos",
+        "range": [
+          0,
+          0.4
+        ]
+      }
+    },
+    {
+      "plc_var": "AxisZ_pos",
+      "dir": "input",
+      "type": "float",
+      "bind": {
+        "asset": "gantry_1",
+        "quantity": "z_pos",
+        "range": [
+          0,
+          0.2
+        ]
+      }
+    }
   ],
-
   "script": {
-    "spawn_schedule": [
-      { "asset_template": "box_a", "at_time": [0.0], "position": [0, 0, 0.7], "count": 1 }
-    ],
+    "spawn_schedule": [],
     "perturbations": [],
-    "termination": { "max_sim_time": 30.0, "early_stop": "all_boxes_settled" }
+    "termination": {
+      "max_sim_time": 30.0,
+      "early_stop": "none"
+    }
   }
 }
 ```
@@ -197,6 +280,8 @@
 | `pid_valve` / `tank` | 一阶惯性被控对象（仿真侧自带，用于过程控制场景） | `opening`(in), `level`(out) |
 
 组件库中每个组件附带一份**参数校验规则**（如气缸 `stroke ∈ (0, 1m]`、`extend_speed ∈ (0.01, 5]`）和一份** quantity 清单**，供 SceneSpec 校验器和 io_map 校验器使用。
+
+> **现役场景（2026-09-07 负责人指令对齐）**：运动控制 motion3axis（PLC 侧，双链路联调基准，后续按需扩展其 USD 组件）+ 三轴绘图仪 `gantry_xyz`（本侧仿真场景）。滚筒/传送带分拣线等早期示例已删除（git 历史可回溯）；清单内其余组件为预置能力，按后续场景启用。
 
 ### 4.4 SceneSpec → USD 构建器（代码骨架）
 
@@ -603,7 +688,7 @@ sim-loop/（目标布局）                    本仓现状
 ├── codegen/               # xml2st 接入、shim/地址表生成   → ⬜ 链路 A 未启动（xml2st 复用 lx src/pipeline）
 ├── scenegen/              # SceneSpec Schema、校验器、USD 构建器
 │                          → ✅ 本仓 scenegen/：scenegen/{schema.json,components.py,validate.py,
-│                             build_usd.py,iomap.py,smoke.py,cli.py,agent/ 离线闭环} + out/ 产物
+│                             build_usd.py,iomap.py,smoke.py,cli.py} + out/ 产物（不含 LLM/agent——②b 本体归 gc）
 ├── components/            # 组件 USD 资产库 + quantity 清单 → ✅ 程序化构建（components.py 注册表，9 类）
 ├── runtime/
 │   ├── run_sim.py         # Isaac headless 主脚本（lockstep 循环）→ ⬜ 待链路 A（同型前驱 isaac_jog_runtime.py ✅）
@@ -628,7 +713,7 @@ OpenPLC v3 Docker 镜像（仅验收链路）。
 
 | 时间 | 目标 | 验收标志 |
 |---|---|---|
-| D1–2 | 手工制作首个场景：气缸 + 光电 + 传送带组件 USD，`run_sim.py` 能 headless 跑完并出 trace | 人工写的 ST（气缸推箱）仿真通过 |
+| D1–2 | 手工制作首个场景（✅ 已由三轴绘图仪替代推进：gantry_xyz 场景 + runtime 示教链路） | headless 跑完并出 trace |
 | D3–4 | matiec 流水线打通：示例 ST → DLL → ctypes 在循环内 lockstep 跑 | 逻辑改动能反映到仿真行为 |
 | D5–7 | SceneSpec Schema + 构建器 + 校验器；LLM 接入生成 SceneSpec | LLM 生成的场景加载成功 |
 | D8–10 | 判定引擎 4 种准则类型 + 反馈 Prompt 拼装 | 人为埋错能被正确判 FAIL 并归因 |
