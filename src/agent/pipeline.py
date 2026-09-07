@@ -29,11 +29,20 @@ _PROJECT_RE = re.compile(r"<project[\s\S]*?</project>")
 
 
 def extract_xml(text):
-    """从模型回复中提取 <project> XML；找不到返回 None。"""
+    """从模型回复中提取 <project> XML；找不到返回 None。
+
+    serve.py 部署端要求 body 以 <?xml 声明开头，而本函数按 <project> 片段
+    提取会丢声明——统一补回（坑 P15：LLM 产物首次打到真部署端时暴露）。
+    """
     m = _FENCE_RE.search(text)
     candidate = m.group(1) if m else text
     m2 = _PROJECT_RE.search(candidate)
-    return m2.group(0) if m2 else None
+    if not m2:
+        return None
+    project = m2.group(0)
+    if not project.lstrip().startswith("<?xml"):
+        project = '<?xml version="1.0" encoding="UTF-8"?>\n' + project
+    return project
 
 
 class PLCGenerator:

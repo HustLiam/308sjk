@@ -131,6 +131,7 @@ def main():
     args = parser.parse_args()
 
     from .aml_parser import parse_aml
+    from .attribution import AttributionEngine
     from .client import BigModelClient
     from .orchestrator import Orchestrator
     from .pipeline import PLCGenerator
@@ -234,7 +235,10 @@ def main():
         elif ev == "best_effort":
             print("   △ 达迭代上限，输出最优轮 + 失败报告")
 
-    orch = Orchestrator(max_iters=args.max_iters)
+    orch = Orchestrator(max_iters=args.max_iters,
+                        attribution_engine=AttributionEngine(
+                            client=BigModelClient(get_api_key())
+                            if get_api_key() else None))
     res = orch.solve(spec, generator, deploy=deploy,
                      acceptance=args.scenario if acceptance else None,
                      echo=on_event,

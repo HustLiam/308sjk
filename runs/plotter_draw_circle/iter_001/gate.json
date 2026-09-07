@@ -1,0 +1,16 @@
+{
+  "gate": "deploy",
+  "ok": false,
+  "errors": [
+    "body 不是 XML（应以 <?xml 开头）"
+  ],
+  "attribution": {
+    "gate": "deploy",
+    "errors": [
+      "body 不是 XML（应以 <?xml 开头）"
+    ],
+    "pitfalls": [],
+    "similar_fixes": [],
+    "repair_hints": []
+  }
+}

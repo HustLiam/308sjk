@@ -10,6 +10,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
+from agent import patternlib  # noqa: E402
 from agent.patternlib import CATALOG, DEFAULT_PICKS, pattern_cards, render_cards  # noqa: E402
 
 
@@ -26,8 +27,9 @@ class TestSelection:
         cards = pattern_cards("煮咖啡")
         assert [c["key"] for c in cards] == list(DEFAULT_PICKS)
 
-    def test_single_seed_returns_one_card(self):
-        # 场景库重组后仅一种子：picks=2 也只返回 1 张
+    def test_single_seed_returns_one_card(self, tmp_path, monkeypatch):
+        # 隔离自动策展注册表：纯 CATALOG 下仅一种子，picks=2 也只返回 1 张
+        monkeypatch.setattr(patternlib, "REGISTRY_PATH", tmp_path / "none.json")
         assert len(pattern_cards("三轴运动")) == 1
 
 
