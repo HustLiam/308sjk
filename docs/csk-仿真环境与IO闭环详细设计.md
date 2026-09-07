@@ -12,8 +12,8 @@
 
 | 总体方案模块 | 本侧职责 | 关键产物 | 状态 |
 |---|---|---|---|
-| ②b 确定性支撑（兼评审方） | SceneSpec 规范/Schema、静态校验器、组件资产库；②b LLM 本体（归 gc）的评审 | 校验器 + `components/` | 🚧 未启动（设计完成，见 §4） |
-| ③b Isaac Sim 仿真引擎 | json→USD 确定性构建、加载冒烟、headless lockstep 运行、IOBridge、trace 采集 | `run_sim.py` + 构建器 + iobridge | 🚧 未启动（设计完成，见 §5） |
+| ②b 确定性支撑（兼评审方） | SceneSpec 规范/Schema、静态校验器、组件资产库；②b LLM 本体（归 gc）的评审 | 校验器 + `components/` | ✅ 首批落地（`scenegen/`：Schema/validate/build_usd/iomap/smoke/cli + agent 离线闭环；回归 22+4 绿，见 §4.1） |
+| ③b Isaac Sim 仿真引擎 | json→USD 确定性构建、加载冒烟、headless lockstep 运行、IOBridge、trace 采集 | `run_sim.py` + 构建器 + iobridge | 🟨 部分（json→USD/冒烟随 scenegen ✅；Modbus 运行时桥+独立运行时+示教器 `runtime/` ✅；lockstep 主循环与 trace 待链路 A） |
 | ④ 判定引擎 | 四类验收准则的确定性规则引擎，产出 `verdict.json` | `verifier/` | 🚧 未启动（设计完成，见 §7） |
 | 链路 A 构建流水线 | `plc.st → iec2c → C → DLL` + shim/地址表自动生成（工具链 Docker 锁版本） | `toolchain/` | 🚧 未启动（设计完成，见 §6.2） |
 | 详细设计文档 | 本文档 | — | ✅ 完成 |
@@ -112,6 +112,11 @@
    ▼
    交付仿真引擎使用
 ```
+
+> **落地状态（2026-09-07）**：②③④ 已实现于仓库 `scenegen/`（schema/validate/build_usd/iomap/smoke/cli + components 注册表 + agent 离线闭环）。
+> 入口：`python -m scenegen.cli all <spec>.json -o out/<场景>`；示例产物 `scenegen/out/{example,gantry}`。
+> smoke 在结构检查中固化了一条黄金规则：**关节 body0/body1 必须指向 RigidBodyAPI 刚体**——
+> 纯静态碰撞体作关节体会被 PhysX 整体拒用、链条散架（实机教训，见 §4.5 注）。
 
 ### 4.2 SceneSpec 规范
 
@@ -237,6 +242,10 @@ def build(spec: dict, out_path: str):
 
 校验失败的具体条目（`"cyl_1.stroke=0 超出 (0,1]"` 这类）拼进反馈 Prompt，LLM 只需做定向修改。
 
+> **落地补充（2026-09-07）**：静态校验之外，转换后的结构冒烟（`scenegen/scenegen/smoke.py: structural_check`）
+> 固化了一条黄金规则——**关节 body0/body1 必须指向带 RigidBodyAPI 的刚体**：纯静态碰撞体作关节体
+> 会被 PhysX 整体拒用、整条运动链散架（实机复现过，龙门部件因此飘移/穿模）。
+
 ---
 
 ## 5. Isaac Sim 仿真引擎（③b）
@@ -250,6 +259,8 @@ def build(spec: dict, out_path: str):
 | Docker（NGC 镜像 `nvcr.io/nvidia/isaac-sim:4.5.0`） | 服务器部署、批量回归 | GPU 直通，headless 运行 |
 
 硬件要求：需要 RTX GPU（渲染/ livestream）；headless 物理仿真对渲染无要求，但官方仍以 RTX 为最低配置。开发机建议 ≥ RTX 3060、32GB 内存。
+
+> **当前实机基准（2026-09-07）**：Isaac Sim **Full 6.0.0**（Ubuntu + RTX 4080 SUPER，GUI 与 Script Editor 工作流已验证）。`runtime/` 脚本按 6.0 入口 `isaacsim.simulation_app.SimulationApp` 编写（附录 A）；6.0 的 API 变化（`omni.isaac.*` 垫片移除、`isaacsim.core.*` 弃用期、Python 3.12）在选型时已纳入考量。
 
 ### 5.2 四种启动方式（Windows 命令）
 
@@ -342,6 +353,12 @@ class IOBridge:
 - **夹爪**：`suck_cmd` 上升沿调用 SurfaceGripper 的 attach/detach。
 
 这样，**PLC 看到的就是真实的物理后果**（气缸伸出需要时间、物料遮挡有先有后），验证才有意义。
+
+> **实机排障知识（Isaac Sim 6.0 / 龙门三轴，2026-09-07）**——三条已固化为代码与回归：
+> 1. **关节开场驱动目标必须等于作者位姿（零初始误差）**：authoring 了一个非零 target（如抬笔位 0.2m）而场景从 q=0 启动时，Play 瞬间误差饱和驱动全力（300N）弹射轻质量滑块，60Hz 下单步位移厘米级、隧穿限位扎穿台面。抬笔类动作一律由运行时完成；
+> 2. **指令写入必须按轴速速率限制**（`runtime/stage_link.py` 按 `simio:axisSpeed` 斜坡）：GUI 按钮或 PLC 一次写入的阶跃指令同样会弹射机构；
+> 3. **关节固定端用 kinematic 锚刚体**（`scenegen` `_kinematic_body`）：关节 body 引用纯静态碰撞体会被 PhysX 拒用，整链散架（同 §4.5 黄金规则）。
+> 运行时桥已落地：`runtime/gantry_bridge.py`（寄存器布局由 io_map 推导）+ `stage_link.py`（stage 接线，编辑器/独立运行时共用）+ `isaac_jog_runtime.py`（免 Script Editor 的独立运行时，闭环 run_sim 骨架的同型前驱）。
 
 ### 5.5 一次仿真的输入与产物
 
@@ -564,22 +581,32 @@ class SoftPLC:
 
 ## 8. 工程目录与依赖
 
+目标布局（sim-loop）与**当前落地对照**（2026-09-07，monorepo 根目录）：
+
 ```
-sim-loop/
-├── orchestrator/          # 端到端编排、迭代管理
-├── codegen/               # xml2st 接入（复用 PLC 侧）、shim/地址表生成（ST 生成本体归智能体侧）
+sim-loop/（目标布局）                    本仓现状
+├── orchestrator/          # 端到端编排、迭代管理          → （gc 侧 src/agent/orchestrator）
+├── codegen/               # xml2st 接入、shim/地址表生成   → ⬜ 链路 A 未启动（xml2st 复用 lx src/pipeline）
 ├── scenegen/              # SceneSpec Schema、校验器、USD 构建器
-├── components/            # 组件 USD 资产库 + quantity 清单 + 参数规则
+│                          → ✅ 本仓 scenegen/：scenegen/{schema.json,components.py,validate.py,
+│                             build_usd.py,iomap.py,smoke.py,cli.py,agent/ 离线闭环} + out/ 产物
+├── components/            # 组件 USD 资产库 + quantity 清单 → ✅ 程序化构建（components.py 注册表，9 类）
 ├── runtime/
-│   ├── run_sim.py         # Isaac headless 主脚本（lockstep 循环）
-│   ├── iobridge/          # IOBridge 各类 binding
-│   └── plc_binding.py     # ctypes 封装
-├── verifier/              # 判定引擎 + trace 分析 + 反馈 Prompt 拼装
-├── toolchain/             # matiec 构建脚本、Dockerfile
-└── runs/                  # 迭代产物（git 管理）
+│   ├── run_sim.py         # Isaac headless 主脚本（lockstep 循环）→ ⬜ 待链路 A（同型前驱 isaac_jog_runtime.py ✅）
+│   ├── iobridge/          # IOBridge 各类 binding          → 🟨 Modbus 桥版 stage_link.py ✅
+│   └── plc_binding.py     # ctypes 封装                    → ⬜ 链路 A
+│                          → ✅ 另有 gantry_bridge.py/isaac_modbus_server.py/isaac_jog_runtime.py/
+│                             gantry_jog_gui.py（Modbus TCP 桥 + 示教器，tests/ 回环 9 项）
+├── verifier/              # 判定引擎 + trace 分析 + 反馈 Prompt 拼装 → ⬜ 未启动
+├── toolchain/             # matiec 构建脚本、Dockerfile      → ⬜ 链路 A
+└── runs/                  # 迭代产物（git 管理）             → scenegen/out/（场景构建产物）
 ```
 
-依赖：Isaac Sim 4.5（原生安装或 pip）、matiec（Beremiz 项目）、gcc/MinGW 或 WSL、Python 3.10+（pandas / pyarrow / jsonschema / ctypes）、OpenPLC v3 Docker 镜像（仅验收链路）、pymodbus（仅链路 B）。
+依赖：Isaac Sim **6.0**（实机基准，Full 安装；pip 元包见 §5.1）、matiec（Beremiz 项目，链路 A）、
+gcc/MinGW 或 WSL（链路 A）、Python 3.12（Isaac 6.0 强制；scenegen 3.10+ 亦可）——
+scenegen：usd-core / jsonschema（`scenegen/requirements.txt`）；runtime：**pymodbus>=3.7,<3.9**
+（服务端从站 API 锁定，`runtime/requirements.txt`）；pandas / pyarrow（判定引擎用，待实现）、
+OpenPLC v3 Docker 镜像（仅验收链路）。
 
 ---
 
@@ -595,22 +622,24 @@ sim-loop/
 
 ### 待办（按优先级）
 
-1. **D1–D4 先行**：手工首场景 + matiec 流水线（链路 A 构建是双链路联调的前置，**lx 在协作看板等待中**）；
-2. SceneSpec Schema/校验器定稿（②b 闸门——gc 生成器接入前置；gc 已按本文 §7.1 对齐 acceptance 结构，待本侧确认冻结）；
-3. `io_map` 结构落地（契约 ③，主方案 §3.3 定义、本侧实现——gc 一致性检查器 R5 腿已就绪等待）；
-4. 判定引擎四类准则实现（verdict 结构底稿见 §7.1）；
-5. 与 lx 双链路联调（motion3axis 场景 A/B trace 比对，主方案风险表"双链路行为不一致"的应对）。
+1. **D3–4 matiec 流水线（下一优先级）**：链路 A 构建是双链路联调的前置，**lx 在协作看板等待中**；
+2. **真机复验收尾**：龙门场景 Play 稳定性与示教（joint_z 弹射穿纸已修复，待 Isaac 实机确认）；随后按 §5.3 骨架把 `isaac_jog_runtime.py` 扩展为带 trace 采集的 `run_sim.py`；
+3. SceneSpec Schema/校验器已落地（`scenegen/`），待与 gc 场景描述生成器对接联调 + acceptance 结构确认冻结；
+4. `io_map` 契约③定稿：实现样例已出（`scenegen/scenegen/iomap.py` + `out/gantry/io_map.json`），**编码（float32 vs 桥侧 INT16 定点）随共同议题"float32/INT16 换算归属"定稿后按 §8.3 RFC 同步**；
+5. 判定引擎四类准则实现（verdict 结构底稿见 §7.1）；
+6. 与 lx 双链路联调（motion3axis 场景 A/B trace 比对，主方案风险表"双链路行为不一致"的应对）。
 
 ---
 
 ## 附录 A：Isaac Sim 版本 API 对照
 
-| 功能 | Isaac Sim ≤ 4.1 | Isaac Sim ≥ 4.2（本文基准） |
-|---|---|---|
-| 应用入口 | `from omni.isaac.kit import SimulationApp` | `from isaacsim import SimulationApp` |
-| World | `omni.isaac.core.api.World` | `isaacsim.core.api.World` |
-| 传感器 | `omni.isaac.sensor` / `omni.isaac.core.api` | `isaacsim.core.api.sensors` |
-| URDF 导入 | 扩展 `omni.isaac.urdf_importer` | 扩展 `isaacsim.asset_importer.urdf`（命令 `URDFParseAndImportFile` 不变） |
+| 功能 | Isaac Sim ≤ 4.1 | Isaac Sim ≥ 4.2 | Isaac Sim 6.0（**本仓 runtime 基准**） |
+|---|---|---|---|
+| 应用入口 | `from omni.isaac.kit import SimulationApp` | `from isaacsim import SimulationApp` | `from isaacsim.simulation_app import SimulationApp`（`runtime/isaac_jog_runtime.py` 采用） |
+| World | `omni.isaac.core.api.World` | `isaacsim.core.api.World` | 同左（弃用期仍可用，新方向 `isaacsim.core.experimental.*`） |
+| 传感器 | `omni.isaac.sensor` / `omni.isaac.core.api` | `isaacsim.core.api.sensors` | 迁移至 `isaacsim.sensors.experimental.*` |
+| URDF 导入 | 扩展 `omni.isaac.urdf_importer` | 扩展 `isaacsim.asset_importer.urdf` | 同左（`fix_base` 三态） |
+| Python | 3.10 | 3.10 / 3.11 | **3.12** |
 
 ## 附录 B：遗留决策点
 
