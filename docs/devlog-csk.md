@@ -2,6 +2,62 @@
 
 > 仅技术说明（改了什么 / 为什么 / 如何验证 / 技术坑）。进度协调内容一律写 `docs/协作看板.md`。本文件在 master 合入前移除，永不进 master。
 
+## 2026-09-07 (2) MuJoCo 轻量仿真面：Isaac 6.x 关节回归的备选后端
+
+### 背景（真机联调结论，Isaac 链路的现状）
+
+真机（RTX 4080SUPER / Isaac 6.0.0-rc.59 离线包与 6.0.1.0 pip 正式版双双实测）
+上龙门机构**不动**。经 tensor API（PhysX 真值）逐轴排查：同场景内自由刚体（探针
+立方体）下落/碰撞/静止全部正常，但棱柱关节链行为系统性错乱——X 轴驱动方向反转
+（目标 +0.3m 实际走到 -0.3m）、Y 轴被拖到限位外、Z 轴"冻结"实为反向驱动力被笔-
+纸接触挡住。交换 body0/body1、加 ArticulationRootAPI、静态基座、CPU dynamics
+（PhysxSceneAPI.EnableGPUDynamics=False）逐一对照均无效——**Isaac 6.x PhysX
+(110.1.11/110.1.13) 对 maximal-coordinate 棱柱关节链的解算回归**，非本侧代码或
+场景问题（USD 语义按 4.5 时代规范书写，自由刚体路径同一进程正常）。
+
+### 改了什么
+
+新增 MuJoCo 后端（`runtime/mujoco_build.py` + `mujoco_jog_runtime.py`），与
+Isaac 工作流 A 同构、与 USD 链路消费同一份 scene.spec.json：
+
+- **组装器**：gantry_xyz 组件 → MJCF（三段滑动关节链 base→x→y→z + position
+  执行器 + 行程限位）。质量 4/3/0.4kg、kp 6000/6000/4000、阻尼 250/250/80 与
+  USD DriveAPI 同源；关节 q=0=作者位姿、Z 0=落笔/travel=抬笔语义不变；
+- **运行时**：主循环 = 指令寄存器 →（axisSpeed 速率限制，与 StageLink 同语义）
+  → `data.ctrl`；`mj_step` 后 `data.qpos` → 反馈寄存器。Modbus 层完整复用
+  `gantry_bridge`（布局/钳位/开场抬笔约定不变），PLC 侧与示教器零改动；
+- **依赖**：`mujoco>=3.2`（pip 几 MB，无 GPU/许可证依赖），已登记
+  `runtime/requirements.txt`。
+
+### 技术坑（MJCF 组装的两处自碰撞顶死）
+
+- MuJoCo 只过滤**父子** body 间的碰撞，隔代（如 x_carriage 的 saddle ↔ z_carriage
+  的 slider）照样碰撞；而龙门几何本来就是"滑座骑导轨/滑块穿床头"的视觉互穿形态，
+  开场即 -15mm 穿深 → 600N 驱动力全被接触力顶死（acc=0、关节以 4mm/s 蠕动）。
+  排查法：`mjDSBL_CONTACT` 关接触对照 + 遍历 `data.contact` 打印几何对；
+- 修法：机构件（立柱/导轨/滑座/床头/滑块体）`contype=0 conaffinity=0`，只保留
+  **笔尖↔纸面**与整机↔地面两类功能接触——机构运动由关节限位约束，不靠碰撞。
+
+### 验证
+
+- `tests/test_mujoco_loop.py` 5 项全绿：MJCF 可编译且限位与 io_map 布局一致、
+  指令经斜坡驱动真实 qpos（非指令回声）、超程 9.9m 钳位到 0.6、开场 Z 0.4s 抬到
+  0.2、阶跃成斜坡（0.2s 时 X≈0.1）；
+- 进程级端到端：runtime 启动 ~4s（Isaac 20s~3min），spy 客户端拖 (0.3,0.2)+落笔
+  0.8s 到位、超程钳位 ✓；
+- 示教器全闭环：GUI 拖动 → Modbus → 斜坡 → MuJoCo → qpos 反馈 → 画笔回读，
+  读数栏显示真实位置（X=0.300 Y=0.200 Z=0.000）；
+- 根目录 pytest 75 项 + runtime 桥回环 6 + StageLink 3 全绿（无回归）。
+
+### 附带修复（真机联调期间发现，一并入库）
+
+- `gantry_jog_gui.py` 写失败路径两个 bug：① `except ... as exc` 的 `exc` 在块外
+  被 Python 删除而延迟 lambda 引用 → NameError，状态栏永远不显示"写入失败"；
+  ② 失败后未断开死连接，`connected` 仍 True，重连需点两次"连接"。修法：先捕获
+  `msg=str(exc)` 再调度 after 回调，失败时补 `client.disconnect()`；
+- `isaac_jog_runtime.py` import 双路兼容（离线包 `isaacsim.simulation_app` /
+  pip 元包 `isaacsim` 顶层导出）。
+
 ## 2026-09-07 真机回归修复：joint_z 开场饱和弹射穿纸
 
 ### 现象（真机 Play 复现）
