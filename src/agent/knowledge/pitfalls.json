@@ -35,9 +35,11 @@
         "cannot AND",
         "cannot OR",
         "invalid operation",
+        "Data type mismatch for 'AND'",
+        "Data type mismatch for 'OR'",
         "AND 16#"
       ],
-      "diagnosis": "对 INT 做 AND/OR 位运算（cw/sw 控制字状态字场景高发）",
+      "diagnosis": "对 INT 做 AND/OR 位运算（cw/sw 控制字状态字场景高发：声明成 INT 而非 WORD）",
       "fix": "cw/sw 一律声明 WORD 再做位运算；比较用 (sw AND 16#0008) <> 0",
       "source": "lx 避坑清单 #3"
     },

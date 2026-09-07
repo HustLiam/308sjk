@@ -1,0 +1,25 @@
+{
+  "gate": "deploy",
+  "ok": false,
+  "errors": [
+    "matiec 编译失败:\nOptimizing ST program...\nGenerating C files...\n./st_files/783164.st:86-10..86-22: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:88-20..88-32: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:148-16..148-27: error: Data type mismatch for 'OR' expression.\n./st_files/783164.st:165-33..165-45: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:165-58..165-70: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:170-20..170-32: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:171-17..171-29: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:171-50..171-62: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:172-17..172-29: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:172-50..172-62: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:173-17..173-29: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:176-13..176-25: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:179-13..179-25: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:200-10..200-22: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:201-16..201-27: error: Data type mismatch for 'OR' expression.\n./st_files/783164.st:203-16..203-28: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:207-27..207-39: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:219-13..219-25: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:308-17..308-31: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:308-46..308-60: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:308-75..308-89: error: Data type mismatch for 'AND' expression.\n21 error(s) found. Bailing out!\nError generating C files\nCompilation finished with errors!"
+  ],
+  "attribution": {
+    "gate": "deploy",
+    "errors": [
+      "matiec 编译失败:\nOptimizing ST program...\nGenerating C files...\n./st_files/783164.st:86-10..86-22: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:88-20..88-32: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:148-16..148-27: error: Data type mismatch for 'OR' expression.\n./st_files/783164.st:165-33..165-45: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:165-58..165-70: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:170-20..170-32: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:171-17..171-29: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:171-50..171-62: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:172-17..172-29: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:172-50..172-62: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:173-17..173-29: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:176-13..176-25: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:179-13..179-25: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:200-10..200-22: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:201-16..201-27: error: Data type mismatch for 'OR' expression.\n./st_files/783164.st:203-16..203-28: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:207-27..207-39: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:219-13..219-25: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:308-17..308-31: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:308-46..308-60: error: Data type mismatch for 'AND' expression.\n./st_files/783164.st:308-75..308-89: error: Data type mismatch for 'AND' expression.\n21 error(s) found. Bailing out!\nError generating C files\nCompilation finished with errors!"
+    ],
+    "pitfalls": [
+      {
+        "id": "P05",
+        "title": "BOOL→INT 需显式转换",
+        "diagnosis": "BOOL 与 INT 混算（如把布尔累加进 INT 计数）",
+        "fix": "一律 BOOL_TO_INT()/INT_TO_BOOL() 显式转换"
+      }
+    ],
+    "similar_fixes": [],
+    "repair_hints": [
+      "一律 BOOL_TO_INT()/INT_TO_BOOL() 显式转换"
+    ]
+  }
+}
