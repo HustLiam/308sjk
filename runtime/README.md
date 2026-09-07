@@ -51,9 +51,13 @@ python gantry_jog_gui.py --host <Isaac主机IP>                                 
 
 ```bash
 pip install mujoco>=3.2                                  # 一次安装（几 MB，无 GPU/许可证依赖）
-python mujoco_jog_runtime.py --scene ../scenegen/out/gantry/scene.spec.json --watch
+python mujoco_jog_runtime.py --scene ../scenegen/out/gantry/scene.spec.json --watch --viewer
 python gantry_jog_gui.py                                  # 示教器零改动直接连（:5020 同端口同布局）
 ```
+
+`--viewer` 额外打开原生 3D 视窗（可拖转/缩放）；**落笔轨迹以深蓝墨点保留在纸面上**
+（环形缓冲 2000 点），抬笔超过 12mm 自动断笔。纸张摆在笔尖行程中心，画布坐标
+（左下 = 原点）与视窗世界坐标一一对应。
 
 `mujoco_build.py` 消费与 USD 链路**同一份** scene.spec.json 组装 MJCF（三段滑动关节链
 + 位置执行器 + 行程限位，质量/kp/阻尼与 USD 侧同源），运行时主循环与工作流 A 同构：
@@ -80,7 +84,7 @@ X/Y 指令 0 = 行程原点（左下角），与示教器画布一致。
 ```bash
 python tests/test_modbus_loop.py          # 桥回环 6 项（不需要 usd-core）
 python tests/test_stage_link.py           # StageLink 真场景接线 2 项（需要 usd-core）
-python tests/test_mujoco_loop.py          # MuJoCo 闭环 5 项（需要 mujoco）
+python tests/test_mujoco_loop.py          # MuJoCo 闭环 6 项（需要 mujoco）
 # 或 python -m pytest tests/ -v
 ```
 

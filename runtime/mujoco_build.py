@@ -17,10 +17,6 @@ import os
 
 # gantry_xyz 组件的 MJCF 几何/动力学常数（与 scenegen/components.py 的 USD 侧保持同源数值）
 GANTRY_CONST = {
-    # 关节链相对位姿（米，相对父级）：与 USD 场景作者位姿一致
-    "x_offset": (0.0, 0.2, 0.5),        # x_carriage ← gantry 根
-    "y_offset": (0.0, -0.2, -0.01),     # y_carriage ← x_carriage
-    "z_offset": (0.0, 0.0, -0.313),     # z_carriage ← y_carriage
     # 质量（kg）：x/y/z 滑块
     "mass": (4.0, 3.0, 0.4),
     # 位置执行器增益（kp）与关节阻尼：对齐 USD DriveAPI 的 stiffness/damping
@@ -70,34 +66,41 @@ def build_mjcf(spec: dict) -> str:
   <worldbody>
     <geom name="floor" type="plane" size="10 10 0.1" rgba="0.92 0.92 0.9 1"/>
     <body name="gantry_base" pos="{_vec((gx, gy, gz))}">
-      <geom name="base_plate" type="box" size="{_vec(c['base_half'])}" pos="0 0 0.02"
-            rgba="0.75 0.76 0.78 1"/>
-      <geom name="paper" type="box" size="0.24 0.16 0.001" pos="0 0 0.041"
-            rgba="0.97 0.97 0.94 1"/>
+      <!-- 工作区布局：spec pose = 笔尖行程原点（左下角），纸张/底板以行程中心摆放，
+           笔尖扫掠 [pose, pose+travel] 恰好铺满纸面（USD 侧同样存在纸张偏置在
+           根原点的布局缺陷，见 devlog 2026-09-07(3)；MJCF 侧已修正） -->
+      <geom name="base_plate" type="box" size="{travel[0] / 2 + 0.12:.6g} {travel[1] / 2 + 0.12:.6g} 0.02"
+            pos="{travel[0] / 2:.6g} {travel[1] / 2:.6g} 0.02" rgba="0.75 0.76 0.78 1"/>
+      <geom name="paper" type="box" size="{travel[0] / 2:.6g} {travel[1] / 2:.6g} 0.001"
+            pos="{travel[0] / 2:.6g} {travel[1] / 2:.6g} 0.041" rgba="0.97 0.97 0.94 1"/>
       <!-- 立柱/导轨为结构装饰件：与滑座在作者位姿天然互穿（滑座"骑"在导轨上），
            关闭其碰撞以免顶死关节；功能接触（笔尖↔纸面、整体↔地面）不受影响 -->
-      <geom name="column_l" type="box" size="0.03 0.03 0.275" pos="-0.38 0 0.275"
+      <geom name="column_l" type="box" size="0.03 0.03 0.275"
+            pos="{travel[0] / 2 - 0.38:.6g} 0 0.275"
             contype="0" conaffinity="0" rgba="0.35 0.36 0.4 1"/>
-      <geom name="column_r" type="box" size="0.03 0.03 0.275" pos="0.38 0 0.275"
+      <geom name="column_r" type="box" size="0.03 0.03 0.275"
+            pos="{travel[0] / 2 + 0.38:.6g} 0 0.275"
             contype="0" conaffinity="0" rgba="0.35 0.36 0.4 1"/>
-      <geom name="x_rail" type="box" size="0.41 0.035 0.035" pos="0 0 0.55"
+      <geom name="x_rail" type="box" size="{travel[0] / 2 + 0.11:.6g} 0.035 0.035"
+            pos="{travel[0] / 2:.6g} 0 0.55"
             contype="0" conaffinity="0" rgba="0.35 0.36 0.4 1"/>
-      <body name="x_carriage" pos="{_vec(c['x_offset'])}">
+      <body name="x_carriage" pos="0 0 0.5">
         <joint name="joint_x" type="slide" axis="1 0 0" range="0 {travel[0]:.6g}"
                damping="{c['damping'][0]:.6g}"/>
         <geom name="saddle" type="box" size="{_vec(c['saddle_half'])}" mass="{c['mass'][0]:.6g}"
               contype="0" conaffinity="0" rgba="0.2 0.55 0.85 1"/>
-        <body name="y_carriage" pos="{_vec(c['y_offset'])}">
+        <body name="y_carriage" pos="0 0 -0.01">
           <joint name="joint_y" type="slide" axis="0 1 0" range="0 {travel[1]:.6g}"
                  damping="{c['damping'][1]:.6g}"/>
           <geom name="head" type="box" size="{_vec(c['head_half'])}" mass="{c['mass'][1]:.6g}"
                 contype="0" conaffinity="0" rgba="0.2 0.55 0.85 1"/>
-          <body name="z_carriage" pos="{_vec(c['z_offset'])}">
+          <body name="z_carriage" pos="0 0 -0.313">
             <joint name="joint_z" type="slide" axis="0 0 1" range="0 {travel[2]:.6g}"
                    damping="{c['damping'][2]:.6g}"/>
             <geom name="slider" type="box" size="{_vec(c['slider_half'])}" mass="{c['mass'][2]:.6g}"
                   pos="0 0 0.155" contype="0" conaffinity="0" rgba="0.16 0.42 0.66 1"/>
-            <geom name="pen" type="capsule" fromto="0 0 0 0 0 {c['pen_length']:.6g}"
+            <!-- 笔向下悬伸：q=0 时笔尖触纸（距纸面 ~1mm 静置位），抬笔 = +Z 行程 -->
+            <geom name="pen" type="capsule" fromto="0 0 {-c['pen_length']:.6g} 0 0 0"
                   size="{c['pen_radius']:.6g}" mass="0.02" rgba="0.85 0.2 0.2 1"/>
           </body>
         </body>

@@ -102,6 +102,31 @@ def test_mjcf_builds_and_matches_layout():
             f"joint_{a.lower()} 限位 {lo}~{hi} 应为 0~{layout[a]['travel']}"
 
 
+def test_pen_sweep_covers_paper():
+    """布局回归：笔尖行程 [0..travel]² 必须铺满纸面（USD 侧曾有纸张偏置在根原点的缺陷，
+    导致右上 1/4 出纸、左侧 1/4 不可达——见 devlog 2026-09-07(3)）。"""
+    import mujoco
+    model = mujoco.MjModel.from_xml_string(build_mjcf(load_spec(REPO_SPEC)))
+    data = mujoco.MjData(model)
+    jid = {a: mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, f"joint_{a.lower()}")
+           for a in "XYZ"}
+    z_body = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "z_carriage")
+    paper = data.geom_xpos[mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "paper")]
+    px, py = paper[0], paper[1]
+    half_x, half_y = model.geom_size[mujoco.mj_name2id(
+        model, mujoco.mjtObj.mjOBJ_GEOM, "paper")][:2]
+    for qx, qy in ((0, 0), (0.6, 0), (0, 0.4), (0.6, 0.4)):
+        data.qpos[jid["X"]] = qx
+        data.qpos[jid["Y"]] = qy
+        data.qpos[jid["Z"]] = 0
+        mujoco.mj_forward(model, data)
+        tx, ty = data.xpos[z_body][:2]
+        assert px - half_x - 1e-6 <= tx <= px + half_x + 1e-6, \
+            f"笔尖 x={tx:.3f} 出纸（纸 {px - half_x:.3f}..{px + half_x:.3f}）"
+        assert py - half_y - 1e-6 <= ty <= py + half_y + 1e-6, \
+            f"笔尖 y={ty:.3f} 出纸（纸 {py - half_y:.3f}..{py + half_y:.3f}）"
+
+
 def test_closed_loop_command_moves_joint():
     """写 X=0.3 → 反馈应经斜坡到达 ≈0.3（真实 qpos，非指令回声）。"""
     from pymodbus.client import ModbusTcpClient
