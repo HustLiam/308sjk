@@ -1,3 +1,27 @@
+## 2026-09-07 (5) 分工与场景对齐（负责人指令）
+
+### 指令
+
+① gc/csk 分工按项目文档（架构 v1.2/v2.0）执行而非按当前工作——csk 不含 agent；
+② 不符合项目文档的废弃项目直接删除——滚筒/传送带分拣线例子；
+③ 现役场景只有运动控制（motion3axis）+ 三轴绘图仪（gantry_xyz）。
+
+### 执行
+
+- 删除 `scenegen/scenegen/agent/`（7 文件，含 MockLLM 生成-校验-重试闭环）——我此前
+  越界实现了 gc 的 ②b LLM 本体，属分工越界；gc 的场景描述生成器今后以
+  `validate(spec)` 闸门 + 契约③ schema 为唯一对接点；
+- 删除 `examples/conveyor_sort.json` + `out/{example,agent,glm}`；规范示例改为
+  `examples/gantry_plotter.json`（与 out/gantry 同源，git 识别为 rename）；
+- test_scenegen 重锚：8 组校验器断言全部改用绘图仪/微型夹具（气缸 axis 枚举作为
+  组件级校验覆盖，非场景），构建/Modbus/关节黄金规则断言 gantry 化——20 组绿；
+- 文档：csk 文档 §0/§4.1/§4.2（示例换绘图仪 JSON）/§4.3（现役场景说明）/§8/§9、
+  scenegen README 重写、看板 csk 区块与变更记录、changelog 场景对齐 v0.2。
+
+### 验证
+
+scenegen 20 组 + pytest 115（master 100 + toolchain 6 + runtime 9）全绿。
+
 ## 2026-09-07 (4) 第二次许可制合并走查（链路 A v0 + 契约③ draft.1）
 
 - 合并前 devlog 移除（9c0d857 同款流程）、master 合并后 pytest 115 全绿（100+6+9）；
