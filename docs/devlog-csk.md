@@ -2,6 +2,32 @@
 
 > 仅技术说明（改了什么 / 为什么 / 如何验证 / 技术坑）。进度协调内容一律写 `docs/协作看板.md`。本文件在 master 合入前移除，永不进 master。
 
+## 2026-09-02 (3) 独立运行时：脱离 Script Editor 的 Modbus 工作流
+
+### 改了什么
+
+- 新增 `runtime/isaac_jog_runtime.py`：一个 Isaac Python 进程同时承载「SimulationApp +
+  World 物理主循环 + Modbus 服务端」，`--window` 可选带渲染窗口，`Ctrl+C` 干净退出
+  ——外部示教器/OpenPLC 桥照旧连 :5020，**全程不需要打开 GUI 编辑器、不需要粘贴脚本**；
+- 抽出 `runtime/stage_link.py`（StageLink）：simio 标记 + io_map → 关节驱动/位置回读
+  的接线逻辑，编辑器脚本与独立运行时共用一份（此前接线逻辑内联在编辑器脚本里）；
+- 两个入口均补"开场指令 = X/Y 原点 + Z 抬笔"（与场景初始位一致，客户端接管前不跳变）；
+- 新增 `tests/test_stage_link.py`：用 usd-core 打开仓库真实 scene.usda + 真 GantryBridge，
+  验证「FC16 指令 → 关节驱动属性」「刚体位置 → 反馈寄存器 → FC03 读回」「超程钳位」
+  ——StageLink 全链路无需 Isaac 即可回归（无 usd-core 时自动跳过）。
+
+### 为什么
+
+外部 Modbus 客户端无法伸进运行中的 Isaac 进程改关节驱动，进程内必须有承接者；
+但承接者不必是 Script Editor 粘贴脚本——让承载 Isaac 的进程自己当服务端即可，
+这正是闭环 run_sim 骨架（csk 文档 §3.3）的形态，OpenPLC 桥接入时该脚本不变。
+
+### 验证
+
+venv(pymodbus 3.8.6 + usd-core)：`pytest runtime/tests/ -q` → 8 passed
+（桥回环 6 + StageLink 2）。isaac_jog_runtime.py 本体无法在本机验证（无 Isaac），
+待真机跑 `--window` 工作流。
+
 ## 2026-09-02 (2) 龙门场景三缺陷修复 + 运行时回环切 Modbus
 
 ### 缺陷与根因
