@@ -221,6 +221,59 @@ class RequirementUnderstander:
                                          "history": history, "problems": problems,
                                          "pending": pending}}
 
+    # ---------------- 修正回合（人工介入点 1 的对话形态） ----------------
+    def refine(self, spec, request_text, device_model=None, correction=None):
+        """用户对上轮规格的修正：上轮 spec 作 assistant 上下文 + 修正指令，
+        **定向最小修改**（实测远稳于从头重生成——同 prog_id 补丁的经验）。
+
+        返回同 understand 的 {spec, report}；io_list 锚定与契约校验照常执行，
+        失败自动回灌（≤max_rounds 轮）。
+        """
+        if self.client is None:
+            return {"spec": None, "report": {"mode": "template", "problems":
+                    ["修正回合需要 LLM（未配置 client）"]}}
+        io_items, pending = ([], [])
+        if device_model:
+            io_items, pending = build_io_list(device_model)
+        messages = self._build_messages(
+            request_text, io_items, _device_summary(device_model),
+            (spec or {}).get("task_id") or _derive_task_id(device_model))
+        messages.append({"role": "assistant",
+                         "content": "```json\n%s\n```" % json.dumps(spec, ensure_ascii=False)})
+        messages.append({"role": "user", "content": (
+            "用户对上轮规格提出修正：\n%s\n\n请做**最小修改**满足修正：未提及的内容"
+            "逐字保留；io_list 仍逐字锚定预填；验收准则保持四类封闭结构与健全谓词。"
+            "重新输出完整 requirement_spec JSON（单个 ```json 代码块）。" % correction)})
+
+        history, problems = [], ["（未获得模型输出）"]
+        for rnd in range(1, self.max_rounds + 1):
+            reply = self._call(messages)
+            text = extract_json(reply)
+            if text is None:
+                problems = ["[extract] 回复中未找到 JSON 对象"]
+            else:
+                try:
+                    new_spec = json.loads(text)
+                except ValueError as exc:
+                    problems = ["[json] 解析失败: %s" % exc]
+                else:
+                    problems = validate_requirement_spec(new_spec)
+                    if io_items:
+                        problems += ["[anchor] %s" % p for p in _anchor_problems(new_spec, io_items)]
+                    if not problems:
+                        history.append({"round": rnd, "ok": True})
+                        return {"spec": new_spec, "report": {
+                            "mode": "llm-refine", "rounds": rnd, "history": history,
+                            "pending": pending}}
+            history.append({"round": rnd, "ok": False, "problems": list(problems)})
+            messages.append({"role": "assistant", "content": reply})
+            messages.append({"role": "user", "content": (
+                "修正后规格校验失败，共 %d 处问题：\n%s\n\n请修复后重新输出完整 JSON。"
+                % (len(problems), "\n".join("- %s" % p for p in problems[:15])))})
+        return {"spec": None, "report": {"mode": "llm-refine", "rounds": self.max_rounds,
+                                         "history": history, "problems": problems,
+                                         "pending": pending}}
+
 
 def main():
     import argparse

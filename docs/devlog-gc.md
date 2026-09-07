@@ -380,3 +380,22 @@ MAXPOS 提为 VAR_INPUT 按轴传参，Z 轴传 20/60/1/10），删除子类。�
 - pytest 129 全绿。
 - 已知细节（待 lx 复核时裁决）：连续跟踪分支不做 MAXPOS 检查（当前用法安全：
   序列目标在量程内、手动路径 Busy/exe 时序天然屏蔽，devlog 留档）。
+
+
+### 对话式 CLI（待办 #8 交互形态落地，src/agent/chat.py）
+
+- 交互流：AML 路径（回车用绘图仪示例）→ 多行自然语言需求（空行结束）→ ① LLM
+  规格生成 → **render_spec 回显**（io 统计/constraints/acceptance 逐条含谓词明细
+  ——forbidden_state 的"当 X=a 禁止 Y=b"直接可见，等值谓词弱项靠这一步人工拦）
+  → 回车确认 / 自然语言修正（循环）→ 生成方式选择 → 闸门环境自动探测 → solve
+  自主迭代（事件回调打印）→ 交付物路径。
+- **refine() 修正回合**：上轮 spec 作 assistant 上下文 + 用户修正文本的**定向
+  最小修改**（prog_id 补丁验证过的模式：远稳于 feedback-only 从头重生成）；
+  验证+锚定照常，失败回灌。粗需求实测 AC2~AC6 出现反向等值谓词
+  （"pen_down 时禁止 x_v=0"），回显阶段可见——LLM 主动反问仍未接，回显是
+  当前防线。
+- probe_gate_env：serve /health + Modbus connect 探测（Session trust_env=False，
+  Windows 系统代理教训第三次应用）；可达即启用闸门3/4，离线自动降级——用户
+  无需关心环境状态。
+- 脚本化：--request --confirm --seed 使全流程可管道演示（实测粗需求 iter_1
+  final，交付 runs/plotter_cell/final/{plcopen.xml, scene.spec.json, io_map.json}）。

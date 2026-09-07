@@ -120,3 +120,60 @@ class TestLLMMode:
         out = RequirementUnderstander(client=client, max_rounds=3).understand(
             "需求", device_model=model)
         assert out["spec"] is None and len(out["report"]["history"]) == 3
+
+
+class TestRefine:
+    """修正回合（人工介入点 1 的对话形态）：上轮 spec 作上下文的定向最小修改。"""
+
+    def test_minimal_change_keeps_unrelated_parts(self):
+        model = plotter_model()
+        io_items, _ = build_io_list(model)
+        spec = _prefill_spec(io_items)
+        spec["task_goal"] += "。完成后点亮完成灯。"
+        # 修正：只改正方形边长（借 device 语义字段无副作用地验证最小修改）
+        revised = json.loads(json.dumps(spec))
+        revised["task_goal"] = revised["task_goal"].replace("正方形", "三角形")
+        client = FakeClient(["```json\n%s\n```" % json.dumps(revised, ensure_ascii=False)])
+        out = RequirementUnderstander(client=client).refine(
+            spec, "三轴绘图仪绘制正方形", device_model=model, correction="把正方形改成三角形")
+        assert out["spec"] is not None
+        assert "三角形" in out["spec"]["task_goal"]
+        assert out["spec"]["io_list"] == io_items          # 锚定仍生效
+
+    def test_anchor_violation_in_refine_repaired(self):
+        model = plotter_model()
+        io_items, _ = build_io_list(model)
+        spec = _prefill_spec(io_items)
+        bad = json.loads(json.dumps(spec))
+        bad["io_list"][0]["name"] = "power_on"             # 违反锚定
+        good = json.loads(json.dumps(spec))
+        good["task_goal"] = good["task_goal"].replace("正方形", "三角形")
+        client = FakeClient([
+            "```json\n%s\n```" % json.dumps(bad, ensure_ascii=False),
+            "```json\n%s\n```" % json.dumps(good, ensure_ascii=False)])
+        out = RequirementUnderstander(client=client).refine(
+            spec, "三轴绘图仪绘制正方形", device_model=model, correction="改成三角形")
+        assert out["spec"] is not None and out["report"]["rounds"] == 2
+
+    def test_template_mode_refine_rejected(self):
+        out = RequirementUnderstander(client=None).refine(
+            {"task_id": "x"}, "req", correction="改")
+        assert out["spec"] is None
+
+
+class TestRenderSpec:
+    def test_render_contains_key_sections(self):
+        sys.path.insert(0, str(REPO / "src"))
+        from agent.chat import render_spec
+        model = plotter_model()
+        io_items, _ = build_io_list(model)
+        spec = _prefill_spec(io_items)
+        spec["acceptance"].append({
+            "id": "AC2", "desc": "使能时序", "type": "event_delay",
+            "from": {"signal": "run", "edge": "rising"},
+            "to": {"signal": "all_oe", "edge": "rising"},
+            "op": "<=", "value": 2.0, "unit": "s"})
+        text = render_spec(spec, pending=["io[xx]: INT 缺量程"])
+        for key in ("task_id", "工艺目标", "io_list: 26 点", "AC1", "AC2",
+                    "使能时序", "待澄清"):
+            assert key in text

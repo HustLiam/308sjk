@@ -209,6 +209,6 @@ io_map.json（仿真侧产出）------------------------------------┤
 5. ~~编排器骨架：先串"生成→编译闸门→部署→链路 B 验收"的半环（不含 Isaac）~~ → 半环五闸门（+闸门2b scene/R5 全腿、/status 观测、CLI 直通 ⓪→①）；仿真全环待 csk 判定引擎与 ③b 接口；
 6. ~~⓪ AutomationML 解析模块（架构 v2.0 新增职责）~~ → 已完成（+ plotter3axis_station.aml：IEC 62714/CAEX 3.0 全结构参考样式）；
 7. ~~②b 场景描述生成器 v0（等 csk SceneSpec Schema）~~ → 已落地确定性 v0（scene.spec + io_map draft.1；资产封闭集待 csk 对齐冻结）；
-8. 需求理解 LLM 澄清回路（多轮提问/规格回显确认，人工介入点 1 的 LLM 形态）；
+8. ~~需求理解 LLM 澄清回路~~ → **对话式形态已落地**（`src/agent/chat.py`：AML+需求输入 → 规格回显（逐条准则含谓词明细）→ 用户自然语言修正（`refine()` 定向最小修改，上轮 spec 作上下文）→ 确认后自主闭环；闸门环境自动探测；`--request --confirm --seed` 可脚本化）。LLM 对粗需求的**主动反问**未接（现状：回显+人工审，弱项为 forbidden_state 等值谓词健全性——回显已明示谓词供核对）；
 9. 归因分析 LLM（消费 verdict.json → report.md，区分代码/场景问题并路由）——待 csk 判定引擎；
 10. plotter3axis 在线验收（需 OpenPLC 环境：run_regression.py L3 自动发现场景对）+ lx 复核代拟的 scenario 脚本后纳入场景库。
