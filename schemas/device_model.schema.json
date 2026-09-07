@@ -1,0 +1,138 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/HustLiam/308sjk/schemas/device_model.schema.json",
+  "title": "device_model",
+  "description": "⓪ AutomationML 解析器的输出（架构 v2.0，主方案 §3.0）：设备清单/IO 点位/拓扑连接/运动学参数/电气接口。device_model.json 是 ① 需求理解的结构化锚点——io_list 初始值由此填充（build_io_list），LLM 校验和补充而非从零生成。解析器为确定性代码（非 LLM）：同一 AML 输入必产出相同模型。版本 v1.0.0-draft.1。",
+  "type": "object",
+  "required": ["schema_version", "source", "station", "devices", "io_points", "topology", "kinematics"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-draft\\.[0-9]+)?$",
+      "description": "device_model 结构版本（升级规则同契约①，主方案 §8.3）"
+    },
+    "source": {
+      "type": "object",
+      "required": ["file"],
+      "additionalProperties": false,
+      "properties": {
+        "file": { "type": "string", "description": "AML 来源文件名（内存解析时为 <memory>）" },
+        "caex_schema_version": { "type": ["string", "null"], "description": "CAEXFile@SchemaVersion" },
+        "from_file": { "type": "boolean" }
+      }
+    },
+    "station": { "type": "string", "description": "InstanceHierarchy 名（站名，设备路径前缀）" },
+    "devices": {
+      "type": "array",
+      "description": "设备树（文档先序）",
+      "items": {
+        "type": "object",
+        "required": ["name", "path", "type", "role", "params", "electrical", "io", "children"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "path": { "type": "string", "description": "站内路径 Station/parent/name（拓扑层级）" },
+          "type": { "type": ["string", "null"], "description": "SystemUnitClass 末段短名（RefBaseSystemUnitPath）" },
+          "role": { "type": ["string", "null"], "description": "RoleRequirements 角色末段短名" },
+          "params": {
+            "type": "object",
+            "description": "设备属性表（Attribute 名→值：运动学/电气/其他工程参数）",
+            "additionalProperties": { "type": ["string", "number", "boolean"] }
+          },
+          "electrical": {
+            "type": "object",
+            "description": "电气接口（voltage/power 前缀属性归一）",
+            "additionalProperties": { "type": "number" }
+          },
+          "io": {
+            "type": "array",
+            "description": "本设备挂的 IO 点位名（与 io_points[].name 对应）",
+            "items": { "type": "string" }
+          },
+          "children": {
+            "type": "array",
+            "description": "子设备路径",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "io_points": {
+      "type": "array",
+      "description": "IO 点位（对接 requirement_spec.io_list 的初始值）",
+      "items": {
+        "type": "object",
+        "required": ["name", "device", "dir", "type", "address", "signal", "range", "unit"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "description": "io_list 对账键，须与 ST 定位变量逐字一致" },
+          "device": { "type": "string", "description": "挂载设备路径（devices[].path）" },
+          "dir": { "type": "string", "enum": ["input", "output"], "description": "input=外界→PLC，output=PLC→外界（与 io_list 同义）" },
+          "type": { "type": "string", "enum": ["BOOL", "INT"], "description": "对外封闭集（lx 位宽契约 BOOL↔%QX、INT↔%QW）" },
+          "address": { "type": ["string", "null"], "pattern": "^%[QI][XW][0-9]+(\\.[0-9]+)?$", "description": "定位变量地址（%Q 区，lx 契约）" },
+          "signal": { "type": ["string", "null"], "description": "信号语义描述（AML description 属性）" },
+          "range": {
+            "type": ["array", "null"],
+            "minItems": 2, "maxItems": 2,
+            "items": { "type": "number" },
+            "description": "INT 量程 [min,max]（io_map 定点换算的 raw 区间）；BOOL 恒 null"
+          },
+          "unit": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "topology": {
+      "type": "object",
+      "required": ["links"],
+      "additionalProperties": false,
+      "properties": {
+        "links": {
+          "type": "array",
+          "description": "InternalLink 连接（端点为 '设备路径#接口名'）",
+          "items": {
+            "type": "object",
+            "required": ["name", "a", "b"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "a": { "type": "string" },
+              "b": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "kinematics": {
+      "type": "object",
+      "required": ["axes"],
+      "additionalProperties": false,
+      "properties": {
+        "axes": {
+          "type": "array",
+          "description": "轴对象（axis_type 显式声明的设备）；参数对接 lx INTERP（VMAX/ACCEL/POSWIN/WRAP）",
+          "items": {
+            "type": "object",
+            "required": ["axis", "device", "type", "stroke", "unit", "vmax", "accel", "poswin", "wrap"],
+            "additionalProperties": false,
+            "properties": {
+              "axis": { "type": "string", "description": "轴名（=设备名）" },
+              "device": { "type": "string", "description": "所属设备路径" },
+              "type": { "type": "string", "enum": ["linear", "rotary_modulo", "rotary_finite"] },
+              "stroke": {
+                "type": ["array", "null"], "minItems": 2, "maxItems": 2,
+                "items": { "type": "number" },
+                "description": "行程 [min,max]；声明不合法时为 null（problems 已记）"
+              },
+              "unit": { "type": ["string", "null"] },
+              "vmax": { "type": ["number", "null"] },
+              "accel": { "type": ["number", "null"] },
+              "poswin": { "type": ["number", "null"], "description": "到位窗（INTERP POSWIN 同义）" },
+              "wrap": { "type": ["number", "null"], "description": "rotary_modulo 回绕周期（如 360°）" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

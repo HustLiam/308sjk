@@ -63,6 +63,28 @@ def read_reg(client, reg):
     return v - 65536 if v > 32767 else v
 
 
+PROG_ID_REG = 20  # 场景程序身份寄存器（每个 PLC_PRG 每扫描周期写自己的 prog_id 常量）
+
+
+def require_program(client, prog_id, name):
+    """校验运行时当前加载的是预期场景程序，不匹配直接终止。
+
+    避免对错误程序注入激励得到一堆莫名其妙的 FAIL。"""
+    got = read_reg(client, PROG_ID_REG)
+    if got != prog_id:
+        print("[verify] 程序不匹配：期望 %s (prog_id=%d)，运行时当前 prog_id=%r"
+              " —— 请先 python src/pipeline/run_deploy.py --xml src/plc/<对应场景>.xml"
+              % (name, prog_id, got))
+        raise SystemExit(1)
+    print("[verify] 程序身份确认: %s (prog_id=%d)" % (name, prog_id))
+
+
+def zero_regs(client, *regs):
+    """清零保持寄存器（场景幂等性：PLC 内部维护的计数器归零，重复运行可复现）。"""
+    for r in regs:
+        client.write_register(address=r, value=0)
+
+
 def connect(host="127.0.0.1", port=502):
     c = ModbusTcpClient(host, port=port)
     if not c.connect():

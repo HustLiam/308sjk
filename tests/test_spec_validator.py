@@ -2,7 +2,7 @@
 """
 requirement_spec 校验器单测（契约①，gc 侧）。
 
-基准样例 = examples/specs/sorting.spec.json（与 src/plc/sorting.xml 的定位变量
+基准样例 = examples/specs/motion3axis.spec.json（与 src/plc/motion3axis.xml 的定位变量
 逐字对齐，兼作一致性检查器的对照样例）。反例覆盖 Schema 结构规则 + 语义规则 S1~S4。
 """
 
@@ -15,14 +15,14 @@ sys.path.insert(0, str(REPO / "src"))
 
 from agent.spec_validator import validate_requirement_spec  # noqa: E402
 
-SPEC_PATH = REPO / "examples" / "specs" / "sorting.spec.json"
+SPEC_PATH = REPO / "examples" / "specs" / "motion3axis.spec.json"
 
 
 def load_spec():
     return json.loads(SPEC_PATH.read_text(encoding="utf-8"))
 
 
-class TestSortingExample:
+class TestMotion3AxisExample:
     def test_valid(self):
         assert validate_requirement_spec(load_spec()) == []
 
@@ -88,13 +88,32 @@ class TestSemanticRules:
 
     def test_s2_int_requires_range(self):
         spec = load_spec()
-        spec["io_list"][8]["range"] = None  # total_cnt: INT 无量程
+        idx = next(i for i, p in enumerate(spec["io_list"]) if p["name"] == "x_fb")
+        spec["io_list"][idx]["range"] = None  # x_fb: INT 无量程
         assert any("INT 必须带 range" in p for p in validate_requirement_spec(spec))
 
     def test_s2_int_range_order(self):
         spec = load_spec()
-        spec["io_list"][8]["range"] = [100, 0]
+        idx = next(i for i, p in enumerate(spec["io_list"]) if p["name"] == "x_fb")
+        spec["io_list"][idx]["range"] = [100, 0]
         assert any("min<max" in p for p in validate_requirement_spec(spec))
+
+    def test_s2_int_range_within_16bit_domain(self):
+        # lx 评审建议（draft.2 落实）：INT 量程不得超出 16 位寄存器域
+        #（%QW 承载 INT/UINT/WORD 的并集 [-32768, 65535]）
+        spec = load_spec()
+        idx = next(i for i, p in enumerate(spec["io_list"]) if p["name"] == "x_fb")
+        spec["io_list"][idx]["range"] = [0, 70000]      # 超 UINT16 上界
+        assert any("16 位寄存器域" in p for p in validate_requirement_spec(spec))
+        spec["io_list"][idx]["range"] = [-40000, 0]     # 超 INT16 下界
+        assert any("16 位寄存器域" in p for p in validate_requirement_spec(spec))
+
+    def test_s2_int_range_domain_boundaries_pass(self):
+        # 域端点本身合法（x_sw 的 [0,65535] 即 UINT16 满量程用法）
+        spec = load_spec()
+        idx = next(i for i, p in enumerate(spec["io_list"]) if p["name"] == "x_fb")
+        spec["io_list"][idx]["range"] = [-32768, 65535]
+        assert validate_requirement_spec(spec) == []
 
     def test_s2_bool_forbids_range(self):
         spec = load_spec()
@@ -118,7 +137,8 @@ class TestSemanticRules:
 
     def test_region_containment_center_shape(self):
         spec = load_spec()
-        spec["acceptance"][1]["region_center"] = [1.0, 2.0]  # 只有两个分量
+        idx = next(i for i, a in enumerate(spec["acceptance"]) if a["type"] == "region_containment")
+        spec["acceptance"][idx]["region_center"] = [1.0, 2.0]  # 只有两个分量
         assert any("region_center" in p for p in validate_requirement_spec(spec))
 
     def test_forbidden_state_equals_type(self):
@@ -136,4 +156,4 @@ class TestLoadAndValidate:
     def test_good_file(self):
         from agent.spec_validator import load_and_validate
         spec, problems = load_and_validate(SPEC_PATH)
-        assert spec["task_id"] == "sorting_demo" and problems == []
+        assert spec["task_id"] == "motion3axis_demo" and problems == []

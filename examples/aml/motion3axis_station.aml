@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  示例 AutomationML 设备描述（⓪ 模块解析输入，架构 v2.0 / 主方案 §3.0）。
+
+  内容与 motion3axis 场景逐字对齐：
+    · IO 点位 = examples/specs/motion3axis.spec.json 的 io_list（24 条），
+      地址取 lx 验收脚本的 Modbus 地址表（线圈 %QX0.0~1.3 / 寄存器 %QW0~15）；
+    · 运动学参数 = src/plc/motion3axis.xml INTERP 实例参数
+      （VMAX=40.0 / ACCEL=80.0 / POSWIN=2.0，行程 [0,100]%）。
+
+  InterfaceClass 约定（解析器据此判定方向与类型，见 src/agent/aml_parser.py）：
+    .../Signal/DigitalInput | DigitalOutput | AnalogInput | AnalogOutput
+    （含 input/output → IO 点位；digital/analog → BOOL/INT；Mechanical/* 非信号）
+-->
+<CAEXFile FileName="motion3axis_station.aml" SchemaVersion="2.15">
+  <InstanceHierarchy Name="Motion3AxisStation">
+
+    <InternalElement Name="gantry" ID="dev_gantry"
+                     RefBaseSystemUnitPath="308sjkSystemUnitClassLib/Gantry">
+      <RoleRequirements Role="308sjkRoleClassLib/MotionSystem/Gantry"/>
+
+      <ExternalInterface Name="run" ID="if_run" RefBaseClassPath="308sjkInterfaceClassLib/Signal/DigitalInput">
+        <Attribute Name="address"><Value>%QX0.0</Value></Attribute>
+        <Attribute Name="description"><Value>MC_Power 总使能（低=shutdown 命令）</Value></Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="cmd_home" ID="if_cmd_home" RefBaseClassPath="308sjkInterfaceClassLib/Signal/DigitalInput">
+        <Attribute Name="address"><Value>%QX0.1</Value></Attribute>
+        <Attribute Name="description"><Value>MC_Home 回零指令（上升沿）</Value></Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="cmd_go" ID="if_cmd_go" RefBaseClassPath="308sjkInterfaceClassLib/Signal/DigitalInput">
+        <Attribute Name="address"><Value>%QX0.2</Value></Attribute>
+        <Attribute Name="description"><Value>MC_MoveAbsolute 三轴并发定位指令（上升沿）</Value></Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="jog_fwd" ID="if_jog_fwd" RefBaseClassPath="308sjkInterfaceClassLib/Signal/DigitalInput">
+        <Attribute Name="address"><Value>%QX0.3</Value></Attribute>
+        <Attribute Name="description"><Value>X 轴 MC_MoveJog 正向（电平）</Value></Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="jog_rev" ID="if_jog_rev" RefBaseClassPath="308sjkInterfaceClassLib/Signal/DigitalInput">
+        <Attribute Name="address"><Value>%QX0.4</Value></Attribute>
+        <Attribute Name="description"><Value>X 轴 MC_MoveJog 反向（电平）</Value></Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="quickstop" ID="if_quickstop" RefBaseClassPath="308sjkInterfaceClassLib/Signal/DigitalInput">
+        <Attribute Name="address"><Value>%QX0.5</Value></Attribute>
+        <Attribute Name="description"><Value>MC_Stop 快停（电平，QSA 受控减速）</Value></Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="inject_fault" ID="if_inject_fault" RefBaseClassPath="308sjkInterfaceClassLib/Signal/DigitalInput">
+        <Attribute Name="address"><Value>%QX0.6</Value></Attribute>
+        <Attribute Name="description"><Value>故障注入（目标越程 150 → FRA/FA）</Value></Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="cmd_reset" ID="if_cmd_reset" RefBaseClassPath="308sjkInterfaceClassLib/Signal/DigitalInput">
+        <Attribute Name="address"><Value>%QX0.7</Value></Attribute>
+        <Attribute Name="description"><Value>MC_Reset 故障复位（上升沿）</Value></Attribute>
+      </ExternalInterface>
+
+      <ExternalInterface Name="all_oe" ID="if_all_oe" RefBaseClassPath="308sjkInterfaceClassLib/Signal/DigitalOutput">
+        <Attribute Name="address"><Value>%QX1.0</Value></Attribute>
+        <Attribute Name="description"><Value>三轴全部 Operation Enabled</Value></Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="move_done" ID="if_move_done" RefBaseClassPath="308sjkInterfaceClassLib/Signal/DigitalOutput">
+        <Attribute Name="address"><Value>%QX1.1</Value></Attribute>
+        <Attribute Name="description"><Value>MC_MoveAbsolute 三轴 Done 汇总</Value></Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="any_moving" ID="if_any_moving" RefBaseClassPath="308sjkInterfaceClassLib/Signal/DigitalOutput">
+        <Attribute Name="address"><Value>%QX1.2</Value></Attribute>
+        <Attribute Name="description"><Value>任一轴速度指令非零</Value></Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="fault_any" ID="if_fault_any" RefBaseClassPath="308sjkInterfaceClassLib/Signal/DigitalOutput">
+        <Attribute Name="address"><Value>%QX1.3</Value></Attribute>
+        <Attribute Name="description"><Value>任一轴故障（sw bit3）</Value></Attribute>
+      </ExternalInterface>
+
+      <InternalElement Name="x_axis" ID="dev_x_axis"
+                       RefBaseSystemUnitPath="308sjkSystemUnitClassLib/LinearAxis">
+        <Attribute Name="axis_type"><Value>linear</Value></Attribute>
+        <Attribute Name="stroke_min"><Value>0.0</Value></Attribute>
+        <Attribute Name="stroke_max"><Value>100.0</Value></Attribute>
+        <Attribute Name="unit"><Value>%</Value></Attribute>
+        <Attribute Name="vmax"><Value>40.0</Value></Attribute>
+        <Attribute Name="accel"><Value>80.0</Value></Attribute>
+        <Attribute Name="poswin"><Value>2.0</Value></Attribute>
+        <Attribute Name="voltage"><Value>24.0</Value></Attribute>
+        <Attribute Name="power"><Value>400.0</Value></Attribute>
+        <ExternalInterface Name="mech_flange" ID="if_x_flange" RefBaseClassPath="308sjkInterfaceClassLib/Mechanical/Flange"/>
+        <ExternalInterface Name="x_fb" ID="if_x_fb" RefBaseClassPath="308sjkInterfaceClassLib/Signal/AnalogInput">
+          <Attribute Name="address"><Value>%QW0</Value></Attribute>
+          <Attribute Name="description"><Value>X 轴编码器反馈（电机仿真写入）</Value></Attribute>
+          <Attribute Name="range_min"><Value>0</Value></Attribute>
+          <Attribute Name="range_max"><Value>100</Value></Attribute>
+          <Attribute Name="unit"><Value>%</Value></Attribute>
+        </ExternalInterface>
+        <ExternalInterface Name="x_sp" ID="if_x_sp" RefBaseClassPath="308sjkInterfaceClassLib/Signal/AnalogInput">
+          <Attribute Name="address"><Value>%QW10</Value></Attribute>
+          <Attribute Name="description"><Value>X 轴目标位置（主站写，先于 cmd_go 建立）</Value></Attribute>
+          <Attribute Name="range_min"><Value>0</Value></Attribute>
+          <Attribute Name="range_max"><Value>100</Value></Attribute>
+          <Attribute Name="unit"><Value>%</Value></Attribute>
+        </ExternalInterface>
+        <ExternalInterface Name="x_sw" ID="if_x_sw" RefBaseClassPath="308sjkInterfaceClassLib/Signal/AnalogOutput">
+          <Attribute Name="address"><Value>%QW6</Value></Attribute>
+          <Attribute Name="description"><Value>X 驱动状态字（CiA 402 编码：bit0/1/2/3/4/5/6/10/12）</Value></Attribute>
+          <Attribute Name="range_min"><Value>0</Value></Attribute>
+          <Attribute Name="range_max"><Value>65535</Value></Attribute>
+        </ExternalInterface>
+        <ExternalInterface Name="x_v" ID="if_x_v" RefBaseClassPath="308sjkInterfaceClassLib/Signal/AnalogOutput">
+          <Attribute Name="address"><Value>%QW13</Value></Attribute>
+          <Attribute Name="description"><Value>X 电机速度指令（带符号，伺服环输出）</Value></Attribute>
+          <Attribute Name="range_min"><Value>-120</Value></Attribute>
+          <Attribute Name="range_max"><Value>120</Value></Attribute>
+          <Attribute Name="unit"><Value>%/s</Value></Attribute>
+        </ExternalInterface>
+      </InternalElement>
+
+      <InternalElement Name="y_axis" ID="dev_y_axis"
+                       RefBaseSystemUnitPath="308sjkSystemUnitClassLib/LinearAxis">
+        <Attribute Name="axis_type"><Value>linear</Value></Attribute>
+        <Attribute Name="stroke_min"><Value>0.0</Value></Attribute>
+        <Attribute Name="stroke_max"><Value>100.0</Value></Attribute>
+        <Attribute Name="unit"><Value>%</Value></Attribute>
+        <Attribute Name="vmax"><Value>40.0</Value></Attribute>
+        <Attribute Name="accel"><Value>80.0</Value></Attribute>
+        <Attribute Name="poswin"><Value>2.0</Value></Attribute>
+        <Attribute Name="voltage"><Value>24.0</Value></Attribute>
+        <Attribute Name="power"><Value>400.0</Value></Attribute>
+        <ExternalInterface Name="mech_flange" ID="if_y_flange" RefBaseClassPath="308sjkInterfaceClassLib/Mechanical/Flange"/>
+        <ExternalInterface Name="y_fb" ID="if_y_fb" RefBaseClassPath="308sjkInterfaceClassLib/Signal/AnalogInput">
+          <Attribute Name="address"><Value>%QW1</Value></Attribute>
+          <Attribute Name="description"><Value>Y 轴编码器反馈</Value></Attribute>
+          <Attribute Name="range_min"><Value>0</Value></Attribute>
+          <Attribute Name="range_max"><Value>100</Value></Attribute>
+          <Attribute Name="unit"><Value>%</Value></Attribute>
+        </ExternalInterface>
+        <ExternalInterface Name="y_sp" ID="if_y_sp" RefBaseClassPath="308sjkInterfaceClassLib/Signal/AnalogInput">
+          <Attribute Name="address"><Value>%QW11</Value></Attribute>
+          <Attribute Name="description"><Value>Y 轴目标位置</Value></Attribute>
+          <Attribute Name="range_min"><Value>0</Value></Attribute>
+          <Attribute Name="range_max"><Value>100</Value></Attribute>
+          <Attribute Name="unit"><Value>%</Value></Attribute>
+        </ExternalInterface>
+        <ExternalInterface Name="y_sw" ID="if_y_sw" RefBaseClassPath="308sjkInterfaceClassLib/Signal/AnalogOutput">
+          <Attribute Name="address"><Value>%QW7</Value></Attribute>
+          <Attribute Name="description"><Value>Y 驱动状态字</Value></Attribute>
+          <Attribute Name="range_min"><Value>0</Value></Attribute>
+          <Attribute Name="range_max"><Value>65535</Value></Attribute>
+        </ExternalInterface>
+        <ExternalInterface Name="y_v" ID="if_y_v" RefBaseClassPath="308sjkInterfaceClassLib/Signal/AnalogOutput">
+          <Attribute Name="address"><Value>%QW14</Value></Attribute>
+          <Attribute Name="description"><Value>Y 电机速度指令</Value></Attribute>
+          <Attribute Name="range_min"><Value>-120</Value></Attribute>
+          <Attribute Name="range_max"><Value>120</Value></Attribute>
+          <Attribute Name="unit"><Value>%/s</Value></Attribute>
+        </ExternalInterface>
+      </InternalElement>
+
+      <InternalElement Name="z_axis" ID="dev_z_axis"
+                       RefBaseSystemUnitPath="308sjkSystemUnitClassLib/LinearAxis">
+        <Attribute Name="axis_type"><Value>linear</Value></Attribute>
+        <Attribute Name="stroke_min"><Value>0.0</Value></Attribute>
+        <Attribute Name="stroke_max"><Value>100.0</Value></Attribute>
+        <Attribute Name="unit"><Value>%</Value></Attribute>
+        <Attribute Name="vmax"><Value>40.0</Value></Attribute>
+        <Attribute Name="accel"><Value>80.0</Value></Attribute>
+        <Attribute Name="poswin"><Value>2.0</Value></Attribute>
+        <Attribute Name="voltage"><Value>24.0</Value></Attribute>
+        <Attribute Name="power"><Value>400.0</Value></Attribute>
+        <ExternalInterface Name="mech_flange" ID="if_z_flange" RefBaseClassPath="308sjkInterfaceClassLib/Mechanical/Flange"/>
+        <ExternalInterface Name="z_fb" ID="if_z_fb" RefBaseClassPath="308sjkInterfaceClassLib/Signal/AnalogInput">
+          <Attribute Name="address"><Value>%QW2</Value></Attribute>
+          <Attribute Name="description"><Value>Z 轴编码器反馈</Value></Attribute>
+          <Attribute Name="range_min"><Value>0</Value></Attribute>
+          <Attribute Name="range_max"><Value>100</Value></Attribute>
+          <Attribute Name="unit"><Value>%</Value></Attribute>
+        </ExternalInterface>
+        <ExternalInterface Name="z_sp" ID="if_z_sp" RefBaseClassPath="308sjkInterfaceClassLib/Signal/AnalogInput">
+          <Attribute Name="address"><Value>%QW12</Value></Attribute>
+          <Attribute Name="description"><Value>Z 轴目标位置</Value></Attribute>
+          <Attribute Name="range_min"><Value>0</Value></Attribute>
+          <Attribute Name="range_max"><Value>100</Value></Attribute>
+          <Attribute Name="unit"><Value>%</Value></Attribute>
+        </ExternalInterface>
+        <ExternalInterface Name="z_sw" ID="if_z_sw" RefBaseClassPath="308sjkInterfaceClassLib/Signal/AnalogOutput">
+          <Attribute Name="address"><Value>%QW8</Value></Attribute>
+          <Attribute Name="description"><Value>Z 驱动状态字</Value></Attribute>
+          <Attribute Name="range_min"><Value>0</Value></Attribute>
+          <Attribute Name="range_max"><Value>65535</Value></Attribute>
+        </ExternalInterface>
+        <ExternalInterface Name="z_v" ID="if_z_v" RefBaseClassPath="308sjkInterfaceClassLib/Signal/AnalogOutput">
+          <Attribute Name="address"><Value>%QW15</Value></Attribute>
+          <Attribute Name="description"><Value>Z 电机速度指令</Value></Attribute>
+          <Attribute Name="range_min"><Value>-120</Value></Attribute>
+          <Attribute Name="range_max"><Value>120</Value></Attribute>
+          <Attribute Name="unit"><Value>%/s</Value></Attribute>
+        </ExternalInterface>
+      </InternalElement>
+
+      <InternalLink Name="mount_x" RefPartnerSideA="if_gx_mount" RefPartnerSideB="if_x_flange"/>
+      <InternalLink Name="mount_y" RefPartnerSideA="if_gy_mount" RefPartnerSideB="if_y_flange"/>
+      <InternalLink Name="mount_z" RefPartnerSideA="if_gz_mount" RefPartnerSideB="if_z_flange"/>
+      <ExternalInterface Name="x_mount" ID="if_gx_mount" RefBaseClassPath="308sjkInterfaceClassLib/Mechanical/Flange"/>
+      <ExternalInterface Name="y_mount" ID="if_gy_mount" RefBaseClassPath="308sjkInterfaceClassLib/Mechanical/Flange"/>
+      <ExternalInterface Name="z_mount" ID="if_gz_mount" RefBaseClassPath="308sjkInterfaceClassLib/Mechanical/Flange"/>
+    </InternalElement>
+
+  </InstanceHierarchy>
+</CAEXFile>

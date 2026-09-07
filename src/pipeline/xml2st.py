@@ -33,6 +33,10 @@ ADDRESS_RE = re.compile(r"^%[IQ]([WDX])?[0-9]+(\.[0-9]+)?$")
 ADDR_WIDTH = {"X": 1, "W": 16}
 BIT_TYPES = {"BOOL"}
 WORD_TYPES = {"INT", "UINT", "WORD"}
+
+# 契约 v1.1（lx 文档 §5.3）：场景程序身份寄存器 prog_id@%QW20 属元信息，
+# 不是业务 IO——不参与 io_list ≡ io_map 三方一致性对账（gc 检查器引用此名单豁免）
+META_VARS = {"prog_id"}
 DWORD_TYPES = {"DINT", "UDINT", "DWORD"}  # 仅用于校验报错提示，不允许 AT %*D
 
 
