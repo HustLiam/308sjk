@@ -53,6 +53,8 @@ schemas/requirement_spec.schema.json  # 契约① Schema 草案（gc 拥有，�
 examples/specs/             # requirement_spec 基准示例（motion3axis，对齐已验收 XML）
 runs/                       # 编排器每轮产物（iter_NNN/final，全量入 git）
 tests/                      # pytest 单测
+scenegen/                   # csk ②b 确定性支撑：SceneSpec Schema/校验器/USD 构建器/Modbus 地址分配（python -m scenegen.cli all <spec> -o out/<场景>）
+runtime/                    # csk ③b 运行时：龙门 Modbus TCP 桥 + 独立运行时（免 Script Editor）+ 鼠标示教器（见 runtime/README.md）
 docs/                       # 方案与详细设计文档
 workspace/                  # 本地生成物（不入库）
 ```
