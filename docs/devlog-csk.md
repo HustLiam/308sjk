@@ -2,6 +2,41 @@
 
 > 仅技术说明（改了什么 / 为什么 / 如何验证 / 技术坑）。进度协调内容一律写 `docs/协作看板.md`。本文件在 master 合入前移除，永不进 master。
 
+## 2026-09-07 (3) 链路 A v0（shim 生成/构建编排/ctypes 绑定）+ 契约③草案
+
+### 改了什么
+
+- `toolchain/shim_gen.py`：io_map（契约③）→ `plc_shim.c/.h`——extern 符号表（__QX0_0/
+  __QW0 风格，matiec 版本差异的隔离点 SYMBOL_RULES）+ 紧凑镜像 di/ai/dq/aq + 稳定接口
+  plc_init/run/write_image/read_image；纯函数无 IO；
+- `toolchain/build_dll.py`：xml→st（子进程复用 lx xml2st，转换点唯一）→ iec2c → shim →
+  gcc 共享库；工具链发现顺序 环境变量(MATEC/CC)→PATH；缺失时 ok=False + 可操作提示
+  （不抛异常不半成品），build_result.json 供编排器消费；
+- `runtime/plc_binding.py`：IOLayout（与 shim 同规则的镜像索引 + 定点换算 scale=
+  每 LSB 工程量 + 打包/解包，纯逻辑）+ SoftPLC（ctypes 薄封装）；
+- `schemas/io_map.schema.json`：契约③ v1.0.0-draft.1（见 changelog）；
+- `toolchain/tests/test_link_a.py`：L2（golden/双实现一致性/换算/Schema/降级）+ L3
+  （minimal.st→DLL→写读回环，无 matiec+gcc 自动 SKIP）。
+
+### 技术要点
+
+1. **镜像索引单一规则双实现**：shim 的 C 侧赋值下标与 Python 侧打包下标必须一致，
+   否则注入错位——两端各自实现 + golden 测试断言逐变量相等（test_layout_matches_shim_gen），
+   测试是唯一仲裁，注释互相指向；
+2. **紧凑镜像**按方向独立编号（di/dq bool 字节、ai/aq int16 字），不用原始地址做下标——
+   %QW10/11/12 这类稀疏地址不浪费镜像空间，shim 生成时逐变量显式赋值；
+3. **word 类型**（CiA402 状态字）不做定点换算，位型透传：to_raw 掩码 &0xFFFF、
+   to_eng 无符号解释（raw -1 → 65535）——INT16 有符号容器承载无符号域的坑在绑定层消化；
+4. **L3 前置条件探测**：find_toolchain() + MATEC_ROOT；本机无 gcc/matiec/WSL/docker，
+   L3 在具备工具链的机器上跑（lx 侧工具链最全，看板已请求协跑）；
+5. 测试踩坑：pack 的 100.5/0.1=1005 而非 1000（断言笔误）；aq 镜像 3 字（move_done
+   在 dq）——镜像下标按方向独立计，测试造数时别把各镜像长度想混。
+
+### 验证
+
+pytest tests/ + toolchain/tests/ + runtime/tests/ = **115 passed**；scenegen 22+4 绿。
+L3（真编译）SKIP——待 lx 工具链机协跑。
+
 ## 2026-09-07 (2) 首次许可制合并走查（csk → master）
 
 ### 合并策略与冲突解决
