@@ -1,0 +1,29 @@
+{
+  "gate": "deploy",
+  "ok": false,
+  "errors": [
+    "matiec 编译失败:\nOptimizing ST program...\nGenerating C files...\n./st_files/454743.st:397: error: invalid variable before ':=' in ST assignment statement.\n./st_files/454743.st:413: error: invalid statement in case element of ST 'CASE' statement.\n./st_files/454743.st:414: error: invalid statement in case element of ST 'CASE' statement.\n./st_files/454743.st:415: error: invalid statement in case element of ST 'CASE' statement.\n./st_files/454743.st:416: error: invalid statement in case element of ST 'CASE' statement.\n./st_files/454743.st:417: error: invalid statement in case element of ST 'CASE' statement.\n\n6 error(s) found. Bailing out!\nError generating C files\nCompilation finished with errors!"
+  ],
+  "attribution": {
+    "gate": "deploy",
+    "errors": [
+      "matiec 编译失败:\nOptimizing ST program...\nGenerating C files...\n./st_files/454743.st:397: error: invalid variable before ':=' in ST assignment statement.\n./st_files/454743.st:413: error: invalid statement in case element of ST 'CASE' statement.\n./st_files/454743.st:414: error: invalid statement in case element of ST 'CASE' statement.\n./st_files/454743.st:415: error: invalid statement in case element of ST 'CASE' statement.\n./st_files/454743.st:416: error: invalid statement in case element of ST 'CASE' statement.\n./st_files/454743.st:417: error: invalid statement in case element of ST 'CASE' statement.\n\n6 error(s) found. Bailing out!\nError generating C files\nCompilation finished with errors!"
+    ],
+    "pitfalls": [],
+    "similar_fixes": [],
+    "repair_hints": [
+      "检查第 397 行赋值语句，确保 ':=' 左侧是合法声明的变量（无拼写错误、未缺 VAR 声明、非表达式或保留字）",
+      "检查第 413-414 行 CASE 语句各分支（case element）内的语句，确保每条语句以分号结尾且语法完整，分支标签后使用 ':' 而非其他符号",
+      "提供第 390-420 行完整代码上下文以便精确定位具体非法 token"
+    ],
+    "llm_diagnosis": {
+      "root_cause": "代码问题：ST 程序第 397 行赋值语句 ':=' 左侧变量非法，且第 413-414 行 CASE 分支内语句语法非法（可能存在语法结构错误或非法 token）",
+      "repair_hints": [
+        "检查第 397 行赋值语句，确保 ':=' 左侧是合法声明的变量（无拼写错误、未缺 VAR 声明、非表达式或保留字）",
+        "检查第 413-414 行 CASE 语句各分支（case element）内的语句，确保每条语句以分号结尾且语法完整，分支标签后使用 ':' 而非其他符号",
+        "提供第 390-420 行完整代码上下文以便精确定位具体非法 token"
+      ],
+      "advisory": true
+    }
+  }
+}
