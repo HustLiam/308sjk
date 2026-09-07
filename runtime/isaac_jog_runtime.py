@@ -48,7 +48,11 @@ def main():
     layout, n_regs = derive_layout(io_map)
 
     # SimulationApp 必须最先创建，其后才能 import 其它 isaacsim 模块
-    from isaacsim.simulation_app import SimulationApp
+    # （离线包/6.0.0-rc 走 simulation_app 子模块；pip 元包 6.0.1+ 走顶层导出）
+    try:
+        from isaacsim.simulation_app import SimulationApp
+    except ImportError:
+        from isaacsim import SimulationApp
     app = SimulationApp({"headless": not args.window})
     try:
         import omni.usd

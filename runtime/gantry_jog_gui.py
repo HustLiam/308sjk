@@ -226,10 +226,14 @@ class JogApp:
                     except Exception as exc:
                         self._writer_on = False
                         self._sent = None
-                        self.root.after(0, lambda: (
+                        # exc 在 except 块结束即被删除，lambda 须先捕获其文本；
+                        # 同时断开死连接，使 connected=False，点"连接"一次即可重连
+                        msg = f"写入失败: {exc}"
+                        self.client.disconnect()
+                        self.root.after(0, lambda m=msg: (
                             self.z_btn.config(state=tk.DISABLED),
                             self.btn.config(text="连接"),
-                            self.status.config(text=f"写入失败: {exc}", fg="#a00")))
+                            self.status.config(text=m, fg="#a00")))
             time.sleep(0.05)
 
     def _reader_loop(self):
