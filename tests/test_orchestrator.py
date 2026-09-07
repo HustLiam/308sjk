@@ -19,6 +19,7 @@ from agent.pipeline import PLCGenerator  # noqa: E402
 
 SPEC = json.loads((REPO / "examples" / "specs" / "motion3axis.spec.json").read_text(encoding="utf-8"))
 MOTION_XML = REPO / "src" / "plc" / "motion3axis.xml"
+PLOTTER_XML = REPO / "src" / "plc" / "plotter3axis.xml"
 
 
 def mismatched_seed(tmp_path):
@@ -215,3 +216,60 @@ class TestStatusProbe:
         assert result["status"] == "final"
         gate = json.loads((Path(result["run_dir"]) / "final" / "gate.json").read_text(encoding="utf-8"))
         assert gate["gates"]["deploy"]["detail"]["runtime_status"]["prog_id"] == 2
+
+
+class TestRepairStrategy:
+    """定向修复为 LLM 迭代默认策略（上轮过静态闸门的产物不丢、最小修改）。"""
+
+    PLOTTER_XML = REPO / "src" / "plc" / "plotter3axis.xml"
+
+    SPEC = json.loads((REPO / "examples" / "specs" / "plotter3axis.spec.json")
+                      .read_text(encoding="utf-8"))
+
+    def test_repair_mode_used_after_static_pass_failure(self, tmp_path, monkeypatch):
+        """静态闸门过后失败 → 下一迭代必须走 repair（用上轮产物），不再重生成。"""
+        from agent.orchestrator import Orchestrator
+        calls = {"fresh": 0, "repair": 0}
+
+        class FakeGen:
+            client = object()  # LLM 可用标记
+
+            def generate(self, spec, feedback=None):
+                calls["fresh"] += 1
+                return {"ok": True, "xml": PLOTTER_XML.read_text(encoding="utf-8")}
+
+            def repair(self, previous_xml, spec, feedback, attempts=None):
+                calls["repair"] += 1
+                assert previous_xml == PLOTTER_XML.read_text(encoding="utf-8")
+                return {"ok": True, "xml": previous_xml, "mode": "repair"}
+
+        states = iter([("failed", ["闸门4失败样本"]), ("ok", "场景验收: 全部通过 ✅")])
+        orch = Orchestrator(runs_root=tmp_path, project_root=REPO)
+        monkeypatch.setattr(orch, "acceptance_gate", lambda s: next(states))
+        result = orch.solve(self.SPEC, FakeGen(), acceptance="plotter3axis")
+        assert result["status"] == "final"
+        assert calls == {"fresh": 1, "repair": 1}      # 第二轮定向修复而非重生成
+
+    def test_repair_circuit_breaker_falls_back_to_fresh(self, tmp_path, monkeypatch):
+        """修复连续失败 3 次 → 回退全新生成（防死循环）。"""
+        from agent.orchestrator import Orchestrator
+        calls = {"fresh": 0, "repair": 0}
+
+        class FlakyGen:
+            client = object()
+
+            def generate(self, spec, feedback=None):
+                calls["fresh"] += 1
+                return {"ok": True, "xml": PLOTTER_XML.read_text(encoding="utf-8")}
+
+            def repair(self, previous_xml, spec, feedback, attempts=None):
+                calls["repair"] += 1
+                return {"ok": False, "xml": None, "errors": ["修复失败"], "mode": "repair"}
+
+        orch = Orchestrator(runs_root=tmp_path, project_root=REPO, max_iters=6)
+        monkeypatch.setattr(orch, "acceptance_gate",
+                            lambda s: ("failed", ["持续失败"]))
+        result = orch.solve(self.SPEC, FlakyGen(), acceptance="plotter3axis")
+        assert result["status"] == "best_effort"
+        # 6 轮预算：fresh(1)→repair×3(熔断)→fresh(2,过静态闸重置计数)→repair(4)
+        assert calls["fresh"] == 2 and calls["repair"] == 4

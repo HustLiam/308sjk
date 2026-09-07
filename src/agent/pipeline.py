@@ -52,13 +52,16 @@ class PLCGenerator:
     直接返回种子，用于编排器联调/回归——必须仍过双闸门）。
     """
 
-    def __init__(self, client, model="glm-5.3", max_rounds=3, seed_xml=None):
+    def __init__(self, client, model="glm-5.3", max_rounds=3, seed_xml=None,
+                 generic_patterns_only=False):
         self.client = client
         self.model = model
         self.max_rounds = max_rounds
         self.seed_xml = Path(seed_xml).read_text(encoding="utf-8") if seed_xml else None
         self.seed_path = str(seed_xml) if seed_xml else None  # 策展登记用
         self.skill_prompt = SKILL_PATH.read_text(encoding="utf-8")
+        # True=仅静态 CATALOG 通用原语（泛化验证：不借助自动策展的同构场景卡）
+        self.generic_patterns_only = generic_patterns_only
 
     # ---------------- LLM 调用 ----------------
     def _call(self, messages):
@@ -99,7 +102,8 @@ class PLCGenerator:
     # ---------------- prompt 拼装 ----------------
     def build_messages(self, spec, feedback=None):
         io_list = spec.get("io_list", [])
-        cards = render_cards(pattern_cards(spec.get("task_goal", ""), io_list))
+        cards = render_cards(pattern_cards(spec.get("task_goal", ""), io_list,
+                                           include_curated=not self.generic_patterns_only))
         io_rendered = json.dumps(io_list, ensure_ascii=False, indent=2)
         constraints = spec.get("constraints", [])
         user = (
@@ -153,3 +157,43 @@ class PLCGenerator:
 
         return {"ok": False, "xml": None, "rounds": self.max_rounds,
                 "history": history, "errors": errors}
+
+    # ---------------- 定向修复（LLM 迭代默认策略） ----------------
+    def repair(self, previous_xml, spec, feedback, attempts=None):
+        """定向修复：上一轮产物作 assistant 上下文 + 失败证据/归因的最小修改。
+
+        三次实证（prog_id 补丁/画圆地址修复/spec refine）：远稳于从头重生成——
+        重生成会随机丢失已修复项（温度采样），最小修改保真未提及内容。
+        返回结构同 generate；静态双闸门照常把关，失败自动回灌（≤attempts 轮）。
+        """
+        attempts = attempts or max(2, self.max_rounds - 1)
+        io_list = spec.get("io_list", [])
+        messages = self.build_messages(spec)
+        messages.append({"role": "assistant",
+                         "content": "```xml\n%s\n```" % previous_xml})
+        messages.append({"role": "user", "content": (
+            "上一轮工程（见上）已通过静态契约校验（xml2st + 三方一致性），"
+            "但在后续闸门失败。失败证据与归因：\n%s\n\n"
+            "请做**最小修改**满足全部失败项：未提及的内容逐字保留；"
+            "修复后重新输出**完整**工程（单个 ```xml 代码块）。" % (feedback or "（未提供明细）"))})
+
+        history, errors = [], ["（未获得模型输出）"]
+        for rnd in range(1, attempts + 1):
+            reply = self._call(messages)
+            xml = extract_xml(reply)
+            if xml is None:
+                errors = ["[extract] 回复中未找到 <project> XML（只输出一个 ```xml 代码块）"]
+            else:
+                ok, errors = self.gate(xml, io_list)
+                if ok:
+                    history.append({"round": rnd, "ok": True, "errors": []})
+                    return {"ok": True, "xml": xml, "rounds": rnd,
+                            "history": history, "errors": [], "mode": "repair"}
+            history.append({"round": rnd, "ok": False, "errors": list(errors)})
+            messages.append({"role": "assistant", "content": reply})
+            messages.append({"role": "user", "content": (
+                "修复后工程仍有 %d 处静态校验错误：\n%s\n\n"
+                "请修复后重新输出完整工程（最小修改，其余保持不变）。"
+                % (len(errors), "\n".join("- %s" % e for e in errors[:15])))})
+        return {"ok": False, "xml": None, "rounds": attempts,
+                "history": history, "errors": errors, "mode": "repair"}

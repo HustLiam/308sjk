@@ -166,6 +166,12 @@ class Orchestrator:
             if echo:
                 echo(event, payload)
 
+        def fail(iter_dir, i, gate, errs, mode):
+            nonlocal repair_fails
+            if mode == "repair":
+                repair_fails += 1   # 修复模式失败计数（≥3 回退全新生成）
+            return self._fail(iter_dir, i, gate, errs, history)
+
         problems = validate_requirement_spec(spec)
         if problems:
             raise ValueError("requirement_spec 校验失败（人工介入点 1）: %s" % problems)
@@ -179,25 +185,36 @@ class Orchestrator:
         history = []          # 迭代记忆：改了什么 → 哪条闸门翻转
         feedback = None       # 上轮反馈包（程序拼装，不靠 LLM 现场发挥）
         best = None           # best-effort：进展最多的一轮
+        repair_base = None    # 最近一次过静态闸门的产物（定向修复的基础）
+        repair_fails = 0      # 修复模式连续失败计数（≥3 回退全新生成，防死循环）
 
         for i in range(1, self.max_iters + 1):
             iter_dir = run_dir / ("iter_%03d" % i)
             iter_dir.mkdir(exist_ok=True)
             notify("iter_start", {"iter": i})
 
-            gen = generator.generate(spec, feedback=feedback)
+            # ---- 生成策略：LLM 可用且有修复基础（上轮过静态闸门、后续闸门失败）
+            #    → 定向修复（最小修改，三次实证远稳于从头重生成）；否则全新生成 ----
+            if (repair_base is not None and feedback is not None
+                    and getattr(generator, "client", None) is not None
+                    and repair_fails < 3):
+                gen = generator.repair(repair_base, spec, feedback)
+                mode = "repair"
+            else:
+                gen = generator.generate(spec, feedback=feedback)
+                mode = "fresh"
             xml_text = gen.get("xml")
             if not xml_text:
-                feedback = self._fail(iter_dir, i, "generate", gen.get("errors", []), history)
-                notify("gate_failed", {"iter": i, "gate": "generate"})
+                feedback = fail(iter_dir, i, "generate", gen.get("errors", []), mode)
+                notify("gate_failed", {"iter": i, "gate": "generate", "mode": mode})
                 continue
             (iter_dir / "plcopen.xml").write_text(xml_text, encoding="utf-8")
 
             # 闸门1+2 已在 generator.gate 内完成（xml2st + 一致性），此处复跑留档：
             ok, st_text, problems1 = xml2st.convert(iter_dir / "plcopen.xml")
             if not ok:
-                feedback = self._fail(iter_dir, i, "xml2st", problems1, history)
-                notify("gate_failed", {"iter": i, "gate": "xml2st"})
+                feedback = fail(iter_dir, i, "xml2st", problems1, mode)
+                notify("gate_failed", {"iter": i, "gate": "xml2st", "mode": mode})
                 continue
             (iter_dir / "plc.st").write_text(st_text, encoding="utf-8")
 
@@ -205,9 +222,13 @@ class Orchestrator:
                                       device_model=device_model)
             hard2 = [p for p in problems2 if not p.startswith("SKIP")]
             if not ok2 or hard2:
-                feedback = self._fail(iter_dir, i, "consistency", hard2, history)
-                notify("gate_failed", {"iter": i, "gate": "consistency"})
+                feedback = fail(iter_dir, i, "consistency", hard2, mode)
+                notify("gate_failed", {"iter": i, "gate": "consistency", "mode": mode})
                 continue
+
+            # 静态闸门全过 → 本产物成为后续定向修复的基础（后续闸门失败也不丢）
+            repair_base = xml_text
+            repair_fails = 0
 
             gates = {"xml2st": True, "consistency": [p for p in problems2 if p.startswith("SKIP")] or True}
 
@@ -216,7 +237,7 @@ class Orchestrator:
                 try:
                     scene_out = scene_generator.generate(spec, device_model)
                 except ValueError as exc:  # 生成器自检失败（spec 异常或内部回归）
-                    feedback = self._fail(iter_dir, i, "scene", [str(exc)], history)
+                    feedback = fail(iter_dir, i, "scene", [str(exc)], mode)
                     notify("gate_failed", {"iter": i, "gate": "scene"})
                     continue
                 (iter_dir / "scene.spec.json").write_text(
@@ -228,7 +249,7 @@ class Orchestrator:
                                                    device_model=device_model)
                 hard5 = [p for p in problems5 if not p.startswith("SKIP")]
                 if not ok5 or hard5:
-                    feedback = self._fail(iter_dir, i, "scene", hard5, history)
+                    feedback = fail(iter_dir, i, "scene", hard5, mode)
                     notify("gate_failed", {"iter": i, "gate": "scene"})
                     continue
                 gates["scene"] = {"ok": True,
@@ -247,7 +268,7 @@ class Orchestrator:
                     errs = detail.get("errors") if isinstance(detail, dict) else [str(detail)]
                     if isinstance(errs, dict):
                         errs = [str(errs)]
-                    feedback = self._fail(iter_dir, i, "deploy", errs, history)
+                    feedback = fail(iter_dir, i, "deploy", errs, mode)
                     notify("gate_failed", {"iter": i, "gate": "deploy"})
                     continue
 
@@ -256,7 +277,7 @@ class Orchestrator:
                 gates["acceptance"] = {"state": state, "detail": detail}
                 if state == "failed":
                     errs = detail if isinstance(detail, list) else [str(detail)]
-                    feedback = self._fail(iter_dir, i, "acceptance", errs, history)
+                    feedback = fail(iter_dir, i, "acceptance", errs, mode)
                     notify("gate_failed", {"iter": i, "gate": "acceptance"})
                     continue
 
@@ -374,6 +395,8 @@ def main():
                         help="链路 B Modbus 主机（缺省 127.0.0.1；远程/VM 运行时传 IP，注入环境供验收子进程）")
     parser.add_argument("--modbus-port", type=int, default=None,
                         help="链路 B Modbus 端口（缺省 502）")
+    parser.add_argument("--no-curated-patterns", action="store_true",
+                        help="生成仅用静态 CATALOG 通用原语（排除自动策展场景卡）——泛化验证口径")
     parser.add_argument("--no-attribution", action="store_true",
                         help="关闭归因引擎（默认启用：坑库签名匹配 + LLM 兜底，只进反馈不裁定）")
     parser.add_argument("--request", default=None,
@@ -436,7 +459,8 @@ def main():
         if not api_key:
             print("未配置 API Key（ZHIPUAI_API_KEY）且未指定 --seed；退出。")
             return 2
-        generator = PLCGenerator(client=BigModelClient(api_key), model=MODEL)
+        generator = PLCGenerator(client=BigModelClient(api_key), model=MODEL,
+                                 generic_patterns_only=args.no_curated_patterns)
 
     scenario = args.scenario
     if scenario is None:

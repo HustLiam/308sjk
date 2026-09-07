@@ -128,6 +128,8 @@ def main():
     parser.add_argument("--scenario", default="plotter3axis", help="验收场景名")
     parser.add_argument("--modbus-host", default=None)
     parser.add_argument("--max-iters", type=int, default=6)
+    parser.add_argument("--no-curated-patterns", action="store_true",
+                        help="生成仅用通用运动原语（排除自动策展场景卡）——泛化验证口径")
     args = parser.parse_args()
 
     from .aml_parser import parse_aml
@@ -207,7 +209,9 @@ def main():
         if pick not in ("l", "L"):
             seed = "src/plc/plotter3axis.xml"
     client = BigModelClient(get_api_key()) if (seed is None and get_api_key()) else None
-    generator = PLCGenerator(client=client, seed_xml=seed) if (seed or client) else None
+    generator = (PLCGenerator(client=client, seed_xml=seed,
+                              generic_patterns_only=args.no_curated_patterns)
+                 if (seed or client) else None)
     if generator is None:
         print("既无种子也无 API Key，无法生成。")
         return 2

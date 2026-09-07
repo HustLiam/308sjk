@@ -4,6 +4,7 @@ ST 模式库单测：种子选取（关键词命中 + 兜底）与卡片渲染�
 种子直接来自 src/plc/*.xml，lx 侧维护场景后内容自动跟随（无第二份拷贝）。
 """
 
+import json
 import sys
 from pathlib import Path
 
@@ -48,3 +49,23 @@ class TestCardContent:
         for key, fname, _s, _t in CATALOG:
             cards = pattern_cards(key)
             assert cards, fname
+
+
+class TestGenericOnly:
+    """泛化验证口径：include_curated=False 时自动策展卡不参与选卡。"""
+
+    def test_curated_excluded_when_generic_only(self, tmp_path, monkeypatch):
+        import agent.patternlib as pl
+        reg = tmp_path / "patterns.json"
+        reg.write_text(json.dumps({"patterns": [
+            {"key": "plotter_circle", "file": "plotter_circle.xml",
+             "summary": "三轴绘图仪画圆", "tags": ["绘图", "画", "圆"]}]}, ensure_ascii=False),
+            encoding="utf-8")
+        monkeypatch.setattr(pl, "REGISTRY_PATH", reg)
+        # 含策展卡：绘图类需求命中 plotter_circle
+        with_curated = [c["key"] for c in pattern_cards("三轴绘图仪 画圆 绘制", picks=2)]
+        assert "plotter_circle" in with_curated
+        # 泛化口径：仅静态 CATALOG（motion3axis），策展卡被排除
+        generic = [c["key"] for c in pattern_cards("三轴绘图仪 画圆 绘制", picks=2,
+                                                   include_curated=False)]
+        assert "plotter_circle" not in generic and "motion3axis" in generic

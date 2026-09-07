@@ -37,9 +37,16 @@ DEFAULT_PICKS = ("motion3axis",)  # 无命中时的兜底：当前唯一种子
 MAX_CARDS_CHARS = 24000
 
 
-def _catalog():
-    """静态 CATALOG + 自动策展注册表（合并视图，注册表条目带 provenance 标记）。"""
+def _catalog(include_curated=True):
+    """静态 CATALOG + 自动策展注册表（合并视图）。
+
+    include_curated=False → 仅静态 CATALOG（lx 审定的通用运动原语）——
+    用于验证 Agent 的真实泛化生成：新任务不借助同构场景的自动策展卡
+    （那等于把答案放进 few-shot）。
+    """
     entries = list(CATALOG)
+    if not include_curated:
+        return entries
     if REGISTRY_PATH.is_file():
         try:
             reg = json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
@@ -79,10 +86,11 @@ def register_pattern(key, xml_path, summary, tags, provenance="auto"):
     return True
 
 
-def pattern_cards(task_goal, io_list=None, picks=2):
+def pattern_cards(task_goal, io_list=None, picks=2, include_curated=True):
     """按需求关键词选模式卡。返回 [{key, summary, st, io}]。
 
-    io_list 也参与匹配（device 语义），task_goal 优先。
+    io_list 也参与匹配（device 语义），task_goal 优先；
+    include_curated=False 排除自动策展卡（泛化验证口径）。
     """
     text = str(task_goal or "")
     if io_list:
@@ -90,7 +98,7 @@ def pattern_cards(task_goal, io_list=None, picks=2):
     text_lc = text.lower()
 
     scored = []
-    for key, fname, summary, tags in _catalog():
+    for key, fname, summary, tags in _catalog(include_curated):
         score = sum(1 for t in tags if t.lower() in text_lc)
         if score:
             scored.append((score, key))
