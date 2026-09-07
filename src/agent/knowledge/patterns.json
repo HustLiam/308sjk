@@ -1,0 +1,17 @@
+{
+ "patterns": [
+  {
+   "key": "plotter3axis",
+   "file": "plotter3axis.xml",
+   "summary": "PlotterCell 三轴龙门绘图机 PLC 控制程序：run 使能并 cmd_home 回参考点（Z 参考点=抬笔安全位 10mm）后进入就绪；cmd_dr",
+   "tags": [
+    "三轴",
+    "绘图",
+    "轴",
+    "笔",
+    "plot"
+   ],
+   "provenance": "orchestrator-final"
+  }
+ ]
+}

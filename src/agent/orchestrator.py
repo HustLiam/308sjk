@@ -48,6 +48,7 @@ import xml2st  # noqa: E402
 _LOCAL = requests.Session()
 _LOCAL.trust_env = False
 
+from .attribution import AttributionEngine  # noqa: E402
 from .config import PROJECT_ROOT, RUNS_DIR, get_api_key  # noqa: E402
 from .consistency_check import consistency_check  # noqa: E402
 from .pipeline import PLCGenerator  # noqa: E402
@@ -61,12 +62,26 @@ ACCEPTANCE_TIMEOUT_S = 600
 
 class Orchestrator:
     def __init__(self, runs_root=None, deploy_url=DEPLOY_URL, max_iters=MAX_ITERS,
-                 project_root=PROJECT_ROOT, acceptance_timeout=ACCEPTANCE_TIMEOUT_S):
+                 project_root=PROJECT_ROOT, acceptance_timeout=ACCEPTANCE_TIMEOUT_S,
+                 attribution_engine=None):
         self.runs_root = Path(runs_root) if runs_root else RUNS_DIR
         self.deploy_url = deploy_url
         self.max_iters = max_iters
         self.project_root = Path(project_root)
         self.acceptance_timeout = acceptance_timeout
+        # 归因引擎（确定性坑库优先 / LLM 兜底）——只进反馈包，不参与闸门裁定
+        self.attribution = attribution_engine or AttributionEngine()
+
+    # ---------------- 归因与失败处理 ----------------
+    def _fail(self, iter_dir, i, gate, errors, history):
+        """统一闸门失败处理：归因 → 增强反馈包 → 留档。返回 feedback。"""
+        errors = [str(e) for e in (errors or ["（闸门失败但未携带错误详情）"])]
+        attribution = self.attribution.attribute(gate, errors)
+        feedback = self._pack_feedback(errors, history, attribution)
+        history.append({"iter": i, "gate": gate, "errors": errors})
+        self._dump_gate(iter_dir, gate, ok=False, errors=errors,
+                        attribution=attribution)
+        return feedback
 
     # ---------------- 闸门 ----------------
     def deploy_gate(self, xml_path):
@@ -78,7 +93,12 @@ class Orchestrator:
         except requests.RequestException as exc:
             return "skipped", "deploy 服务不在线（%s）——半环跳过真编译" % exc.__class__.__name__
         if resp.status_code != 200:
-            return "failed", "HTTP %d: %s" % (resp.status_code, resp.text[:500])
+            # 500 多为编译失败：body 即 deploy_result.json（errors 字段是回喂主体），
+            # 尽量透传；仅非 JSON 时降级为文本
+            try:
+                return "failed", resp.json()
+            except ValueError:
+                return "failed", "HTTP %d: %s" % (resp.status_code, resp.text[:500])
         result = resp.json()
         status = result.get("status")
         if str(status).lower() == "ok" or status is True:
@@ -168,9 +188,7 @@ class Orchestrator:
             gen = generator.generate(spec, feedback=feedback)
             xml_text = gen.get("xml")
             if not xml_text:
-                history.append({"iter": i, "gate": "generate", "errors": gen.get("errors", [])})
-                feedback = self._pack_feedback(gen.get("errors", []), history)
-                self._dump_gate(iter_dir, "generate", ok=False, errors=gen.get("errors", []))
+                feedback = self._fail(iter_dir, i, "generate", gen.get("errors", []), history)
                 notify("gate_failed", {"iter": i, "gate": "generate"})
                 continue
             (iter_dir / "plcopen.xml").write_text(xml_text, encoding="utf-8")
@@ -178,9 +196,7 @@ class Orchestrator:
             # 闸门1+2 已在 generator.gate 内完成（xml2st + 一致性），此处复跑留档：
             ok, st_text, problems1 = xml2st.convert(iter_dir / "plcopen.xml")
             if not ok:
-                history.append({"iter": i, "gate": "xml2st", "errors": problems1})
-                feedback = self._pack_feedback(problems1, history)
-                self._dump_gate(iter_dir, "xml2st", ok=False, errors=problems1)
+                feedback = self._fail(iter_dir, i, "xml2st", problems1, history)
                 notify("gate_failed", {"iter": i, "gate": "xml2st"})
                 continue
             (iter_dir / "plc.st").write_text(st_text, encoding="utf-8")
@@ -188,9 +204,7 @@ class Orchestrator:
             ok2, problems2 = consistency_check(iter_dir / "plcopen.xml", spec["io_list"])
             hard2 = [p for p in problems2 if not p.startswith("SKIP")]
             if not ok2 or hard2:
-                history.append({"iter": i, "gate": "consistency", "errors": hard2})
-                feedback = self._pack_feedback(hard2, history)
-                self._dump_gate(iter_dir, "consistency", ok=False, errors=hard2)
+                feedback = self._fail(iter_dir, i, "consistency", hard2, history)
                 notify("gate_failed", {"iter": i, "gate": "consistency"})
                 continue
 
@@ -201,10 +215,7 @@ class Orchestrator:
                 try:
                     scene_out = scene_generator.generate(spec, device_model)
                 except ValueError as exc:  # 生成器自检失败（spec 异常或内部回归）
-                    errs = [str(exc)]
-                    history.append({"iter": i, "gate": "scene", "errors": errs})
-                    feedback = self._pack_feedback(errs, history)
-                    self._dump_gate(iter_dir, "scene", ok=False, errors=errs)
+                    feedback = self._fail(iter_dir, i, "scene", [str(exc)], history)
                     notify("gate_failed", {"iter": i, "gate": "scene"})
                     continue
                 (iter_dir / "scene.spec.json").write_text(
@@ -215,9 +226,7 @@ class Orchestrator:
                                                    spec["io_list"], scene_out["io_map"])
                 hard5 = [p for p in problems5 if not p.startswith("SKIP")]
                 if not ok5 or hard5:
-                    history.append({"iter": i, "gate": "scene", "errors": hard5})
-                    feedback = self._pack_feedback(hard5, history)
-                    self._dump_gate(iter_dir, "scene", ok=False, errors=hard5)
+                    feedback = self._fail(iter_dir, i, "scene", hard5, history)
                     notify("gate_failed", {"iter": i, "gate": "scene"})
                     continue
                 gates["scene"] = {"ok": True,
@@ -236,9 +245,7 @@ class Orchestrator:
                     errs = detail.get("errors") if isinstance(detail, dict) else [str(detail)]
                     if isinstance(errs, dict):
                         errs = [str(errs)]
-                    history.append({"iter": i, "gate": "deploy", "errors": errs})
-                    feedback = self._pack_feedback(errs, history)
-                    self._dump_gate(iter_dir, "deploy", ok=False, errors=errs)
+                    feedback = self._fail(iter_dir, i, "deploy", errs, history)
                     notify("gate_failed", {"iter": i, "gate": "deploy"})
                     continue
 
@@ -247,14 +254,13 @@ class Orchestrator:
                 gates["acceptance"] = {"state": state, "detail": detail}
                 if state == "failed":
                     errs = detail if isinstance(detail, list) else [str(detail)]
-                    history.append({"iter": i, "gate": "acceptance", "errors": errs})
-                    feedback = self._pack_feedback(errs, history)
-                    self._dump_gate(iter_dir, "acceptance", ok=False, errors=errs)
+                    feedback = self._fail(iter_dir, i, "acceptance", errs, history)
                     notify("gate_failed", {"iter": i, "gate": "acceptance"})
                     continue
 
             self._dump_gate(iter_dir, "all", ok=True, gates=gates)
             history.append({"iter": i, "gate": "all", "ok": True})
+            self._consolidate(generator, spec, gates, history)
             self._finalize(run_dir, iter_dir, i, history)
             notify("final", {"iter": i, "run_dir": str(run_dir)})
             return {"status": "final", "iter": i, "run_dir": run_dir}
@@ -263,30 +269,68 @@ class Orchestrator:
         order = {"generate": 0, "xml2st": 1, "consistency": 2, "scene": 3, "deploy": 4,
                  "acceptance": 5, "all": 6}
         best = max(history, key=lambda h: order.get(h.get("gate"), -1)) if history else None
+        if best and not best.get("ok"):
+            self.attribution.memory.record_fix(
+                best.get("gate"), best.get("errors", []),
+                "迭代上限未收敛（人工介入点 2），best=%s" % best.get("gate"), "abandoned")
         self._write_summary(run_dir, history, best)
         notify("best_effort", {"run_dir": str(run_dir)})
         return {"status": "best_effort", "iter": (best or {}).get("iter"), "run_dir": run_dir}
 
     # ---------------- 产物 ----------------
     @staticmethod
-    def _pack_feedback(errors, history):
-        """反馈包：失败证据原文 + 迭代记忆（禁止回退已通过的修改）。"""
+    def _pack_feedback(errors, history, attribution=None):
+        """反馈包：失败证据原文 + 归因（坑库/历史修复/LLM 兜底）+ 迭代记忆。"""
         passed = [h for h in history if h.get("ok")]
         lines = ["失败证据（原样）："] + ["- %s" % e for e in errors]
+        if attribution:
+            extra = AttributionEngine.format_feedback(attribution)
+            if extra:
+                lines += ["归因（只供修复参考，不改变闸门结论）：", extra]
         if passed:
             lines.append("迭代记忆：以下修改已通过对应闸门，禁止回退——")
             lines += ["- iter %s: %s" % (h["iter"], h.get("gate")) for h in passed]
         return "\n".join(lines)
 
     @staticmethod
-    def _dump_gate(iter_dir, gate, ok, errors=None, gates=None):
+    def _dump_gate(iter_dir, gate, ok, errors=None, gates=None, attribution=None):
         payload = {"gate": gate, "ok": ok}
         if errors:
             payload["errors"] = errors
         if gates:
             payload["gates"] = gates
+        if attribution:
+            payload["attribution"] = attribution
         (iter_dir / "gate.json").write_text(
             json.dumps(payload, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+
+    # ---------------- 知识沉淀（final 后） ----------------
+    def _consolidate(self, generator, spec, gates, history):
+        """final 后的知识沉淀：情景记忆（修复对）+ 模式卡自动策展。
+
+        策展条件从严：种子模式 + 在线验收 ok（skipped 不入模式库——未在线
+        验证的场景不构成"已验收模式"）。
+        """
+        acc = gates.get("acceptance") or {}
+        acc_ok = isinstance(acc, dict) and acc.get("state") == "ok"
+        seed_path = getattr(generator, "seed_path", None)
+        if not (acc_ok and seed_path):
+            return None
+        key = Path(seed_path).stem
+        goal = spec.get("task_goal", "")[:80]
+        self.attribution.memory.record_fix(
+            "all", ["final iter=%d" % len(history)],
+            "种子 %s 通过全部闸门（含在线验收）" % key, "final")
+        tags = [w for w in ("三轴", "绘图", "画", "运动", "定位", "轴", "互锁",
+                            "序列", "笔", "plot", "draw", "square")
+                if w in goal or w in goal.lower()]
+        try:
+            from . import patternlib
+            patternlib.register_pattern(key, seed_path, goal, tags,
+                                        provenance="orchestrator-final")
+        except Exception:
+            pass  # 策展失败不影响交付
+        return key
 
     def _finalize(self, run_dir, iter_dir, i, history):
         final_dir = run_dir / "final"
@@ -328,6 +372,8 @@ def main():
                         help="链路 B Modbus 主机（缺省 127.0.0.1；远程/VM 运行时传 IP，注入环境供验收子进程）")
     parser.add_argument("--modbus-port", type=int, default=None,
                         help="链路 B Modbus 端口（缺省 502）")
+    parser.add_argument("--no-attribution", action="store_true",
+                        help="关闭归因引擎（默认启用：坑库签名匹配 + LLM 兜底，只进反馈不裁定）")
     parser.add_argument("--request", default=None,
                         help="自然语言需求文本（或 .txt 文件路径），配合 --aml 使用")
     args = parser.parse_args()
@@ -398,7 +444,12 @@ def main():
     if args.modbus_port:
         os.environ["MODBUS_PORT"] = str(args.modbus_port)
 
-    orch = Orchestrator(runs_root=args.runs_root, max_iters=args.max_iters)
+    orch = Orchestrator(runs_root=args.runs_root, max_iters=args.max_iters,
+                        attribution_engine=(
+                            None if args.no_attribution
+                            else AttributionEngine(
+                                client=BigModelClient(get_api_key())
+                                if get_api_key() else None)))
     scene_gen = None if args.no_scene else SceneSpecGenerator()
     result = orch.solve(spec, generator, deploy=args.deploy,
                         acceptance=scenario if args.acceptance else None,

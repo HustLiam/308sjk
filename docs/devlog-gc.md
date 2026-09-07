@@ -399,3 +399,29 @@ MAXPOS 提为 VAR_INPUT 按轴传参，Z 轴传 20/60/1/10），删除子类。�
   无需关心环境状态。
 - 脚本化：--request --confirm --seed 使全流程可管道演示（实测粗需求 iter_1
   final，交付 runs/plotter_cell/final/{plcopen.xml, scene.spec.json, io_map.json}）。
+
+
+### 标准形态推进：知识库 / 记忆 / 归因 / 自动策展 / 上下文预算
+
+- **知识库**（src/agent/knowledge/pitfalls.json，committed 契约性质）：lx 避坑
+  1~8 + 本项目联调新增 9~14 共 14 条，结构 {签名→诊断→修法}；归因按错误文本
+  签名计分匹配（短语命中权重高）。
+- **记忆**（src/agent/memory.py）：程序性（坑库，committed）+ 情景
+  （workspace/memory/fixes.json 修复对，本机）；检索确定性签名匹配，无向量零依赖。
+- **归因引擎**（src/agent/attribution.py）：**KB 优先（命中不打 LLM）、LLM 兜底
+  （未命中才小上下文诊断，输出标 advisory）**；红线保持——归因只进反馈包
+  （_pack_feedback 增强版），gate.json 留档，不改变闸门裁定。实测：LLM 兜底对
+  空证据正确回答"证据不足"。
+- **编排器接线**：7 个失败点统一收敛到 _fail()（归因→增强反馈→留档）；
+  final+在线验收 ok → _consolidate()（修复对入情景记忆 + 种子自动策展，
+  skipped 不策展——未在线验证不构成"已验收模式"）；best_effort 记 abandoned。
+- **模式库自动策展**（patternlib）：knowledge/patterns.json 注册表与静态
+  CATALOG 合并视图；register_pattern 登记前过闸门防坏种子、防 key/文件重复；
+  pattern_cards 选卡读合并视图。**实测闭环：final 后绘图类需求自动选到
+  plotter3axis 卡（零代码改动）**。上下文预算：render_cards 超限丢卡并注明。
+- 联调暴露并修复 3 个集成 bug：① serve 编译失败返回 HTTP 500 时 deploy_gate
+  只留状态码文本丢了 errors——改透传 body；② _fail 未防 errors=None；③
+  register_pattern 的相对路径正斜杠被 split("\\") 切不动拼出双重路径——
+  归一化 rsplit("/")。
+- 测试 133→147（坑库匹配 4 / 情景记忆 2 / 归因 4 / 策展与预算 2 / 编排器接线 2）；
+  实效演示：坏 END_CASE → 闸门3 matiec 真失败 → gate.json 归因命中 P09 给出修法。

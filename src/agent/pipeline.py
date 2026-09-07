@@ -48,6 +48,7 @@ class PLCGenerator:
         self.model = model
         self.max_rounds = max_rounds
         self.seed_xml = Path(seed_xml).read_text(encoding="utf-8") if seed_xml else None
+        self.seed_path = str(seed_xml) if seed_xml else None  # 策展登记用
         self.skill_prompt = SKILL_PATH.read_text(encoding="utf-8")
 
     # ---------------- LLM 调用 ----------------

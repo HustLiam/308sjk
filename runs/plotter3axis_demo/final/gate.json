@@ -20,7 +20,7 @@
           {
             "step": "validate & convert XML",
             "ok": true,
-            "detail": "deploy_wiq54a6g.xml -> 547 行 ST"
+            "detail": "deploy_0om2swcl.xml -> 547 行 ST"
           },
           {
             "step": "write program.st",
@@ -35,7 +35,7 @@
           {
             "step": "upload & trigger compile",
             "ok": true,
-            "detail": "156548.st"
+            "detail": "19602.st"
           },
           {
             "step": "compile (matiec)",
