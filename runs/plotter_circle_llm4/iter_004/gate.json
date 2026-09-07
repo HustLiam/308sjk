@@ -1,0 +1,29 @@
+{
+  "gate": "generate",
+  "ok": false,
+  "errors": [
+    "[xml2st] XML 无法解析: mismatched tag: line 14, column 98"
+  ],
+  "attribution": {
+    "gate": "generate",
+    "errors": [
+      "[xml2st] XML 无法解析: mismatched tag: line 14, column 98"
+    ],
+    "pitfalls": [],
+    "similar_fixes": [],
+    "repair_hints": [
+      "检查生成输出第 14 行（尤其第 98 列附近）的 XML 标签，确保开标签与闭标签名称严格一致（如 <block> 对应 </block>）",
+      "对生成内容执行 XML 良构性校验（xmllint 或解析器预检）后再送入 xml2st 闸门",
+      "排查第 14 行附近是否存在未转义的尖括号/引号或模板拼接导致的标签截断"
+    ],
+    "llm_diagnosis": {
+      "root_cause": "代码问题：生成的 ST/XML 文件中第 14 行存在标签不匹配（mismatched tag），XML 结构非法导致 xml2st 无法解析",
+      "repair_hints": [
+        "检查生成输出第 14 行（尤其第 98 列附近）的 XML 标签，确保开标签与闭标签名称严格一致（如 <block> 对应 </block>）",
+        "对生成内容执行 XML 良构性校验（xmllint 或解析器预检）后再送入 xml2st 闸门",
+        "排查第 14 行附近是否存在未转义的尖括号/引号或模板拼接导致的标签截断"
+      ],
+      "advisory": true
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "gate": "acceptance",
+  "ok": false,
+  "errors": [
+    "[verify] 程序不匹配：期望 plotter_circle (prog_id=3)，运行时当前 prog_id=2 —— 请先 python src/pipeline/run_deploy.py --xml src/plc/<对应场景>.xml"
+  ],
+  "attribution": {
+    "gate": "acceptance",
+    "errors": [
+      "[verify] 程序不匹配：期望 plotter_circle (prog_id=3)，运行时当前 prog_id=2 —— 请先 python src/pipeline/run_deploy.py --xml src/plc/<对应场景>.xml"
+    ],
+    "pitfalls": [
+      {
+        "id": "P12",
+        "title": "缺 prog_id 程序身份",
+        "diagnosis": "场景程序缺 prog_id AT %QW20 声明与每周期写入（契约② v1.1），在线验收 require_program 必挂",
+        "fix": "定位变量块加 prog_id AT %QW20（INT，初值=场景号），ST 本体首行 prog_id := N;"
+      }
+    ],
+    "similar_fixes": [],
+    "repair_hints": [
+      "定位变量块加 prog_id AT %QW20（INT，初值=场景号），ST 本体首行 prog_id := N;"
+    ]
+  }
+}

@@ -149,6 +149,150 @@ class Orchestrator:
             pass
         return None
 
+    # ---------------- 运行时透视（诊断口自动注入与采集） ----------------
+    _DIAG_KEYWORDS = ("step", "seq", "state", "ck", "phase", "exe", "busy",
+                      "done", "edge", "armed", "pen", "latch", "count")
+    _DIAG_BASE_REG = 16   # %QW16.. 诊断口（站表未分配区，跳过 prog_id@%QW20）
+
+    def _pick_diag_vars(self, xml_path, limit=6):
+        """从 PLC_PRG 内部变量挑诊断观察对象（步号/触发线/状态类命名启发）。"""
+        import re as _re
+        try:
+            problems, model = xml2st.parse(xml_path)
+        except Exception:
+            return []
+        out = []
+        for pou in model.get("pous", []):
+            if pou["name"] != "PLC_PRG":
+                continue
+            for line in pou.get("iface", []):
+                m = _re.match(r"\s*([A-Za-z_][A-Za-z0-9_]*)\s*(AT\s+%Q\S+)?\s*:\s*(\w+)", line)
+                if not m:
+                    continue
+                name, at, typ = m.group(1), m.group(2), m.group(3)
+                if at or typ not in ("INT", "BOOL", "WORD"):
+                    continue
+                if any(k in name.lower() for k in self._DIAG_KEYWORDS):
+                    out.append((name, typ))
+        # 步号/状态类最关键，排前（诊断时间线的可读性）
+        out.sort(key=lambda nt: 0 if any(k in nt[0].lower()
+                                         for k in ("step", "seq", "state", "phase"))
+                 else 1)
+        return out[:limit]
+
+    def _runtime_probe(self, iter_dir, xml_text, samples=14, span_s=7.0):
+        """给 XML 注入诊断口 → 部署 → enable+draw 探针采集内部状态时间线。
+
+        返回时间线行列表（进入反馈包）；失败返回 []（不影响主流程）。
+        采集后重新部署原始 XML（探针部署不留痕）。
+        """
+        import tempfile
+        import time as _time
+        import xml.etree.ElementTree as ET
+
+        NS = "http://www.plcopen.org/xml/tc6_0201"
+        xml_path = Path(iter_dir) / "plcopen.xml"
+        picks = self._pick_diag_vars(xml_path)
+        if not picks:
+            return []
+        with tempfile.NamedTemporaryFile("w", suffix=".xml", delete=False,
+                                         encoding="utf-8") as fh:
+            fh.write(xml_text)
+            src = Path(fh.name)
+        try:
+            ET.register_namespace("", NS)
+            tree = ET.parse(src)
+            root = tree.getroot()
+            prg = next((p for p in root.findall(".//{%s}pou" % NS)
+                        if p.get("name") == "PLC_PRG"), None)
+            if prg is None:
+                return []
+            iface = prg.find("{%s}interface" % NS)
+            blk = ET.SubElement(iface, "{%s}localVars" % NS)
+            def diag_addr(idx):
+                reg = self._DIAG_BASE_REG + idx
+                return reg + 1 if reg >= 20 else reg       # 跳过 prog_id@%QW20
+
+            assigns = []
+            for idx, (name, typ) in enumerate(picks):
+                st = typ if typ != "BOOL" else "INT"
+                v = ET.SubElement(blk, "{%s}variable" % NS,
+                                  {"name": "dbg_%d" % idx})
+                v.set("address", "%%QW%d" % diag_addr(idx))
+                ET.SubElement(ET.SubElement(v, "{%s}type" % NS), "{%s}%s" % (NS, st))
+                assigns.append("dbg_%d := %s;" % (idx, name) if typ != "BOOL"
+                               else "dbg_%d := BOOL_TO_INT(%s);" % (idx, name))
+            body_st = prg.find(".//{%s}body/{%s}ST" % (NS, NS))
+            if body_st is None:
+                return []
+            xh = body_st.find("{http://www.w3.org/1999/xhtml}xhtml")
+            tail = "\n" + "\n".join(assigns)
+            if xh is not None:
+                xh.text = (xh.text or "") + tail
+            else:
+                body_st.text = (body_st.text or "") + tail
+            probe_xml = Path(iter_dir) / "plcopen_diag.xml"
+            tree.write(probe_xml, encoding="UTF-8", xml_declaration=True)
+            ok, _st, probs = xml2st.convert(probe_xml)
+            if not ok:
+                return []
+            state, _detail = self.deploy_gate(probe_xml)
+            if state != "ok":
+                return []
+            lines = self._probe_collect([n for n, _t in picks])
+            # 恢复原始程序（诊断部署不留痕）
+            self.deploy_gate(xml_path)
+            return lines
+        finally:
+            try:
+                src.unlink()
+            except OSError:
+                pass
+
+    def _probe_collect(self, names, samples=14):
+        """探针采集：enable → 触发绘图 → 采样 %QW16+ 内部状态时间线。"""
+        import os
+        import time as _time
+        sys.path.insert(0, str(self.project_root / "src" / "pipeline"))
+        try:
+            from modbus_io import SafeCoilIO, connect, read_reg
+        except ImportError:
+            return []
+        host = os.environ.get("MODBUS_HOST", "127.0.0.1")
+        try:
+            m = connect(host=host,
+                        port=int(os.environ.get("MODBUS_PORT", "502")))
+        except Exception:
+            return []
+        lines = []
+        try:
+            io = SafeCoilIO(m)
+            io.write(0, True)                     # run
+            _time.sleep(1.0)
+            io.write(16, True)                    # cmd_draw（站表约定）
+            _time.sleep(0.2)
+            io.write(16, False)
+            def diag_addr(j):
+                reg = self._DIAG_BASE_REG + j
+                return reg + 1 if reg >= 20 else reg
+
+            for k in range(samples):
+                _time.sleep(0.5)
+                vals = [read_reg(m, diag_addr(j)) & 0xFFFF
+                        for j in range(len(names))]
+                lines.append("    [diag t=%.1fs] %s" % (
+                    (k + 1) * 0.5,
+                    " ".join("%s=%d" % (n, v) for n, v in zip(names, vals))))
+            io.write(0, False)
+        except Exception:
+            pass
+        finally:
+            try:
+                m.close()
+            except Exception:
+                pass
+        return lines
+
     # ---------------- 主循环 ----------------
     def solve(self, spec, generator, deploy=False, acceptance=None, echo=None,
               scene_generator=None, device_model=None):
@@ -277,6 +421,14 @@ class Orchestrator:
                 gates["acceptance"] = {"state": state, "detail": detail}
                 if state == "failed":
                     errs = detail if isinstance(detail, list) else [str(detail)]
+                    # 运行时透视：验收行为失败时自动注入诊断口采集序列器内部状态，
+                    # 把"卡在 (51,26,9)"变成"pl_step 停在 2 / exe=1 / Busy=1"级证据
+                    try:
+                        diag = self._runtime_probe(iter_dir, xml_text)
+                        if diag:
+                            errs = errs + ["运行时内部状态时间线（诊断口自动采集）："] + diag
+                    except Exception:
+                        pass
                     feedback = fail(iter_dir, i, "acceptance", errs, mode)
                     notify("gate_failed", {"iter": i, "gate": "acceptance"})
                     continue
@@ -452,15 +604,21 @@ def main():
             return 2
         spec = json.loads(Path(args.spec).read_text(encoding="utf-8"))
 
+    address_table = {}
+    if device_model:
+        address_table = {p["name"]: p["address"] for p in device_model.get("io_points", [])
+                         if p.get("address")}
     if args.seed:
-        generator = PLCGenerator(client=None, seed_xml=args.seed)
+        generator = PLCGenerator(client=None, seed_xml=args.seed,
+                                 address_table=address_table)
     else:
         api_key = get_api_key()
         if not api_key:
             print("未配置 API Key（ZHIPUAI_API_KEY）且未指定 --seed；退出。")
             return 2
         generator = PLCGenerator(client=BigModelClient(api_key), model=MODEL,
-                                 generic_patterns_only=args.no_curated_patterns)
+                                 generic_patterns_only=args.no_curated_patterns,
+                                 address_table=address_table)
 
     scenario = args.scenario
     if scenario is None:

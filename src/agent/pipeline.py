@@ -53,7 +53,7 @@ class PLCGenerator:
     """
 
     def __init__(self, client, model="glm-5.3", max_rounds=3, seed_xml=None,
-                 generic_patterns_only=False):
+                 generic_patterns_only=False, address_table=None):
         self.client = client
         self.model = model
         self.max_rounds = max_rounds
@@ -62,6 +62,9 @@ class PLCGenerator:
         self.skill_prompt = SKILL_PATH.read_text(encoding="utf-8")
         # True=仅静态 CATALOG 通用原语（泛化验证：不借助自动策展的同构场景卡）
         self.generic_patterns_only = generic_patterns_only
+        # ⓪ 侧地址分配表（AML 通道 → %Q 地址）：设备契约，前置注入 prompt，
+        # 让首次生成即按站约定表分配（R6 仍是闸门兜底）
+        self.address_table = address_table or {}
 
     # ---------------- LLM 调用 ----------------
     def _call(self, messages):

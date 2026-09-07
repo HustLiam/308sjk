@@ -59,7 +59,46 @@ IEC 61131-10 PLCopen XML 工程**。以下硬约束的权威定义在《lx-PLC�
 - **CASE 每个分支至少一条可执行语句**——只有注释的分支非法（填 `step := step;`
   类占位或写实际条件赋值）；`END_CASE;` 带分号；
 - REAL 初值必须带小数点（40.0 非 40）；不同 FB 的边沿记忆变量不同名；
-- 输出完整工程时自查上述五条再交付。
+- 输出完整工程时自查上述五条再交付；
+- **CiA402 空闲态约定**：MC_Power 未使能（Enable=FALSE）期间必须持续发
+  shutdown 命令（cw=0x06），使驱动器处于 RTSO 态（sw=0x31，bit0=1）——
+  不能让驱动器停在 SOD（sw=0x40），否则上电自检类验收必挂。
+
+## 多段轨迹序列器模板（连续跟踪模式——工艺序列的标准实现，源自运动控制生成方案 v2）
+
+任何"按步骤依次走多个目标点"的工艺（画图/搬运/检测路径…）必须用此模式。
+**禁止**在 PLC_PRG 里写单扫描选通/脉冲触发（运行时优化器会静默吞掉这类赋值——
+症状：序列器空转、FB 状态不翻转）。骨架：
+
+```st
+(* 变量：pl_step INT（步号，0=空闲）；pl_tx/ty/tz INT（当前步目标）；
+   go_*_exe BOOL（电平持有，触发扫描置 TRUE、完成步清 FALSE） *)
+CASE pl_step OF
+    0: IF 启动指令 AND 就绪条件 THEN      (* 电平门控，无 pen 类前置须与规格一致 *)
+           目标 := 序列第一步; go_x_exe := TRUE; go_y_exe := TRUE; go_z_exe := TRUE;
+           pl_step := 1;
+       END_IF;
+    1: 目标 := 步1目标;                   (* 每步只改目标值 *)
+    2: 目标 := 步2目标;                   (* 需要折线/多路点：本步内按段计数器算目标 *)
+    ...
+    N: 目标 := 收尾目标;
+END_CASE;
+
+(* 步进：三轴插补全部空闲且 Done——目标变化由 INTERP 连续跟踪自动起新轨迹 *)
+IF (pl_step <> 0) AND NOT ix_x.Busy AND NOT ix_y.Busy AND NOT ix_z.Busy
+   AND ix_x.Done AND ix_y.Done AND ix_z.Done THEN
+    IF pl_step = N THEN 完成标志 := TRUE; pl_step := 0; go_*_exe := FALSE;
+    ELSE pl_step := pl_step + 1;
+    END_IF;
+END_IF;
+
+(* INTERP 需含连续跟踪分支（fire 电平保持期间目标变化即起新轨迹）：
+   ELSIF fire AND NOT Busy AND (ABS(INT_TO_REAL(pos_target) - tgt) > 0.499)
+   THEN tgt := INT_TO_REAL(pos_target); Busy := TRUE; Done := FALSE; *)
+```
+
+要点：触发线**全程电平保持**（触发扫描置位、终止/完成才清零）；步进只改目标值；
+急停/故障 → pl_step := 0 并清 exe（释放后不自动续跑）。
 
 ## 工艺逻辑写法（模式库要点，完整种子见随 prompt 附的模式卡）
 

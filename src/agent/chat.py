@@ -209,8 +209,11 @@ def main():
         if pick not in ("l", "L"):
             seed = "src/plc/plotter3axis.xml"
     client = BigModelClient(get_api_key()) if (seed is None and get_api_key()) else None
+    address_table = {p["name"]: p["address"] for p in device_model.get("io_points", [])
+                     if p.get("address")}
     generator = (PLCGenerator(client=client, seed_xml=seed,
-                              generic_patterns_only=args.no_curated_patterns)
+                              generic_patterns_only=args.no_curated_patterns,
+                              address_table=address_table)
                  if (seed or client) else None)
     if generator is None:
         print("既无种子也无 API Key，无法生成。")

@@ -146,13 +146,25 @@ def main():
         return False
 
     def draw(timeout=40.0):
+        """触发绘图并监测。每 2s 打印运行时时间线（pos/v/pen/done）——
+        失败时这些行进入闸门反馈包，是归因与修复的运行时证据。"""
         io.write(CMD_DRAW, True); time.sleep(0.2); io.write(CMD_DRAW, False)
         t0 = time.time()
+        next_mark = 2.0
         while time.time() - t0 < timeout:
-            cycle()
+            xv, yv, zv = cycle()
+            el = time.time() - t0
+            if el >= next_mark:
+                print("    [trace t=%.0fs] pos=(%d,%d,%d) v=(%d,%d,%d) pen=%d done=%d moving=%d"
+                      % (el, read_reg(m, X_FB), read_reg(m, Y_FB), read_reg(m, Z_FB),
+                         xv, yv, zv, io.read(PEN_DOWN), io.read(PLOT_DONE), io.read(ANY_MOVING)))
+                next_mark += 2.0
             if io.read(PLOT_DONE) and not io.read(ANY_MOVING):
                 return time.time() - t0
             time.sleep(DT)
+        print("    [trace 超时] pos=(%d,%d,%d) pen=%d done=%d"
+              % (read_reg(m, X_FB), read_reg(m, Y_FB), read_reg(m, Z_FB),
+                 io.read(PEN_DOWN), io.read(PLOT_DONE)))
         return None
 
     back_to_initial()
