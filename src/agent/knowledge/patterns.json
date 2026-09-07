@@ -12,6 +12,21 @@
     "plot"
    ],
    "provenance": "orchestrator-final"
+  },
+  {
+   "key": "plotter_circle",
+   "file": "plotter_circle.xml",
+   "summary": "三轴绘图单元在 XY 平面绘制整圆：run 使能三轴驱动器后，按 cmd_draw 启动序列——先确认抬笔（z_fb=10），XY 定位至圆起点（圆心 50%,",
+   "tags": [
+    "三轴",
+    "绘图",
+    "定位",
+    "轴",
+    "序列",
+    "笔",
+    "draw"
+   ],
+   "provenance": "orchestrator-final"
   }
  ]
 }

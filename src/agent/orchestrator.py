@@ -201,7 +201,8 @@ class Orchestrator:
                 continue
             (iter_dir / "plc.st").write_text(st_text, encoding="utf-8")
 
-            ok2, problems2 = consistency_check(iter_dir / "plcopen.xml", spec["io_list"])
+            ok2, problems2 = consistency_check(iter_dir / "plcopen.xml", spec["io_list"],
+                                      device_model=device_model)
             hard2 = [p for p in problems2 if not p.startswith("SKIP")]
             if not ok2 or hard2:
                 feedback = self._fail(iter_dir, i, "consistency", hard2, history)
@@ -223,7 +224,8 @@ class Orchestrator:
                 (iter_dir / "io_map.json").write_text(
                     json.dumps(scene_out["io_map"], ensure_ascii=False, indent=2), encoding="utf-8")
                 ok5, problems5 = consistency_check(iter_dir / "plcopen.xml",
-                                                   spec["io_list"], scene_out["io_map"])
+                                                   spec["io_list"], scene_out["io_map"],
+                                                   device_model=device_model)
                 hard5 = [p for p in problems5 if not p.startswith("SKIP")]
                 if not ok5 or hard5:
                     feedback = self._fail(iter_dir, i, "scene", hard5, history)

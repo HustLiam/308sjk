@@ -165,12 +165,37 @@ def _err_io_map_shape(problems, io_map):
                     % type(io_map).__name__)
 
 
-def consistency_check(xml_source, io_list, io_map=None):
+def _check_device_addresses(problems, located, device_model):
+    """R6：⓪ 侧地址腿——AML 通道地址是 io_map/验收脚本的共同语言，
+    生成代码必须逐字遵循（名字↔地址双向对账）。画圆场景实证：名字/类型
+    全对但地址自编一套，静态层全绿、Modbus 层才露馅。"""
+    points = {p["name"]: p.get("address") for p in device_model.get("io_points", [])
+              if p.get("address")}
+    if not points:
+        return
+    xml_addr = {v["name"]: v["addr"] for v in located}
+    for name, aml_addr in points.items():
+        got = xml_addr.get(name)
+        if got is None:
+            continue  # R2 已报缺失，不重复
+        if got != aml_addr:
+            problems.append("R6: 变量 %r 地址 %s 与设备模型通道 %s 不一致"
+                            "（AML/io_map/验收脚本按站约定表寻址，须逐字遵循）"
+                            % (name, got, aml_addr))
+    for name, addr in xml_addr.items():
+        if name not in points and name != "prog_id":
+            if addr in set(points.values()):
+                problems.append("R6: 变量 %r（%s）占用了设备模型其他通道的地址"
+                                % (name, addr))
+
+
+def consistency_check(xml_source, io_list, io_map=None, device_model=None):
     """主入口。返回 (ok, problems)。
 
-    xml_source: PLCopen XML 路径或文本；
-    io_list:    requirement_spec.io_list；
-    io_map:     dict / list / 文件路径；None = 仿真侧尚未产出，跳过该腿。
+    xml_source:   PLCopen XML 路径或文本；
+    io_list:      requirement_spec.io_list；
+    io_map:       dict / list / 文件路径；None = 仿真侧尚未产出，跳过该腿。
+    device_model: ⓪ 的设备模型；提供时启用 R6 地址腿（名字↔地址对账）。
     """
     problems = []
 
@@ -190,6 +215,8 @@ def consistency_check(xml_source, io_list, io_map=None):
     located = extract_located_vars(xml_source)
     _check_names_and_types(problems, located, io_list)
     _check_addresses(problems, located)
+    if device_model is not None:
+        _check_device_addresses(problems, located, device_model)
 
     if io_map is None:
         problems.append("SKIP: io_map 未提供（仿真侧尚未产出）——仅对账 XML ↔ io_list 两方")

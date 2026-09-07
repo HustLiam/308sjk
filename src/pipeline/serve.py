@@ -35,7 +35,7 @@ from modbus_io import PROG_ID_REG, connect, read_reg          # noqa: E402
 from openplc_client import OpenPLCClient                       # noqa: E402
 
 # prog_id → 场景名（与 lx 文档 §5.3 prog_id 分配一致；新场景在此顺延登记）
-PROG_NAMES = {1: "motion3axis", 2: "plotter3axis"}
+PROG_NAMES = {1: "motion3axis", 2: "plotter3axis", 3: "plotter_circle"}
 
 
 class DeployHandler(BaseHTTPRequestHandler):

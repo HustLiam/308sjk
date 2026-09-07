@@ -114,3 +114,34 @@ class TestIoMapLeg:
         path.write_text(json.dumps(io_map_from(IO_LIST)), encoding="utf-8")
         ok, problems = consistency_check(MOTION_XML, IO_LIST, path)
         assert ok, problems
+
+
+class TestR6DeviceAddresses:
+    """R6：⓪ 侧地址腿——AML 通道地址 ≡ XML 定位变量地址（画圆场景实证）。"""
+
+    MODEL_AML = REPO / "examples" / "aml" / "plotter3axis_station.aml"
+    SPEC = json.loads((REPO / "examples" / "specs" / "plotter3axis.spec.json")
+                      .read_text(encoding="utf-8"))
+
+    def _model(self):
+        from agent.aml_parser import parse_aml
+        model, problems = parse_aml(self.MODEL_AML)
+        assert problems == []
+        return model
+
+    def test_matching_addresses_pass(self):
+        ok, problems = consistency_check(
+            REPO / "src" / "plc" / "plotter3axis.xml", self.SPEC["io_list"],
+            device_model=self._model())
+        assert ok, problems
+
+    def test_diverged_addresses_caught(self, tmp_path):
+        # 把 x_sp 挪到错误地址 → R6 必须抓到
+        text = (REPO / "src" / "plc" / "plotter3axis.xml").read_text(encoding="utf-8")
+        broken = text.replace('name="x_sp" address="%QW10"', 'name="x_sp" address="%QW3"')
+        assert broken != text
+        bad = tmp_path / "bad_addr.xml"
+        bad.write_text(broken, encoding="utf-8")
+        ok, problems = consistency_check(bad, self.SPEC["io_list"], device_model=self._model())
+        assert not ok
+        assert any(p.startswith("R6") and "x_sp" in p for p in problems)
