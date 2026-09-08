@@ -52,8 +52,12 @@ class MemoryStore:
             pass
 
     # ---------------- 程序性知识：签名匹配 ----------------
-    def match_pitfalls(self, errors, top=3):
-        """错误文本列表 → 命中的知识条目（按签名得分降序）。"""
+    def match_pitfalls(self, errors, top=5):
+        """错误文本列表 → 命中的知识条目（按签名得分降序）。
+
+        top=5：症状相近的坑（如全冻结 P18 与画图段卡死 P22）常同时命中，
+        多给两条参考无害（归因只进反馈不裁定），过紧会把真根因挤出列表。
+        """
         text = " \n ".join(str(e) for e in errors).lower()
         scored = []
         for p in self.pitfalls:

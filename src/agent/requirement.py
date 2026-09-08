@@ -174,6 +174,34 @@ class RequirementUnderstander:
                             "type": "sim_health"}],
         }
 
+    # ---------------- 形状识别（轨迹参数化路线：LLM 只认形状、抽显式数字） ----------------
+    _SHAPE_PROMPT = """你是 PLC 绘图任务的需求分析器。从用户需求中识别绘图形状并抽取
+用户**明确写出**的几何参数。只输出一个 ```json 代码块：
+{"shape": "square|circle|unknown",
+ "params": {"center": [x, y]|null, "size": n|null, "radius": n|null, "segments": n|null},
+ "note": "一句话：用户给了什么、缺什么"}
+规则：params 里只放用户文本中明确出现的数字（如"半径 20"→ radius: 20），
+没有的填 null；shape 按用户意图判定，与绘图无关的需求输出 unknown。"""
+
+    def extract_shape(self, request_text):
+        """LLM 识别绘图形状 + 抽取用户显式参数（缺参由 trajectory 默认值补齐）。
+
+        返回 {"shape", "params", "note"}；LLM 不可用/输出异常时 shape=unknown。
+        """
+        if self.client is None:
+            return {"shape": "unknown", "params": {}, "note": "无 LLM"}
+        try:
+            reply = self._call([
+                {"role": "system", "content": self._SHAPE_PROMPT},
+                {"role": "user", "content": "用户需求：%s" % request_text}])
+            text = extract_json(reply)
+            data = json.loads(text) if text else {}
+        except (ValueError, RuntimeError, KeyError):
+            data = {}
+        params = {k: v for k, v in (data.get("params") or {}).items() if v is not None}
+        return {"shape": data.get("shape") or "unknown", "params": params,
+                "note": data.get("note", "")}
+
     # ---------------- 主入口 ----------------
     def understand(self, request_text, device_model=None, task_id=None):
         """返回 {spec, report}。spec 为 None 表示组装失败（报告含全部问题）。"""

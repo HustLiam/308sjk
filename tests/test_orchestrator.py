@@ -363,3 +363,80 @@ class TestZeroProgressBreaker:
             "    [trace t=36s] pos=(50,50,10) v=(0,0,0) pen=1 done=1 moving=0"])
         assert a == b                       # 易变成分剥离后同质
         assert a != progressed              # 状态数值变化 = 有推进，不同签名
+
+
+class TestSectionFailFast:
+    """验收段级 fail-fast：FAIL 段检查完毕即暂停（kill 子进程），后续段不执行。"""
+
+    @staticmethod
+    def _write_scenario(root):
+        """临时验收脚本：[1] 过 → [2] 挂 → （停 1.2s）→ [3][4] 不应被执行。"""
+        d = root / "src" / "pipeline"
+        d.mkdir(parents=True)
+        script = d / "scenario_testsec.py"
+        script.write_text(
+            "import time\n"
+            "print('[1] 上电初始')\n"
+            "print('  PASS 初始态')\n"
+            "print('[2] 使能')\n"
+            "print('  FAIL all_oe=TRUE')\n"
+            "time.sleep(1.2)\n"
+            "print('[3] 手动定位')\n"
+            "print('  PASS 定位')\n"
+            "print('[4] 绘图')\n"
+            "print('场景验收: 全部通过')\n", encoding="utf-8")
+        return script
+
+    def test_failed_section_pauses_rest(self, tmp_path):
+        self._write_scenario(tmp_path)
+        orch = Orchestrator(runs_root=tmp_path, project_root=tmp_path,
+                            deploy_url="http://127.0.0.1:1/deploy")
+        live = []
+        orch._acceptance_live = live.append
+        state, detail = orch.acceptance_gate("testsec")
+        assert state == "failed"
+        text = "\n".join(detail)
+        assert "[1]" in text and "FAIL all_oe=TRUE" in text   # 失败段明细保留
+        assert "验收暂停" in text and "段 [2]" in text        # 暂停说明
+        assert "已通过段：[1]" in text
+        assert "[3]" not in text and "[4]" not in text        # 后续段未执行
+        assert any("[3]" not in ln and ln for ln in live)     # 直播通道也收到
+
+    def test_all_pass_runs_to_end(self, tmp_path):
+        d = tmp_path / "src" / "pipeline"
+        d.mkdir(parents=True)
+        (d / "scenario_oksec.py").write_text(
+            "print('[1] 段一')\nprint('  PASS a')\nprint('[2] 段二')\n"
+            "print('  PASS b')\nprint('场景验收: 全部通过')\n", encoding="utf-8")
+        orch = Orchestrator(runs_root=tmp_path, project_root=tmp_path)
+        state, detail = orch.acceptance_gate("oksec")
+        assert state == "ok"                                  # 全过 → 正常完成
+        assert "验收暂停" not in "\n".join(detail)
+
+
+class TestTrajectoryFlow:
+    """轨迹参数化路线：trajectory 落盘 run_dir 并透传生成器。"""
+
+    def test_trajectory_archived_and_passed_to_generator(self, tmp_path, monkeypatch):
+        from agent.trajectory import plan_circle
+        calls = {}
+
+        class FakeGen:
+            client = None   # 无 LLM → 永远 fresh 路径
+
+            def generate(self, spec, feedback=None, trajectory=None):
+                calls["trajectory"] = trajectory
+                return {"ok": True, "xml": MOTION_XML.read_text(encoding="utf-8")}
+
+            def repair(self, *a, **kw):
+                raise AssertionError("无 client 不应走 repair")
+
+        traj = plan_circle()
+        orch = Orchestrator(runs_root=tmp_path)
+        result = orch.solve(SPEC, FakeGen(), trajectory=traj)
+        assert result["status"] == "final"
+        assert calls["trajectory"] is traj                     # 生成器收到权威步表
+        archived = json.loads((Path(result["run_dir"]) / "trajectory.json")
+                              .read_text(encoding="utf-8"))
+        assert archived["shape"] == "circle"                   # 任务级留档
+        assert archived["params"]["radius"] == 25

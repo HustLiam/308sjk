@@ -1,0 +1,32 @@
+{
+  "gate": "deploy",
+  "ok": false,
+  "errors": [
+    "matiec 编译失败:\nOptimizing ST program...\nGenerating C files...\n./st_files/574901.st:440-44..440-54: error: Invalid assignment syntax '=>' used for parameter 'interp_exe', when invoking FB 'go_x'\n./st_files/574901.st:441-44..441-54: error: Invalid assignment syntax '=>' used for parameter 'interp_exe', when invoking FB 'go_y'\n./st_files/574901.st:442-44..442-54: error: Invalid assignment syntax '=>' used for parameter 'interp_exe', when invoking FB 'go_z'\n./st_files/574901.st:443-27..443-35: error: Invalid assignment syntax '=>' used for parameter 'home_exe', when invoking FB 'hm_x'\n./st_files/574901.st:444-27..444-35: error: Invalid assignment syntax '=>' used for parameter 'home_exe', when invoking FB 'hm_y'\n./st_files/574901.st:445-27..445-35: error: Invalid assignment syntax '=>' used for parameter 'home_exe', when invoking FB 'hm_z'\n./st_files/574901.st:446-63..446-70: error: Invalid assignment syntax '=>' used for parameter 'jog_pos', when invoking FB 'jg_x'\n7 error(s) found. Bailing out!\nError generating C files\nCompilation finished with errors!"
+  ],
+  "attribution": {
+    "gate": "deploy",
+    "errors": [
+      "matiec 编译失败:\nOptimizing ST program...\nGenerating C files...\n./st_files/574901.st:440-44..440-54: error: Invalid assignment syntax '=>' used for parameter 'interp_exe', when invoking FB 'go_x'\n./st_files/574901.st:441-44..441-54: error: Invalid assignment syntax '=>' used for parameter 'interp_exe', when invoking FB 'go_y'\n./st_files/574901.st:442-44..442-54: error: Invalid assignment syntax '=>' used for parameter 'interp_exe', when invoking FB 'go_z'\n./st_files/574901.st:443-27..443-35: error: Invalid assignment syntax '=>' used for parameter 'home_exe', when invoking FB 'hm_x'\n./st_files/574901.st:444-27..444-35: error: Invalid assignment syntax '=>' used for parameter 'home_exe', when invoking FB 'hm_y'\n./st_files/574901.st:445-27..445-35: error: Invalid assignment syntax '=>' used for parameter 'home_exe', when invoking FB 'hm_z'\n./st_files/574901.st:446-63..446-70: error: Invalid assignment syntax '=>' used for parameter 'jog_pos', when invoking FB 'jg_x'\n7 error(s) found. Bailing out!\nError generating C files\nCompilation finished with errors!"
+    ],
+    "pitfalls": [
+      {
+        "id": "P19",
+        "title": "FB 内部变量当调用形参赋值",
+        "diagnosis": "FB 调用时给非 VAR_INPUT 的内部变量传值（如 go_x(interp_exe := x)——interp_exe 是 FB 内部 VAR 不是形参）",
+        "fix": "只给 VAR_INPUT 形参赋值；FB 内部状态经 FB 输出读回后在主程序里用，或把该变量提为 VAR_INPUT"
+      },
+      {
+        "id": "P06",
+        "title": "REAL 初值必须带小数点",
+        "diagnosis": "REAL 变量初值写成整数（40 而非 40.0）",
+        "fix": "REAL 初值必须 50.0 形式；INTERP 类参数逐个核对"
+      }
+    ],
+    "similar_fixes": [],
+    "repair_hints": [
+      "只给 VAR_INPUT 形参赋值；FB 内部状态经 FB 输出读回后在主程序里用，或把该变量提为 VAR_INPUT",
+      "REAL 初值必须 50.0 形式；INTERP 类参数逐个核对"
+    ]
+  }
+}

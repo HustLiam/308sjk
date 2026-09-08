@@ -122,6 +122,31 @@ class TestLLMMode:
         assert out["spec"] is None and len(out["report"]["history"]) == 3
 
 
+class TestExtractShape:
+    """轨迹参数化路线：LLM 只认形状 + 抽显式数字（缺参默认值在 trajectory 侧补）。"""
+
+    def test_circle_with_radius(self):
+        u = RequirementUnderstander(client=FakeClient([
+            '```json\n{"shape": "circle", "params": {"radius": 20, "center": null},'
+            ' "note": "给了半径"}\n```']))
+        out = u.extract_shape("画一个半径 20 的圆")
+        assert out["shape"] == "circle"
+        assert out["params"] == {"radius": 20}       # null 项剔除
+
+    def test_square_no_params(self):
+        u = RequirementUnderstander(client=FakeClient([
+            '```json\n{"shape": "square", "params": {}, "note": "没给尺寸"}\n```']))
+        out = u.extract_shape("画一个正方形")
+        assert out["shape"] == "square" and out["params"] == {}
+
+    def test_llm_garbage_falls_back_unknown(self):
+        u = RequirementUnderstander(client=FakeClient(["抱歉我无法输出 JSON"]))
+        assert u.extract_shape("随便")["shape"] == "unknown"
+
+    def test_no_client_is_unknown(self):
+        assert RequirementUnderstander(client=None).extract_shape("x")["shape"] == "unknown"
+
+
 class TestRefine:
     """修正回合（人工介入点 1 的对话形态）：上轮 spec 作上下文的定向最小修改。"""
 

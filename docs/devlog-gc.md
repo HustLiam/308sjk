@@ -557,3 +557,67 @@ iter_005 副本补 `<initialValue><simpleValue value="1"/></initialValue>` 一�
 新增 7 例（test_orchestrator.py 5 + test_agent_memory.py 2，方案 TC-UNIT-3/4/5/6
 落地，TC-INT-3 转为 iter_005 gate.json 重放单测）：pytest **152 → 159 全绿**
 （39s）。TC-UNIT-1/2、TC-INT-1/2 随 W4 待 RFC 后实施。
+
+## 2026-09-08（晚）轨迹参数化路线落地（流程跑通为最高优先级）
+
+负责人方向裁决：生成工艺目标太"繁琐"是走不通的根因——实际 PLC 生成主要靠
+轨迹规划。新路线：用户简单输入 → ① 理解并**交互确认必要参数** → 确定性
+轨迹参数 → LLM 按权威步表**自主生成**（IEC 61131-10 契约，不套用策展场景
+卡：圆/方同构卡=把答案放进 few-shot）→ XML + 场景 JSON 双交付。
+
+### 架构（新增 src/agent/trajectory.py，其余接线）
+
+- **trajectory.py**（确定性核心，零 LLM）：`plan_square/plan_circle` →
+  序列器步表（动作+坐标+笔态）；站标准几何与验收脚本逐字对齐（方 20..80
+  中心 (50,50)；圆心 (50,50) r25 起点 (50,25) 24 段折线+COS/SIN 公式）；
+  `plan_with_confirm` 缺参确认（confirm 回调交互 / None 自动采纳默认值）；
+  行程域校验（越界即拒）。
+- **requirement.py**：`extract_shape`——LLM 唯一职责=识别形状+抽用户显式
+  数字（null 剔除、垃圾输出兜底 unknown），几何数字不进 LLM。
+- **pipeline.py**：`build_messages` 注入 `summarize_for_prompt(traj)` 作
+  权威约束（坐标不得改动/不得增删路点）；generate/repair 均带 trajectory。
+- **orchestrator.py**：solve 增 trajectory（落盘 run_dir/trajectory.json
+  任务级留档）；CLI `--request` 路径接完整流程 + `--confirm-params`（终端
+  逐项确认，缺省自动采纳）+ `--task-id/--prog-id`（同站多役区分+程序身份）。
+- **chat.py**：同一流程对话形态接线。
+
+### 验收体验修复（负责人要求）
+
+1. **实时流式**：`_run_acceptance` 子进程注入 `PYTHONUNBUFFERED=1`——
+   根因是 scenario 脚本 print 在管道模式下全缓冲，结果最后一次性涌出。
+2. **段级 fail-fast**：逐行解析段标题 `[N]` 与 FAIL 行；失败段检查完毕
+   （下一段标题出现）即 kill 子进程，合成说明行（"段 [N] 失败已暂停；
+   已通过段：…先修复本段"）进直播+gate.json+LLM 反馈——repair 拿到
+   "已过段禁回退 + 本段明细"的聚焦证据；重跑从头（脚本幂等，lx 已验证）。
+3. **字数播报移除**：删 `_chunk_reporter`（"已输出约 N 字"逐步打印），
+   保留阶段级播报与流式通道（保活功能不变）。
+
+### 实测（真 LLM + 真部署 + 在线验收）
+
+- **画方（plotter_sq_traj）：第 5 轮 final，45 项全 PASS**。轮次轨迹：
+  iter1 静态闸门一次过（地址纠偏 16 处）→ matiec 新坑"FB 内部变量当调用
+  形参"（`go_x(interp_exe := ...)` 类，Invalid assignment syntax）→ iter2
+  修复部署过 → 验收段 [1]~[4] 全过（**上一战役全挂的笔互锁负测试 [3]
+  三项全过**）、段 [5] move_done+bit10 两项 FAIL → fail-fast 暂停 →
+  iter3/4/5 定向修复 → 45/45：绘图 11.0s、终态 (50,50,10)、落笔联动 53
+  采样、越区 0、急停减速 0.21s、复跑完成、失能零速。
+- **画圆（plotter_ci_traj4）：第 5 轮 final，全项 PASS**。四役迭代史
+  （每役暴露一类语义缺陷 → 签名化入库 → 下役生效，闭环知识回路的实证）：
+  traj1（8 轮 best，差 1 项急停复跑）→ 暴露 **P20**（qs_latch 需 cmd_reset
+  才清，剧本释放后直接复跑 → 死锁）；traj2（7 轮卡段 [1]）→ 暴露 **P21**
+  （pen_down 被写成含 run/all_oe 的复合信号，未使能恒 FALSE）；traj3
+  （8 轮 best：定位/落笔全对但落笔后 XY 死）→ 对照黄金轨道闭合诊断暴露
+  **P22**（INTERP 骨架被自由发挥：自加 pos_fb 同步/改 fire 沿门槛 →
+  三轴联合步进永假，序列卡死）+ skill"基础 FB 骨架冻结"硬规则；traj4
+  第 3 轮起 XY 联动复活（113 采样完整画圈）、第 4 轮差终态回圆心 1 项、
+  **第 5 轮全过**：plot_done 19.3s、终态 (51,49,9)、联动 110、越界 0、
+  急停减速 0.06s、**复跑 18.0s**（P20 修法生效）、失能零速。
+  （traj3 期间运行时环境故障一次：VM 挂起+serve 掉线 → vmrun 恢复 +
+  docker restart + serve 重启；假 final 产物已清除。）
+- **match_pitfalls top 3→5**：P22/P20 症状与 P18 相近时挤占真根因，
+  放宽容量（多参考无害，归因不裁定红线不变）。
+
+### 测试
+
+pytest 159 → **176 全绿**（trajectory 9 例 + extract_shape 4 例 + 段级
+fail-fast/全过路径 2 例 + trajectory 落盘透传 1 例 + 零推进熔断回归 1 例）。

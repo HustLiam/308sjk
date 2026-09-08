@@ -106,7 +106,7 @@ class PLCGenerator:
         return xml2st.parse(fh.name)
 
     # ---------------- prompt 拼装 ----------------
-    def build_messages(self, spec, feedback=None):
+    def build_messages(self, spec, feedback=None, trajectory=None):
         io_list = spec.get("io_list", [])
         cards = render_cards(pattern_cards(spec.get("task_goal", ""), io_list,
                                            include_curated=not self.generic_patterns_only))
@@ -120,6 +120,11 @@ class PLCGenerator:
             "2. 每条约束都体现在逻辑中；acceptance 的时序/联锁在逻辑上可达；\n"
             "3. constraints 中的时序值（如延时 300ms）用 TON 的 PT 落地。\n" % len(io_list)
         )
+        if trajectory:
+            from .trajectory import summarize_for_prompt
+            user += ("\n" + summarize_for_prompt(trajectory)
+                     + "\n（步表是确定性规划的权威产物：坐标、顺序、笔态逐字落地，"
+                       "不得增删路点或改动数值；插补 FB 参数按速度上限配置。）\n")
         if constraints:
             user += "约束清单：%s\n" % json.dumps(constraints, ensure_ascii=False)
         if feedback:
@@ -130,24 +135,8 @@ class PLCGenerator:
         ]
         return messages
 
-    # ---------------- 进度播报 ----------------
-    def _chunk_reporter(self, label):
-        """节流播报器：每 ≥2.5 秒或每 3000 字符回报一次生成进度。"""
-        import time
-        state = {"last": 0.0, "chars": 0, "next_mile": 3000}
-
-        def on_chunk(_piece, total):
-            now = time.time()
-            state["chars"] = total
-            if now - state["last"] >= 2.5 or total >= state["next_mile"]:
-                state["last"] = now
-                state["next_mile"] = total + 3000
-                self.report("…%s进行中：模型已输出约 %s 字"
-                            % (label, f"{total:,}"))
-        return on_chunk
-
     # ---------------- 主入口 ----------------
-    def generate(self, spec, feedback=None):
+    def generate(self, spec, feedback=None, trajectory=None):
         """生成并过闸。返回 {ok, xml, rounds, history, errors}。"""
         io_list = spec.get("io_list", [])
 
@@ -157,16 +146,13 @@ class PLCGenerator:
             return {"ok": ok, "xml": self.seed_xml, "rounds": 0,
                     "history": [{"round": 0, "ok": ok, "errors": errors}], "errors": errors}
 
-        messages = self.build_messages(spec, feedback)
+        messages = self.build_messages(spec, feedback, trajectory)
         history, errors = [], []
         for rnd in range(1, self.max_rounds + 1):
             self.report("正在联系模型%s生成完整 PLCopen 工程…"
                         % ("第 %d 次，" % rnd if rnd > 1 else ""))
-            reply = self._call(messages,
-                               on_chunk=self._chunk_reporter("生成"),
-                               prefer_stream=True)
-            self.report("模型回复完毕（约 %s 字），正在提取工程并校验…"
-                        % f"{len(reply):,}")
+            reply = self._call(messages, prefer_stream=True)
+            self.report("模型回复完毕，正在提取工程并校验…")
             xml = extract_xml(reply)
             if xml is None:
                 errors = ["[extract] 回复中未找到 <project> XML（只输出一个 ```xml 代码块）"]
@@ -190,7 +176,7 @@ class PLCGenerator:
                 "history": history, "errors": errors}
 
     # ---------------- 定向修复（LLM 迭代默认策略） ----------------
-    def repair(self, previous_xml, spec, feedback, attempts=None):
+    def repair(self, previous_xml, spec, feedback, attempts=None, trajectory=None):
         """定向修复：上一轮产物作 assistant 上下文 + 失败证据/归因的最小修改。
 
         三次实证（prog_id 补丁/画圆地址修复/spec refine）：远稳于从头重生成——
@@ -199,7 +185,7 @@ class PLCGenerator:
         """
         attempts = attempts or max(2, self.max_rounds - 1)
         io_list = spec.get("io_list", [])
-        messages = self.build_messages(spec)
+        messages = self.build_messages(spec, trajectory=trajectory)
         messages.append({"role": "assistant",
                          "content": "```xml\n%s\n```" % previous_xml})
         messages.append({"role": "user", "content": (
@@ -212,10 +198,8 @@ class PLCGenerator:
         for rnd in range(1, attempts + 1):
             self.report("正在让模型做定向修复%s（基于上一轮工程的最小修改）…"
                         % ("（第 %d 次）" % rnd if rnd > 1 else ""))
-            reply = self._call(messages,
-                               on_chunk=self._chunk_reporter("修复"),
-                               prefer_stream=True)
-            self.report("修复稿收到（约 %s 字），正在提取并校验…" % f"{len(reply):,}")
+            reply = self._call(messages, prefer_stream=True)
+            self.report("修复稿收到，正在提取并校验…")
             xml = extract_xml(reply)
             if xml is None:
                 errors = ["[extract] 回复中未找到 <project> XML（只输出一个 ```xml 代码块）"]

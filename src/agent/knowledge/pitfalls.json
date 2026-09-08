@@ -241,6 +241,60 @@
       "diagnosis": "DRIVE402 的 state 声明缺 ':= 1' 初值，上电停在 CASE 未覆盖的状态 0，无转移出口：sw 恒 0、v_out 恒 0、MC_POWER 握手死等 sw.bit0。序列器与插补器本身健康（设定值能 ramp 到位）。",
       "fix": "FB 接口声明改 state : INT := 1（SOD 起步）；所有 CASE 状态机选择器同规则检查。",
       "source": "plotter_circle_llm10 iter5-7 实证 + 现场复现 2026-09-08"
+    },
+    {
+      "id": "P19",
+      "domain": "matiec",
+      "title": "FB 内部变量当调用形参赋值",
+      "signatures": [
+        "Invalid assignment syntax",
+        "when invoking FB",
+        "used for parameter"
+      ],
+      "diagnosis": "FB 调用时给非 VAR_INPUT 的内部变量传值（如 go_x(interp_exe := x)——interp_exe 是 FB 内部 VAR 不是形参）",
+      "fix": "只给 VAR_INPUT 形参赋值；FB 内部状态经 FB 输出读回后在主程序里用，或把该变量提为 VAR_INPUT",
+      "source": "plotter_sq_traj iter1 编译实证 2026-09-08"
+    },
+    {
+      "id": "P20",
+      "domain": "runtime",
+      "title": "急停锁存需复位命令，释放后复跑死锁",
+      "signatures": [
+        "重新 cmd_draw 后完成",
+        "复跑可完成",
+        "序列不重启",
+        "第二次绘图已启动"
+      ],
+      "diagnosis": "急停/故障后引入需要额外复位命令（cmd_reset）才能清除的锁存（qs_latch 类），而验收语义是急停释放（quickstop=0）+ 重新使能后直接重发 cmd_draw 即应重启序列——锁存不死锁：cmd_draw 触发条件含 NOT qs_latch 而锁存永不清",
+      "fix": "急停锁存改为随释放自动清（IF NOT quickstop THEN qs_latch := FALSE），或删除锁存（quickstop 电平已是触发门控）；急停在序列里的正确语义=电平中止（pl_step := 0 + 清 exe），释放即可接受新 cmd_draw",
+      "source": "plotter_ci_traj iter4-8 四轮同质实证 2026-09-08"
+    },
+    {
+      "id": "P21",
+      "domain": "runtime",
+      "title": "pen_down 写成含使能条件的复合信号，上电恒 FALSE",
+      "signatures": [
+        "pen_down=TRUE（初始触纸）",
+        "初始笔触纸",
+        "初始笔位"
+      ],
+      "diagnosis": "pen_down（笔态输出）被写成 run AND all_oe AND NOT quickstop AND … AND z_fb<=2 的复合命令信号——run=0（未使能）时恒 FALSE，上电初始触纸验收必挂。pen_down 是物理笔位的事实陈述：笔在纸上就是在纸上，与使能/序列/急停状态无关",
+      "fix": "pen_down := (z_fb <= 2)（纯物理阈值判定，不得复合任何条件）；'落笔期间禁止手动 X/Y' 这类互锁用独立信号复合（go_ok := … AND pen_down），不要把条件揉进 pen_down 本身",
+      "source": "plotter_ci_traj2 iter1-7 七轮同质实证 2026-09-08"
+    },
+    {
+      "id": "P22",
+      "domain": "runtime",
+      "title": "INTERP 骨架被自由发挥，序列步进卡死",
+      "signatures": [
+        "画圆序列完成 plot_done=TRUE（999.0s",
+        "落笔期间 XY 联动发生过（采样 0）",
+        "XY 联动发生过（采样 2）",
+        "pl_step=1 go_x_exe=1"
+      ],
+      "diagnosis": "插补 FB 内部被自行改造（如加 pos_fb 输入与 idle 同步分支、fire 沿分支加距离门槛、改 Done 语义）——到位判定/新轨迹启动的微妙改变会让某轴 Busy/Done 永不满足，三轴联合步进条件永假，序列器卡死（定位与落笔都正常、落笔后 XY 死）。参考模式的 INTERP 骨架是 45/45 在线验证过的：无 pos_fb 输入、fire 沿无条件 tgt:=pos_target、连续跟踪分支管理新轨迹、到位置 Done",
+      "fix": "INTERP/DRIVE402 本体逐字保留参考模式骨架，只允许改实例参数（VMAX/ACCEL/POSWIN/MAXPOS）；禁止增加 pos_fb 同步分支、禁止给 fire 沿分支加距离门槛、禁止改 Done 置位条件；步进条件 = NOT Busy AND Done AND 物理窗口（与参考一致）",
+      "source": "plotter_ci_traj3 iter2-8 跨轮实证（对齐黄金轨道后闭合诊断）2026-09-08"
     }
   ]
 }

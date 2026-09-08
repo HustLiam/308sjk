@@ -1,0 +1,61 @@
+{
+  "gate": "acceptance",
+  "ok": false,
+  "errors": [
+    "[verify] 程序身份确认: plotter_circle (prog_id=3)",
+    "[1] 上电（run=0）：三轴就绪；初始笔位 z=0",
+    "  PASS X 轴 sw.bit0=1（0031）",
+    "  PASS Y 轴 sw.bit0=1（0031）",
+    "  PASS Z 轴 sw.bit0=1（0031）",
+    "  PASS all_oe=FALSE",
+    "  FAIL pen_down=TRUE（初始触纸）",
+    "（验收暂停：段 [1] 存在失败，后续段未执行；已通过段：无——先修复本段，通过后重跑继续）",
+    "运行时内部状态时间线（诊断口自动采集）：",
+    "    [diag t=0.5s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=1 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=1.0s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=1.5s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=2.0s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=2.5s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=3.0s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=3.5s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=4.0s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=4.5s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=5.0s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=5.5s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=6.0s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=6.5s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0 hm_y_exe=0",
+    "    [diag t=7.0s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0 hm_y_exe=0"
+  ],
+  "attribution": {
+    "gate": "acceptance",
+    "errors": [
+      "[verify] 程序身份确认: plotter_circle (prog_id=3)",
+      "[1] 上电（run=0）：三轴就绪；初始笔位 z=0",
+      "  PASS X 轴 sw.bit0=1（0031）",
+      "  PASS Y 轴 sw.bit0=1（0031）",
+      "  PASS Z 轴 sw.bit0=1（0031）",
+      "  PASS all_oe=FALSE",
+      "  FAIL pen_down=TRUE（初始触纸）",
+      "（验收暂停：段 [1] 存在失败，后续段未执行；已通过段：无——先修复本段，通过后重跑继续）"
+    ],
+    "pitfalls": [
+      {
+        "id": "P12",
+        "title": "缺 prog_id 程序身份",
+        "diagnosis": "场景程序缺 prog_id AT %QW20 声明与每周期写入（契约② v1.1），在线验收 require_program 必挂",
+        "fix": "定位变量块加 prog_id AT %QW20（INT，初值=场景号），ST 本体首行 prog_id := N;"
+      },
+      {
+        "id": "P18",
+        "title": "驱动状态机 state 无初值，402 卡在未定义状态",
+        "diagnosis": "DRIVE402 的 state 声明缺 ':= 1' 初值，上电停在 CASE 未覆盖的状态 0，无转移出口：sw 恒 0、v_out 恒 0、MC_POWER 握手死等 sw.bit0。序列器与插补器本身健康（设定值能 ramp 到位）。",
+        "fix": "FB 接口声明改 state : INT := 1（SOD 起步）；所有 CASE 状态机选择器同规则检查。"
+      }
+    ],
+    "similar_fixes": [],
+    "repair_hints": [
+      "定位变量块加 prog_id AT %QW20（INT，初值=场景号），ST 本体首行 prog_id := N;",
+      "FB 接口声明改 state : INT := 1（SOD 起步）；所有 CASE 状态机选择器同规则检查。"
+    ]
+  }
+}

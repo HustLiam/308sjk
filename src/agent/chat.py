@@ -170,6 +170,17 @@ def main():
     if understander.client is None:
         print("（没找到 ZHIPUAI_API_KEY，我先退化为模板模式——只有设备 IO 预填，工艺部分会是空白。）")
 
+    # ---- 轨迹参数化路线：绘图类需求先确认几何参数（确定性轨迹规划） ----
+    trajectory = None
+    ex = understander.extract_shape(request_text)
+    if ex["shape"] in ("square", "circle"):
+        from .orchestrator import _terminal_confirm
+        from .trajectory import goal_text, plan_with_confirm
+        trajectory = plan_with_confirm(ex["shape"], ex["params"],
+                                       confirm=_terminal_confirm)
+        print("轨迹我规划好了：%s。序列器会严格按这份步表走。" % goal_text(trajectory))
+        request_text = "%s。已确认几何：%s" % (request_text, goal_text(trajectory))
+
     print("明白了，我来把你的需求整理成正式规格…")
     result = understander.understand(request_text, device_model=device_model)
     spec = result["spec"]
@@ -214,7 +225,8 @@ def main():
                      if p.get("address")}
     talk = lambda msg: print("  · " + msg)   # 生成器的实时进度播报（对话风格）
     generator = (PLCGenerator(client=client, seed_xml=seed,
-                              generic_patterns_only=args.no_curated_patterns,
+                              generic_patterns_only=(args.no_curated_patterns
+                                                     or trajectory is not None),
                               address_table=address_table, report=talk)
                  if (seed or client) else None)
     if generator is None:
@@ -243,7 +255,7 @@ def main():
                             if get_api_key() else None))
     res = orch.solve(spec, generator, deploy=deploy,
                      acceptance=args.scenario if acceptance else None,
-                     echo=narrate,
+                     echo=narrate, trajectory=trajectory,
                      scene_generator=SceneSpecGenerator(), device_model=device_model)
 
     run_dir = Path(res["run_dir"])

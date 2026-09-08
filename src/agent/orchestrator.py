@@ -170,23 +170,49 @@ class Orchestrator:
     def _run_acceptance(self, script):
         """跑验收脚本子进程（独立方法便于测试注入）。
 
-        默认**逐行直播**：验收脚本的每行输出实时回调 self._acceptance_live
-        （缺省打印，前缀 "  │ "）——用户全程看到 PASS/FAIL 明细，不再是
-        静默一分钟后倒出全部结果。注入测试可直接替换本方法。
+        默认**逐行直播 + 段级 fail-fast**：PYTHONUNBUFFERED 强制子进程实时
+        flush（否则管道模式下 print 全缓冲，结果最后一次性涌出）；逐行解析
+        段标题 [N] 与 FAIL 行，某段失败且该段检查完毕（下一段标题出现）即
+        kill 子进程——后续段不再执行，等修复重跑（脚本幂等，lx 已验证）。
         """
         live = getattr(self, "_acceptance_live", None)
+        env = dict(os.environ, PYTHONUNBUFFERED="1")   # 子进程 print 实时到达
         proc = subprocess.Popen(
             [sys.executable, str(script)], cwd=str(self.project_root),
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
-            encoding="utf-8", errors="replace")
+            encoding="utf-8", errors="replace", env=env)
         lines = []
+        sec_re = re.compile(r"^\[(\d+)\]")
+        cur_sec, failed_sec, passed_secs = None, None, []
+        killed = False
         try:
             for line in proc.stdout:
                 line = line.rstrip("\n")
+                stripped = line.strip()
+                m = sec_re.match(stripped)
+                if m:                                   # 新段标题
+                    if failed_sec is not None:          # 上一段已判死 → 暂停
+                        note = ("（验收暂停：段 [%d] 存在失败，后续段未执行；"
+                                "已通过段：%s——先修复本段，通过后重跑继续）"
+                                % (failed_sec,
+                                   " ".join("[%d]" % s for s in passed_secs) or "无"))
+                        lines.append(note)
+                        if live:
+                            live(note)
+                        proc.kill()
+                        killed = True
+                        break
+                    if cur_sec is not None:
+                        passed_secs.append(cur_sec)
+                    cur_sec = int(m.group(1))
+                elif (failed_sec is None and cur_sec is not None
+                      and stripped.startswith("FAIL")):
+                    failed_sec = cur_sec
                 lines.append(line)
                 if live:
                     live(line)
-            proc.wait(timeout=self.acceptance_timeout)
+            if not killed:
+                proc.wait(timeout=self.acceptance_timeout)
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait()
@@ -404,7 +430,8 @@ class Orchestrator:
 
     # ---------------- 主循环 ----------------
     def solve(self, spec, generator, deploy=False, acceptance=None, echo=None,
-              scene_generator=None, device_model=None, address_table=None):
+              scene_generator=None, device_model=None, address_table=None,
+              trajectory=None):
         """执行闭环。返回 {status: final|best, iter, run_dir}。
 
         acceptance: 场景名（None=不跑闸门4）——用于定位 src/pipeline/scenario_<名>.py；
@@ -414,6 +441,8 @@ class Orchestrator:
         SceneSpecGenerator()，确定性产物激活一致性 R5 全腿）。
         device_model: ⓪ 的设备模型（供 ②b 取 IO 地址与轴参数；None=降级分配）。
         echo: 可选回调 fn(event, payload)，供 CLI/测试观察循环过程。
+        trajectory: 轨迹规划参数（trajectory.plan_* 产物；None=常规生成）。
+        注入生成 prompt 作权威步表并落盘 run_dir/trajectory.json。
         """
         def notify(event, payload):
             if echo:
@@ -442,6 +471,10 @@ class Orchestrator:
         run_dir.mkdir(parents=True, exist_ok=True)
         (run_dir / "request.json").write_text(
             json.dumps(spec, ensure_ascii=False, indent=2), encoding="utf-8")
+        if trajectory is not None:   # 轨迹参数是任务级权威产物，留档供复现
+            (run_dir / "trajectory.json").write_text(
+                json.dumps(trajectory, ensure_ascii=False, indent=2),
+                encoding="utf-8")
 
         history = []          # 迭代记忆：改了什么 → 哪条闸门翻转
         feedback = None       # 上轮反馈包（程序拼装，不靠 LLM 现场发挥）
@@ -462,13 +495,14 @@ class Orchestrator:
             would_repair = (repair_base is not None and feedback is not None
                             and getattr(generator, "client", None) is not None
                             and repair_fails < 3)
+            traj_kw = {"trajectory": trajectory} if trajectory is not None else {}
             if would_repair and not force_fresh:
-                gen = generator.repair(repair_base, spec, feedback)
+                gen = generator.repair(repair_base, spec, feedback, **traj_kw)
                 mode = "repair"
             else:
                 if would_repair:
                     notify("switch_fresh", {"iter": i})
-                gen = generator.generate(spec, feedback=feedback)
+                gen = generator.generate(spec, feedback=feedback, **traj_kw)
                 mode = "fresh"
                 force_fresh = False
             xml_text = gen.get("xml")
@@ -672,6 +706,27 @@ class Orchestrator:
         (run_dir / "summary.md").write_text("\n".join(lines), encoding="utf-8")
 
 
+def _terminal_confirm(questions):
+    """轨迹参数终端确认（--confirm-params）：逐项 input，回车=默认值。"""
+    print("请确认绘图参数（直接回车 = 采纳括号内默认/站标准值）：")
+    answers = {}
+    for q in questions:
+        raw = input("  %s: " % q["question"]).strip()
+        if not raw:
+            continue
+        key = q["key"]
+        try:
+            if key == "center":
+                parts = [float(v) for v in raw.replace("，", ",").split(",")]
+                if len(parts) == 2:
+                    answers[key] = parts
+            else:
+                answers[key] = float(raw) if "." in raw else int(raw)
+        except ValueError:
+            print("  （%r 无法解析为数值，该项仍用默认值）" % raw)
+    return answers
+
+
 def main():
     import argparse
     parser = argparse.ArgumentParser(description="gc 闭环编排器（半环骨架）")
@@ -699,12 +754,19 @@ def main():
                         help="关闭归因引擎（默认启用：坑库签名匹配 + LLM 兜底，只进反馈不裁定）")
     parser.add_argument("--request", default=None,
                         help="自然语言需求文本（或 .txt 文件路径），配合 --aml 使用")
+    parser.add_argument("--confirm-params", action="store_true",
+                        help="轨迹参数逐项终端确认（缺省自动采纳站标准值；非标准参数验收按标准几何判定）")
+    parser.add_argument("--task-id", default=None,
+                        help="覆盖 spec.task_id（区分同站多役的 runs 目录；^[a-z][a-z0-9_]*$）")
+    parser.add_argument("--prog-id", type=int, default=None,
+                        help="覆盖程序身份 prog_id@%%QW20（画方=2/画圆=3，进 spec 供生成器落身份）")
     args = parser.parse_args()
 
     from .aml_parser import parse_aml
     from .client import BigModelClient
     from .config import MODEL
 
+    trajectory = None
     device_model = None
     if args.aml and args.request:
         if args.spec:
@@ -719,9 +781,23 @@ def main():
         request_text = req.read_text(encoding="utf-8").strip() if req.is_file() else args.request
         client = BigModelClient(get_api_key()) if get_api_key() else None
         from .requirement import RequirementUnderstander
+        understander = RequirementUnderstander(client=client, model=MODEL)
+
+        # ---- 轨迹参数化路线：识别形状 → 参数确认 → 确定性轨迹规划 ----
+        ex = understander.extract_shape(request_text)
+        if ex["shape"] in ("square", "circle"):
+            from .trajectory import DEFAULTS, goal_text, plan_with_confirm
+            confirm = _terminal_confirm if args.confirm_params else None
+            trajectory = plan_with_confirm(ex["shape"], ex["params"], confirm=confirm)
+            print("① 轨迹规划：%s（%s）；缺参已按站标准值补齐"
+                  % (ex["shape"], goal_text(trajectory)))
+            request_text = "%s。已确认几何：%s" % (request_text, goal_text(trajectory))
+        elif ex["shape"] != "unknown":
+            print("形状识别异常：%r" % ex)
+
         print("① 需求理解：模式=%s" % ("llm" if client else "template"))
-        res = RequirementUnderstander(client=client, model=MODEL).understand(
-            request_text, device_model=device_model)
+        res = understander.understand(request_text, device_model=device_model,
+                                      task_id=args.task_id)
         report = res["report"]
         for p in report.get("pending", []):
             print("  待澄清 - %s" % p)
@@ -732,7 +808,12 @@ def main():
                 print("  - %s" % p)
             return 2
         spec = res["spec"]
-        print("① 完成（rounds=%s，io_list=%d 条）" % (report.get("rounds", 0), len(spec["io_list"])))
+        if args.task_id:
+            spec["task_id"] = args.task_id
+        if args.prog_id is not None:
+            spec["prog_id"] = args.prog_id    # 程序身份（进 prompt，生成器落 %QW20）
+        print("① 完成（rounds=%s，io_list=%d 条，prog_id=%s）"
+              % (report.get("rounds", 0), len(spec["io_list"]), spec.get("prog_id", "-")))
     elif args.aml:
         # --aml 仅提供设备模型（⓪）：spec 走冻结文件（可复现联调路径），模型供 ②b 取址
         if not args.spec:
@@ -762,8 +843,11 @@ def main():
         if not api_key:
             print("未配置 API Key（ZHIPUAI_API_KEY）且未指定 --seed；退出。")
             return 2
+        # 轨迹参数化路线：LLM 按权威步表现场生成，不注入策展场景卡
+        # （圆/方同构卡=把答案放进 few-shot，违背泛化口径）
         generator = PLCGenerator(client=BigModelClient(api_key), model=MODEL,
-                                 generic_patterns_only=args.no_curated_patterns,
+                                 generic_patterns_only=(args.no_curated_patterns
+                                                        or trajectory is not None),
                                  address_table=address_table)
 
     scenario = args.scenario
@@ -783,7 +867,7 @@ def main():
     scene_gen = None if args.no_scene else SceneSpecGenerator()
     result = orch.solve(spec, generator, deploy=args.deploy,
                         acceptance=scenario if args.acceptance else None,
-                        echo=narrate,
+                        echo=narrate, trajectory=trajectory,
                         scene_generator=scene_gen, device_model=device_model)
     print("\nRESULT: %s (iter=%s) -> %s" % (result["status"], result["iter"], result["run_dir"]))
     return 0 if result["status"] == "final" else 1
