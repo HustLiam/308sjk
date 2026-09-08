@@ -227,6 +227,20 @@
       "diagnosis": "CASE 某分支标签后只有注释（(* … *)）没有可执行语句——matiec 要求每个分支至少一条语句",
       "fix": "空分支填占位语句（如 step := step;）或把注释移到分支外；'等待推进'类分支应有实际条件赋值",
       "source": "画圆场景 LLM 生成产物 matiec 实证 2026-09-07"
+    },
+    {
+      "id": "P18",
+      "domain": "runtime",
+      "title": "驱动状态机 state 无初值，402 卡在未定义状态",
+      "signatures": [
+        "sw 全 0",
+        "驱动器未使能",
+        "all_oe=FALSE",
+        "v=(0,0,0) 恒零"
+      ],
+      "diagnosis": "DRIVE402 的 state 声明缺 ':= 1' 初值，上电停在 CASE 未覆盖的状态 0，无转移出口：sw 恒 0、v_out 恒 0、MC_POWER 握手死等 sw.bit0。序列器与插补器本身健康（设定值能 ramp 到位）。",
+      "fix": "FB 接口声明改 state : INT := 1（SOD 起步）；所有 CASE 状态机选择器同规则检查。",
+      "source": "plotter_circle_llm10 iter5-7 实证 + 现场复现 2026-09-08"
     }
   ]
 }

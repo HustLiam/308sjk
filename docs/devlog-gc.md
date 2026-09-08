@@ -515,3 +515,45 @@ pipeline/orchestrator/chat）：**生成只允许静态 CATALOG（motion3axis �
 ① 验收失败输出结构化（per-check JSON+期望/实际对比表，替代文本行）；
 ② 场景仿真层前置（本地轻量 ST 求值器，生成后自检行为再上线）；
 ③ repair 附加上轮 XML diff 高亮变更区（强化最小修改约束）。
+
+## 2026-09-08（下午）驱动状态机初值缺陷修复（方案 v1.1 实施记录）
+
+依据《gc-驱动状态机初值缺陷修复开发方案》v1.1（GC-PLAN-2026-09-08-01）实施 W1/W2/W3/W5；
+W4（F1/R7 静态校验规则）按 §9.1 前置条件（lx RFC 评审）**未实施、不设旁路**。
+
+### V0 根因验证（W1，结论已回填方案附录 A）
+
+iter_005 副本补 `<initialValue><simpleValue value="1"/></initialValue>` 一处 →
+部署 → 画圆在线验收：步 1 冻结消失、序列器前进至步 3、驱动器使能链路复活
+（"释放后重新使能" PASS）。根因链（§2.2）实证闭环。运行时已恢复 plotter3axis。
+
+### 实施明细
+
+- **F2a 反馈全量落盘**（orchestrator.py）：`acceptance_gate` 去掉 `[-40:]` 截断，
+  返回全量行；`_pack_feedback` 统一截尾（常量 `FEEDBACK_TAIL_LINES=40`）并在
+  反馈文本注明"（输出已截断至尾部 40 行，全量见 gate.json）"。措辞与方案 §5.3
+  的"验收输出"略有偏差（截断点在通用 `_pack_feedback`，非验收专用），语义等价。
+- **F2b 坑库 P18**：按方案 §5.3 原文入库；实测对 iter_005 真实验收证据以
+  `all_oe=FALSE` 子串命中（3 分，与 P10"Done"同分但均进 top3，P18 列表序在后
+  不影响命中）。归因引擎零代码改动。
+- **F2c skill 硬规则**："状态机变量必须显式初值"条目入 plcgen_skill.md 的
+  matiec 硬规则节（CiA402 空闲态约定同族），含 402 从 1=SOD 起步与 ELSE 兜底。
+- **F3 零推进熔断**（orchestrator.py）：`_fail_signature` 归一化哈希 + solve 循环
+  `last_fail_sig`/`force_fresh`。**归一化规则**（本节即方案 §5.4 第 4 条的登记）：
+  ① `t=数字s`（trace/diag 采样时刻）→ `t=?s`；② `时:分:秒`→TS、`日期`→DATE；
+  ③ `文件:行(列)` 冒号行号→`:N`（lookbehind 单词字符，不误伤"R2: 变量"类）；
+  ④ `line 数字`→`line N`；⑤ `*.st` 文件路径→`F.st`；⑥ `iter_数字`→`iter_N`。
+  **状态数值（pl_step=1→2）刻意保留**——那是推进证据不是噪声；急停时长
+  （3.04s→2.9s）同理保留。签名 = (gate, md5 前 16 位)；连续两轮同签名 → 下轮
+  强制 fresh + narrate `switch_fresh` 播报。触发不限于 repair 轮（略宽于方案
+  §5.4 的 repair 语境）：fresh 连续同质失败同样提前熔断，误判后果仍为进入既有
+  fresh 兜底路径，误伤面与方案 §5.4 分析一致。
+- **测试环境加固（计划外）**：serve.py 在线时 acceptance 失败类单测会经
+  `_runtime_probe` 真部署 OpenPLC（每轮 20~40s，且占用共享运行时）——相关单测
+  统一 `deploy_url="http://127.0.0.1:1/deploy"` 隔离，被测语义不变。
+
+### 测试
+
+新增 7 例（test_orchestrator.py 5 + test_agent_memory.py 2，方案 TC-UNIT-3/4/5/6
+落地，TC-INT-3 转为 iter_005 gate.json 重放单测）：pytest **152 → 159 全绿**
+（39s）。TC-UNIT-1/2、TC-INT-1/2 随 W4 待 RFC 后实施。

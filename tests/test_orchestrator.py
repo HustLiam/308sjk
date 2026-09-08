@@ -119,8 +119,10 @@ class TestAcceptanceGate:
         assert gate["gates"]["acceptance"]["state"] == "ok"
 
     def test_acceptance_fail_feeds_back_and_best_effort(self, tmp_path, monkeypatch):
-        # 真失败（exit 1 的 PASS/FAIL 明细）→ 回喂下一轮，6 轮不过取 best_effort
-        orch = Orchestrator(runs_root=tmp_path, project_root=REPO, max_iters=2)
+        # 真失败（exit 1 的 PASS/FAIL 明细）→ 回喂下一轮，6 轮不过取 best_effort。
+        # deploy_url 指向死端口：隔离 _runtime_probe 的真部署（serve 在线时防占用运行时）
+        orch = Orchestrator(runs_root=tmp_path, project_root=REPO, max_iters=2,
+                            deploy_url="http://127.0.0.1:1/deploy")
         monkeypatch.setattr(orch, "acceptance_gate",
                             lambda scenario: ("failed", ["  FAIL X 回零（实际 37）",
                                                          "场景验收: 存在失败 ❌"]))
@@ -244,7 +246,8 @@ class TestRepairStrategy:
                 return {"ok": True, "xml": previous_xml, "mode": "repair"}
 
         states = iter([("failed", ["闸门4失败样本"]), ("ok", "场景验收: 全部通过 ✅")])
-        orch = Orchestrator(runs_root=tmp_path, project_root=REPO)
+        orch = Orchestrator(runs_root=tmp_path, project_root=REPO,
+                            deploy_url="http://127.0.0.1:1/deploy")
         monkeypatch.setattr(orch, "acceptance_gate", lambda s: next(states))
         result = orch.solve(self.SPEC, FakeGen(), acceptance="plotter3axis")
         assert result["status"] == "final"
@@ -266,10 +269,97 @@ class TestRepairStrategy:
                 calls["repair"] += 1
                 return {"ok": False, "xml": None, "errors": ["修复失败"], "mode": "repair"}
 
-        orch = Orchestrator(runs_root=tmp_path, project_root=REPO, max_iters=6)
+        orch = Orchestrator(runs_root=tmp_path, project_root=REPO, max_iters=6,
+                            deploy_url="http://127.0.0.1:1/deploy")
         monkeypatch.setattr(orch, "acceptance_gate",
                             lambda s: ("failed", ["持续失败"]))
         result = orch.solve(self.SPEC, FlakyGen(), acceptance="plotter3axis")
         assert result["status"] == "best_effort"
         # 6 轮预算：fresh(1)→repair×3(熔断)→fresh(2,过静态闸重置计数)→repair(4)
         assert calls["fresh"] == 2 and calls["repair"] == 4
+
+
+class TestFeedbackFullArchive:
+    """F2a：验收证据全量落盘 gate.json；LLM 反馈包截尾并注明（token 预算不变）。"""
+
+    def test_pack_feedback_truncates_with_note(self):
+        errors = ["失败行 %d" % i for i in range(1, 51)]      # 50 行 > 40
+        text = Orchestrator._pack_feedback(errors, [])
+        assert "全量见 gate.json" in text                     # 截断显式注明
+        assert "- 失败行 50" in text                          # 尾部保留
+        assert "- 失败行 1\n" not in text                     # 头部截除（行 1，非行 10~19）
+        assert text.count("- 失败行") == 40                   # 恰好尾部 40 行
+
+    def test_gate_json_keeps_full_errors(self, tmp_path, monkeypatch):
+        full = ["FAIL 证据 %02d" % i for i in range(60)]
+        orch = Orchestrator(runs_root=tmp_path, project_root=REPO, max_iters=1,
+                            deploy_url="http://127.0.0.1:1/deploy")
+        monkeypatch.setattr(orch, "acceptance_gate", lambda s: ("failed", full))
+        result = orch.solve(SPEC, PLCGenerator(client=None, seed_xml=MOTION_XML),
+                            acceptance="motion3axis")
+        gate = json.loads((Path(result["run_dir"]) / "iter_001" / "gate.json")
+                          .read_text(encoding="utf-8"))
+        assert len(gate["errors"]) == 60                      # 全量（旧逻辑仅尾部 40）
+        assert gate["errors"][0] == "FAIL 证据 00"
+
+
+class TestZeroProgressBreaker:
+    """F3：repair 对零推进失败提前熔断——连续 2 轮失败签名同质即强制全新生成。"""
+
+    PLOTTER_XML = REPO / "src" / "plc" / "plotter3axis.xml"
+    SPEC = json.loads((REPO / "examples" / "specs" / "plotter3axis.spec.json")
+                      .read_text(encoding="utf-8"))
+
+    @staticmethod
+    def _gen(calls):
+        class FakeGen:
+            client = object()   # LLM 可用标记（repair 路由前提）
+
+            def generate(self, spec, feedback=None):
+                calls["fresh"] += 1
+                return {"ok": True,
+                        "xml": TestZeroProgressBreaker.PLOTTER_XML.read_text(encoding="utf-8")}
+
+            def repair(self, previous_xml, spec, feedback, attempts=None):
+                calls["repair"] += 1
+                return {"ok": True, "xml": previous_xml, "mode": "repair"}
+        return FakeGen()
+
+    def test_two_homogeneous_failures_force_fresh(self, tmp_path, monkeypatch):
+        """iter1 fresh 失败 → iter2 repair 失败（证据同质）→ iter3 强制 fresh。"""
+        calls = {"fresh": 0, "repair": 0}
+        events = []
+        orch = Orchestrator(runs_root=tmp_path, project_root=REPO, max_iters=3,
+                            deploy_url="http://127.0.0.1:1/deploy")
+        monkeypatch.setattr(orch, "acceptance_gate",
+                            lambda s: ("failed", ["FAIL 序列冻结：pl_step=1 恒定"]))
+        orch.solve(self.SPEC, self._gen(calls), acceptance="plotter3axis",
+                   echo=lambda ev, p: events.append(ev))
+        assert calls == {"fresh": 2, "repair": 1}
+        assert "switch_fresh" in events
+
+    def test_changing_evidence_does_not_break_early(self, tmp_path, monkeypatch):
+        """失败证据逐轮变化（签名不同质）→ 不触发提前熔断，repair 继续。"""
+        calls = {"fresh": 0, "repair": 0}
+        states = iter([("failed", ["FAIL 回零（实际 37）"]),
+                       ("failed", ["FAIL 回零（实际 25）"]),
+                       ("failed", ["FAIL 回零（实际 12）"])])
+        orch = Orchestrator(runs_root=tmp_path, project_root=REPO, max_iters=3,
+                            deploy_url="http://127.0.0.1:1/deploy")
+        monkeypatch.setattr(orch, "acceptance_gate", lambda s: next(states))
+        result = orch.solve(self.SPEC, self._gen(calls), acceptance="plotter3axis")
+        assert result["status"] == "best_effort"
+        assert calls == {"fresh": 1, "repair": 2}
+
+    def test_signature_normalization_ignores_volatile_parts(self):
+        """采样时刻/时间戳/行号/st 文件名归一化；状态数值保留（是推进证据）。"""
+        a = Orchestrator._fail_signature([
+            "    [trace t=36s] pos=(0,0,0) v=(0,0,0) pen=1 done=0 moving=0",
+            "./st_files/12.st:509: error: ';' missing"])
+        b = Orchestrator._fail_signature([
+            "    [trace t=99s] pos=(0,0,0) v=(0,0,0) pen=1 done=0 moving=0",
+            "./st_files/77.st:88: error: ';' missing"])
+        progressed = Orchestrator._fail_signature([
+            "    [trace t=36s] pos=(50,50,10) v=(0,0,0) pen=1 done=1 moving=0"])
+        assert a == b                       # 易变成分剥离后同质
+        assert a != progressed              # 状态数值变化 = 有推进，不同签名

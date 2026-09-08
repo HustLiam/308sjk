@@ -33,6 +33,27 @@ class TestPitfallMatching:
         hits = m.match_pitfalls(["序列器步进空转：ix Done 永不回落（选通赋值消失）"])
         assert any(p["id"] == "P10" for p in hits)
 
+    def test_drive_state_no_init_hit(self):
+        # P18：驱动状态机 state 无初值（llm10 iter5-7 型失败——使能全挂、v 恒零）
+        m = MemoryStore(kb_path=KB, episodic_path=REPO / "workspace" / "memory" / "nope.json")
+        hits = m.match_pitfalls([
+            "  FAIL 释放后重新使能",
+            "    [trace t=12s] pos=(0,0,0) v=(0,0,0) pen=1 done=0 moving=0",
+            "  FAIL 失能 all_oe=FALSE",
+        ])
+        assert any(p["id"] == "P18" for p in hits)
+
+    def test_iter005_acceptance_replay_hits_p18(self):
+        """TC-INT-3 重放：llm10 iter_005 验收证据喂归因 → 命中 P18 带初值修法。"""
+        gate = json.loads((REPO / "runs" / "plotter_circle_llm10" / "iter_005" / "gate.json")
+                          .read_text(encoding="utf-8"))
+        engine = AttributionEngine(
+            memory=MemoryStore(kb_path=KB,
+                               episodic_path=REPO / "workspace" / "memory" / "nope.json"))
+        out = engine.attribute("acceptance", gate["errors"])
+        assert "P18" in [p["id"] for p in out["pitfalls"]]
+        assert "state : INT := 1" in "\n".join(out["repair_hints"])
+
     def test_no_false_positive_on_clean_text(self):
         m = MemoryStore(kb_path=KB, episodic_path=REPO / "workspace" / "memory" / "nope.json")
         assert m.match_pitfalls(["一切正常"]) == []
@@ -136,7 +157,8 @@ class TestOrchestratorAttribution:
     def test_failure_gate_json_contains_attribution(self, tmp_path, monkeypatch):
         from agent.orchestrator import Orchestrator
         from agent.pipeline import PLCGenerator
-        orch = Orchestrator(runs_root=tmp_path, max_iters=1, project_root=REPO)
+        orch = Orchestrator(runs_root=tmp_path, max_iters=1, project_root=REPO,
+                            deploy_url="http://127.0.0.1:1/deploy")
         monkeypatch.setattr(
             orch, "acceptance_gate",
             lambda scenario: ("failed", ["matiec 编译失败: ';' missing at the end"]))

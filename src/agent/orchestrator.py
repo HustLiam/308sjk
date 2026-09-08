@@ -33,6 +33,7 @@
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -58,6 +59,20 @@ from .spec_validator import validate_requirement_spec  # noqa: E402
 MAX_ITERS = 6
 DEPLOY_URL = "http://127.0.0.1:8600/deploy"
 ACCEPTANCE_TIMEOUT_S = 600
+FEEDBACK_TAIL_LINES = 40   # 反馈包失败证据尾部行数上限（全量证据落 gate.json）
+
+# 失败签名归一化（零推进熔断用）：剥离采样时刻/时间戳/行号/st 文件名等
+# 易变成分——同质失败（仅数字时刻不同）折叠为同一签名。状态数值
+# （pl_step=1 → 2）是推进证据不是噪声，保留。
+_SIG_VOLATILE = [
+    (re.compile(r"t=\d+(?:\.\d+)?s"), "t=?s"),                    # [trace t=36s]/[diag t=3.5s]
+    (re.compile(r"\b\d{2}:\d{2}:\d{2}\b"), "TS"),                 # 时:分:秒
+    (re.compile(r"\b\d{4}-\d{2}-\d{2}\b"), "DATE"),               # 日期
+    (re.compile(r"(?<=\w):\d+(?::\d+)?"), ":N"),                  # 文件:行(列) 号
+    (re.compile(r"\bline\s+\d+", re.IGNORECASE), "line N"),
+    (re.compile(r"[\w./\\-]*\w+\.st\b", re.IGNORECASE), "F.st"),  # st 文件名（含临时路径）
+    (re.compile(r"iter_\d+"), "iter_N"),
+]
 
 # 闸门名 → 对话化说法（叙述器用）
 _GATE_NAMES = {"generate": "代码生成", "xml2st": "格式契约", "consistency": "三方一致性",
@@ -89,6 +104,8 @@ def narrate(event, payload, out=print):
         gate = _GATE_NAMES.get(payload.get("gate"), payload.get("gate"))
         out("  ✗ 这一轮没过「%s」关——失败原因我已归因并反馈给生成器，准备下一轮。"
             % gate)
+    elif event == "switch_fresh":
+        out("  ⟳ 连续两轮失败证据同质（零推进），本轮切换全新生成策略。")
     elif event == "final":
         out("  ✓ 全部闸门通过！正在冻结交付物…")
     elif event == "best_effort":
@@ -109,6 +126,15 @@ class Orchestrator:
         self._addr_table = None
 
     # ---------------- 归因与失败处理 ----------------
+    @staticmethod
+    def _fail_signature(errors):
+        """errors → 归一化签名（连续同质失败判定，md5 前 16 位）。"""
+        norm = "\n".join(str(e) for e in (errors or []))
+        for pat, sub in _SIG_VOLATILE:
+            norm = pat.sub(sub, norm)
+        import hashlib
+        return hashlib.md5(norm.encode("utf-8", "ignore")).hexdigest()[:16]
+
     def _fail(self, iter_dir, i, gate, errors, history):
         """统一闸门失败处理：归因 → 增强反馈包 → 留档。返回 feedback。"""
         errors = [str(e) for e in (errors or ["（闸门失败但未携带错误详情）"])]
@@ -187,7 +213,9 @@ class Orchestrator:
             return "skipped", "OpenPLC/Modbus 不在线——半环跳过在线验收"
         if proc.returncode == 0:
             return "ok", (out.splitlines() or ["验收通过"])[-1]
-        return "failed", out.splitlines()[-40:] or ["验收失败（无输出）"]
+        # 全量行返回（头部使能段等证据不再丢弃）：gate.json 落全量，
+        # LLM 反馈包在 _pack_feedback 统一截尾并注明
+        return "failed", out.splitlines() or ["验收失败（无输出）"]
 
     def status_probe(self):
         """GET /status（lx serve.py）：运行时状态 + 程序身份观测。
@@ -392,7 +420,12 @@ class Orchestrator:
                 echo(event, payload)
 
         def fail(iter_dir, i, gate, errs, mode):
-            nonlocal repair_fails
+            nonlocal repair_fails, last_fail_sig, force_fresh
+            sig = (gate, self._fail_signature(errs))
+            if sig == last_fail_sig:
+                # 连续两轮同闸门同证据（归一化后）＝零推进：下一轮强制全新生成
+                force_fresh = True
+            last_fail_sig = sig
             if mode == "repair":
                 repair_fails += 1   # 修复模式失败计数（≥3 回退全新生成）
             return self._fail(iter_dir, i, gate, errs, history)
@@ -415,6 +448,8 @@ class Orchestrator:
         best = None           # best-effort：进展最多的一轮
         repair_base = None    # 最近一次过静态闸门的产物（定向修复的基础）
         repair_fails = 0      # 修复模式连续失败计数（≥3 回退全新生成，防死循环）
+        last_fail_sig = None  # 上轮失败签名 (gate, 归一化哈希)——同质即零推进
+        force_fresh = False   # 零推进提前熔断：连续 2 轮失败证据同质 → 下轮强制 fresh
 
         for i in range(1, self.max_iters + 1):
             iter_dir = run_dir / ("iter_%03d" % i)
@@ -422,15 +457,20 @@ class Orchestrator:
             notify("iter_start", {"iter": i})
 
             # ---- 生成策略：LLM 可用且有修复基础（上轮过静态闸门、后续闸门失败）
-            #    → 定向修复（最小修改，三次实证远稳于从头重生成）；否则全新生成 ----
-            if (repair_base is not None and feedback is not None
-                    and getattr(generator, "client", None) is not None
-                    and repair_fails < 3):
+            #    → 定向修复（最小修改，三次实证远稳于从头重生成）；否则全新生成。
+            #    零推进熔断：连续 2 轮失败签名同质时提前放弃 repair，强制 fresh ----
+            would_repair = (repair_base is not None and feedback is not None
+                            and getattr(generator, "client", None) is not None
+                            and repair_fails < 3)
+            if would_repair and not force_fresh:
                 gen = generator.repair(repair_base, spec, feedback)
                 mode = "repair"
             else:
+                if would_repair:
+                    notify("switch_fresh", {"iter": i})
                 gen = generator.generate(spec, feedback=feedback)
                 mode = "fresh"
+                force_fresh = False
             xml_text = gen.get("xml")
             if not xml_text:
                 feedback = fail(iter_dir, i, "generate", gen.get("errors", []), mode)
@@ -552,9 +592,18 @@ class Orchestrator:
     # ---------------- 产物 ----------------
     @staticmethod
     def _pack_feedback(errors, history, attribution=None):
-        """反馈包：失败证据原文 + 归因（坑库/历史修复/LLM 兜底）+ 迭代记忆。"""
+        """反馈包：失败证据原文 + 归因（坑库/历史修复/LLM 兜底）+ 迭代记忆。
+
+        失败证据超 FEEDBACK_TAIL_LINES 行时截尾并注明（LLM token 预算不变，
+        全量证据落该轮 gate.json——证据不再丢失）。
+        """
         passed = [h for h in history if h.get("ok")]
-        lines = ["失败证据（原样）："] + ["- %s" % e for e in errors]
+        lines = ["失败证据（原样）："]
+        if len(errors) > FEEDBACK_TAIL_LINES:
+            lines.append("（输出已截断至尾部 %d 行，全量见 gate.json）"
+                         % FEEDBACK_TAIL_LINES)
+            errors = errors[-FEEDBACK_TAIL_LINES:]
+        lines += ["- %s" % e for e in errors]
         if attribution:
             extra = AttributionEngine.format_feedback(attribution)
             if extra:
