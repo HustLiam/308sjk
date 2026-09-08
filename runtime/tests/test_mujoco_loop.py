@@ -111,6 +111,7 @@ def test_pen_sweep_covers_paper():
     jid = {a: mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, f"joint_{a.lower()}")
            for a in "XYZ"}
     z_body = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "z_carriage")
+    mujoco.mj_forward(model, data)      # fresh MjData 的 geom_xpos 全零，须先正运动学
     paper = data.geom_xpos[mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "paper")]
     px, py = paper[0], paper[1]
     half_x, half_y = model.geom_size[mujoco.mj_name2id(

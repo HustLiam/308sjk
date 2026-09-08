@@ -1,3 +1,56 @@
+## 2026-09-08 (3) 契约发布 v1.1 + 工作流机制化：纯命令完成「检查→创建→仿真」
+
+### 动机（对上轮的纠偏）
+
+plotter 实战暴露：gc 生成 spec 时没有组件契约可依（注册表只在 csk 代码里、无机器
+可读发布），导致"闸门拒绝→csk 顺手补库"的混流——库登记与组装规则实质是 csk 的
+即时设计而非契约产物。本轮把库沉淀为**正式契约包**发布给 gc，并把工作流固化成
+纯命令调用（无人工补写环节）。
+
+### 交付
+
+- `cli components`：注册表 → 机器可读契约 JSON / 人类可读表格（与闸门同源，
+  `MJCF_TYPES` 由组装器导出，后端支持列真实反映）；
+- `cli build-mjcf`：validate → io_map 地址分配 → MJCF 落盘一条命令；
+  **io_map 缺失直接拒绝**（实测对 gc 原始文件正确退出，不代拟）；
+- `contract/`（v1.1）：components.v1.1.json + 组件契约表.md + scene.spec.example.json
+  （参考 spec，io_map 为 csk 代拟范本待 gc 正式版）+ README.md（字段语义七条决议：
+  类型封闭/io_map 必填/米制/pose 语义/轴链声明序/paper_area 基准/动力学缺省）；
+- 推送 master（契约包，负责人指令）与 csk 分支。
+
+### 严格流程实走（发布树上，纯命令）
+
+① `cli validate contract/scene.spec.example.json` → OK（8 资产/6 IO）；
+② `cli build-mjcf … -o out/plotter_cell` → scene.xml + io_map 三件套 + 分配表；
+③ `mujoco_jog_runtime --scene --io-map` + 客户端方块闭环全绿；
+回归 runtime 21 + 根 106 + scenegen 20 全绿。
+
+## 2026-09-08 (2) plotter_cell 实战：gc master:scene.spec.json 走通 MuJoCo 工作流
+
+### 流程实录（组件库新增已标注；组装规则 R1-R4 见 mujoco_build 源码）
+
+- validate（gc 原始文件）FAIL——io_map 缺失（schema 必填）；
+- 组件库登记 6 类型（ground/work_table/linear_axis/tool_head/pen/hmi_panel）
+  + ParamSpec 扩 vec2/bool/str_list 形态（均【csk 2026-09-08 新增】标注）；
+- io_map 补三轴米制草案（工作副本），重验证 OK；
+- `_plotter_xml` 多资产装配 + mujoco_jog_runtime 通用化（travel/轴速从
+  linear_axis 推导 = stroke×scale / vmax×scale；墨迹笔尖/纸面动态化）；
+- `tests/test_plotter_build.py` 6 项（行程换算/纸面几何/qz=0 离纸 2mm/扫掠覆盖/
+  闭环/超程钳位）+ e2e 方块绘制全绿。
+
+### 回馈 gc 的发现（9 项，重点）
+
+io_map 缺失（请出正式版）；plot_head.parent=y_axis 与 z_axis 链语义冲突（按轴
+声明序成链）；轴 0 点语义（定为 pose=行程中心）；paper_area 基准（按 work_table
+尺寸）；hmi_panel 无 IO 通道（本轮未接入）；动力学参数缺失（沿用库值）；ground
+资产与顶层字段重复；参数形态扩展 3 种；spec_version 1.0 vs 1.1。
+
+### 技术坑
+
+fresh MjData 的 geom_xpos 全零（取几何前必须 mj_forward；龙门纸在世界原点碰巧
+绿，plotter 纸心 (0.5,0.5) 暴露）；静态件 pose z=0 按落位面解释（按中心则台体
+半埋、纸面低半台高）。
+
 ## 2026-09-08 (1) aml_parser Linux 兼容最小补丁（跨模块，附带给 gc）
 
 ### 现象与根因

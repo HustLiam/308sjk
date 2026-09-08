@@ -54,12 +54,42 @@ def main():
 
     args = parse_args()
     io_map = load_io_map(args.io_map if os.path.isfile(args.io_map) else None)
-    layout, n_regs = derive_layout(io_map)
+
+    # 行程/轴速/相机锚点推导：【csk 2026-09-08 plotter 兼容】gantry_xyz 用 travel_*/speed；
+    # linear_axis（plotter_cell）用 stroke×scale_m_per_unit / vmax×scale 换算米制，
+    # 桥的钳位行程随 spec 走（无 spec 时才落到 derive_layout 的内置缺省）。
+    travel_hint = {}
+    axis_speed = {a: 0.5 for a in AXES}
+    gx = gy = 0.0
+    spec = None if args.scene.endswith(".xml") else load_spec(args.scene)
+    if spec:
+        axis_pose = None
+        for a in spec.get("assets", []):
+            p = a.get("params", {})
+            if a.get("type") == "gantry_xyz":
+                travel_hint = {"X": float(p.get("travel_x", 0.6)),
+                               "Y": float(p.get("travel_y", 0.4)),
+                               "Z": float(p.get("travel_z", 0.2))}
+                axis_speed = {ax: float(p.get("speed", 0.5)) for ax in AXES}
+                gx, gy = (float(v) for v in
+                          a.get("pose", {}).get("position", (0.0, 0.0))[:2])
+            elif a.get("type") == "linear_axis":
+                lo, hi = p["stroke"]
+                s = float(p["scale_m_per_unit"])
+                travel_hint[p["axis"].upper()] = (float(hi) - float(lo)) * s
+                axis_speed[p["axis"].upper()] = float(p.get("vmax", 40.0)) * s
+                if axis_pose is None:
+                    axis_pose = a.get("pose", {}).get("position", (0.0, 0.0, 0.0))
+        if axis_pose is not None and "X" in travel_hint and "Y" in travel_hint:
+            gx = float(axis_pose[0]) - travel_hint["X"] / 2   # 链锚点（行程起点）＝相机左下角
+            gy = float(axis_pose[1]) - travel_hint["Y"] / 2
+
+    layout, n_regs = derive_layout(io_map, travel_hint or None)
 
     if args.scene.endswith(".xml"):
         model = mujoco.MjModel.from_xml_path(args.scene)
     else:
-        model = mujoco.MjModel.from_xml_string(build_mjcf(load_spec(args.scene)))
+        model = mujoco.MjModel.from_xml_string(build_mjcf(spec))
     data = mujoco.MjData(model)
     jid = {a: mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, f"joint_{a.lower()}")
            for a in AXES}
@@ -74,16 +104,6 @@ def main():
     print(f"Modbus server ready (mujoco {mujoco.__version__}, in-process)")
     print(bridge.describe())
     print(f"physics: {args.physics_hz}Hz, scene: {args.scene}")
-
-    # axisSpeed 与龙门 pose 从 spec 的 gantry 参数取（与 USD 侧 simio:axisSpeed 同源）
-    axis_speed = 0.5
-    gx = gy = 0.0
-    if not args.scene.endswith(".xml"):
-        for a in load_spec(args.scene).get("assets", []):
-            if a.get("type") == "gantry_xyz":
-                axis_speed = float(a.get("params", {}).get("speed", 0.5))
-                gx, gy = (float(v) for v in
-                          a.get("pose", {}).get("position", (0.0, 0.0))[:2])
 
     model.opt.timestep = 1.0 / args.physics_hz
     last_cmd = {a: 0.0 for a in AXES}       # 跟踪起点 = 0（作者位姿），阶跃必成斜坡
@@ -104,15 +124,19 @@ def main():
     INK_MAX = 2000
     ink_next = 0
     ink_last = None
-    PAPER_TOP = 0.042
+    # 【csk 2026-09-08 场景无关化】笔尖/纸面高度从模型几何动态取（龙门/plotter 通用，
+    # 不再硬编码龙门常数）：笔尖 = 胶囊几何中心 - 半长（fromto 端点）；纸面 = 几何中心 + 半厚
+    pen_gid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "pen")
+    paper_gid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "paper")
 
     def drop_ink():
         nonlocal ink_next, ink_last
         if viewer_ctx is None:
             return
-        zb = data.xpos[mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "z_carriage")]
-        tip = (zb[0], zb[1], zb[2] - 0.135)          # 笔尖 = z 滑块下方 0.135m
-        if tip[2] > PAPER_TOP + 0.012:               # 未落笔（离纸 >1.2cm 不留痕）
+        tip = (data.geom_xpos[pen_gid][0], data.geom_xpos[pen_gid][1],
+               data.geom_xpos[pen_gid][2] - model.geom_size[pen_gid][1])
+        paper_top = data.geom_xpos[paper_gid][2] + model.geom_size[paper_gid][2]
+        if tip[2] > paper_top + 0.012:               # 未落笔（离纸 >1.2cm 不留痕）
             return
         if ink_last is not None and \
                 (tip[0] - ink_last[0]) ** 2 + (tip[1] - ink_last[1]) ** 2 < 0.004 ** 2:
@@ -121,7 +145,7 @@ def main():
         mujoco.mjv_initGeom(
             g, mujoco.mjtGeom.mjGEOM_SPHERE,
             np.array([0.004, 0.004, 0.004]),
-            np.array([tip[0], tip[1], PAPER_TOP + 0.0015]),
+            np.array([tip[0], tip[1], paper_top + 0.0015]),
             np.eye(3).flatten(),
             np.array([0.1, 0.1, 0.55, 1.0], dtype=np.float32))
         ink_next += 1
@@ -133,7 +157,7 @@ def main():
             t0 = time.perf_counter()
             n_watch += 1
             for a, target in bridge.read_commands().items():
-                step = axis_speed * frame
+                step = axis_speed[a] * frame
                 cur = last_cmd[a]
                 delta = target - cur
                 new = target if abs(delta) <= step else \
@@ -153,7 +177,8 @@ def main():
                     viewer_ctx.cam.elevation = -42.0
                     viewer_ctx.cam.distance = 1.9
                     viewer_ctx.cam.lookat[:] = np.array([gx + travel["X"] / 2,
-                                                         gy + travel["Y"] / 2, 0.06])
+                                                         gy + travel["Y"] / 2,
+                                                         data.geom_xpos[paper_gid][2]])
                     viewer_ctx.sync()
             if args.watch and n_watch % int(args.physics_hz * 2) == 0:
                 fb = bridge.read_positions()

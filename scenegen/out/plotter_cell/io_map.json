@@ -1,0 +1,122 @@
+[
+  {
+    "plc_var": "AxisX_cmd",
+    "dir": "output",
+    "type": "float",
+    "bind": {
+      "asset": "x_axis",
+      "quantity": "cmd",
+      "range": [
+        0.0,
+        1.0
+      ]
+    },
+    "modbus": {
+      "area": "holding_registers",
+      "address": 0,
+      "plc_addr": "%QW0",
+      "length": 2,
+      "encoding": "float32_be"
+    }
+  },
+  {
+    "plc_var": "AxisY_cmd",
+    "dir": "output",
+    "type": "float",
+    "bind": {
+      "asset": "y_axis",
+      "quantity": "cmd",
+      "range": [
+        0.0,
+        1.0
+      ]
+    },
+    "modbus": {
+      "area": "holding_registers",
+      "address": 2,
+      "plc_addr": "%QW2",
+      "length": 2,
+      "encoding": "float32_be"
+    }
+  },
+  {
+    "plc_var": "AxisZ_cmd",
+    "dir": "output",
+    "type": "float",
+    "bind": {
+      "asset": "z_axis",
+      "quantity": "cmd",
+      "range": [
+        0.0,
+        0.01
+      ]
+    },
+    "modbus": {
+      "area": "holding_registers",
+      "address": 4,
+      "plc_addr": "%QW4",
+      "length": 2,
+      "encoding": "float32_be"
+    }
+  },
+  {
+    "plc_var": "AxisX_pos",
+    "dir": "input",
+    "type": "float",
+    "bind": {
+      "asset": "x_axis",
+      "quantity": "pos",
+      "range": [
+        0.0,
+        1.0
+      ]
+    },
+    "modbus": {
+      "area": "sensor_block",
+      "server_register": 0,
+      "plc_addr": "%IW0",
+      "length": 2,
+      "encoding": "float32_be"
+    }
+  },
+  {
+    "plc_var": "AxisY_pos",
+    "dir": "input",
+    "type": "float",
+    "bind": {
+      "asset": "y_axis",
+      "quantity": "pos",
+      "range": [
+        0.0,
+        1.0
+      ]
+    },
+    "modbus": {
+      "area": "sensor_block",
+      "server_register": 2,
+      "plc_addr": "%IW2",
+      "length": 2,
+      "encoding": "float32_be"
+    }
+  },
+  {
+    "plc_var": "AxisZ_pos",
+    "dir": "input",
+    "type": "float",
+    "bind": {
+      "asset": "z_axis",
+      "quantity": "pos",
+      "range": [
+        0.0,
+        0.01
+      ]
+    },
+    "modbus": {
+      "area": "sensor_block",
+      "server_register": 4,
+      "plc_addr": "%IW4",
+      "length": 2,
+      "encoding": "float32_be"
+    }
+  }
+]
