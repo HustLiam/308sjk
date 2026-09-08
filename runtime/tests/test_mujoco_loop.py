@@ -104,7 +104,7 @@ def test_mjcf_builds_and_matches_layout():
 
 def test_pen_sweep_covers_paper():
     """布局回归：笔尖行程 [0..travel]² 必须铺满纸面（USD 侧曾有纸张偏置在根原点的缺陷，
-    导致右上 1/4 出纸、左侧 1/4 不可达——见 devlog 2026-09-07(3)）。"""
+    导致右上 1/4 出纸、左侧 1/4 不可达——见 devlog 2026-09-07(8)）。"""
     import mujoco
     model = mujoco.MjModel.from_xml_string(build_mjcf(load_spec(REPO_SPEC)))
     data = mujoco.MjData(model)

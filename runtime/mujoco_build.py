@@ -68,7 +68,7 @@ def build_mjcf(spec: dict) -> str:
     <body name="gantry_base" pos="{_vec((gx, gy, gz))}">
       <!-- 工作区布局：spec pose = 笔尖行程原点（左下角），纸张/底板以行程中心摆放，
            笔尖扫掠 [pose, pose+travel] 恰好铺满纸面（USD 侧同样存在纸张偏置在
-           根原点的布局缺陷，见 devlog 2026-09-07(3)；MJCF 侧已修正） -->
+           根原点的布局缺陷，见 devlog 2026-09-07(8)；MJCF 侧已修正） -->
       <geom name="base_plate" type="box" size="{travel[0] / 2 + 0.12:.6g} {travel[1] / 2 + 0.12:.6g} 0.02"
             pos="{travel[0] / 2:.6g} {travel[1] / 2:.6g} 0.02" rgba="0.75 0.76 0.78 1"/>
       <geom name="paper" type="box" size="{travel[0] / 2:.6g} {travel[1] / 2:.6g} 0.001"

@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/HustLiam/308sjk/schemas/requirement_spec.schema.json",
   "title": "requirement_spec",
-  "description": "契约①：自然语言需求 → 结构化需求规格（gc 拥有 Schema 定义权，权威说明见 docs/gc-需求理解与闭环编排详细设计.md §2）。acceptance 四类结构逐字对齐 csk 文档 §5.1（判定引擎权威）。版本 v1.0.0-draft.1：草案，待三方评审联签后冻结为 1.0.0。",
+  "description": "契约①：自然语言需求 → 结构化需求规格（gc 拥有 Schema 定义权，权威说明见 docs/gc-需求理解与闭环编排详细设计.md §2）。acceptance 四类结构逐字对齐 csk 文档 §5.1（判定引擎权威）。版本 v1.0.0-draft.2：在 draft.1 基础上落实 lx 评审建议——io_list INT 量程限定 16 位寄存器域 [-32768,65535]（lx 位宽表 %QW 承载 INT/UINT/WORD 的并集域）。三方评审联签后冻结为 1.0.0。",
   "type": "object",
   "required": ["schema_version", "task_id", "task_goal", "io_list", "constraints", "acceptance"],
   "additionalProperties": false,
@@ -72,7 +72,7 @@
           "minItems": 2,
           "maxItems": 2,
           "items": { "type": "number" },
-          "description": "量程 [min, max]。type=INT 时必填（定点换算的 raw 区间）；type=BOOL 时必须为 null 或缺省"
+          "description": "量程 [min, max]。type=INT 时必填（定点换算的 raw 区间），且须落在 16 位寄存器域 [-32768,65535]（运行权威校验 S2，lx 位宽表）；type=BOOL 时必须为 null 或缺省"
         },
         "unit": {
           "type": "string",

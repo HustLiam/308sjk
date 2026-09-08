@@ -70,6 +70,8 @@ def extract_located_vars(xml_source):
                 addr = var.get("address")
                 if not addr:
                     continue
+                if var.get("name", "") in xml2st.META_VARS:  # 契约 v1.1 元信息（prog_id）豁免
+                    continue
                 type_el = var.find(ns + "type")
                 vtype = None
                 if type_el is not None:

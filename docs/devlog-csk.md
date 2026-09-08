@@ -1,8 +1,4 @@
-# csk 本地开发日志
-
-> 仅技术说明（改了什么 / 为什么 / 如何验证 / 技术坑）。进度协调内容一律写 `docs/协作看板.md`。本文件在 master 合入前移除，永不进 master。
-
-## 2026-09-07 (3) 实操反馈修复：工作区布局错位 + 落笔墨迹保留 + 原生视窗
+## 2026-09-07 (8) 实操反馈修复：工作区布局错位 + 落笔墨迹保留 + 原生视窗
 
 ### 背景（示教器实操反馈两个问题）
 
@@ -38,8 +34,12 @@
   会直接红；
 - 6/6 全绿；根目录 75 项无回归；进程级：GUI 折线 (0.05,0.05)→(0.5,0.33)→(0.12,0.35)
   经 Modbus 画完，视窗截图经视觉模型确认**深蓝轨迹线保留在纸面中部**。
+- 合并 origin/csk（链路A/分工对齐）后复跑：toolchain 6 + runtime 15（含本组 6）+
+  scenegen 20 全绿；根目录 93/100——7 例 test_aml_parser 为远端固有的 Python 3.10
+  pathlib 兼容问题（`Path(超长str).is_file()` 在 3.10 抛 OSError36、3.11+ 吞掉），
+  干净检出 origin/csk 同样复现，非合并引入，已反馈 gc。
 
-## 2026-09-07 (2) MuJoCo 轻量仿真面：Isaac 6.x 关节回归的备选后端
+## 2026-09-07 (7) MuJoCo 轻量仿真面：Isaac 6.x 关节回归的备选后端
 
 ### 背景（真机联调结论，Isaac 链路的现状）
 
@@ -94,6 +94,110 @@ Isaac 工作流 A 同构、与 USD 链路消费同一份 scene.spec.json：
   `msg=str(exc)` 再调度 after 回调，失败时补 `client.disconnect()`；
 - `isaac_jog_runtime.py` import 双路兼容（离线包 `isaacsim.simulation_app` /
   pip 元包 `isaacsim` 顶层导出）。
+
+## 2026-09-07 (6) 第三次许可制合并走查（分工与场景对齐）
+
+- 合并内容：删除 scenegen/agent（分工越界自纠）+ 滚筒分拣线废弃场景；场景现役集 =
+  motion3axis + 三轴绘图仪；master 合并后 pytest 115 全绿；
+- 流程第三次走查，devlog 移除/重建同款；网络间歇中断下推送均重试成功。
+
+## 2026-09-07 (5) 分工与场景对齐（负责人指令）
+
+### 指令
+
+① gc/csk 分工按项目文档（架构 v1.2/v2.0）执行而非按当前工作——csk 不含 agent；
+② 不符合项目文档的废弃项目直接删除——滚筒/传送带分拣线例子；
+③ 现役场景只有运动控制（motion3axis）+ 三轴绘图仪（gantry_xyz）。
+
+### 执行
+
+- 删除 `scenegen/scenegen/agent/`（7 文件，含 MockLLM 生成-校验-重试闭环）——我此前
+  越界实现了 gc 的 ②b LLM 本体，属分工越界；gc 的场景描述生成器今后以
+  `validate(spec)` 闸门 + 契约③ schema 为唯一对接点；
+- 删除 `examples/conveyor_sort.json` + `out/{example,agent,glm}`；规范示例改为
+  `examples/gantry_plotter.json`（与 out/gantry 同源，git 识别为 rename）；
+- test_scenegen 重锚：8 组校验器断言全部改用绘图仪/微型夹具（气缸 axis 枚举作为
+  组件级校验覆盖，非场景），构建/Modbus/关节黄金规则断言 gantry 化——20 组绿；
+- 文档：csk 文档 §0/§4.1/§4.2（示例换绘图仪 JSON）/§4.3（现役场景说明）/§8/§9、
+  scenegen README 重写、看板 csk 区块与变更记录、changelog 场景对齐 v0.2。
+
+### 验证
+
+scenegen 20 组 + pytest 115（master 100 + toolchain 6 + runtime 9）全绿。
+
+## 2026-09-07 (4) 第二次许可制合并走查（链路 A v0 + 契约③ draft.1）
+
+- 合并前 devlog 移除（9c0d857 同款流程）、master 合并后 pytest 115 全绿（100+6+9）；
+- 契约③ draft.1 已挂共同议题待 lx/gc 评审；L3 待 lx 工具链机协跑（MATEC_ROOT）；
+- 本日志按规则合入前移除、合并后重建（第二次走查，流程已熟）。
+
+# csk 本地开发日志
+
+> 仅技术说明（改了什么 / 为什么 / 如何验证 / 技术坑）。进度协调内容一律写 `docs/协作看板.md`。本文件在 master 合入前移除，永不进 master。
+
+## 2026-09-07 (3) 链路 A v0（shim 生成/构建编排/ctypes 绑定）+ 契约③草案
+
+### 改了什么
+
+- `toolchain/shim_gen.py`：io_map（契约③）→ `plc_shim.c/.h`——extern 符号表（__QX0_0/
+  __QW0 风格，matiec 版本差异的隔离点 SYMBOL_RULES）+ 紧凑镜像 di/ai/dq/aq + 稳定接口
+  plc_init/run/write_image/read_image；纯函数无 IO；
+- `toolchain/build_dll.py`：xml→st（子进程复用 lx xml2st，转换点唯一）→ iec2c → shim →
+  gcc 共享库；工具链发现顺序 环境变量(MATEC/CC)→PATH；缺失时 ok=False + 可操作提示
+  （不抛异常不半成品），build_result.json 供编排器消费；
+- `runtime/plc_binding.py`：IOLayout（与 shim 同规则的镜像索引 + 定点换算 scale=
+  每 LSB 工程量 + 打包/解包，纯逻辑）+ SoftPLC（ctypes 薄封装）；
+- `schemas/io_map.schema.json`：契约③ v1.0.0-draft.1（见 changelog）；
+- `toolchain/tests/test_link_a.py`：L2（golden/双实现一致性/换算/Schema/降级）+ L3
+  （minimal.st→DLL→写读回环，无 matiec+gcc 自动 SKIP）。
+
+### 技术要点
+
+1. **镜像索引单一规则双实现**：shim 的 C 侧赋值下标与 Python 侧打包下标必须一致，
+   否则注入错位——两端各自实现 + golden 测试断言逐变量相等（test_layout_matches_shim_gen），
+   测试是唯一仲裁，注释互相指向；
+2. **紧凑镜像**按方向独立编号（di/dq bool 字节、ai/aq int16 字），不用原始地址做下标——
+   %QW10/11/12 这类稀疏地址不浪费镜像空间，shim 生成时逐变量显式赋值；
+3. **word 类型**（CiA402 状态字）不做定点换算，位型透传：to_raw 掩码 &0xFFFF、
+   to_eng 无符号解释（raw -1 → 65535）——INT16 有符号容器承载无符号域的坑在绑定层消化；
+4. **L3 前置条件探测**：find_toolchain() + MATEC_ROOT；本机无 gcc/matiec/WSL/docker，
+   L3 在具备工具链的机器上跑（lx 侧工具链最全，看板已请求协跑）；
+5. 测试踩坑：pack 的 100.5/0.1=1005 而非 1000（断言笔误）；aq 镜像 3 字（move_done
+   在 dq）——镜像下标按方向独立计，测试造数时别把各镜像长度想混。
+
+### 验证
+
+pytest tests/ + toolchain/tests/ + runtime/tests/ = **115 passed**；scenegen 22+4 绿。
+L3（真编译）SKIP——待 lx 工具链机协跑。
+
+## 2026-09-07 (2) 首次许可制合并走查（csk → master）
+
+### 合并策略与冲突解决
+
+- master 在本分支开发期间前进了 88 个提交（架构 v1.1→v2.0：编号改 ①②a②b③a③b④、
+  新增 ⓪ AML、csk 文档重排为标准格式 v1.3、看板重置、场景库收敛 motion3axis）；
+- **关键发现**：master 90476dd（架构 v1.2）已由负责人独立落地与本分支一致的分工调整
+  （②b 场景描述生成归 gc、评审归 csk，组件库随 USD 构建器归 ③b）——本分支的五份
+  文档修订全部被官方版本覆盖，冲突解决统一 `git checkout origin/master -- docs/`，
+  本分支保留的增量仅为 scenegen/ 与 runtime/；
+- 看板以 master 重置版为基线，手动刷新 csk 区块（真实进度）+ 变更记录登记合入条目；
+- devlog 按规则合入前 git rm（9c0d857）、合并后重建（本提交）。
+
+### 合入前 DoD 走查（本机）
+
+- 合并 origin/master 进 csk 解决冲突后：master 侧 `pytest tests/` **100 passed**
+  （venv：pymodbus 3.8.6 + usd-core + requests + pytest；全局 python 缺 pytest，主仓
+  测试统一走 venv 跑）；
+- scenegen 22 组 + agent 4 组 + runtime 9 项全绿；
+- master 合并后树与 csk 完全一致（`git diff csk master` 为空）+ pytest 复跑 100 passed。
+
+### 遗留/注意
+
+- **float32/INT16 换算归属**（lx 登记的共同议题）：当前 iomap.py 与 gantry_bridge.py
+  均为 float32 大端；倾向采纳 lx 建议（换算归桥侧、PLC 保持 16 位字域），定稿后需
+  同步改两处并按 §8.3 走 RFC + changelog——这是下一个契约动作，别忘；
+- venv-modbus 现在承担主仓 pytest + runtime 测试双职责（requirements：pymodbus<3.9、
+  usd-core、requests、pytest）。
 
 ## 2026-09-07 真机回归修复：joint_z 开场饱和弹射穿纸
 
