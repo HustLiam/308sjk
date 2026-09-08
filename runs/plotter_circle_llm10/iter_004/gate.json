@@ -1,0 +1,47 @@
+{
+  "gate": "acceptance",
+  "ok": false,
+  "errors": [
+    "[verify] 程序不匹配：期望 plotter_circle (prog_id=3)，运行时当前 prog_id=2 —— 请先 python src/pipeline/run_deploy.py --xml src/plc/<对应场景>.xml",
+    "运行时内部状态时间线（诊断口自动采集）：",
+    "    [diag t=0.5s] pl_step=1 abort_seq=0 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_z_exe=0",
+    "    [diag t=1.0s] pl_step=1 abort_seq=0 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_z_exe=0",
+    "    [diag t=1.5s] pl_step=1 abort_seq=0 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_z_exe=0",
+    "    [diag t=2.0s] pl_step=1 abort_seq=0 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_z_exe=0",
+    "    [diag t=2.5s] pl_step=1 abort_seq=0 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_z_exe=0",
+    "    [diag t=3.0s] pl_step=1 abort_seq=0 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_z_exe=0",
+    "    [diag t=3.5s] pl_step=1 abort_seq=0 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_z_exe=0",
+    "    [diag t=4.0s] pl_step=1 abort_seq=0 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_z_exe=0",
+    "    [diag t=4.5s] pl_step=1 abort_seq=0 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_z_exe=0",
+    "    [diag t=5.0s] pl_step=1 abort_seq=0 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_z_exe=0",
+    "    [diag t=5.5s] pl_step=1 abort_seq=0 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_z_exe=0",
+    "    [diag t=6.0s] pl_step=1 abort_seq=0 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_z_exe=0",
+    "    [diag t=6.5s] pl_step=1 abort_seq=0 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_z_exe=0",
+    "    [diag t=7.0s] pl_step=1 abort_seq=0 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_z_exe=0"
+  ],
+  "attribution": {
+    "gate": "acceptance",
+    "errors": [
+      "[verify] 程序不匹配：期望 plotter_circle (prog_id=3)，运行时当前 prog_id=2 —— 请先 python src/pipeline/run_deploy.py --xml src/plc/<对应场景>.xml",
+      "运行时内部状态时间线（诊断口自动采集）：",
+      "    [diag t=0.5s] pl_step=1 abort_seq=0 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_z_exe=0",
+      "    [diag t=1.0s] pl_step=1 abort_seq=0 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_z_exe=0",
+      "    [diag t=1.5s] pl_step=1 abort_seq=0 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_z_exe=0",
+      "    [diag t=2.0s] pl_step=1 abort_seq=0 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_z_exe=0",
+      "    [diag t=2.5s] pl_step=1 abort_seq=0 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_z_exe=0",
+      "    [diag t=3.0s] pl_step=1 abort_seq=0 go_x_exe=1 go_y_exe=1 go_z_exe=1 hm_z_exe=0"
+    ],
+    "pitfalls": [
+      {
+        "id": "P12",
+        "title": "缺 prog_id 程序身份",
+        "diagnosis": "场景程序缺 prog_id AT %QW20 声明与每周期写入（契约② v1.1），在线验收 require_program 必挂",
+        "fix": "定位变量块加 prog_id AT %QW20（INT，初值=场景号），ST 本体首行 prog_id := N;"
+      }
+    ],
+    "similar_fixes": [],
+    "repair_hints": [
+      "定位变量块加 prog_id AT %QW20（INT，初值=场景号），ST 本体首行 prog_id := N;"
+    ]
+  }
+}

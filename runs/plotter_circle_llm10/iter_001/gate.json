@@ -1,0 +1,39 @@
+{
+  "gate": "deploy",
+  "ok": false,
+  "errors": [
+    "matiec 编译失败:\nOptimizing ST program...\nGenerating C files...\n./st_files/664347.st:164: error: invalid statement in case element of ST 'CASE' statement.\n./st_files/664347.st:164: error: invalid variable before ':=' in ST assignment statement.\n./st_files/664347.st:164: error: ':' missing after case list in ST 'CASE' statement.\n./st_files/664347.st:165: error: invalid variable before ':=' in ST assignment statement.\n./st_files/664347.st:166: error: invalid variable before ':=' in ST assignment statement.\n./st_files/664347.st:170: error: invalid variable before ':=' in ST assignment statement.\n./st_files/664347.st:194: error: invalid variable before ':=' in ST assignment statement.\n./st_files/664347.st:196: error: invalid variable before ':=' in ST assignment statement.\n./st_files/664347.st:211: error: invalid variable before ':=' in ST assignment statement.\n./st_files/664347.st:250: error: invalid variable before ':=' in ST assignment statement.\n./st_files/664347.st:252: error: invalid statement list in 'ELSEIF' statement of ST 'IF' statement.\n./st_files/664347.st:250: error: invalid variable before ':=' in ST assignment statement.\n./st_files/664347.st:420: error: invalid expression after ':=' in ST assignment statement.\n./st_files/664347.st:420: error: ';' missing at the end of statement in ST statement.\n./st_files/664347.st:420: error: invalid statement in ST statement.\n./st_files/664347.st:421: error: invalid expression after ':=' in ST assignment statement.\n./st_files/664347.st:421: error: ';' missing at the end of statement in ST statement.\n./st_files/664347.st:421: error: invalid statement in ST statement.\n./st_files/664347.st:422: error: invalid expression after ':=' in ST assignment statement.\n./st_files/664347.st:422: error: ';' missing at the end of statement in ST statement.\n./st_files/664347.st:422: error: invalid statement in ST statement.\n\n21 error(s) found. Bailing out!\nError generating C files\nCompilation finished with errors!"
+  ],
+  "attribution": {
+    "gate": "deploy",
+    "errors": [
+      "matiec 编译失败:\nOptimizing ST program...\nGenerating C files...\n./st_files/664347.st:164: error: invalid statement in case element of ST 'CASE' statement.\n./st_files/664347.st:164: error: invalid variable before ':=' in ST assignment statement.\n./st_files/664347.st:164: error: ':' missing after case list in ST 'CASE' statement.\n./st_files/664347.st:165: error: invalid variable before ':=' in ST assignment statement.\n./st_files/664347.st:166: error: invalid variable before ':=' in ST assignment statement.\n./st_files/664347.st:170: error: invalid variable before ':=' in ST assignment statement.\n./st_files/664347.st:194: error: invalid variable before ':=' in ST assignment statement.\n./st_files/664347.st:196: error: invalid variable before ':=' in ST assignment statement.\n./st_files/664347.st:211: error: invalid variable before ':=' in ST assignment statement.\n./st_files/664347.st:250: error: invalid variable before ':=' in ST assignment statement.\n./st_files/664347.st:252: error: invalid statement list in 'ELSEIF' statement of ST 'IF' statement.\n./st_files/664347.st:250: error: invalid variable before ':=' in ST assignment statement.\n./st_files/664347.st:420: error: invalid expression after ':=' in ST assignment statement.\n./st_files/664347.st:420: error: ';' missing at the end of statement in ST statement.\n./st_files/664347.st:420: error: invalid statement in ST statement.\n./st_files/664347.st:421: error: invalid expression after ':=' in ST assignment statement.\n./st_files/664347.st:421: error: ';' missing at the end of statement in ST statement.\n./st_files/664347.st:421: error: invalid statement in ST statement.\n./st_files/664347.st:422: error: invalid expression after ':=' in ST assignment statement.\n./st_files/664347.st:422: error: ';' missing at the end of statement in ST statement.\n./st_files/664347.st:422: error: invalid statement in ST statement.\n\n21 error(s) found. Bailing out!\nError generating C files\nCompilation finished with errors!"
+    ],
+    "pitfalls": [
+      {
+        "id": "P09",
+        "title": "END_CASE 后缺分号",
+        "diagnosis": "CASE 语句的 END_CASE 后缺分号（静态闸门不解析 ST 语法，只有 matiec 真编译才报）",
+        "fix": "最后一个分支后写 END_CASE;（对照：END_IF 同理）"
+      },
+      {
+        "id": "P17",
+        "title": "CASE 分支只有注释无语句",
+        "diagnosis": "CASE 某分支标签后只有注释（(* … *)）没有可执行语句——matiec 要求每个分支至少一条语句",
+        "fix": "空分支填占位语句（如 step := step;）或把注释移到分支外；'等待推进'类分支应有实际条件赋值"
+      },
+      {
+        "id": "P16",
+        "title": "内部变量使用未声明",
+        "diagnosis": "ST 本体使用了内部变量但 VAR 块漏声明（LLM 生成高发：先写逻辑后补声明时遗漏）",
+        "fix": "逐个核对本体首次赋值的变量是否都在 VAR 块声明；特别是状态/边沿类临时变量（pen_up、latch 等）"
+      }
+    ],
+    "similar_fixes": [],
+    "repair_hints": [
+      "最后一个分支后写 END_CASE;（对照：END_IF 同理）",
+      "空分支填占位语句（如 step := step;）或把注释移到分支外；'等待推进'类分支应有实际条件赋值",
+      "逐个核对本体首次赋值的变量是否都在 VAR 块声明；特别是状态/边沿类临时变量（pen_up、latch 等）"
+    ]
+  }
+}
