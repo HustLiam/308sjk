@@ -1,3 +1,29 @@
+## 2026-09-08 (1) aml_parser Linux 兼容最小补丁（跨模块，附带给 gc）
+
+### 现象与根因
+
+- 合并 origin/csk 后根目录 pytest 7 例 test_aml_parser 全挂 `OSError(36) ENAMETOOLONG`；
+- `parse_aml(source)` 用 `Path(source).is_file()` 探测"是文件还是 XML 文本"——内存
+  XML 字符串（8KB、含换行）被当路径 stat，Linux ext4 单文件名上限 255 字节 → 必炸；
+- **不是 Python 小版本差异**：实测 3.10.12 / 3.12.14 / 3.13.15（uv 独立构建）行为一致，
+  pathlib 的 `is_file` 只吞 ENOENT/ENOTDIR 等少数 errno 后重新抛出；是 **Windows/Linux
+  差异**（Windows 的 is_file 对非法名/超长名返回 False）——推测 gc 在 Windows 跑全绿。
+
+### 修复
+
+`_is_file_quiet()`：try/except OSError 包 `is_file`，异常按非文件处理走 `<memory>`
+分支（Windows 行为不变）。跨模块改动，看板 →gc 登记请复核合入。
+
+### 验证
+
+根目录 100/100 + toolchain 6 + runtime 15 + scenegen 20 全绿（本机 Python 3.10.12）。
+
+### 环境备忘
+
+- 为对照实验用 uv 另装了独立 Python 3.12.14 / 3.13.15（`~/.local/share/uv/python`，
+  系统 python3 未动）；日常工作继续系统 3.10，不需要迁移；
+  `uv python uninstall 3.12 3.13` 可清理。
+
 ## 2026-09-07 (8) 实操反馈修复：工作区布局错位 + 落笔墨迹保留 + 原生视窗
 
 ### 背景（示教器实操反馈两个问题）
