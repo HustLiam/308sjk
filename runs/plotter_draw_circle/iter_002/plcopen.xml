@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='UTF-8'?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://www.plcopen.org/xml/tc6_0201" xmlns:html="http://www.w3.org/1999/xhtml">
   <fileHeader companyName="lx" productName="PLC CodeGen" productVersion="1.0" creationDateTime="2024-01-01T00:00:00" />
   <contentHeader name="plotter_draw_circle" modificationDateTime="2024-01-01T00:00:00" />
@@ -15,8 +15,6 @@
             <variable name="vel"><type><REAL /></type><initialValue><simpleValue value="0.0" /></initialValue></variable>
             <variable name="dist"><type><REAL /></type></variable>
             <variable name="stop_d"><type><REAL /></type></variable>
-          </localVars>
-          <localVars constant="true">
             <variable name="SCAN_T"><type><REAL /></type><initialValue><simpleValue value="0.02" /></initialValue></variable>
           </localVars>
           <inputVars>
@@ -85,8 +83,6 @@ Setpoint := REAL_TO_INT(pos);
             <variable name="v_ff"><type><REAL /></type></variable>
             <variable name="pos_err"><type><REAL /></type></variable>
             <variable name="sp_prev"><type><INT /></type></variable>
-          </localVars>
-          <localVars constant="true">
             <variable name="KP"><type><REAL /></type><initialValue><simpleValue value="8.0" /></initialValue></variable>
             <variable name="QS_DECEL"><type><REAL /></type><initialValue><simpleValue value="200.0" /></initialValue></variable>
             <variable name="SCAN_T"><type><REAL /></type><initialValue><simpleValue value="0.02" /></initialValue></variable>

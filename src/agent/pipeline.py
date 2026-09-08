@@ -53,7 +53,7 @@ class PLCGenerator:
     """
 
     def __init__(self, client, model="glm-5.3", max_rounds=3, seed_xml=None,
-                 generic_patterns_only=False, address_table=None):
+                 generic_patterns_only=False, address_table=None, report=None):
         self.client = client
         self.model = model
         self.max_rounds = max_rounds
@@ -65,9 +65,11 @@ class PLCGenerator:
         # ⓪ 侧地址分配表（AML 通道 → %Q 地址）：设备契约，前置注入 prompt，
         # 让首次生成即按站约定表分配（R6 仍是闸门兜底）
         self.address_table = address_table or {}
+        # 进度播报回调 report(msg: str)——生成期间实时向控制台回报（对话风格）
+        self.report = report or (lambda msg: None)
 
     # ---------------- LLM 调用 ----------------
-    def _call(self, messages):
+    def _call(self, messages, on_chunk=None, prefer_stream=False):
         payload = {
             "model": self.model,
             "messages": messages,
@@ -76,7 +78,8 @@ class PLCGenerator:
             "thinking": {"type": "disabled"},  # 结构化代码生成不需要思考链
         }
         try:
-            data = self.client.chat_completions(payload)
+            data = self.client.chat_completions(payload, on_chunk=on_chunk,
+                                                prefer_stream=prefer_stream)
         except RuntimeError as exc:
             if "thinking" in str(exc) or "400" in str(exc):
                 payload.pop("thinking")
@@ -127,12 +130,29 @@ class PLCGenerator:
         ]
         return messages
 
+    # ---------------- 进度播报 ----------------
+    def _chunk_reporter(self, label):
+        """节流播报器：每 ≥2.5 秒或每 3000 字符回报一次生成进度。"""
+        import time
+        state = {"last": 0.0, "chars": 0, "next_mile": 3000}
+
+        def on_chunk(_piece, total):
+            now = time.time()
+            state["chars"] = total
+            if now - state["last"] >= 2.5 or total >= state["next_mile"]:
+                state["last"] = now
+                state["next_mile"] = total + 3000
+                self.report("…%s进行中：模型已输出约 %s 字"
+                            % (label, f"{total:,}"))
+        return on_chunk
+
     # ---------------- 主入口 ----------------
     def generate(self, spec, feedback=None):
         """生成并过闸。返回 {ok, xml, rounds, history, errors}。"""
         io_list = spec.get("io_list", [])
 
         if self.seed_xml is not None:  # 种子模式：不调 LLM，产物仍过双闸门
+            self.report("使用已验收种子工程，正在过静态闸门…")
             ok, errors = self.gate(self.seed_xml, io_list)
             return {"ok": ok, "xml": self.seed_xml, "rounds": 0,
                     "history": [{"round": 0, "ok": ok, "errors": errors}], "errors": errors}
@@ -140,7 +160,13 @@ class PLCGenerator:
         messages = self.build_messages(spec, feedback)
         history, errors = [], []
         for rnd in range(1, self.max_rounds + 1):
-            reply = self._call(messages)
+            self.report("正在联系模型%s生成完整 PLCopen 工程…"
+                        % ("第 %d 次，" % rnd if rnd > 1 else ""))
+            reply = self._call(messages,
+                               on_chunk=self._chunk_reporter("生成"),
+                               prefer_stream=True)
+            self.report("模型回复完毕（约 %s 字），正在提取工程并校验…"
+                        % f"{len(reply):,}")
             xml = extract_xml(reply)
             if xml is None:
                 errors = ["[extract] 回复中未找到 <project> XML（只输出一个 ```xml 代码块）"]
@@ -148,9 +174,11 @@ class PLCGenerator:
                 ok, errors = self.gate(xml, io_list)
                 if ok:
                     history.append({"round": rnd, "ok": True, "errors": []})
+                    self.report("静态闸门通过（xml2st 契约 + 三方一致性），工程可用。")
                     return {"ok": True, "xml": xml, "rounds": rnd, "history": history, "errors": []}
 
             history.append({"round": rnd, "ok": False, "errors": list(errors)})
+            self.report("校验发现 %d 处问题，正在带错误清单让模型修复…" % len(errors))
             messages.append({"role": "assistant", "content": reply})
             messages.append({"role": "user", "content": (
                 "校验失败，共 %d 处错误：\n%s\n\n"
@@ -182,7 +210,12 @@ class PLCGenerator:
 
         history, errors = [], ["（未获得模型输出）"]
         for rnd in range(1, attempts + 1):
-            reply = self._call(messages)
+            self.report("正在让模型做定向修复%s（基于上一轮工程的最小修改）…"
+                        % ("（第 %d 次）" % rnd if rnd > 1 else ""))
+            reply = self._call(messages,
+                               on_chunk=self._chunk_reporter("修复"),
+                               prefer_stream=True)
+            self.report("修复稿收到（约 %s 字），正在提取并校验…" % f"{len(reply):,}")
             xml = extract_xml(reply)
             if xml is None:
                 errors = ["[extract] 回复中未找到 <project> XML（只输出一个 ```xml 代码块）"]
@@ -190,9 +223,11 @@ class PLCGenerator:
                 ok, errors = self.gate(xml, io_list)
                 if ok:
                     history.append({"round": rnd, "ok": True, "errors": []})
+                    self.report("修复稿通过静态闸门。")
                     return {"ok": True, "xml": xml, "rounds": rnd,
                             "history": history, "errors": [], "mode": "repair"}
             history.append({"round": rnd, "ok": False, "errors": list(errors)})
+            self.report("修复稿仍有 %d 处问题，继续回灌…" % len(errors))
             messages.append({"role": "assistant", "content": reply})
             messages.append({"role": "user", "content": (
                 "修复后工程仍有 %d 处静态校验错误：\n%s\n\n"

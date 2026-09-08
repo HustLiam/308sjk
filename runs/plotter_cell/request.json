@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0-draft.3",
   "task_id": "plotter_cell",
-  "task_goal": "三轴绘图单元（PlotterCell）绘制正方形并安全收尾：运行开关 run 使能三轴驱动器后，按下 cmd_draw 启动自动绘图序列——抬笔状态下先定位至起点(20,20)，再落笔（Z 至触纸区）依次绘制 (20,20)→(80,20)→(80,80)→(20,80)→(20,20) 的正方形轨迹，随后抬笔（Z=10 抬笔位）、X/Y 回中心(50,50)，完成后点亮 plot_done 并熄灭 any_moving。期间：急停 quickstop 触发时三轴受控减速停止并中止绘图序列，plot_done 保持熄灭，需 cmd_reset 后方可重新启动；落笔状态（pen_down=TRUE）下，cmd_go 手动定位与 jog_fwd/jog_rev 手动进给请求一律被安全互锁拒绝，X/Y 不得运动。PLC 为逻辑主站（写速度指令 x_v/y_v/z_v、状态汇总输出），仿真器扮演电机/编码器（闭环更新 x_fb/y_fb/z_fb 与驱动器状态字 x_sw/y_sw/z_sw）；x_sp/y_sp/z_sp 为 NC 设定值通道。",
+  "task_goal": "三轴绘图单元在绘图平台上自动绘制 20..80 正方形：run 使能后按 cmd_draw 启动序列（抬笔→XY 定位起点(20,20)→落笔 z=0→依次走 (80,20)→(80,80)→(20,80)→(20,20) 四边→抬笔 z=10→回中心(50,50)→plot_done 置位）；急停 quickstop 受控减速停止并中止绘图、plot_done 熄灭；落笔（pen_down=1）期间禁止 X/Y 手动点动与手动定位，Z 抬落笔设定不受互锁限制。外部接口角色：OperatorPanel/NC 通道写指令与设定值，PLC 执行逻辑并输出速度指令与状态灯，三轴伺服由仿真侧执行。",
   "io_list": [
     {
       "name": "run",
@@ -235,43 +235,38 @@
     {
       "id": "C1",
       "kind": "interlock",
-      "desc": "落笔安全互锁：pen_down=TRUE（笔触纸）期间，禁止执行 cmd_go 手动定位与 jog_fwd/jog_rev 手动进给，X/Y 轴速度指令 x_v、y_v 必须保持为 0；z_sp/z_v 抬笔动作不受该互锁限制"
+      "desc": "落笔状态（pen_down=1）期间，jog_fwd/jog_rev 点动与 cmd_go 手动定位对 X/Y 的运动请求必须被拒绝，X/Y 不产生运动；z_sp 抬落笔操作不受此互锁限制。"
     },
     {
       "id": "C2",
       "kind": "exception",
-      "desc": "急停处理：quickstop=TRUE 触发时，三轴以受控减速方式停止（x_v/y_v/z_v 按加速度限值斜降到 0），中止绘图序列状态机，plot_done 保持熄灭；急停锁定后须经 cmd_reset 复位方可重新接受 cmd_draw"
+      "desc": "quickstop=1（急停有效）期间：三轴以受控减速停止（限用 ACCEL 减速，非自由停车），绘图序列立即中止，plot_done 保持熄灭；急停未释放且 cmd_reset 未按下前禁止重新启动绘图。"
     },
     {
       "id": "C3",
       "kind": "timing",
-      "desc": "使能握手时序：run=FALSE 时不得输出任何速度指令；run 上升沿后三轴驱动器使能（all_oe=TRUE），随后才允许接受 cmd_draw/cmd_go/jog 请求"
+      "desc": "绘图序列步骤顺序固定：抬笔(z=10)→定位(20,20)→落笔(z=0)→(80,20)→(80,80)→(20,80)→(20,20)→抬笔→回中心(50,50)→plot_done 置位；每步换向前必须确认上一步到位（POSWIN 内）后才能开始下一步，禁止 X/Y 与 Z 同时动作导致斜线拖笔。"
     },
     {
       "id": "C4",
-      "kind": "timing",
-      "desc": "绘图序列时序：cmd_draw 上升沿且 all_oe=TRUE 时启动序列——抬笔（z_fb 到 10）→ XY 定位至起点(20,20)且到位（x_sw/y_sw bit10=1，|x_fb-20|<=2、|y_fb-20|<=2）→落笔（z_fb 进入触纸区 0..1）→依次走 (80,20)→(80,80)→(20,80)→(20,20) 各段均到位后进入下一段→抬笔→回中心(50,50)→点亮 plot_done"
+      "kind": "interlock",
+      "desc": "run 断开或任一驱动器故障（状态字 bit3=1）时，禁止启动/继续绘图，fault_any 点亮；需 cmd_reset 且故障消除后方可恢复。"
     },
     {
       "id": "C5",
-      "kind": "interlock",
-      "desc": "边绘边动限制：绘图序列落笔段期间，X/Y 只允许沿当前段目标方向运动（矩形轨迹段），任何段未到位前不得抬笔（除急停外）"
+      "kind": "timing",
+      "desc": "轴速度指令不得超过轴 VMAX 限速（X/Y=40 %/s，Z=20 mm/s），且落在 x_v/y_v/z_v 的 range 内。"
     },
     {
       "id": "C6",
       "kind": "exception",
-      "desc": "故障处理：任一驱动器状态字 bit3=1 时置 fault_any=TRUE、停止输出速度指令并中止序列；cmd_reset 上升沿在无急停、无故障位残留时清除故障态"
-    },
-    {
-      "id": "C7",
-      "kind": "timing",
-      "desc": "速度/加减速约束：X/Y 轴速度指令幅值 ≤40 %/s、Z 轴 ≤20 mm/s；加速度按轴组态（X/Y 80，Z 60）执行斜坡，到位判定窗口 X/Y 为 ±2、Z 为 ±1"
+      "desc": "急停或故障中止后若笔仍处于落笔状态，仅允许 Z 轴抬笔方向运动用于脱离纸面，X/Y 保持禁止运动直至急停释放。"
     }
   ],
   "acceptance": [
     {
       "id": "AC1",
-      "desc": "使能握手：run 上升沿后 1.0s 内 all_oe 置位",
+      "desc": "run 使能后，三轴驱动器全部使能，就绪灯点亮。",
       "type": "event_delay",
       "from": {
         "signal": "run",
@@ -282,12 +277,12 @@
         "edge": "rising"
       },
       "op": "<=",
-      "value": 1.0,
+      "value": 2.0,
       "unit": "s"
     },
     {
       "id": "AC2",
-      "desc": "落笔状态下禁止手动正向点动：pen_down=TRUE 时 jog_fwd=TRUE 不得引起 X 轴运动",
+      "desc": "落笔期间触发 X 正向手动点动，X 轴不得产生运动（速度指令保持 0）。",
       "type": "forbidden_state",
       "when": {
         "signal": "pen_down",
@@ -300,7 +295,7 @@
     },
     {
       "id": "AC3",
-      "desc": "落笔状态下禁止手动反向点动：pen_down=TRUE 时 jog_rev=TRUE 不得引起 X 轴运动",
+      "desc": "落笔期间触发手动定位启动，X 轴不得产生运动。",
       "type": "forbidden_state",
       "when": {
         "signal": "pen_down",
@@ -313,23 +308,10 @@
     },
     {
       "id": "AC4",
-      "desc": "落笔状态下禁止手动定位：pen_down=TRUE 时 cmd_go=TRUE 不得引起 Y 轴运动",
+      "desc": "落笔期间触发 X 反向手动点动，X 轴不得产生运动。",
       "type": "forbidden_state",
       "when": {
         "signal": "pen_down",
-        "equals": 1
-      },
-      "forbid": {
-        "signal": "y_v",
-        "equals": 0
-      }
-    },
-    {
-      "id": "AC5",
-      "desc": "急停期间禁止继续绘图运动：quickstop=TRUE 时 X 轴速度指令必须为 0（受控减速完成前斜坡，稳态为 0）",
-      "type": "forbidden_state",
-      "when": {
-        "signal": "quickstop",
         "equals": 1
       },
       "forbid": {
@@ -338,21 +320,8 @@
       }
     },
     {
-      "id": "AC6",
-      "desc": "急停期间禁止继续绘图运动（Y 轴）",
-      "type": "forbidden_state",
-      "when": {
-        "signal": "quickstop",
-        "equals": 1
-      },
-      "forbid": {
-        "signal": "y_v",
-        "equals": 0
-      }
-    },
-    {
-      "id": "AC7",
-      "desc": "急停中止绘图：quickstop=TRUE 期间 plot_done 不得点亮",
+      "id": "AC5",
+      "desc": "急停有效期间，绘图完成灯必须熄灭（急停中止绘图，plot_done 不得置位）。",
       "type": "forbidden_state",
       "when": {
         "signal": "quickstop",
@@ -360,12 +329,28 @@
       },
       "forbid": {
         "signal": "plot_done",
-        "equals": 1
+        "equals": 0
       }
     },
     {
-      "id": "AC8",
-      "desc": "完成收尾：cmd_draw 上升沿至 plot_done 置位（含四段绘制、抬笔、回中心，行程约 300%，限速 40%/s 加裕量）在 20.0s 内完成",
+      "id": "AC6",
+      "desc": "急停触发后三轴速度指令应在受控减速时间内归零（按 VMAX/ACCEL + 裕量：X/Y=0.5s+裕量，Z≈0.33s+裕量，统一放宽到 2s）。",
+      "type": "event_delay",
+      "from": {
+        "signal": "quickstop",
+        "edge": "rising"
+      },
+      "to": {
+        "signal": "x_v",
+        "edge": "falling"
+      },
+      "op": "<=",
+      "value": 2.0,
+      "unit": "s"
+    },
+    {
+      "id": "AC7",
+      "desc": "cmd_draw 上升沿启动绘图序列，完成后笔回到中心并抬笔：序列总时长按行程估算（X/Y 每边 60% / 40%/s ≈ 1.5s+加减速裕量，Z 10mm/20 ≈ 0.5s，总计约 10s，放宽 30%），plot_done 在此时间内点亮。",
       "type": "event_delay",
       "from": {
         "signal": "cmd_draw",
@@ -376,25 +361,25 @@
         "edge": "rising"
       },
       "op": "<=",
-      "value": 20.0,
+      "value": 13.0,
       "unit": "s"
     },
     {
-      "id": "AC9",
-      "desc": "绘图结束笔架终态：X/Y 回中心(50,50)、Z 抬笔位 10，容差覆盖 POSWIN 与入场滞后（Z 容差 1.2）",
+      "id": "AC8",
+      "desc": "绘图序列结束时，笔（工具资产）应位于绘图平台中心且处于抬笔位（Z≈10mm，XY 容差覆盖 POSWIN 及抬笔后回中累计误差）。",
       "type": "region_containment",
       "asset": "pen",
       "region_center": [
-        50,
-        50,
-        10
+        50.0,
+        50.0,
+        10.0
       ],
-      "tolerance": 2.5,
+      "tolerance": 6.0,
       "check_at": "end"
     },
     {
-      "id": "AC10",
-      "desc": "仿真健康度：整个绘图周期内仿真无发散，X/Y 反馈始终位于行程 0..100%、Z 反馈 0..10mm 内，无越界",
+      "id": "AC9",
+      "desc": "整个任务仿真过程中三轴位置不越界（X/Y∈[0,100]，Z∈[0,10]），速度指令不超限且仿真数值无发散。",
       "type": "sim_health"
     }
   ]

@@ -59,6 +59,41 @@ MAX_ITERS = 6
 DEPLOY_URL = "http://127.0.0.1:8600/deploy"
 ACCEPTANCE_TIMEOUT_S = 600
 
+# 闸门名 → 对话化说法（叙述器用）
+_GATE_NAMES = {"generate": "代码生成", "xml2st": "格式契约", "consistency": "三方一致性",
+               "scene": "场景描述", "deploy": "真机编译", "acceptance": "在线验收"}
+
+
+def narrate(event, payload, out=print):
+    """编排器事件 → 对话化播报（chat 与编排器 CLI 共用，统一风格）。
+
+    out 可注入（chat 的控制台 / 测试的收集器）；机器可读面（gate.json 等
+    落盘文件）保持结构化不变——本函数只负责"人说的话"。
+    """
+    if event == "iter_start":
+        out("── 第 %s 轮尝试 ──" % payload.get("iter"))
+    elif event == "addr_fixed":
+        out("  · 我按 AML 设备契约自动对齐了 %s 个变量的地址。" % payload.get("count"))
+    elif event == "deploy_start":
+        out("  · 正在部署到 OpenPLC 做真实编译（约 20~40 秒），请稍候…")
+    elif event == "deploy_done":
+        out("  · 编译%s。" % ("通过了，程序已在运行时上运行"
+                              if payload.get("state") == "ok" else "结果异常"))
+    elif event == "acceptance_start":
+        out("  · 开始在线验收（约 1~2 分钟），结果逐条实时显示：")
+    elif event == "acceptance_line":
+        text = str(payload)
+        if text.strip():
+            out("  │ " + text)
+    elif event == "gate_failed":
+        gate = _GATE_NAMES.get(payload.get("gate"), payload.get("gate"))
+        out("  ✗ 这一轮没过「%s」关——失败原因我已归因并反馈给生成器，准备下一轮。"
+            % gate)
+    elif event == "final":
+        out("  ✓ 全部闸门通过！正在冻结交付物…")
+    elif event == "best_effort":
+        out("  △ 达到迭代上限，未完全收敛——已保留推进最远的一轮和失败分析。")
+
 
 class Orchestrator:
     def __init__(self, runs_root=None, deploy_url=DEPLOY_URL, max_iters=MAX_ITERS,
@@ -107,11 +142,31 @@ class Orchestrator:
         return "failed", result  # errors 字段原样进反馈包（lx 约定）
 
     def _run_acceptance(self, script):
-        """跑验收脚本子进程（独立方法便于测试注入）。"""
-        return subprocess.run(
+        """跑验收脚本子进程（独立方法便于测试注入）。
+
+        默认**逐行直播**：验收脚本的每行输出实时回调 self._acceptance_live
+        （缺省打印，前缀 "  │ "）——用户全程看到 PASS/FAIL 明细，不再是
+        静默一分钟后倒出全部结果。注入测试可直接替换本方法。
+        """
+        live = getattr(self, "_acceptance_live", None)
+        proc = subprocess.Popen(
             [sys.executable, str(script)], cwd=str(self.project_root),
-            capture_output=True, text=True, timeout=self.acceptance_timeout,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
             encoding="utf-8", errors="replace")
+        lines = []
+        try:
+            for line in proc.stdout:
+                line = line.rstrip("\n")
+                lines.append(line)
+                if live:
+                    live(line)
+            proc.wait(timeout=self.acceptance_timeout)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+            raise
+        return subprocess.CompletedProcess(proc.args, proc.returncode,
+                                           stdout="\n".join(lines), stderr="")
 
     def acceptance_gate(self, scenario):
         """闸门4：链路 B 在线验收——跑 lx 的 src/pipeline/scenario_<场景>.py。
@@ -438,6 +493,7 @@ class Orchestrator:
                                   "r5": "active"}
 
             if deploy:
+                notify("deploy_start", {"iter": i})
                 state, detail = self.deploy_gate(iter_dir / "plcopen.xml")
                 probe = self.status_probe()  # 观测性：运行时状态/程序身份（不裁定）
                 if probe is not None:
@@ -451,9 +507,14 @@ class Orchestrator:
                     feedback = fail(iter_dir, i, "deploy", errs, mode)
                     notify("gate_failed", {"iter": i, "gate": "deploy"})
                     continue
+                notify("deploy_done", {"iter": i, "state": state})
 
             if acceptance:
+                notify("acceptance_start", {"iter": i, "scenario": acceptance})
+                self._acceptance_live = (
+                    lambda ln: notify("acceptance_line", ln)) if echo else None
                 state, detail = self.acceptance_gate(acceptance)
+                self._acceptance_live = None
                 gates["acceptance"] = {"state": state, "detail": detail}
                 if state == "failed":
                     errs = detail if isinstance(detail, list) else [str(detail)]
@@ -673,7 +734,7 @@ def main():
     scene_gen = None if args.no_scene else SceneSpecGenerator()
     result = orch.solve(spec, generator, deploy=args.deploy,
                         acceptance=scenario if args.acceptance else None,
-                        echo=lambda ev, p: print("[%s] %s" % (ev, p)),
+                        echo=narrate,
                         scene_generator=scene_gen, device_model=device_model)
     print("\nRESULT: %s (iter=%s) -> %s" % (result["status"], result["iter"], result["run_dir"]))
     return 0 if result["status"] == "final" else 1

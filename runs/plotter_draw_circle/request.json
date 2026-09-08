@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0-draft.3",
   "task_id": "plotter_draw_circle",
-  "task_goal": "绘图仪在抬笔安全位待机；run 闭合且三轴使能后，按下 cmd_draw 启动绘制：Z 轴抬笔（z_fb=10），X/Y 轴定位到圆心（50,50），落笔至 z_fb=0，随后以速度插补方式沿半径 25 的圆形轨迹（圆心 50,50，X/Y 以正弦/余弦速度分量协调驱动）连续画一整圆，完成后抬笔回 z_fb=10，X/Y 回到圆心（50,50），点亮 plot_done。运动过程中 X/Y 速度指令幅值不超过 VMAX=40%/s，Z 速度不超过 20mm/s；quickstop 或任一驱动器故障时受控减速中止并熄灭 plot_done，复位后可重新启动。",
+  "task_goal": "三轴绘图机在 XY 平面（0..100% 行程内）绘制整圆：抬笔状态下由 cmd_draw 触发，先回参考点，再定位至圆心，落笔后以圆心插补方式沿半径 20% 的圆周（圆心 50,50）连续绘制一周，随后抬笔并返回中心，点亮 plot_done。Z 轴控制笔的起落（0=落笔触纸，10=抬笔）。急停或任一驱动器故障时立即受控减速并中止绘图，plot_done 熄灭。",
   "io_list": [
     {
       "name": "run",
@@ -57,7 +57,7 @@
       "dir": "input",
       "type": "BOOL",
       "range": null,
-      "device": "绘图启动按钮（抬笔→定位圆心→落笔绘制圆形轨迹→抬笔→回中心）"
+      "device": "绘图启动按钮（触发圆插补序列：抬笔回参考→定位圆心(50,50)→落笔→沿半径 20 圆周插补一周→抬笔→回中心）"
     },
     {
       "name": "all_oe",
@@ -92,14 +92,14 @@
       "dir": "output",
       "type": "BOOL",
       "range": null,
-      "device": "笔触纸指示灯（Z 行程下限区，含入场容差）"
+      "device": "笔触纸指示灯（Z 行程下限区，含入场容差；圆周插补期间应持续点亮）"
     },
     {
       "name": "plot_done",
       "dir": "output",
       "type": "BOOL",
       "range": null,
-      "device": "绘图完成指示灯（抬笔回中心后点亮；急停/故障中止时熄灭）"
+      "device": "绘图完成指示灯（圆周绘制完成、抬笔回中心后点亮；急停/故障中止时熄灭）"
     },
     {
       "name": "x_fb",
@@ -142,7 +142,7 @@
         0,
         100
       ],
-      "device": "X 轴定位设定值（NC 写入，先于定位启动建立）",
+      "device": "X 轴定位设定值（NC 写入，先于定位启动建立；圆心 X=50，插补期间由 PLC 内部圆弧发生器接管 X/Y 速度指令）",
       "unit": "%"
     },
     {
@@ -153,7 +153,7 @@
         0,
         100
       ],
-      "device": "Y 轴定位设定值（NC 写入）",
+      "device": "Y 轴定位设定值（NC 写入；圆心 Y=50）",
       "unit": "%"
     },
     {
@@ -175,7 +175,8 @@
         0,
         65535
       ],
-      "device": "X 驱动器状态字（诊断通道；bit3=故障，bit10=到位）"
+      "device": "X 驱动器状态字（诊断通道；bit3=故障，bit10=到位）",
+      "unit": null
     },
     {
       "name": "y_sw",
@@ -185,7 +186,8 @@
         0,
         65535
       ],
-      "device": "Y 驱动器状态字（诊断通道）"
+      "device": "Y 驱动器状态字（诊断通道）",
+      "unit": null
     },
     {
       "name": "z_sw",
@@ -195,7 +197,8 @@
         0,
         65535
       ],
-      "device": "Z 驱动器状态字（诊断通道）"
+      "device": "Z 驱动器状态字（诊断通道）",
+      "unit": null
     },
     {
       "name": "x_v",
@@ -205,7 +208,7 @@
         -120,
         120
       ],
-      "device": "X 轴速度指令（伺服驱动器给定，带符号）",
+      "device": "X 轴速度指令（伺服驱动器给定，带符号；圆插补时输出 cos 分量）",
       "unit": "%/s"
     },
     {
@@ -216,7 +219,7 @@
         -120,
         120
       ],
-      "device": "Y 轴速度指令（伺服驱动器给定，带符号）",
+      "device": "Y 轴速度指令（伺服驱动器给定，带符号；圆插补时输出 sin 分量）",
       "unit": "%/s"
     },
     {
@@ -234,60 +237,68 @@
   "constraints": [
     {
       "id": "C1",
-      "kind": "interlock",
-      "desc": "落笔状态（z_fb=0，pen_down=TRUE）期间禁止 X/Y 轴以非圆弧插补方式运动：手动定位 cmd_go 与手动进给 jog_fwd/jog_rev 请求必须被拒绝；圆形插补轨迹段为唯一允许的落笔运动。"
+      "kind": "timing",
+      "desc": "绘图时序：run 使能且 all_oe 点亮后，cmd_draw 上升沿启动序列；先抬笔（z_fb≥8）并确认，再定位圆心(50,50)，到位后落笔（z_fb≤1），稳定 ≥0.3s 后开始圆周插补，插补一周完成后抬笔回中心并置 plot_done。"
     },
     {
       "id": "C2",
-      "kind": "interlock",
-      "desc": "急停 quickstop=TRUE 或任一驱动器故障（fault_any=TRUE）期间，三轴速度指令 x_v/y_v/z_v 必须受控减速至 0，禁止启动新的绘图或定位动作，plot_done 熄灭。"
+      "kind": "timing",
+      "desc": "圆插补采用分段直线/圆弧逼近：圆心(50,50)、半径 20%，至少 36 段，合成切向速度不超过 VMAX 的 70%（约 28%/s，单轴速度指令绝对值 ≤28），加减速段限制在 ≤80%/s²。"
     },
     {
       "id": "C3",
       "kind": "interlock",
-      "desc": "run=FALSE（驱动使能断开）期间禁止任何轴运动指令（x_v=y_v=z_v=0），绘图序列中止。"
+      "desc": "落笔期间（pen_down=TRUE）禁止点动：jog_fwd、jog_rev 请求被拒绝，X/Y 手动定位（cmd_go）被安全互锁拒绝；急停 quickstop=TRUE 时立即置三轴速度指令为 0，中止插补并使 plot_done 熄灭。"
     },
     {
       "id": "C4",
-      "kind": "timing",
-      "desc": "cmd_draw 上升沿启动绘图序列：先确认 z_fb=10（抬笔），再定位 X/Y 至圆心（50,50），到位后再落笔至 z_fb=0，各阶段按顺序切换，不得跳步。"
+      "kind": "interlock",
+      "desc": "任一驱动器故障位（x_sw/y_sw/z_sw bit3=1）时 fault_any 点亮，冻结当前序列，需 cmd_reset 复位后才能重新启动绘图。"
     },
     {
       "id": "C5",
-      "kind": "timing",
-      "desc": "圆形插补：X/Y 轴速度分量满足 x_v=R·ω·cos、y_v=R·ω·sin 的协调关系（圆心 50,50，半径 25），切向速度不超过 VMAX=40%/s，整圆绘制连续完成（周长约 157%，以 30%/s 切向速度计约需 5.3s）。"
+      "kind": "exception",
+      "desc": "插补过程中若 x_fb 或 y_fb 超出行程软限界（<2 或 >98），立即停止插补并按安全方向回退到行程内，报告异常。"
     },
     {
       "id": "C6",
       "kind": "exception",
-      "desc": "绘图过程中若 x_fb 或 y_fb 偏离理论圆轨迹超过 2 倍 POSWIN（4%）且持续，判定随动故障：中止插补、抬笔（z 至 10）、置 fault_any 并熄灭 plot_done，等待 cmd_reset。"
-    },
-    {
-      "id": "C7",
-      "kind": "exception",
-      "desc": "故障/急停复位 cmd_reset 仅在故障源消除后生效：先抬笔（z_fb=10）再允许重新启动绘图，禁止带笔恢复插补。"
+      "desc": "run 断开或掉电后重新使能时，必须重新执行回参考点序列（cmd_home 流程）后 cmd_draw 才被接受。"
     }
   ],
   "acceptance": [
     {
       "id": "AC1",
-      "desc": "run 闭合后三轴使能，就绪指示灯点亮：all_oe 在 run 上升沿后 1.0s 内置位",
+      "desc": "cmd_draw 上升沿到落笔开始（pen_down 上升沿）的时间不超过 8s（含回中/定位裕量）。",
       "type": "event_delay",
       "from": {
-        "signal": "run",
+        "signal": "cmd_draw",
         "edge": "rising"
       },
       "to": {
-        "signal": "all_oe",
+        "signal": "pen_down",
         "edge": "rising"
       },
       "op": "<=",
-      "value": 1.0,
+      "value": 8.0,
       "unit": "s"
     },
     {
       "id": "AC2",
-      "desc": "急停激活期间任何轴不得运动：quickstop=TRUE 时任一轴速度指令非零均为违规",
+      "desc": "绘图序列完成（plot_done 上升沿）后笔必须处于抬笔位，禁止触纸。",
+      "type": "forbidden_state",
+      "when": {
+        "signal": "plot_done",
+        "equals": 1
+      },
+      "forbid": {
+        "signal": "pen_down",
+        "equals": 1
+      }
+    },
+    {
+      "id": "AC3",
+      "desc": "急停有效期间任何轴不允许继续运动（速度指令保持为 0）。",
       "type": "forbidden_state",
       "when": {
         "signal": "quickstop",
@@ -299,63 +310,50 @@
       }
     },
     {
-      "id": "AC3",
-      "desc": "落笔状态（pen_down=1）期间禁止手动进给：jog_fwd 有效时 X 轴不得运动",
+      "id": "AC4",
+      "desc": "落笔状态下点动请求不允许引起 X 轴运动。",
       "type": "forbidden_state",
       "when": {
         "signal": "pen_down",
         "equals": 1
       },
       "forbid": {
-        "signal": "jog_fwd",
-        "equals": 1
-      }
-    },
-    {
-      "id": "AC4",
-      "desc": "驱动未使能时禁止绘图输出：run 断开时绘图完成灯不得点亮",
-      "type": "forbidden_state",
-      "when": {
-        "signal": "run",
-        "equals": 0
-      },
-      "forbid": {
-        "signal": "plot_done",
+        "signal": "any_moving",
         "equals": 1
       }
     },
     {
       "id": "AC5",
-      "desc": "cmd_draw 上升沿后圆形绘制+抬笔回中心全序列在 10.0s 内完成（定位约 1.5s+插补约 5.3s+抬笔回心约 2s，含 30% 通信/加减速裕量）",
-      "type": "event_delay",
-      "from": {
-        "signal": "cmd_draw",
-        "edge": "rising"
-      },
-      "to": {
-        "signal": "plot_done",
-        "edge": "rising"
-      },
-      "op": "<=",
-      "value": 10.0,
-      "unit": "s"
-    },
-    {
-      "id": "AC6",
-      "desc": "绘制完成后笔架回到圆心且抬笔：终态 X/Y 位置落入圆心（50,50）容差 3（POSWIN=2 加伺服滞后裕量）、Z=10 的区域",
+      "desc": "绘图序列结束后笔架（x/y 轴）回到圆心区域，容差覆盖伺服到位窗口（POSWIN=2）并加裕量。",
       "type": "region_containment",
-      "asset": "Plotter3Axis",
+      "asset": "Plotter3Axis.pen",
       "region_center": [
         50,
         50,
         10
       ],
-      "tolerance": 3,
+      "tolerance": 4.0,
       "check_at": "end"
     },
     {
+      "id": "AC6",
+      "desc": "绘图过程中笔始终处于触纸位：pen_down 在圆周插补期间保持点亮。",
+      "type": "event_delay",
+      "from": {
+        "signal": "pen_down",
+        "edge": "rising"
+      },
+      "to": {
+        "signal": "pen_down",
+        "edge": "falling"
+      },
+      "op": ">=",
+      "value": 5.0,
+      "unit": "s"
+    },
+    {
       "id": "AC7",
-      "desc": "全程仿真健康：三轴速度不超限（X/Y≤40%/s，Z≤20mm/s）、位置不越出行程（X/Y∈[0,100]，Z∈[0,10]）、无数值发散，圆形轨迹半径偏差 ≤5%",
+      "desc": "仿真全过程无发散：三轴位置反馈始终处于软限界内（x_fb,y_fb∈[0,100]，z_fb∈[0,10]），速度指令不饱和，无未处理的驱动器故障。",
       "type": "sim_health"
     }
   ]

@@ -2,12 +2,12 @@
   "gate": "deploy",
   "ok": false,
   "errors": [
-    "matiec 编译失败:\nOptimizing ST program...\nGenerating C files...\n./st_files/508030.st:258: error: ';' missing at end of variable(s) declaration.\n./st_files/508030.st:258: error: invalid variable(s) declaration.\n\n2 error(s) found. Bailing out!\nError generating C files\nCompilation finished with errors!"
+    "matiec 编译失败:\nOptimizing ST program...\nGenerating C files...\n./st_files/761599.st:254: error: ';' missing at end of variable(s) declaration.\n./st_files/761599.st:254: error: invalid variable(s) declaration.\n\n2 error(s) found. Bailing out!\nError generating C files\nCompilation finished with errors!"
   ],
   "attribution": {
     "gate": "deploy",
     "errors": [
-      "matiec 编译失败:\nOptimizing ST program...\nGenerating C files...\n./st_files/508030.st:258: error: ';' missing at end of variable(s) declaration.\n./st_files/508030.st:258: error: invalid variable(s) declaration.\n\n2 error(s) found. Bailing out!\nError generating C files\nCompilation finished with errors!"
+      "matiec 编译失败:\nOptimizing ST program...\nGenerating C files...\n./st_files/761599.st:254: error: ';' missing at end of variable(s) declaration.\n./st_files/761599.st:254: error: invalid variable(s) declaration.\n\n2 error(s) found. Bailing out!\nError generating C files\nCompilation finished with errors!"
     ],
     "pitfalls": [
       {

@@ -20,8 +20,6 @@ FUNCTION_BLOCK INTERP
     vel : REAL := 0.0;
     dist : REAL;
     stop_d : REAL;
-  END_VAR
-  VAR CONSTANT
     SCAN_T : REAL := 0.02;
   END_VAR
 IF fire AND NOT edge_ir THEN
@@ -81,8 +79,6 @@ FUNCTION_BLOCK DRIVE402
     v_ff : REAL;
     pos_err : REAL;
     sp_prev : INT;
-  END_VAR
-  VAR CONSTANT
     KP : REAL := 8.0;
     QS_DECEL : REAL := 200.0;
     SCAN_T : REAL := 0.02;
@@ -255,7 +251,7 @@ FUNCTION_BLOCK MC_MOVEJOG
     JogBackward : BOOL;
   END_VAR
   VAR_IN_OUT
-    jog_pos : INT := 50;
+    jog_pos : INT;
   END_VAR
   VAR_OUTPUT
     Busy : BOOL;

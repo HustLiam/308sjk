@@ -3,6 +3,7 @@ FUNCTION_BLOCK INTERP
     fire : BOOL;
     hold_req : BOOL;
     pos_target : INT;
+    pos_fb : INT;
     MAXPOS : INT;
     VMAX : REAL;
     ACCEL : REAL;
@@ -20,8 +21,6 @@ FUNCTION_BLOCK INTERP
     vel : REAL := 0.0;
     dist : REAL;
     stop_d : REAL;
-  END_VAR
-  VAR CONSTANT
     SCAN_T : REAL := 0.02;
   END_VAR
 IF fire AND NOT edge_ir THEN
@@ -38,6 +37,9 @@ ELSIF fire AND NOT Busy AND (ABS(INT_TO_REAL(pos_target) - tgt) > 0.499) THEN
     Done := FALSE;
 END_IF;
 edge_ir := fire;
+IF NOT Busy THEN
+    pos := INT_TO_REAL(pos_fb);
+END_IF;
 IF hold_req THEN
     IF vel > 0.0 THEN vel := MAX(0.0, vel - ACCEL * SCAN_T);
     ELSIF vel < 0.0 THEN vel := MIN(0.0, vel + ACCEL * SCAN_T);
@@ -81,8 +83,6 @@ FUNCTION_BLOCK DRIVE402
     v_ff : REAL;
     pos_err : REAL;
     sp_prev : INT;
-  END_VAR
-  VAR CONSTANT
     KP : REAL := 8.0;
     QS_DECEL : REAL := 200.0;
     SCAN_T : REAL := 0.02;
@@ -170,7 +170,7 @@ IF Enable THEN
     CASE pstep OF
         0: cw := (cw AND 16#00F0) OR 16#0006; pstep := 1;
         1: IF (sw AND 16#0001) <> 0 THEN cw := (cw AND 16#00F0) OR 16#0007; pstep := 2; END_IF;
-        2: IF (sw AND 16#0002) <> 0 THEN cw := (cw AND 16#00F0) OR 16#000F; pstep := 3; END_IF;
+        2: IF (sw AND 16#0002) <> 0 THEN cw := (cw AND 16#00F0) OR 16#0F; pstep := 3; END_IF;
         3: IF (sw AND 16#0004) <> 0 THEN pstep := 4; END_IF;
     END_CASE;
 ELSE
@@ -233,8 +233,10 @@ FUNCTION_BLOCK MC_MOVEABSOLUTE
     fire : BOOL;
     Position : INT;
   END_VAR
-  VAR_OUTPUT
+  VAR_IN_OUT
     interp_exe : BOOL;
+  END_VAR
+  VAR_OUTPUT
     Busy : BOOL;
     Done : BOOL;
   END_VAR
@@ -255,7 +257,7 @@ FUNCTION_BLOCK MC_MOVEJOG
     JogBackward : BOOL;
   END_VAR
   VAR_IN_OUT
-    jog_pos : INT := 50;
+    jog_pos : INT;
   END_VAR
   VAR_OUTPUT
     Busy : BOOL;
@@ -272,8 +274,10 @@ FUNCTION_BLOCK MC_HOME
   VAR_INPUT
     fire : BOOL;
   END_VAR
-  VAR_OUTPUT
+  VAR_IN_OUT
     home_exe : BOOL;
+  END_VAR
+  VAR_OUTPUT
     Done : BOOL;
   END_VAR
   VAR
@@ -339,6 +343,7 @@ PROGRAM PLC_PRG
     soft_err : BOOL;
     pen_up : BOOL;
     edge_dr : BOOL;
+    rec_lift : BOOL;
   END_VAR
   VAR
     prog_id AT %QW20 : INT := 2;
@@ -389,9 +394,9 @@ pwr_x(Enable := run AND NOT quickstop, cw := x_cw, sw := wx_sw);
 pwr_y(Enable := run AND NOT quickstop, cw := y_cw, sw := wy_sw);
 pwr_z(Enable := run AND NOT quickstop, cw := z_cw, sw := wz_sw);
 rs_x(fire := cmd_reset, cw := x_cw, sw := wx_sw);
-st_x(fire := quickstop, cw := x_cw, sw := wx_sw);
-st_y(fire := quickstop, cw := y_cw, sw := wy_sw);
-st_z(fire := quickstop, cw := z_cw, sw := wz_sw);
+st_x(fire := quickstop, cw := x_cw);
+st_y(fire := quickstop, cw := y_cw);
+st_z(fire := quickstop, cw := z_cw);
 
 (* ---- 故障检测与锁存（C4） ---- *)
 fault_any := ((wx_sw AND 16#0008) <> 0) OR ((wy_sw AND 16#0008) <> 0) OR ((wz_sw AND 16#0008) <> 0);
@@ -409,13 +414,17 @@ IF hm_x.Done AND hm_y.Done AND hm_z.Done THEN
     homed := TRUE;
 END_IF;
 
-(* ---- 序列中止：急停 / 故障（C3/C4），plot_done 熄灭 ---- *)
+(* ---- 序列中止：急停 / 故障（C3/C4），plot_done 熄灭，并锁存原地抬笔回收 ---- *)
 IF (quickstop OR fault_any) AND (pl_step <> 0) THEN
     pl_step := 0;
     go_x_exe := FALSE;
     go_y_exe := FALSE;
     go_z_exe := FALSE;
     plot_done := FALSE;
+    rec_lift := TRUE;
+END_IF;
+IF rec_lift AND (z_fb >= 8) THEN
+    rec_lift := FALSE;
 END_IF;
 
 (* ---- 软限界异常（C5）：越界立即停止插补，抬笔并退回行程内(中心) ---- *)
@@ -461,7 +470,7 @@ hm_z(fire := cmd_home AND (pl_step = 0) AND (NOT quickstop), home_exe := hm_z_ex
 jg_x(JogForward := jog_fwd AND pen_up AND (pl_step = 0) AND (NOT quickstop),
      JogBackward := jog_rev AND pen_up AND (pl_step = 0) AND (NOT quickstop), jog_pos := x_jog_pos);
 
-(* ---- 插补目标路由：序列 > 回零 > 手动；Z 回零位=抬笔安全位 10 ---- *)
+(* ---- 插补目标路由：抬笔回收 > 序列 > 回零 > 手动；Z 回零位=抬笔安全位 10 ---- *)
 IF (pl_step <> 0) THEN
     x_tgt := pl_tx;
 ELSIF hm_x_exe THEN
@@ -476,7 +485,9 @@ ELSIF hm_y_exe THEN
 ELSE
     y_tgt := y_sp;
 END_IF;
-IF (pl_step <> 0) THEN
+IF rec_lift THEN
+    z_tgt := 10;
+ELSIF (pl_step <> 0) THEN
     z_tgt := pl_tz;
 ELSIF hm_z_exe THEN
     z_tgt := 10;
@@ -484,18 +495,18 @@ ELSE
     z_tgt := z_sp;
 END_IF;
 
-(* ---- 插补引擎：连续跟踪模式，急停时受控减速（hold_req） ---- *)
-ix_x(fire := go_x_exe OR hm_x_exe, pos_target := x_tgt, hold_req := quickstop,
+(* ---- 插补引擎：连续跟踪模式，急停时受控减速（hold_req）；空闲时 pos 同步反馈 ---- *)
+ix_x(fire := go_x_exe OR hm_x_exe, pos_target := x_tgt, pos_fb := x_fb, hold_req := quickstop,
      VMAX := 25.0, ACCEL := 80.0, POSWIN := 2.0, MAXPOS := 100);
-ix_y(fire := go_y_exe OR hm_y_exe, pos_target := y_tgt, hold_req := quickstop,
+ix_y(fire := go_y_exe OR hm_y_exe, pos_target := y_tgt, pos_fb := y_fb, hold_req := quickstop,
      VMAX := 25.0, ACCEL := 80.0, POSWIN := 2.0, MAXPOS := 100);
-ix_z(fire := go_z_exe OR hm_z_exe, pos_target := z_tgt, hold_req := quickstop,
+ix_z(fire := go_z_exe OR hm_z_exe OR rec_lift, pos_target := z_tgt, pos_fb := z_fb, hold_req := quickstop,
      VMAX := 20.0, ACCEL := 60.0, POSWIN := 1.0, MAXPOS := 10);
 
 (* ---- 触发线清除 ---- *)
 IF ix_x.Done AND (pl_step = 0) THEN go_x_exe := FALSE; END_IF;
 IF ix_y.Done AND (pl_step = 0) THEN go_y_exe := FALSE; END_IF;
-IF ix_z.Done AND (pl_step = 0) THEN go_z_exe := FALSE; END_IF;
+IF ix_z.Done AND (pl_step = 0) AND (NOT rec_lift) THEN go_z_exe := FALSE; END_IF;
 IF ix_x.Done THEN hm_x_exe := FALSE; END_IF;
 IF ix_y.Done THEN hm_y_exe := FALSE; END_IF;
 IF ix_z.Done THEN hm_z_exe := FALSE; END_IF;
@@ -536,8 +547,8 @@ dv_x(cw := x_cw, Setpoint := x_interp, pos_fb := x_fb);
 dv_y(cw := y_cw, Setpoint := y_interp, pos_fb := y_fb);
 dv_z(cw := z_cw, Setpoint := z_interp, pos_fb := z_fb);
 
-(* ---- 速度指令输出：急停立即置 0（AC3/C3），圆插补限速 28（C2），Z 限 20 ---- *)
-IF quickstop THEN
+(* ---- 速度指令输出：急停/失能立即置 0（AC3/C3/[10]），圆插补限速 28（C2），Z 限 20 ---- *)
+IF quickstop OR (NOT run) THEN
     x_v := 0;
     y_v := 0;
     z_v := 0;
@@ -554,7 +565,7 @@ IF z_v > 20 THEN z_v := 20; END_IF;
 IF z_v < -20 THEN z_v := -20; END_IF;
 
 (* ---- 应用状态 ---- *)
-all_oe := pwr_x.Status AND pwr_y.Status AND pwr_z.Status;
+all_oe := run AND pwr_x.Status AND pwr_y.Status AND pwr_z.Status;
 move_done := go_x.Done AND go_y.Done AND go_z.Done AND (pl_step = 0);
 any_moving := (x_v <> 0) OR (y_v <> 0) OR (z_v <> 0);
 END_PROGRAM

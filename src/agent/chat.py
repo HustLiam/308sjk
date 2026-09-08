@@ -41,7 +41,7 @@ _AC_WATCH = ("equals",)
 
 def render_spec(spec, pending=()):
     """规格回显文本（人工介入点 1）：目标/约束/准则摘要 + 待澄清项。"""
-    lines = ["── requirement_spec 回显（请核对）────────────────────"]
+    lines = ["── 需求规格（我整理的版本，请核对）────────────────────"]
     lines.append("task_id: %s" % spec.get("task_id"))
     lines.append("工艺目标: %s" % spec.get("task_goal"))
     io = spec.get("io_list", [])
@@ -149,13 +149,13 @@ def main():
         aml = input("AML 设备描述路径 [回车=%s]: " % DEFAULT_AML.name).strip() or str(DEFAULT_AML)
     device_model, problems = parse_aml(aml)
     if problems:
-        print("⓪ AML 解析存在问题：")
+        print("我读这份 AML 时发现了问题，先不往下走了：")
         for p in problems:
             print("   - %s" % p)
         return 2
     n_io = len(device_model["io_points"])
     n_ax = len(device_model["kinematics"]["axes"])
-    print("⓪ 解析通过：%s（%d 设备 / %d IO / %d 轴）"
+    print("AML 我读完了：这是「%s」，一共 %d 台设备、%d 个 IO 通道、%d 根运动轴。"
           % (device_model["station"], len(device_model["devices"]), n_io, n_ax))
 
     # ---- ① 需求理解 + 回显/修正循环（人工介入点 1） ----
@@ -163,43 +163,44 @@ def main():
         client=BigModelClient(get_api_key()) if get_api_key() else None, model=MODEL)
     request_text = args.request
     if request_text is None:
-        request_text = read_multiline("① 请描述需求（多行，空行结束；写清工艺意图与安全要求即可）：")
+        request_text = read_multiline("请描述你的需求（多行，空行结束；写清工艺意图和安全要求就行，数值细节可以不写）：")
     if not request_text.strip():
-        print("需求为空，退出。")
+        print("需求是空的，我先退出了。")
         return 2
     if understander.client is None:
-        print("（未配置 ZHIPUAI_API_KEY：① 退化为模板模式——仅预填 io_list，工艺空白）")
+        print("（没找到 ZHIPUAI_API_KEY，我先退化为模板模式——只有设备 IO 预填，工艺部分会是空白。）")
 
+    print("明白了，我来把你的需求整理成正式规格…")
     result = understander.understand(request_text, device_model=device_model)
     spec = result["spec"]
     if spec is None:
-        print("① 规格组装失败：")
+        print("规格没组装成功，问题如下：")
         for p in (result["report"].get("problems")
                   or result["report"].get("history", [{}])[-1].get("problems", [])):
             print("   - %s" % p)
         return 2
-    print("① 规格生成（%s 轮）" % result["report"].get("rounds", 0))
+    print("规格整理好了（模型用了 %s 轮），请你过目：" % result["report"].get("rounds", 0))
 
     while True:
         print(render_spec(spec, result["report"].get("pending", [])))
         if args.confirm:
             break
-        ans = input("确认生成代码？[回车=确认 / 输入修正文本 / q=退出]: ").strip()
-        if ans in ("", "y", "Y", "是"):
+        ans = input("规格没问题的话回车，我就开始写代码；哪里不对直接告诉我改；q 退出: ").strip()
+        if ans in ("", "y", "Y", "是", "确认", "没问题"):
             break
         if ans in ("q", "Q", "quit", "exit"):
-            print("已退出（规格未下发生成）。")
+            print("好的，就此打住（规格没有下发生成）。")
             return 0
-        print("①·refine 按你的修正定向更新规格…")
+        print("收到，我按你的意见只改相关部分，其他保持原样…")
         result = understander.refine(spec, request_text,
                                      device_model=device_model, correction=ans)
         if result["spec"] is None:
-            print("修正失败（保留上轮规格）：")
+            print("这次修正没成功，先保留上一版规格。问题在：")
             for p in (result["report"].get("problems") or [])[:5]:
                 print("   - %s" % p)
             continue
         spec = result["spec"]
-        print("① 修正完成（%s 轮）" % result["report"].get("rounds", 0))
+        print("改好了（%s 轮），再请你过目：" % result["report"].get("rounds", 0))
 
     # ---- 生成模式 ----
     seed = args.seed
@@ -211,14 +212,16 @@ def main():
     client = BigModelClient(get_api_key()) if (seed is None and get_api_key()) else None
     address_table = {p["name"]: p["address"] for p in device_model.get("io_points", [])
                      if p.get("address")}
+    talk = lambda msg: print("  · " + msg)   # 生成器的实时进度播报（对话风格）
     generator = (PLCGenerator(client=client, seed_xml=seed,
                               generic_patterns_only=args.no_curated_patterns,
-                              address_table=address_table)
+                              address_table=address_table, report=talk)
                  if (seed or client) else None)
     if generator is None:
         print("既无种子也无 API Key，无法生成。")
         return 2
-    print("②a 生成方式：%s" % ("种子（已验收基线）" if seed else "LLM 现场生成"))
+    print("好的，我将用%s来写控制程序。" % ("已验收的种子工程（最快最稳）" if seed
+                                          else "LLM 现场编写——过程会实时汇报进度"))
 
     # ---- 闸门环境探测 ----
     import os
@@ -227,20 +230,12 @@ def main():
     serve_ok, modbus_ok = probe_gate_env(args.modbus_host)
     deploy = False if args.no_deploy else (args.deploy or serve_ok)
     acceptance = False if args.no_acceptance else (args.acceptance or modbus_ok)
-    print("闸门环境：serve(:8600)=%s → 闸门3%s；Modbus=%s → 闸门4%s"
-          % ("在线" if serve_ok else "离线", "启用" if deploy else "跳过",
-             "在线" if modbus_ok else "离线", "启用" if acceptance else "跳过"))
+    print("我探测了一下环境：编译服务%s、PLC 运行时%s——所以这一轮会%s。"
+          % ("在线" if serve_ok else "离线", "在线" if modbus_ok else "离线",
+             ("做真实编译" if deploy else "跳过") + (" + 在线验收" if acceptance else "")))
 
-    # ---- solve 闭环（自主迭代） ----
-    def on_event(ev, payload):
-        if ev == "iter_start":
-            print("── 迭代 %s ──" % payload.get("iter"))
-        elif ev == "gate_failed":
-            print("   ✗ 闸门 %s 失败（错误已回喂，进入下一迭代）" % payload.get("gate"))
-        elif ev == "final":
-            print("   ✓ 全部闸门通过")
-        elif ev == "best_effort":
-            print("   △ 达迭代上限，输出最优轮 + 失败报告")
+    # ---- solve 闭环（自主迭代，全程播报） ----
+    from .orchestrator import narrate
 
     orch = Orchestrator(max_iters=args.max_iters,
                         attribution_engine=AttributionEngine(
@@ -248,26 +243,29 @@ def main():
                             if get_api_key() else None))
     res = orch.solve(spec, generator, deploy=deploy,
                      acceptance=args.scenario if acceptance else None,
-                     echo=on_event,
+                     echo=narrate,
                      scene_generator=SceneSpecGenerator(), device_model=device_model)
 
     run_dir = Path(res["run_dir"])
     print("\n" + "=" * 56)
     if res["status"] == "final":
         final = run_dir / "final"
-        print("✅ 闭环收敛（iter=%s）。交付物：" % res["iter"])
-        for name in ("plcopen.xml", "scene.spec.json", "io_map.json", "gate.json"):
-            print("   %s" % (final / name))
-        print("   （IEC 61131-10 代码 = plcopen.xml；场景描述 = scene.spec.json + io_map.json）")
+        print("✅ 搞定了！第 %s 轮全部通过。你要的交付物都在这里：" % res["iter"])
+        for name, desc in (("plcopen.xml", "PLC 控制代码（IEC 61131-10）"),
+                           ("scene.spec.json", "仿真场景描述"),
+                           ("io_map.json", "IO 映射表"),
+                           ("gate.json", "全部验证证据")):
+            print("   %-16s %s\n     %s" % (name, desc, final / name))
     else:
-        print("⚠ 未收敛（best_effort）。失败分析：%s" % (run_dir / "summary.md"))
+        print("⚠ 这一轮没有完全通过（保留到第 %s 轮的成绩）。"
+              "失败原因分析我写在了这里：\n   %s" % (res.get("iter"), run_dir / "summary.md"))
     if not args.confirm:
-        again = input("修改需求重跑？[输入新修正文本 / 回车退出]: ").strip()
+        again = input("还想调整需求再跑一遍吗？直接说改哪里；回车就到这里: ").strip()
         if again:
             r2 = understander.refine(spec, request_text, device_model=device_model,
                                      correction=again)
             if r2["spec"]:
-                print("新规格 task_id=%s（请重跑本 CLI 继续闭环）" % r2["spec"]["task_id"])
+                print("新规格已经准备好（task_id=%s），重新运行我就能带着新要求再来一轮。" % r2["spec"]["task_id"])
     return 0 if res["status"] == "final" else 1
 
 

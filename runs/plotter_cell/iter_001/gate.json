@@ -20,7 +20,7 @@
           {
             "step": "validate & convert XML",
             "ok": true,
-            "detail": "deploy__8yzx5fx.xml -> 547 行 ST"
+            "detail": "deploy_ewloidfi.xml -> 547 行 ST"
           },
           {
             "step": "write program.st",
@@ -35,7 +35,7 @@
           {
             "step": "upload & trigger compile",
             "ok": true,
-            "detail": "139108.st"
+            "detail": "4067.st"
           },
           {
             "step": "compile (matiec)",
