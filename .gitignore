@@ -1,6 +1,10 @@
 # 本地工作区（生成的 .st / 部署结果）
 workspace/
 
+# 链路 A 构建产物（L2 降级测试 / L3 真编译输出）
+toolchain/tests/out_l2/
+toolchain/tests/out_l3/
+
 # Python
 __pycache__/
 *.pyc
