@@ -1,0 +1,583 @@
+{
+  "schema_version": "1.0.0-draft.1",
+  "scene_id": "plotter_ci_learn7",
+  "mappings": [
+    {
+      "plc_var": "run",
+      "io_channel": {
+        "plc_addr": "%QX0.0",
+        "modbus": {
+          "area": "coils",
+          "address": 0
+        }
+      },
+      "bind": {
+        "prim": "/World/panel",
+        "quantity": "run_btn"
+      },
+      "dir": "input",
+      "type": "BOOL",
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    },
+    {
+      "plc_var": "cmd_home",
+      "io_channel": {
+        "plc_addr": "%QX0.1",
+        "modbus": {
+          "area": "coils",
+          "address": 1
+        }
+      },
+      "bind": {
+        "prim": "/World/panel",
+        "quantity": "cmd_home_btn"
+      },
+      "dir": "input",
+      "type": "BOOL",
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    },
+    {
+      "plc_var": "cmd_go",
+      "io_channel": {
+        "plc_addr": "%QX0.2",
+        "modbus": {
+          "area": "coils",
+          "address": 2
+        }
+      },
+      "bind": {
+        "prim": "/World/panel",
+        "quantity": "cmd_go_btn"
+      },
+      "dir": "input",
+      "type": "BOOL",
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    },
+    {
+      "plc_var": "jog_fwd",
+      "io_channel": {
+        "plc_addr": "%QX0.3",
+        "modbus": {
+          "area": "coils",
+          "address": 3
+        }
+      },
+      "bind": {
+        "prim": "/World/panel",
+        "quantity": "jog_fwd_btn"
+      },
+      "dir": "input",
+      "type": "BOOL",
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    },
+    {
+      "plc_var": "jog_rev",
+      "io_channel": {
+        "plc_addr": "%QX0.4",
+        "modbus": {
+          "area": "coils",
+          "address": 4
+        }
+      },
+      "bind": {
+        "prim": "/World/panel",
+        "quantity": "jog_rev_btn"
+      },
+      "dir": "input",
+      "type": "BOOL",
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    },
+    {
+      "plc_var": "quickstop",
+      "io_channel": {
+        "plc_addr": "%QX0.5",
+        "modbus": {
+          "area": "coils",
+          "address": 5
+        }
+      },
+      "bind": {
+        "prim": "/World/panel",
+        "quantity": "quickstop_btn"
+      },
+      "dir": "input",
+      "type": "BOOL",
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    },
+    {
+      "plc_var": "cmd_reset",
+      "io_channel": {
+        "plc_addr": "%QX0.7",
+        "modbus": {
+          "area": "coils",
+          "address": 7
+        }
+      },
+      "bind": {
+        "prim": "/World/panel",
+        "quantity": "cmd_reset_btn"
+      },
+      "dir": "input",
+      "type": "BOOL",
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    },
+    {
+      "plc_var": "cmd_draw",
+      "io_channel": {
+        "plc_addr": "%QX2.0",
+        "modbus": {
+          "area": "coils",
+          "address": 16
+        }
+      },
+      "bind": {
+        "prim": "/World/panel",
+        "quantity": "cmd_draw_btn"
+      },
+      "dir": "input",
+      "type": "BOOL",
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    },
+    {
+      "plc_var": "all_oe",
+      "io_channel": {
+        "plc_addr": "%QX1.0",
+        "modbus": {
+          "area": "coils",
+          "address": 8
+        }
+      },
+      "bind": {
+        "prim": "/World/panel",
+        "quantity": "all_oe_lamp"
+      },
+      "dir": "output",
+      "type": "BOOL",
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    },
+    {
+      "plc_var": "move_done",
+      "io_channel": {
+        "plc_addr": "%QX1.1",
+        "modbus": {
+          "area": "coils",
+          "address": 9
+        }
+      },
+      "bind": {
+        "prim": "/World/panel",
+        "quantity": "move_done_lamp"
+      },
+      "dir": "output",
+      "type": "BOOL",
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    },
+    {
+      "plc_var": "any_moving",
+      "io_channel": {
+        "plc_addr": "%QX1.2",
+        "modbus": {
+          "area": "coils",
+          "address": 10
+        }
+      },
+      "bind": {
+        "prim": "/World/panel",
+        "quantity": "any_moving_lamp"
+      },
+      "dir": "output",
+      "type": "BOOL",
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    },
+    {
+      "plc_var": "fault_any",
+      "io_channel": {
+        "plc_addr": "%QX1.3",
+        "modbus": {
+          "area": "coils",
+          "address": 11
+        }
+      },
+      "bind": {
+        "prim": "/World/panel",
+        "quantity": "fault_any_lamp"
+      },
+      "dir": "output",
+      "type": "BOOL",
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    },
+    {
+      "plc_var": "pen_down",
+      "io_channel": {
+        "plc_addr": "%QX2.1",
+        "modbus": {
+          "area": "coils",
+          "address": 17
+        }
+      },
+      "bind": {
+        "prim": "/World/panel",
+        "quantity": "pen_down_lamp"
+      },
+      "dir": "output",
+      "type": "BOOL",
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    },
+    {
+      "plc_var": "plot_done",
+      "io_channel": {
+        "plc_addr": "%QX2.2",
+        "modbus": {
+          "area": "coils",
+          "address": 18
+        }
+      },
+      "bind": {
+        "prim": "/World/panel",
+        "quantity": "plot_done_lamp"
+      },
+      "dir": "output",
+      "type": "BOOL",
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    },
+    {
+      "plc_var": "x_fb",
+      "io_channel": {
+        "plc_addr": "%QW0",
+        "modbus": {
+          "area": "holding_registers",
+          "address": 0
+        }
+      },
+      "bind": {
+        "prim": "/World/x_axis",
+        "quantity": "joint_pos"
+      },
+      "dir": "input",
+      "type": "INT",
+      "range": [
+        0,
+        100
+      ],
+      "unit": "%",
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    },
+    {
+      "plc_var": "y_fb",
+      "io_channel": {
+        "plc_addr": "%QW1",
+        "modbus": {
+          "area": "holding_registers",
+          "address": 1
+        }
+      },
+      "bind": {
+        "prim": "/World/y_axis",
+        "quantity": "joint_pos"
+      },
+      "dir": "input",
+      "type": "INT",
+      "range": [
+        0,
+        100
+      ],
+      "unit": "%",
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    },
+    {
+      "plc_var": "z_fb",
+      "io_channel": {
+        "plc_addr": "%QW2",
+        "modbus": {
+          "area": "holding_registers",
+          "address": 2
+        }
+      },
+      "bind": {
+        "prim": "/World/z_axis",
+        "quantity": "joint_pos"
+      },
+      "dir": "input",
+      "type": "INT",
+      "range": [
+        0,
+        10
+      ],
+      "unit": "mm",
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    },
+    {
+      "plc_var": "x_sp",
+      "io_channel": {
+        "plc_addr": "%QW10",
+        "modbus": {
+          "area": "holding_registers",
+          "address": 10
+        }
+      },
+      "bind": {
+        "prim": "/World/panel",
+        "quantity": "x_target"
+      },
+      "dir": "input",
+      "type": "INT",
+      "range": [
+        0,
+        100
+      ],
+      "unit": "%",
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    },
+    {
+      "plc_var": "y_sp",
+      "io_channel": {
+        "plc_addr": "%QW11",
+        "modbus": {
+          "area": "holding_registers",
+          "address": 11
+        }
+      },
+      "bind": {
+        "prim": "/World/panel",
+        "quantity": "y_target"
+      },
+      "dir": "input",
+      "type": "INT",
+      "range": [
+        0,
+        100
+      ],
+      "unit": "%",
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    },
+    {
+      "plc_var": "z_sp",
+      "io_channel": {
+        "plc_addr": "%QW12",
+        "modbus": {
+          "area": "holding_registers",
+          "address": 12
+        }
+      },
+      "bind": {
+        "prim": "/World/panel",
+        "quantity": "z_target"
+      },
+      "dir": "input",
+      "type": "INT",
+      "range": [
+        0,
+        10
+      ],
+      "unit": "mm",
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    },
+    {
+      "plc_var": "x_sw",
+      "io_channel": {
+        "plc_addr": "%QW6",
+        "modbus": {
+          "area": "holding_registers",
+          "address": 6
+        }
+      },
+      "bind": {
+        "prim": "/World/x_axis",
+        "quantity": "status_word"
+      },
+      "dir": "output",
+      "type": "INT",
+      "range": [
+        0,
+        65535
+      ],
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    },
+    {
+      "plc_var": "y_sw",
+      "io_channel": {
+        "plc_addr": "%QW7",
+        "modbus": {
+          "area": "holding_registers",
+          "address": 7
+        }
+      },
+      "bind": {
+        "prim": "/World/y_axis",
+        "quantity": "status_word"
+      },
+      "dir": "output",
+      "type": "INT",
+      "range": [
+        0,
+        65535
+      ],
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    },
+    {
+      "plc_var": "z_sw",
+      "io_channel": {
+        "plc_addr": "%QW8",
+        "modbus": {
+          "area": "holding_registers",
+          "address": 8
+        }
+      },
+      "bind": {
+        "prim": "/World/z_axis",
+        "quantity": "status_word"
+      },
+      "dir": "output",
+      "type": "INT",
+      "range": [
+        0,
+        65535
+      ],
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    },
+    {
+      "plc_var": "x_v",
+      "io_channel": {
+        "plc_addr": "%QW13",
+        "modbus": {
+          "area": "holding_registers",
+          "address": 13
+        }
+      },
+      "bind": {
+        "prim": "/World/x_axis",
+        "quantity": "vel_cmd"
+      },
+      "dir": "output",
+      "type": "INT",
+      "range": [
+        -120,
+        120
+      ],
+      "unit": "%/s",
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    },
+    {
+      "plc_var": "y_v",
+      "io_channel": {
+        "plc_addr": "%QW14",
+        "modbus": {
+          "area": "holding_registers",
+          "address": 14
+        }
+      },
+      "bind": {
+        "prim": "/World/y_axis",
+        "quantity": "vel_cmd"
+      },
+      "dir": "output",
+      "type": "INT",
+      "range": [
+        -120,
+        120
+      ],
+      "unit": "%/s",
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    },
+    {
+      "plc_var": "z_v",
+      "io_channel": {
+        "plc_addr": "%QW15",
+        "modbus": {
+          "area": "holding_registers",
+          "address": 15
+        }
+      },
+      "bind": {
+        "prim": "/World/z_axis",
+        "quantity": "vel_cmd"
+      },
+      "dir": "output",
+      "type": "INT",
+      "range": [
+        -120,
+        120
+      ],
+      "unit": "mm/s",
+      "scale": {
+        "offset": 0,
+        "factor": 1.0
+      }
+    }
+  ]
+}

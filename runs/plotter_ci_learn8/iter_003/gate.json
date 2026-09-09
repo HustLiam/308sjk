@@ -1,0 +1,111 @@
+{
+  "gate": "acceptance",
+  "ok": false,
+  "errors": [
+    "[verify] 程序身份确认: plotter_circle (prog_id=3)",
+    "[1] 上电（run=0）：三轴就绪；初始笔位 z=0",
+    "  PASS X 轴 sw.bit0=1（0031）",
+    "  PASS Y 轴 sw.bit0=1（0031）",
+    "  PASS Z 轴 sw.bit0=1（0031）",
+    "  PASS all_oe=FALSE",
+    "  PASS pen_down=TRUE（初始触纸）",
+    "[2] run=1 → 三轴使能",
+    "  PASS all_oe=TRUE（0.12s）",
+    "[3] 落笔态 cmd_go(60,40,0)：X/Y 请求被笔互锁拒绝",
+    "  PASS X/Y 未运动（互锁拒绝，AC5）",
+    "[4] cmd_draw：抬笔→(50,25)→落笔画整圆→回圆心(50,50,10)",
+    "    [trace t=2s] pos=(38,24,1) v=(0,0,0) pen=1 done=0 moving=1",
+    "    [trace t=4s] pos=(68,35,1) v=(0,24,0) pen=1 done=0 moving=1",
+    "    [trace t=6s] pos=(73,56,1) v=(0,0,0) pen=1 done=0 moving=0",
+    "    [trace t=8s] pos=(56,74,1) v=(0,0,0) pen=1 done=0 moving=0",
+    "    [trace t=10s] pos=(31,65,1) v=(0,0,0) pen=1 done=0 moving=0",
+    "    [trace t=12s] pos=(27,45,1) v=(0,0,0) pen=1 done=0 moving=1",
+    "    [trace t=14s] pos=(44,26,1) v=(0,0,0) pen=1 done=0 moving=1",
+    "  PASS 画圆序列完成 plot_done=TRUE（14.7s ≤ 30s，AC1）",
+    "  PASS 终态回圆心 (50,50,10)（实际 (49,49,9)，AC6）",
+    "  PASS 落笔期间 XY 联动发生过（采样 84）",
+    "  PASS 落笔轨迹在圆包围盒（x 26..75, y 24..75，越界 0 次，AC7）",
+    "  PASS 完成后抬笔",
+    "[5] 画圆中急停：受控减速≤3s、序列中止、复跑可完成",
+    "  FAIL 第二次画圆已启动",
+    "  PASS 急停后三轴静止≤3s（0.00s，AC2-4）",
+    "  FAIL plot_done=FALSE（序列中止）",
+    "  PASS 释放后重新使能",
+    "    [trace t=2s] pos=(62,35,1) v=(0,0,0) pen=1 done=0 moving=0",
+    "    [trace t=4s] pos=(75,51,1) v=(0,0,0) pen=1 done=0 moving=0",
+    "    [trace t=6s] pos=(62,72,1) v=(0,0,0) pen=1 done=0 moving=0",
+    "    [trace t=8s] pos=(38,69,1) v=(0,0,0) pen=1 done=0 moving=0",
+    "    [trace t=10s] pos=(25,46,1) v=(0,0,0) pen=1 done=0 moving=0",
+    "    [trace t=12s] pos=(39,27,1) v=(0,0,0) pen=1 done=0 moving=0",
+    "  PASS 重新 cmd_draw 后完成（13.1s）",
+    "（验收暂停：段 [5] 存在失败，后续段未执行；已通过段：[1] [2] [3] [4]——先修复本段，通过后重跑继续）",
+    "运行时内部状态时间线（诊断口自动采集）：",
+    "    [diag t=0.5s] pl_step=1 plot_exe=1 go_exe=0",
+    "    [diag t=1.0s] pl_step=3 plot_exe=1 go_exe=0",
+    "    [diag t=1.5s] pl_step=3 plot_exe=1 go_exe=0",
+    "    [diag t=2.0s] pl_step=3 plot_exe=1 go_exe=0",
+    "    [diag t=2.5s] pl_step=3 plot_exe=1 go_exe=0",
+    "    [diag t=3.0s] pl_step=3 plot_exe=1 go_exe=0",
+    "    [diag t=3.5s] pl_step=5 plot_exe=1 go_exe=0",
+    "    [diag t=4.0s] pl_step=6 plot_exe=1 go_exe=0",
+    "    [diag t=4.5s] pl_step=7 plot_exe=1 go_exe=0",
+    "    [diag t=5.0s] pl_step=9 plot_exe=1 go_exe=0",
+    "    [diag t=5.5s] pl_step=10 plot_exe=1 go_exe=0",
+    "    [diag t=6.0s] pl_step=11 plot_exe=1 go_exe=0",
+    "    [diag t=6.5s] pl_step=12 plot_exe=1 go_exe=0",
+    "    [diag t=7.0s] pl_step=13 plot_exe=1 go_exe=0"
+  ],
+  "attribution": {
+    "gate": "acceptance",
+    "errors": [
+      "[verify] 程序身份确认: plotter_circle (prog_id=3)",
+      "[1] 上电（run=0）：三轴就绪；初始笔位 z=0",
+      "  PASS X 轴 sw.bit0=1（0031）",
+      "  PASS Y 轴 sw.bit0=1（0031）",
+      "  PASS Z 轴 sw.bit0=1（0031）",
+      "  PASS all_oe=FALSE",
+      "  PASS pen_down=TRUE（初始触纸）",
+      "[2] run=1 → 三轴使能"
+    ],
+    "pitfalls": [
+      {
+        "id": "P20",
+        "title": "急停锁存需复位命令，释放后复跑死锁",
+        "diagnosis": "急停/故障后引入需要额外复位命令（cmd_reset）才能清除的锁存（qs_latch 类），而验收语义是急停释放（quickstop=0）+ 重新使能后直接重发 cmd_draw 即应重启序列——锁存不死锁：cmd_draw 触发条件含 NOT qs_latch 而锁存永不清",
+        "fix": "急停锁存改为随释放自动清（IF NOT quickstop THEN qs_latch := FALSE），或删除锁存（quickstop 电平已是触发门控）；急停在序列里的正确语义=电平中止（pl_step := 0 + 清 exe），释放即可接受新 cmd_draw"
+      },
+      {
+        "id": "P21",
+        "title": "pen_down 写成含使能条件的复合信号，上电恒 FALSE",
+        "diagnosis": "pen_down（笔态输出）被写成 run AND all_oe AND NOT quickstop AND … AND z_fb<=2 的复合命令信号——run=0（未使能）时恒 FALSE，上电初始触纸验收必挂。pen_down 是物理笔位的事实陈述：笔在纸上就是在纸上，与使能/序列/急停状态无关",
+        "fix": "pen_down := (z_fb <= 2)（纯物理阈值判定，不得复合任何条件）；'落笔期间禁止手动 X/Y' 这类互锁用独立信号复合（go_ok := … AND pen_down），不要把条件揉进 pen_down 本身"
+      },
+      {
+        "id": "P06",
+        "title": "REAL 初值必须带小数点",
+        "diagnosis": "REAL 变量初值写成整数（40 而非 40.0）",
+        "fix": "REAL 初值必须 50.0 形式；INTERP 类参数逐个核对"
+      },
+      {
+        "id": "P10",
+        "title": "PLC_PRG 内单扫描选通赋值被吞",
+        "diagnosis": "主程序内单扫描选通/边沿记忆变量的赋值被优化器静默丢弃（症状：序列器步进空转、FB 状态不翻转、手动路径正常）",
+        "fix": "改连续跟踪模式：触发线全程电平保持，目标值变化自动起新轨迹（INTERP 增 fire AND NOT Busy AND 目标变化分支）；或经 %QX 线圈级信号驱动。PLC_PRG 内不写单扫描脉冲逻辑"
+      },
+      {
+        "id": "P12",
+        "title": "缺 prog_id 程序身份",
+        "diagnosis": "场景程序缺 prog_id AT %QW20 声明与每周期写入（契约② v1.1），在线验收 require_program 必挂",
+        "fix": "定位变量块加 prog_id AT %QW20（INT，初值=场景号），ST 本体首行 prog_id := N;"
+      }
+    ],
+    "similar_fixes": [],
+    "repair_hints": [
+      "急停锁存改为随释放自动清（IF NOT quickstop THEN qs_latch := FALSE），或删除锁存（quickstop 电平已是触发门控）；急停在序列里的正确语义=电平中止（pl_step := 0 + 清 exe），释放即可接受新 cmd_draw",
+      "pen_down := (z_fb <= 2)（纯物理阈值判定，不得复合任何条件）；'落笔期间禁止手动 X/Y' 这类互锁用独立信号复合（go_ok := … AND pen_down），不要把条件揉进 pen_down 本身",
+      "REAL 初值必须 50.0 形式；INTERP 类参数逐个核对",
+      "改连续跟踪模式：触发线全程电平保持，目标值变化自动起新轨迹（INTERP 增 fire AND NOT Busy AND 目标变化分支）；或经 %QX 线圈级信号驱动。PLC_PRG 内不写单扫描脉冲逻辑",
+      "定位变量块加 prog_id AT %QW20（INT，初值=场景号），ST 本体首行 prog_id := N;"
+    ]
+  }
+}

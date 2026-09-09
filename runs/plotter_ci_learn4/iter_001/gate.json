@@ -1,0 +1,16 @@
+{
+  "gate": "deploy",
+  "ok": false,
+  "errors": [
+    "matiec 编译失败:\nOptimizing ST program...\nGenerating C files...\n./st_files/54137.st:213: error: unknown syntax error.\n\n1 error(s) found. Bailing out!\nError generating C files\nCompilation finished with errors!"
+  ],
+  "attribution": {
+    "gate": "deploy",
+    "errors": [
+      "matiec 编译失败:\nOptimizing ST program...\nGenerating C files...\n./st_files/54137.st:213: error: unknown syntax error.\n\n1 error(s) found. Bailing out!\nError generating C files\nCompilation finished with errors!"
+    ],
+    "pitfalls": [],
+    "similar_fixes": [],
+    "repair_hints": []
+  }
+}

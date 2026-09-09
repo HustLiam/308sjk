@@ -1,0 +1,29 @@
+{
+  "gate": "deploy",
+  "ok": false,
+  "errors": [
+    "matiec 编译失败:\nOptimizing ST program...\nGenerating C files...\n./st_files/418241.st:213: error: unknown syntax error.\n\n1 error(s) found. Bailing out!\nError generating C files\nCompilation finished with errors!"
+  ],
+  "attribution": {
+    "gate": "deploy",
+    "errors": [
+      "matiec 编译失败:\nOptimizing ST program...\nGenerating C files...\n./st_files/418241.st:213: error: unknown syntax error.\n\n1 error(s) found. Bailing out!\nError generating C files\nCompilation finished with errors!"
+    ],
+    "pitfalls": [],
+    "similar_fixes": [],
+    "repair_hints": [
+      "定位 st_files/418241.st 第 213 行及其上下文（±10 行），逐 token 检查是否存在 matiec 不支持的扩展语法（如某些功能块调用写法、数组/字符串字面量、注释或分号缺失）。",
+      "对照 matiec 支持的 IEC 61131-3 语法子集，将该行改写为标准 ST 写法，例如将非标准运算符、隐式类型转换或第三方库调用替换为 matiec 兼容形式。",
+      "修复后仅重新编译该文件验证错误消除，再进入完整 deploy 流程。"
+    ],
+    "llm_diagnosis": {
+      "root_cause": "代码问题：ST 源文件 418241.st 第 213 行附近存在 matiec 无法解析的语法错误，导致 C 代码生成中止。",
+      "repair_hints": [
+        "定位 st_files/418241.st 第 213 行及其上下文（±10 行），逐 token 检查是否存在 matiec 不支持的扩展语法（如某些功能块调用写法、数组/字符串字面量、注释或分号缺失）。",
+        "对照 matiec 支持的 IEC 61131-3 语法子集，将该行改写为标准 ST 写法，例如将非标准运算符、隐式类型转换或第三方库调用替换为 matiec 兼容形式。",
+        "修复后仅重新编译该文件验证错误消除，再进入完整 deploy 流程。"
+      ],
+      "advisory": true
+    }
+  }
+}

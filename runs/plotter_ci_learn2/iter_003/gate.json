@@ -1,0 +1,68 @@
+{
+  "gate": "acceptance",
+  "ok": false,
+  "errors": [
+    "[verify] 程序身份确认: plotter_circle (prog_id=3)",
+    "[1] 上电（run=0）：三轴就绪；初始笔位 z=0",
+    "  FAIL X 轴 sw.bit0=1（0000）",
+    "  FAIL Y 轴 sw.bit0=1（0000）",
+    "  FAIL Z 轴 sw.bit0=1（0000）",
+    "  PASS all_oe=FALSE",
+    "  PASS pen_down=TRUE（初始触纸）",
+    "（验收暂停：段 [1] 存在失败，后续段未执行；已通过段：无——先修复本段，通过后重跑继续）",
+    "运行时内部状态时间线（诊断口自动采集）：",
+    "    [diag t=0.5s] pl_step=1",
+    "    [diag t=1.0s] pl_step=1",
+    "    [diag t=1.5s] pl_step=1",
+    "    [diag t=2.0s] pl_step=1",
+    "    [diag t=2.5s] pl_step=1",
+    "    [diag t=3.0s] pl_step=1",
+    "    [diag t=3.5s] pl_step=1",
+    "    [diag t=4.0s] pl_step=1",
+    "    [diag t=4.5s] pl_step=1",
+    "    [diag t=5.0s] pl_step=1",
+    "    [diag t=5.5s] pl_step=1",
+    "    [diag t=6.0s] pl_step=1",
+    "    [diag t=6.5s] pl_step=1",
+    "    [diag t=7.0s] pl_step=1"
+  ],
+  "attribution": {
+    "gate": "acceptance",
+    "errors": [
+      "[verify] 程序身份确认: plotter_circle (prog_id=3)",
+      "[1] 上电（run=0）：三轴就绪；初始笔位 z=0",
+      "  FAIL X 轴 sw.bit0=1（0000）",
+      "  FAIL Y 轴 sw.bit0=1（0000）",
+      "  FAIL Z 轴 sw.bit0=1（0000）",
+      "  PASS all_oe=FALSE",
+      "  PASS pen_down=TRUE（初始触纸）",
+      "（验收暂停：段 [1] 存在失败，后续段未执行；已通过段：无——先修复本段，通过后重跑继续）"
+    ],
+    "pitfalls": [
+      {
+        "id": "P21",
+        "title": "pen_down 写成含使能条件的复合信号，上电恒 FALSE",
+        "diagnosis": "pen_down（笔态输出）被写成 run AND all_oe AND NOT quickstop AND … AND z_fb<=2 的复合命令信号——run=0（未使能）时恒 FALSE，上电初始触纸验收必挂。pen_down 是物理笔位的事实陈述：笔在纸上就是在纸上，与使能/序列/急停状态无关",
+        "fix": "pen_down := (z_fb <= 2)（纯物理阈值判定，不得复合任何条件）；'落笔期间禁止手动 X/Y' 这类互锁用独立信号复合（go_ok := … AND pen_down），不要把条件揉进 pen_down 本身"
+      },
+      {
+        "id": "P12",
+        "title": "缺 prog_id 程序身份",
+        "diagnosis": "场景程序缺 prog_id AT %QW20 声明与每周期写入（契约② v1.1），在线验收 require_program 必挂",
+        "fix": "定位变量块加 prog_id AT %QW20（INT，初值=场景号），ST 本体首行 prog_id := N;"
+      },
+      {
+        "id": "P18",
+        "title": "驱动状态机 state 无初值，402 卡在未定义状态",
+        "diagnosis": "DRIVE402 的 state 声明缺 ':= 1' 初值，上电停在 CASE 未覆盖的状态 0，无转移出口：sw 恒 0、v_out 恒 0、MC_POWER 握手死等 sw.bit0。序列器与插补器本身健康（设定值能 ramp 到位）。",
+        "fix": "FB 接口声明改 state : INT := 1（SOD 起步）；所有 CASE 状态机选择器同规则检查。"
+      }
+    ],
+    "similar_fixes": [],
+    "repair_hints": [
+      "pen_down := (z_fb <= 2)（纯物理阈值判定，不得复合任何条件）；'落笔期间禁止手动 X/Y' 这类互锁用独立信号复合（go_ok := … AND pen_down），不要把条件揉进 pen_down 本身",
+      "定位变量块加 prog_id AT %QW20（INT，初值=场景号），ST 本体首行 prog_id := N;",
+      "FB 接口声明改 state : INT := 1（SOD 起步）；所有 CASE 状态机选择器同规则检查。"
+    ]
+  }
+}
