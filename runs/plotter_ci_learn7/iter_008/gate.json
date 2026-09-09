@@ -1,0 +1,36 @@
+{
+  "gate": "deploy",
+  "ok": false,
+  "errors": [
+    "matiec 编译失败:\nOptimizing ST program...\nGenerating C files...\n./st_files/522670.st:34: error: invalid variable before ':=' in ST assignment statement.\n\n1 error(s) found. Bailing out!\nError generating C files\nCompilation finished with errors!"
+  ],
+  "attribution": {
+    "gate": "deploy",
+    "errors": [
+      "matiec 编译失败:\nOptimizing ST program...\nGenerating C files...\n./st_files/522670.st:34: error: invalid variable before ':=' in ST assignment statement.\n\n1 error(s) found. Bailing out!\nError generating C files\nCompilation finished with errors!"
+    ],
+    "pitfalls": [
+      {
+        "id": "P16",
+        "title": "内部变量使用未声明",
+        "diagnosis": "ST 本体使用了内部变量但 VAR 块漏声明（LLM 生成高发：先写逻辑后补声明时遗漏）",
+        "fix": "逐个核对本体首次赋值的变量是否都在 VAR 块声明；特别是状态/边沿类临时变量（pen_up、latch 等）"
+      }
+    ],
+    "similar_fixes": [],
+    "repair_hints": [
+      "逐个核对本体首次赋值的变量是否都在 VAR 块声明；特别是状态/边沿类临时变量（pen_up、latch 等）"
+    ]
+  },
+  "lessons": [
+    {
+      "sim": 0.75,
+      "gate": "deploy",
+      "task": "plotter_ci_learn4",
+      "fix_summary": "['生成 ST 后必须以 matiec 实际编译作为硬校验门，不可依赖语法自评即通过。', \"遇到 'unknown syntax error at line N' 时，定位该行及其邻近上下文（常为前一语句的收尾，如缺失分号/END_IF/括号闭合），对照 matiec 语法子集（非 IEC 全集）修正后重编译验证。\", '把 matiec 支持的语法子集与已知易错构造（如分号、语句块结束符、非法关键字/表达式写法）沉淀为生成器的负面约束清单。']",
+      "outcome": "resolved",
+      "kind": "distilled",
+      "diff_hunks": []
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "gate": "all",
+  "ok": true,
+  "gates": {
+    "xml2st": true,
+    "consistency": [
+      "SKIP: io_map 未提供（仿真侧尚未产出）——仅对账 XML ↔ io_list 两方"
+    ],
+    "scene": {
+      "ok": true,
+      "assets": 8,
+      "io_map_vars": 26,
+      "r5": "active"
+    },
+    "deploy": {
+      "state": "skipped",
+      "detail": "deploy 服务不在线（ConnectionError）——半环跳过真编译"
+    },
+    "acceptance": {
+      "state": "skipped",
+      "detail": "OpenPLC/Modbus 不在线——半环跳过在线验收"
+    }
+  }
+}

@@ -1,0 +1,300 @@
+{
+  "schema_version": "1.0.0",
+  "description": "matiec/OpenPLC/Modbus 避坑知识库（签名→诊断→修法）。来源：lx 避坑清单 1~8（docs/lx-PLC代码生成与执行引擎详细设计.md）+ plotter3axis 在线联调新增 9~14。归因引擎按错误文本签名匹配，命中即注入反馈包；未命中走 LLM 归因兜底。新增条目随验收累积（人工策展，契约文件性质——修改走 RFC）。",
+  "pitfalls": [
+    {
+      "id": "P01",
+      "domain": "matiec",
+      "title": "保留字冲突",
+      "signatures": [
+        "unexpected token",
+        "保留字",
+        "redefining keyword"
+      ],
+      "diagnosis": "变量/FB 名撞 IEC 保留字（DT/STEP/Execute/Target/Hold 等）",
+      "fix": "改用 SCAN_T/pstep/fire/pos_target/hold_req 等安全名",
+      "source": "lx 避坑清单 #1"
+    },
+    {
+      "id": "P02",
+      "domain": "matiec",
+      "title": "FB 内 VAR CONSTANT 禁用",
+      "signatures": [
+        "CONSTANT",
+        "invalid variable(s) declaration"
+      ],
+      "diagnosis": "FUNCTION_BLOCK 内使用 VAR CONSTANT 块",
+      "fix": "改用带初值的普通 VAR（初值 REAL 必须带小数点，见 P06）",
+      "source": "lx 避坑清单 #2"
+    },
+    {
+      "id": "P03",
+      "domain": "matiec",
+      "title": "INT 不能位运算",
+      "signatures": [
+        "cannot AND",
+        "cannot OR",
+        "invalid operation",
+        "Data type mismatch for 'AND'",
+        "Data type mismatch for 'OR'",
+        "AND 16#"
+      ],
+      "diagnosis": "对 INT 做 AND/OR 位运算（cw/sw 控制字状态字场景高发：声明成 INT 而非 WORD）",
+      "fix": "cw/sw 一律声明 WORD 再做位运算；比较用 (sw AND 16#0008) <> 0",
+      "source": "lx 避坑清单 #3"
+    },
+    {
+      "id": "P04",
+      "domain": "matiec",
+      "title": "FB 输出不可作 VAR_IN_OUT 实参",
+      "signatures": [
+        "VAR_IN_OUT",
+        "in-out"
+      ],
+      "diagnosis": "把 FB 输出直接接到另一个 FB 的 VAR_IN_OUT 引脚",
+      "fix": "经扫描头采样到中间变量再绑定（如 x_sw := dv_x.sw 先落地再喂 MC_*）",
+      "source": "lx 避坑清单 #4"
+    },
+    {
+      "id": "P05",
+      "domain": "matiec",
+      "title": "BOOL→INT 需显式转换",
+      "signatures": [
+        "BOOL_TO_INT",
+        "type mismatch",
+        "illegal implicit"
+      ],
+      "diagnosis": "BOOL 与 INT 混算（如把布尔累加进 INT 计数）",
+      "fix": "一律 BOOL_TO_INT()/INT_TO_BOOL() 显式转换",
+      "source": "lx 避坑清单 #5"
+    },
+    {
+      "id": "P06",
+      "domain": "matiec",
+      "title": "REAL 初值必须带小数点",
+      "signatures": [
+        "40",
+        "initial value",
+        "REAL"
+      ],
+      "diagnosis": "REAL 变量初值写成整数（40 而非 40.0）",
+      "fix": "REAL 初值必须 50.0 形式；INTERP 类参数逐个核对",
+      "source": "lx 避坑清单 #6"
+    },
+    {
+      "id": "P07",
+      "domain": "optimizer",
+      "title": "同模式 FB 被优化器合并",
+      "signatures": [
+        "编译通过",
+        "运行时无输出",
+        "FB 无输出",
+        "freeze",
+        "冻结"
+      ],
+      "diagnosis": "多个结构相同的 FB（如 INTERP 与其轴变体）被 ST 优化器合并，运行时无输出——编译静默通过",
+      "fix": "共用一个 FB 并参数化差异（VMAX/行程等提为 VAR_INPUT 按实例传参），禁止复制出同模式第二 FB",
+      "source": "lx 避坑清单 #7 + plotter INTERP_Z 实证"
+    },
+    {
+      "id": "P08",
+      "domain": "optimizer",
+      "title": "边沿检测变量跨 FB 必须不同名",
+      "signatures": [
+        "edge",
+        "边沿"
+      ],
+      "diagnosis": "不同 FB 用同名边沿记忆变量被优化器串扰",
+      "fix": "每个 FB 独立命名（edge_ir/edge_rs/edge_ma/edge_hm）",
+      "source": "lx 避坑清单 #8"
+    },
+    {
+      "id": "P09",
+      "domain": "matiec",
+      "title": "END_CASE 后缺分号",
+      "signatures": [
+        "';' missing at the end of statement",
+        "missing at the end of statement"
+      ],
+      "diagnosis": "CASE 语句的 END_CASE 后缺分号（静态闸门不解析 ST 语法，只有 matiec 真编译才报）",
+      "fix": "最后一个分支后写 END_CASE;（对照：END_IF 同理）",
+      "source": "plotter3axis 闸门3 实证 2026-09-07"
+    },
+    {
+      "id": "P10",
+      "domain": "optimizer",
+      "title": "PLC_PRG 内单扫描选通赋值被吞",
+      "signatures": [
+        "Done",
+        "选通",
+        "pl_go",
+        "pl_armed",
+        "瞬进",
+        "空转",
+        "赋值消失"
+      ],
+      "diagnosis": "主程序内单扫描选通/边沿记忆变量的赋值被优化器静默丢弃（症状：序列器步进空转、FB 状态不翻转、手动路径正常）",
+      "fix": "改连续跟踪模式：触发线全程电平保持，目标值变化自动起新轨迹（INTERP 增 fire AND NOT Busy AND 目标变化分支）；或经 %QX 线圈级信号驱动。PLC_PRG 内不写单扫描脉冲逻辑",
+      "source": "plotter3axis 诊断口实证 2026-09-07（避坑7 变体）"
+    },
+    {
+      "id": "P11",
+      "domain": "modbus",
+      "title": "跨寄存器快照非原子",
+      "signatures": [
+        "失能态速度",
+        "读偏斜",
+        "sw=",
+        "non-atomic"
+      ],
+      "diagnosis": "OpenPLC Modbus 服务对不同寄存器的快照来自不同扫描（v 与 sw 组合判定出现物理不可能状态）",
+      "fix": "验收脚本的跨寄存器组合判定：切换瞬态排除（模式连续≥3周期）或改位置增量判定；等待期间持续刷新反馈，禁裸 sleep",
+      "source": "plotter3axis 验收实证 2026-09-07"
+    },
+    {
+      "id": "P12",
+      "domain": "contract",
+      "title": "缺 prog_id 程序身份",
+      "signatures": [
+        "程序不匹配",
+        "prog_id",
+        "require_program"
+      ],
+      "diagnosis": "场景程序缺 prog_id AT %QW20 声明与每周期写入（契约② v1.1），在线验收 require_program 必挂",
+      "fix": "定位变量块加 prog_id AT %QW20（INT，初值=场景号），ST 本体首行 prog_id := N;",
+      "source": "LLM 生成产物闸门3 实证 2026-09-07"
+    },
+    {
+      "id": "P13",
+      "domain": "llm-output",
+      "title": "XML 命名空间前缀未绑定",
+      "signatures": [
+        "unbound prefix",
+        "无法解析: unbound"
+      ],
+      "diagnosis": "生成 XML 里出现未声明前缀的元素（如 xhtml: 前缀脱离命名空间声明）",
+      "fix": "ST 本体统一用默认命名空间；xhtml 元素带 xmlns 声明，或纯文本包裹",
+      "source": "LLM 生成产物两轮实证 2026-09-07"
+    },
+    {
+      "id": "P14",
+      "domain": "llm-output",
+      "title": "输出格式不符（无代码块/夹带解释）",
+      "signatures": [
+        "未找到 <project>",
+        "未找到 JSON",
+        "回复中未找到"
+      ],
+      "diagnosis": "模型回复没按'单个代码块'约定（夹解释文字/多块/截断）",
+      "fix": "重申输出约定；检查 max_tokens 是否截断长工程（万 token 级输出需流式通道）",
+      "source": "LLM 生成实测 2026-09-07"
+    },
+    {
+      "id": "P15",
+      "domain": "integration",
+      "title": "部署 body 缺 XML 声明",
+      "signatures": [
+        "body 不是 XML",
+        "应以 <?xml 开头"
+      ],
+      "diagnosis": "生成器按 <project> 片段提取回复，丢了 <?xml 声明——静态闸门（ET 解析不要求）放行，serve 部署端拒绝",
+      "fix": "extract_xml 已统一补回声明（框架级修复）；若再见此错误说明部署了空/非 XML 内容",
+      "source": "LLM 产物首次真部署实证 2026-09-07"
+    },
+    {
+      "id": "P16",
+      "domain": "llm-output",
+      "title": "内部变量使用未声明",
+      "signatures": [
+        "invalid variable before ':='",
+        "unknown variable",
+        "undeclared"
+      ],
+      "diagnosis": "ST 本体使用了内部变量但 VAR 块漏声明（LLM 生成高发：先写逻辑后补声明时遗漏）",
+      "fix": "逐个核对本体首次赋值的变量是否都在 VAR 块声明；特别是状态/边沿类临时变量（pen_up、latch 等）",
+      "source": "画圆场景 LLM 生成产物 matiec 实证 2026-09-07"
+    },
+    {
+      "id": "P17",
+      "domain": "matiec",
+      "title": "CASE 分支只有注释无语句",
+      "signatures": [
+        "invalid statement in ST",
+        "in CASE",
+        "case element",
+        "CASE 分支"
+      ],
+      "diagnosis": "CASE 某分支标签后只有注释（(* … *)）没有可执行语句——matiec 要求每个分支至少一条语句",
+      "fix": "空分支填占位语句（如 step := step;）或把注释移到分支外；'等待推进'类分支应有实际条件赋值",
+      "source": "画圆场景 LLM 生成产物 matiec 实证 2026-09-07"
+    },
+    {
+      "id": "P18",
+      "domain": "runtime",
+      "title": "驱动状态机 state 无初值，402 卡在未定义状态",
+      "signatures": [
+        "sw 全 0",
+        "驱动器未使能",
+        "all_oe=FALSE",
+        "v=(0,0,0) 恒零"
+      ],
+      "diagnosis": "DRIVE402 的 state 声明缺 ':= 1' 初值，上电停在 CASE 未覆盖的状态 0，无转移出口：sw 恒 0、v_out 恒 0、MC_POWER 握手死等 sw.bit0。序列器与插补器本身健康（设定值能 ramp 到位）。",
+      "fix": "FB 接口声明改 state : INT := 1（SOD 起步）；所有 CASE 状态机选择器同规则检查。",
+      "source": "plotter_circle_llm10 iter5-7 实证 + 现场复现 2026-09-08"
+    },
+    {
+      "id": "P19",
+      "domain": "matiec",
+      "title": "FB 内部变量当调用形参赋值",
+      "signatures": [
+        "Invalid assignment syntax",
+        "when invoking FB",
+        "used for parameter"
+      ],
+      "diagnosis": "FB 调用时给非 VAR_INPUT 的内部变量传值（如 go_x(interp_exe := x)——interp_exe 是 FB 内部 VAR 不是形参）",
+      "fix": "只给 VAR_INPUT 形参赋值；FB 内部状态经 FB 输出读回后在主程序里用，或把该变量提为 VAR_INPUT",
+      "source": "plotter_sq_traj iter1 编译实证 2026-09-08"
+    },
+    {
+      "id": "P20",
+      "domain": "runtime",
+      "title": "急停锁存需复位命令，释放后复跑死锁",
+      "signatures": [
+        "重新 cmd_draw 后完成",
+        "复跑可完成",
+        "序列不重启",
+        "第二次绘图已启动"
+      ],
+      "diagnosis": "急停/故障后引入需要额外复位命令（cmd_reset）才能清除的锁存（qs_latch 类），而验收语义是急停释放（quickstop=0）+ 重新使能后直接重发 cmd_draw 即应重启序列——锁存不死锁：cmd_draw 触发条件含 NOT qs_latch 而锁存永不清",
+      "fix": "急停锁存改为随释放自动清（IF NOT quickstop THEN qs_latch := FALSE），或删除锁存（quickstop 电平已是触发门控）；急停在序列里的正确语义=电平中止（pl_step := 0 + 清 exe），释放即可接受新 cmd_draw",
+      "source": "plotter_ci_traj iter4-8 四轮同质实证 2026-09-08"
+    },
+    {
+      "id": "P21",
+      "domain": "runtime",
+      "title": "pen_down 写成含使能条件的复合信号，上电恒 FALSE",
+      "signatures": [
+        "pen_down=TRUE（初始触纸）",
+        "初始笔触纸",
+        "初始笔位"
+      ],
+      "diagnosis": "pen_down（笔态输出）被写成 run AND all_oe AND NOT quickstop AND … AND z_fb<=2 的复合命令信号——run=0（未使能）时恒 FALSE，上电初始触纸验收必挂。pen_down 是物理笔位的事实陈述：笔在纸上就是在纸上，与使能/序列/急停状态无关",
+      "fix": "pen_down := (z_fb <= 2)（纯物理阈值判定，不得复合任何条件）；'落笔期间禁止手动 X/Y' 这类互锁用独立信号复合（go_ok := … AND pen_down），不要把条件揉进 pen_down 本身",
+      "source": "plotter_ci_traj2 iter1-7 七轮同质实证 2026-09-08"
+    },
+    {
+      "id": "P22",
+      "domain": "runtime",
+      "title": "INTERP 骨架被自由发挥，序列步进卡死",
+      "signatures": [
+        "画圆序列完成 plot_done=TRUE（999.0s",
+        "落笔期间 XY 联动发生过（采样 0）",
+        "XY 联动发生过（采样 2）",
+        "pl_step=1 go_x_exe=1"
+      ],
+      "diagnosis": "插补 FB 内部被自行改造（如加 pos_fb 输入与 idle 同步分支、fire 沿分支加距离门槛、改 Done 语义）——到位判定/新轨迹启动的微妙改变会让某轴 Busy/Done 永不满足，三轴联合步进条件永假，序列器卡死（定位与落笔都正常、落笔后 XY 死）。参考模式的 INTERP 骨架是 45/45 在线验证过的：无 pos_fb 输入、fire 沿无条件 tgt:=pos_target、连续跟踪分支管理新轨迹、到位置 Done",
+      "fix": "INTERP/DRIVE402 本体逐字保留参考模式骨架，只允许改实例参数（VMAX/ACCEL/POSWIN/MAXPOS）；禁止增加 pos_fb 同步分支、禁止给 fire 沿分支加距离门槛、禁止改 Done 置位条件；步进条件 = NOT Busy AND Done AND 物理窗口（与参考一致）",
+      "source": "plotter_ci_traj3 iter2-8 跨轮实证（对齐黄金轨道后闭合诊断）2026-09-08"
+    }
+  ]
+}

@@ -342,7 +342,7 @@ def build_io_list(model):
         if point.get("unit") is not None:
             item["unit"] = point["unit"]
         if point["type"] == "INT" and point["range"] is None:
-            pending.append("io[%s]: INT 缺量程 range（16 位寄存器域 [-32768,65535] 内，"
+            pending.append("io[%s]: INT 缺量程 range（须完整落入 [-32768,32767] 或 [0,65535] 之一，"
                            "供 io_map 定点换算）" % point["name"])
         io_items.append(item)
     return io_items, pending

@@ -99,20 +99,30 @@ class TestSemanticRules:
         assert any("min<max" in p for p in validate_requirement_spec(spec))
 
     def test_s2_int_range_within_16bit_domain(self):
-        # lx 评审建议（draft.2 落实）：INT 量程不得超出 16 位寄存器域
-        #（%QW 承载 INT/UINT/WORD 的并集 [-32768, 65535]）
+        # lx 评审建议（draft.2 落实 + draft.3 收紧）：INT 量程不得超出 16 位寄存器域
+        #（%QW 承载 INT/UINT/WORD），且须完整落入有符号/无符号域之一
         spec = load_spec()
         idx = next(i for i, p in enumerate(spec["io_list"]) if p["name"] == "x_fb")
         spec["io_list"][idx]["range"] = [0, 70000]      # 超 UINT16 上界
-        assert any("16 位寄存器域" in p for p in validate_requirement_spec(spec))
+        assert any("完整落入" in p for p in validate_requirement_spec(spec))
         spec["io_list"][idx]["range"] = [-40000, 0]     # 超 INT16 下界
-        assert any("16 位寄存器域" in p for p in validate_requirement_spec(spec))
+        assert any("完整落入" in p for p in validate_requirement_spec(spec))
 
-    def test_s2_int_range_domain_boundaries_pass(self):
-        # 域端点本身合法（x_sw 的 [0,65535] 即 UINT16 满量程用法）
+    def test_s2_int_range_cross_domain_rejected(self):
+        # lx 收紧建议（draft.3 落实）：跨域混合量程（如 [-100,65535]）单个 %QW
+        # 无法用同一符号解释承载，拒绝
         spec = load_spec()
         idx = next(i for i, p in enumerate(spec["io_list"]) if p["name"] == "x_fb")
-        spec["io_list"][idx]["range"] = [-32768, 65535]
+        spec["io_list"][idx]["range"] = [-100, 65535]
+        assert any("完整落入" in p for p in validate_requirement_spec(spec))
+
+    def test_s2_int_range_domain_boundaries_pass(self):
+        # 域端点本身合法（x_sw 的 [0,65535] 即 UINT16 满量程用法；[-32768,32767] INT16 满量程）
+        spec = load_spec()
+        idx = next(i for i, p in enumerate(spec["io_list"]) if p["name"] == "x_fb")
+        spec["io_list"][idx]["range"] = [-32768, 32767]
+        assert validate_requirement_spec(spec) == []
+        spec["io_list"][idx]["range"] = [0, 65535]
         assert validate_requirement_spec(spec) == []
 
     def test_s2_bool_forbids_range(self):

@@ -34,6 +34,9 @@ IEC 61131-10 PLCopen XML 工程**。以下硬约束的权威定义在《lx-PLC�
 - 位宽铁律：`BOOL → %QX`，`INT → %QW`；**禁用 %QD/%ID**（编译能过但外部读不到）；
   32 位值用两个连续 %QW 由客户端拼接；
 - 地址不冲突；模拟量统一 **INT@%QW + 定点换算**（内部可转 REAL 计算，对外仍是 INT）；
+- **程序身份（契约② v1.1，必做）**：声明 `prog_id AT %QW20 : INT`（初值=需求
+  spec 的 prog_id，缺省 2 起顺延）并在 ST 本体每扫描周期写
+  `prog_id := <编号>;`——验收脚本据此校验运行时程序身份，缺失即在线验收必挂；
 - io_list 之外的变量 = POU 内部状态，**不带 AT 地址**；
 - matiec 怪癖：同一个 VAR 块内，普通声明（FB 实例等）与带 AT 的定位声明**必须分块**
   （先普通块后定位块），结束符统一 END_VAR。
@@ -46,6 +49,213 @@ IEC 61131-10 PLCopen XML 工程**。以下硬约束的权威定义在《lx-PLC�
   persistentVars、`<configuration>` 内容、externalVars/temporaryVars/tempVars、
   PERSISTENT 限定符；
 - 每个 FB 实例每扫描周期调用一次（如 `ton1(IN := …, PT := T#300MS);`）。
+
+## matiec 硬规则（违反=编译必挂，历史高频）
+
+- **cw/sw 控制字/状态字一律声明 WORD**——INT/BOOL 禁止 AND/OR 位运算
+  （`cmd := cw AND 16#000F;` 中 cw 必须是 WORD；比较写 `(sw AND 16#0008) <> 0`）；
+- **本体用到的每个内部变量都必须在 VAR 块声明**（含状态位/锁存/边沿记忆），
+  写完本体回头逐个核对；
+- **CASE 每个分支至少一条可执行语句**——只有注释的分支非法（填 `step := step;`
+  类占位或写实际条件赋值）；`END_CASE;` 带分号；
+- REAL 初值必须带小数点（40.0 非 40）；不同 FB 的边沿记忆变量不同名；
+- 输出完整工程时自查上述五条再交付；
+- **CiA402 空闲态约定**：MC_Power 未使能（Enable=FALSE）期间必须持续发
+  shutdown 命令（cw=0x06），使驱动器处于 RTSO 态（sw=0x31，bit0=1）——
+  不能让驱动器停在 SOD（sw=0x40），否则上电自检类验收必挂；
+- **状态机变量必须显式初值**：一切被 CASE 索引的状态变量（402 的 state、
+  序列器的 step/seq）声明时必须带 `:= 初值`；402 状态机从 1=SOD 起步
+  （0 不是合法状态）。CASE 一律带 ELSE 兜底（记错状态/复位用）——
+  无初值 + 无 ELSE 时上电落入未定义状态，驱动器永不使能（sw 恒 0）。
+
+## 基础 FB 骨架冻结（硬规则）
+
+INTERP / DRIVE402 / MC_* FB **本体逐字沿用下方骨架**——在线验证过的原语；
+只允许改**实例参数**（VMAX/ACCEL/POSWIN/MAXPOS/行程）。禁止：给 INTERP
+增加 pos_fb 输入或 idle 同步分支；给 fire 沿分支加距离门槛；修改 Done/Busy
+置位条件；改造 402 状态机转移表。自创内部结构是序列器步进卡死（定位正常、
+落笔后 XY 死）的头号根因。
+
+INTERP 权威骨架（接口：fire/pos_target/hold_req/VMAX/ACCEL/POSWIN/MAXPOS 入，
+Setpoint/Busy/Done 出；内部 SCAN_T REAL := 0.02、pos/tgt/vel/edge_ir）：
+
+```st
+IF fire AND NOT edge_ir THEN
+    IF pos_target > MAXPOS OR pos_target < 0 THEN
+        (* 目标越程: 不启动插补, 保持原位 *)
+        Done := TRUE;
+    ELSE
+        tgt := INT_TO_REAL(pos_target);
+        Busy := TRUE;
+        Done := FALSE;
+    END_IF;
+ELSIF fire AND NOT Busy AND (ABS(INT_TO_REAL(pos_target) - tgt) > 0.499) THEN
+    (* continuous tracking: new target starts new trajectory while fire held *)
+    tgt := INT_TO_REAL(pos_target);
+    Busy := TRUE;
+    Done := FALSE;
+END_IF;
+edge_ir := fire;
+
+IF hold_req THEN
+    IF vel > 0.0 THEN vel := MAX(0.0, vel - ACCEL * SCAN_T);
+    ELSIF vel < 0.0 THEN vel := MIN(0.0, vel + ACCEL * SCAN_T);
+    END_IF;
+ELSIF Busy THEN
+    dist := tgt - pos;
+    stop_d := (vel * vel) / (2.0 * ACCEL);
+    IF ABS(dist) <= stop_d THEN
+        IF dist >= 0.0 THEN vel := MAX(0.0, vel - ACCEL * SCAN_T);
+        ELSE vel := MIN(0.0, vel + ACCEL * SCAN_T);
+        END_IF;
+        IF vel = 0.0 AND ABS(dist) <= POSWIN THEN
+            pos := tgt;
+            Busy := FALSE;
+            Done := TRUE;
+        END_IF;
+    ELSE
+        IF dist > 0.0 THEN vel := MIN(VMAX, vel + ACCEL * SCAN_T);
+        ELSE vel := MAX(-VMAX, vel - ACCEL * SCAN_T);
+        END_IF;
+    END_IF;
+END_IF;
+
+pos := pos + vel * SCAN_T;
+Setpoint := REAL_TO_INT(pos);
+```
+
+DRIVE402 权威骨架（接口：cw/Setpoint/pos_fb 入，sw/v_cmd 出；内部 state : INT := 1
+——SOD 起步、KP 8.0、QS_DECEL 200.0、SCAN_T 0.02）：
+
+```st
+(* ============ DRIVE402: 驱动器（CSP 跟随 + 位置环）============ *)
+(* 接收周期位置设定点（插补点），闭位置环，输出电机速度指令。 *)
+(* 不含轨迹规划——那是 PLC 侧 INTERP 的事。                  *)
+(* state: 1=SOD 2=RTSO 3=SO 4=OE 5=QSA 6=FRA 7=FA           *)
+
+cmd := cw AND 16#000F;
+
+IF state = 7 AND (cw AND 16#0080) <> 0 THEN
+    state := 1;
+END_IF;
+
+CASE state OF
+    1: IF cmd = 16#06 THEN state := 2; END_IF;
+    2: IF cmd = 16#07 THEN state := 3;
+       ELSIF cmd = 16#0F THEN state := 4;
+       ELSIF cmd = 16#00 THEN state := 1;
+       END_IF;
+    3: IF cmd = 16#0F THEN state := 4;
+       ELSIF cmd = 16#06 THEN state := 2;
+       ELSIF cmd = 16#00 THEN state := 1;
+       ELSIF cmd = 16#02 THEN state := 5;
+       END_IF;
+    4: IF cmd = 16#07 THEN state := 3;
+       ELSIF cmd = 16#06 THEN state := 2;
+       ELSIF cmd = 16#00 THEN state := 1;
+       ELSIF cmd = 16#02 THEN state := 5;
+       END_IF;
+    5: IF v_out = 0.0 THEN
+           IF cmd = 16#0F THEN state := 4;
+           ELSIF cmd = 16#06 THEN state := 2;
+           ELSIF cmd = 16#00 THEN state := 1;
+           END_IF;
+       END_IF;
+    6: IF v_out = 0.0 THEN state := 7; END_IF;
+END_CASE;
+
+(* ---- 位置环：P 控制 + 设定值差分前馈 ---- *)
+IF state >= 4 AND state <= 6 THEN
+    v_ff := INT_TO_REAL(Setpoint - sp_prev) / SCAN_T;
+    pos_err := INT_TO_REAL(Setpoint) - INT_TO_REAL(pos_fb);
+    v_out := v_ff + KP * pos_err;
+    IF v_out > 120.0 THEN v_out := 120.0; END_IF;
+    IF v_out < -120.0 THEN v_out := -120.0; END_IF;
+    IF v_ff = 0.0 AND ABS(pos_err) <= 1.5 THEN
+        v_out := 0.0;
+    END_IF;
+ELSIF state = 5 THEN
+    IF v_out > 0.0 THEN v_out := MAX(0.0, v_out - QS_DECEL * SCAN_T);
+    ELSIF v_out < 0.0 THEN v_out := MIN(0.0, v_out + QS_DECEL * SCAN_T);
+    END_IF;
+ELSE
+    v_out := 0.0;
+END_IF;
+
+sp_prev := Setpoint;
+```
+
+MC 层权威骨架（MC_POWER 握手 / MC_MOVEABSOLUTE 触发记忆，Done 随完成回清）：
+
+```st
+--- MC_POWER ---
+IF Enable AND pstep = 4 AND (sw AND 16#0004) = 0 AND (sw AND 16#0008) = 0 THEN
+    pstep := 0;
+END_IF;
+IF Enable THEN
+    CASE pstep OF
+        0: cw := (cw AND 16#00F0) OR 16#0006;  pstep := 1;
+        1: IF (sw AND 16#0001) <> 0 THEN cw := (cw AND 16#00F0) OR 16#0007; pstep := 2; END_IF;
+        2: IF (sw AND 16#0002) <> 0 THEN cw := (cw AND 16#00F0) OR 16#000F; pstep := 3; END_IF;
+        3: IF (sw AND 16#0004) <> 0 THEN pstep := 4; END_IF;
+    END_CASE;
+ELSE
+    cw := (cw AND 16#00F0) OR 16#0006;
+    pstep := 0;
+END_IF;
+Status := (sw AND 16#0004) <> 0;
+
+--- MC_MOVEABSOLUTE ---
+(* 触发插补引擎的 fire 线 *)
+IF fire AND NOT edge_ma THEN
+    interp_exe := TRUE;
+END_IF;
+edge_ma := fire;
+(* interp_exe 保持 TRUE 直到运动完成(由 PLC_PRG 的 INTERP.Done 清零) *)
+Done := NOT interp_exe;
+Busy := interp_exe;
+```
+
+## 多段轨迹序列器模板（连续跟踪模式——工艺序列的标准实现，源自运动控制生成方案 v2）
+
+任何"按步骤依次走多个目标点"的工艺（画图/搬运/检测路径…）必须用此模式。
+**禁止**在 PLC_PRG 里写单扫描选通/脉冲触发（运行时优化器会静默吞掉这类赋值——
+症状：序列器空转、FB 状态不翻转）。骨架：
+
+```st
+(* 变量：pl_step INT（步号，0=空闲）；pl_tx/ty/tz INT（当前步目标）；
+   go_*_exe BOOL（电平持有，触发扫描置 TRUE、完成步清 FALSE） *)
+CASE pl_step OF
+    0: IF 启动指令 AND 就绪条件 THEN      (* 电平门控，无 pen 类前置须与规格一致 *)
+           目标 := 序列第一步; go_x_exe := TRUE; go_y_exe := TRUE; go_z_exe := TRUE;
+           pl_step := 1;
+       END_IF;
+    1: 目标 := 步1目标;                   (* 每步只改目标值 *)
+    2: 目标 := 步2目标;                   (* 需要折线/多路点：本步内按段计数器算目标 *)
+    ...
+    N: 目标 := 收尾目标;
+END_CASE;
+
+(* 步进：三轴插补全部空闲且 Done——目标变化由 INTERP 连续跟踪自动起新轨迹 *)
+IF (pl_step <> 0) AND NOT ix_x.Busy AND NOT ix_y.Busy AND NOT ix_z.Busy
+   AND ix_x.Done AND ix_y.Done AND ix_z.Done THEN
+    IF pl_step = N THEN 完成标志 := TRUE; pl_step := 0; go_*_exe := FALSE;
+    ELSE pl_step := pl_step + 1;
+    END_IF;
+END_IF;
+
+(* INTERP 需含连续跟踪分支（fire 电平保持期间目标变化即起新轨迹）：
+   ELSIF fire AND NOT Busy AND (ABS(INT_TO_REAL(pos_target) - tgt) > 0.499)
+   THEN tgt := INT_TO_REAL(pos_target); Busy := TRUE; Done := FALSE; *)
+```
+
+要点：触发线**全程电平保持**（触发扫描置位、终止/完成才清零）；步进只改目标值；
+急停/故障 → pl_step := 0 并清 exe（释放后不自动续跑）。**急停语义=电平中止，
+不得引入需要额外复位命令才能清的锁存**——验收剧本是急停释放（quickstop=0）
++ 重新使能后**直接重发 cmd_draw** 即应重启序列（qs_latch 类锁存必须随释放
+自动清，否则复跑死锁）。**pen_down 等笔态输出是纯物理判定**（pen_down :=
+z_fb <= 2，与 run/使能/急停/序列无关——未使能时笔在纸上也是 TRUE）；
+"落笔期间禁手动"类互锁用独立信号复合，不得把条件揉进笔态输出。
 
 ## 工艺逻辑写法（模式库要点，完整种子见随 prompt 附的模式卡）
 

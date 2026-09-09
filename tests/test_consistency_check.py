@@ -20,19 +20,19 @@ SPEC = json.loads((REPO / "examples" / "specs" / "motion3axis.spec.json").read_t
 IO_LIST = SPEC["io_list"]
 
 
-def io_map_from(io_list, **overrides):
-    """按主方案 §3.3 结构生成一份与 io_list 对齐的 io_map。"""
-    mappings = [
-        {"plc_var": p["name"], "io_channel": "ch%d" % idx,
-         "bind": {"prim": "/World/%s" % p["name"], "quantity": "state"},
-         "dir": p["dir"], "type": p["type"]}
+def io_entries_from(io_list, **overrides):
+    """按契约 v1.1 ioEntry 生成与 io_list 对齐的条目（bind 为占位，R5 不查注册表）。"""
+    tmap = {"BOOL": "bool", "INT": "float"}
+    entries = [
+        {"plc_var": p["name"], "dir": p["dir"], "type": tmap.get(p["type"], "float"),
+         "bind": {"asset": "a_%d" % idx, "quantity": "q"}}
         for idx, p in enumerate(io_list)
     ]
     for idx, patch in overrides.get("patches", []):
-        mappings[idx].update(patch)
+        entries[idx].update(patch)
     if "drop" in overrides:
-        mappings = [m for i, m in enumerate(mappings) if i != overrides["drop"]]
-    return {"mappings": mappings}
+        entries = [e for i, e in enumerate(entries) if i != overrides["drop"]]
+    return entries
 
 
 class TestExtractLocatedVars:
@@ -89,28 +89,77 @@ class TestTwoPartyCheck:
 
 
 class TestIoMapLeg:
-    def test_aligned_io_map_passes(self):
-        ok, problems = consistency_check(MOTION_XML, IO_LIST, io_map_from(IO_LIST))
+    """R5：契约 v1.1 ioEntry（子集覆盖语义——io_map ⊆ io_list，按钮/灯等非物理通道不在其列）。"""
+
+    def test_aligned_entries_pass(self):
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, io_entries_from(IO_LIST))
         assert ok, problems
         assert not any(p.startswith("SKIP") for p in problems)
 
-    def test_r5_missing_binding(self):
-        io_map = io_map_from(IO_LIST, drop=14)  # x_sw 无绑定
-        ok, problems = consistency_check(MOTION_XML, IO_LIST, io_map)
-        assert not ok and any("R5" in p and "x_sw" in p for p in problems)
+    def test_subset_coverage_is_legal(self):
+        """io_map 只含物理通道子集是合法形态（契约 v1.1：按钮/灯不进 io_map）。"""
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, io_entries_from(IO_LIST)[:3])
+        assert ok, problems
 
     def test_r5_direction_mismatch(self):
-        io_map = io_map_from(IO_LIST, patches=[(14, {"dir": "input"})])  # x_sw 方向反转
+        io_map = io_entries_from(IO_LIST, patches=[(14, {"dir": "input"})])  # x_sw 方向反转
         ok, problems = consistency_check(MOTION_XML, IO_LIST, io_map)
         assert any("R5" in p and "方向不一致" in p for p in problems)
 
+    def test_r5_type_mismatch(self):
+        io_map = io_entries_from(IO_LIST, patches=[(14, {"type": "bool"})])  # INT 通道标 bool
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, io_map)
+        assert any("R5" in p and "类型不一致" in p for p in problems)
+
     def test_r5_plc_var_not_in_io_list(self):
-        io_map = io_map_from(IO_LIST, patches=[(0, {"plc_var": "ghost_var"})])
+        io_map = io_entries_from(IO_LIST, patches=[(0, {"plc_var": "ghost_var"})])
         ok, problems = consistency_check(MOTION_XML, IO_LIST, io_map)
         assert any("R5" in p and "ghost_var" in p for p in problems)
 
+    def test_r5_bind_must_be_asset_quantity(self):
+        io_map = io_entries_from(IO_LIST, patches=[(0, {"bind": {"prim": "/World/run"}})])
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, io_map)
+        assert any("R5" in p and "bind" in p for p in problems)
+
+    def test_contract3_entries_shape_accepted(self):
+        """契约③ io_map.json 形态（{entries: [...]}，csk build 产物）同规则对账。"""
+        wrapped = {"io_map_version": "1.0.0-draft.1", "entries": io_entries_from(IO_LIST)}
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, wrapped)
+        assert ok, problems
+
     def test_io_map_from_file_path(self, tmp_path):
         path = tmp_path / "io_map.json"
-        path.write_text(json.dumps(io_map_from(IO_LIST)), encoding="utf-8")
+        path.write_text(json.dumps(io_entries_from(IO_LIST)), encoding="utf-8")
         ok, problems = consistency_check(MOTION_XML, IO_LIST, path)
         assert ok, problems
+
+
+class TestR6DeviceAddresses:
+    """R6：⓪ 侧地址腿——AML 通道地址 ≡ XML 定位变量地址（画圆场景实证）。"""
+
+    MODEL_AML = REPO / "examples" / "aml" / "plotter3axis_station.aml"
+    SPEC = json.loads((REPO / "examples" / "specs" / "plotter3axis.spec.json")
+                      .read_text(encoding="utf-8"))
+
+    def _model(self):
+        from agent.aml_parser import parse_aml
+        model, problems = parse_aml(self.MODEL_AML)
+        assert problems == []
+        return model
+
+    def test_matching_addresses_pass(self):
+        ok, problems = consistency_check(
+            REPO / "src" / "plc" / "plotter3axis.xml", self.SPEC["io_list"],
+            device_model=self._model())
+        assert ok, problems
+
+    def test_diverged_addresses_caught(self, tmp_path):
+        # 把 x_sp 挪到错误地址 → R6 必须抓到
+        text = (REPO / "src" / "plc" / "plotter3axis.xml").read_text(encoding="utf-8")
+        broken = text.replace('name="x_sp" address="%QW10"', 'name="x_sp" address="%QW3"')
+        assert broken != text
+        bad = tmp_path / "bad_addr.xml"
+        bad.write_text(broken, encoding="utf-8")
+        ok, problems = consistency_check(bad, self.SPEC["io_list"], device_model=self._model())
+        assert not ok
+        assert any(p.startswith("R6") and "x_sp" in p for p in problems)

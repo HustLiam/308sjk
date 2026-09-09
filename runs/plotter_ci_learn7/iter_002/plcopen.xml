@@ -1,0 +1,436 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0201" xmlns:html="http://www.w3.org/1999/xhtml">
+  <fileHeader companyName="" productName="PLCopen Editor" productVersion="1.0" creationDateTime="2024-01-01T00:00:00" />
+  <contentHeader name="plotter_ci_learn7" modificationDateTime="2024-01-01T00:00:00" />
+  <types>
+    <dataTypes />
+    <pous>
+      <pou name="INTERP" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="fire"><type><BOOL /></type></variable>
+            <variable name="pos_target"><type><INT /></type></variable>
+            <variable name="hold_req"><type><BOOL /></type></variable>
+            <variable name="VMAX"><type><REAL /></type></variable>
+            <variable name="ACCEL"><type><REAL /></type></variable>
+            <variable name="POSWIN"><type><REAL /></type></variable>
+            <variable name="MAXPOS"><type><REAL /></type></variable>
+          </inputVars>
+          <outputVars>
+            <variable name="Setpoint"><type><INT /></type></variable>
+            <variable name="Busy"><type><BOOL /></type></variable>
+            <variable name="Done"><type><BOOL /></type></variable>
+          </outputVars>
+          <localVars>
+            <variable name="SCAN_T"><type><REAL /></type><initialValue><simpleValue value="0.02" /></initialValue></variable>
+            <variable name="pos"><type><REAL /></type></variable>
+            <variable name="tgt"><type><REAL /></type></variable>
+            <variable name="vel"><type><REAL /></type></variable>
+            <variable name="edge_ir"><type><BOOL /></type></variable>
+            <variable name="dist"><type><REAL /></type></variable>
+            <variable name="stop_d"><type><REAL /></type></variable>
+            <variable name="inited"><type><BOOL /></type></variable>
+          </localVars>
+        </interface>
+        <body><ST><html:p>
+IF NOT inited THEN
+    Done := TRUE;
+    inited := TRUE;
+END_IF;
+
+IF fire AND NOT edge_ir THEN
+    IF pos_target &gt; MAXPOS OR pos_target &lt; 0 THEN
+        (* target out of range: do not start, stay *)
+        Done := TRUE;
+    ELSE
+        tgt := INT_TO_REAL(pos_target);
+        Busy := TRUE;
+        Done := FALSE;
+    END_IF;
+ELSIF fire AND NOT Busy AND (ABS(INT_TO_REAL(pos_target) - tgt) &gt; 0.499) THEN
+    (* continuous tracking: new target starts new trajectory while fire held *)
+    tgt := INT_TO_REAL(pos_target);
+    Busy := TRUE;
+    Done := FALSE;
+END_IF;
+edge_ir := fire;
+
+IF hold_req THEN
+    IF vel &gt; 0.0 THEN vel := MAX(0.0, vel - ACCEL * SCAN_T);
+    ELSIF vel &lt; 0.0 THEN vel := MIN(0.0, vel + ACCEL * SCAN_T);
+    END_IF;
+ELSIF Busy THEN
+    dist := tgt - pos;
+    stop_d := (vel * vel) / (2.0 * ACCEL);
+    IF ABS(dist) &lt;= stop_d THEN
+        IF dist &gt;= 0.0 THEN vel := MAX(0.0, vel - ACCEL * SCAN_T);
+        ELSE vel := MIN(0.0, vel + ACCEL * SCAN_T);
+        END_IF;
+        IF vel = 0.0 AND ABS(dist) &lt;= POSWIN THEN
+            pos := tgt;
+            Busy := FALSE;
+            Done := TRUE;
+        END_IF;
+    ELSE
+        IF dist &gt; 0.0 THEN vel := MIN(VMAX, vel + ACCEL * SCAN_T);
+        ELSE vel := MAX(-VMAX, vel - ACCEL * SCAN_T);
+        END_IF;
+    END_IF;
+END_IF;
+
+pos := pos + vel * SCAN_T;
+Setpoint := REAL_TO_INT(pos);
+</html:p></ST></body>
+      </pou>
+      <pou name="DRIVE402" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="cw"><type><WORD /></type></variable>
+            <variable name="Setpoint"><type><INT /></type></variable>
+            <variable name="pos_fb"><type><INT /></type></variable>
+          </inputVars>
+          <outputVars>
+            <variable name="sw"><type><WORD /></type></variable>
+            <variable name="v_cmd"><type><INT /></type></variable>
+          </outputVars>
+          <localVars>
+            <variable name="state"><type><INT /></type><initialValue><simpleValue value="1" /></initialValue></variable>
+            <variable name="cmd"><type><WORD /></type></variable>
+            <variable name="v_ff"><type><REAL /></type></variable>
+            <variable name="pos_err"><type><REAL /></type></variable>
+            <variable name="v_out"><type><REAL /></type></variable>
+            <variable name="sp_prev"><type><INT /></type></variable>
+            <variable name="KP"><type><REAL /></type><initialValue><simpleValue value="8.0" /></initialValue></variable>
+            <variable name="QS_DECEL"><type><REAL /></type><initialValue><simpleValue value="200.0" /></initialValue></variable>
+            <variable name="SCAN_T"><type><REAL /></type><initialValue><simpleValue value="0.02" /></initialValue></variable>
+          </localVars>
+        </interface>
+        <body><ST><html:p>
+(* ============ DRIVE402: axis drive (CSP following + position loop) ============ *)
+(* state: 1=SOD 2=RTSO 3=SO 4=OE 5=QSA 6=FRA 7=FA *)
+
+cmd := cw AND 16#000F;
+
+IF state = 7 AND (cw AND 16#0080) &lt;&gt; 0 THEN
+    state := 1;
+END_IF;
+
+CASE state OF
+    1: IF cmd = 16#06 THEN state := 2; END_IF;
+    2: IF cmd = 16#07 THEN state := 3;
+       ELSIF cmd = 16#0F THEN state := 4;
+       ELSIF cmd = 16#00 THEN state := 1;
+       END_IF;
+    3: IF cmd = 16#0F THEN state := 4;
+       ELSIF cmd = 16#06 THEN state := 2;
+       ELSIF cmd = 16#00 THEN state := 1;
+       ELSIF cmd = 16#02 THEN state := 5;
+       END_IF;
+    4: IF cmd = 16#07 THEN state := 3;
+       ELSIF cmd = 16#06 THEN state := 2;
+       ELSIF cmd = 16#00 THEN state := 1;
+       ELSIF cmd = 16#02 THEN state := 5;
+       END_IF;
+    5: IF v_out = 0.0 THEN
+           IF cmd = 16#0F THEN state := 4;
+           ELSIF cmd = 16#06 THEN state := 2;
+           ELSIF cmd = 16#00 THEN state := 1;
+           END_IF;
+       END_IF;
+    6: IF v_out = 0.0 THEN state := 7; END_IF;
+END_CASE;
+
+(* ---- position loop: P control + setpoint differential feedforward ---- *)
+IF state &gt;= 4 AND state &lt;= 6 THEN
+    v_ff := INT_TO_REAL(Setpoint - sp_prev) / SCAN_T;
+    pos_err := INT_TO_REAL(Setpoint) - INT_TO_REAL(pos_fb);
+    v_out := v_ff + KP * pos_err;
+    IF v_out &gt; 120.0 THEN v_out := 120.0; END_IF;
+    IF v_out &lt; -120.0 THEN v_out := -120.0; END_IF;
+    IF v_ff = 0.0 AND ABS(pos_err) &lt;= 1.5 THEN
+        v_out := 0.0;
+    END_IF;
+ELSIF state = 5 THEN
+    IF v_out &gt; 0.0 THEN v_out := MAX(0.0, v_out - QS_DECEL * SCAN_T);
+    ELSIF v_out &lt; 0.0 THEN v_out := MIN(0.0, v_out + QS_DECEL * SCAN_T);
+    END_IF;
+ELSE
+    v_out := 0.0;
+END_IF;
+
+sp_prev := Setpoint;
+
+(* ---- status word (bit0=ready,bit1=on,bit2=oe,bit3=fault,bit10=in-position) ---- *)
+CASE state OF
+    1: sw := 16#0040;
+    2: sw := 16#0031;
+    3: sw := 16#0033;
+    4: sw := 16#0037;
+    5: sw := 16#0017;
+    6: sw := 16#0013;
+    7: sw := 16#0008;
+END_CASE;
+IF (state = 4) AND (v_out = 0.0) THEN
+    sw := sw OR 16#0400;
+END_IF;
+v_cmd := REAL_TO_INT(v_out);
+</html:p></ST></body>
+      </pou>
+      <pou name="PLC_PRG" pouType="program">
+        <interface>
+          <localVars>
+            <variable name="ix_x"><type><derived name="INTERP" /></type></variable>
+            <variable name="ix_y"><type><derived name="INTERP" /></type></variable>
+            <variable name="ix_z"><type><derived name="INTERP" /></type></variable>
+            <variable name="drv_x"><type><derived name="DRIVE402" /></type></variable>
+            <variable name="drv_y"><type><derived name="DRIVE402" /></type></variable>
+            <variable name="drv_z"><type><derived name="DRIVE402" /></type></variable>
+            <variable name="pstep_ax"><type><INT /></type><initialValue><simpleValue value="0" /></initialValue></variable>
+            <variable name="cw_x"><type><WORD /></type></variable>
+            <variable name="cw_y"><type><WORD /></type></variable>
+            <variable name="cw_z"><type><WORD /></type></variable>
+            <variable name="swx"><type><WORD /></type></variable>
+            <variable name="swy"><type><WORD /></type></variable>
+            <variable name="swz"><type><WORD /></type></variable>
+            <variable name="go_x_exe"><type><BOOL /></type></variable>
+            <variable name="go_y_exe"><type><BOOL /></type></variable>
+            <variable name="go_z_exe"><type><BOOL /></type></variable>
+            <variable name="jog_exe"><type><BOOL /></type></variable>
+            <variable name="fire_x"><type><BOOL /></type></variable>
+            <variable name="fire_y"><type><BOOL /></type></variable>
+            <variable name="tx"><type><INT /></type></variable>
+            <variable name="ty"><type><INT /></type></variable>
+            <variable name="tz"><type><INT /></type></variable>
+            <variable name="pl_step"><type><INT /></type><initialValue><simpleValue value="0" /></initialValue></variable>
+            <variable name="abt"><type><BOOL /></type></variable>
+            <variable name="vxy"><type><REAL /></type><initialValue><simpleValue value="40.0" /></initialValue></variable>
+            <variable name="ang"><type><REAL /></type></variable>
+            <variable name="hold"><type><BOOL /></type></variable>
+            <variable name="pen_up_now"><type><BOOL /></type></variable>
+            <variable name="oe_ok"><type><BOOL /></type></variable>
+            <variable name="faultd"><type><BOOL /></type></variable>
+          </localVars>
+          <localVars>
+            <variable name="run" address="%QX0.0"><type><BOOL /></type></variable>
+            <variable name="cmd_home" address="%QX0.1"><type><BOOL /></type></variable>
+            <variable name="cmd_go" address="%QX0.2"><type><BOOL /></type></variable>
+            <variable name="jog_fwd" address="%QX0.3"><type><BOOL /></type></variable>
+            <variable name="jog_rev" address="%QX0.4"><type><BOOL /></type></variable>
+            <variable name="quickstop" address="%QX0.5"><type><BOOL /></type></variable>
+            <variable name="cmd_reset" address="%QX0.7"><type><BOOL /></type></variable>
+            <variable name="cmd_draw" address="%QX2.0"><type><BOOL /></type></variable>
+            <variable name="all_oe" address="%QX1.0"><type><BOOL /></type></variable>
+            <variable name="move_done" address="%QX1.1"><type><BOOL /></type></variable>
+            <variable name="any_moving" address="%QX1.2"><type><BOOL /></type></variable>
+            <variable name="fault_any" address="%QX1.3"><type><BOOL /></type></variable>
+            <variable name="pen_down" address="%QX2.1"><type><BOOL /></type></variable>
+            <variable name="plot_done" address="%QX2.2"><type><BOOL /></type></variable>
+            <variable name="x_fb" address="%QW0"><type><INT /></type></variable>
+            <variable name="y_fb" address="%QW1"><type><INT /></type></variable>
+            <variable name="z_fb" address="%QW2"><type><INT /></type></variable>
+            <variable name="x_sp" address="%QW10"><type><INT /></type></variable>
+            <variable name="y_sp" address="%QW11"><type><INT /></type></variable>
+            <variable name="z_sp" address="%QW12"><type><INT /></type></variable>
+            <variable name="x_sw" address="%QW6"><type><INT /></type></variable>
+            <variable name="y_sw" address="%QW7"><type><INT /></type></variable>
+            <variable name="z_sw" address="%QW8"><type><INT /></type></variable>
+            <variable name="x_v" address="%QW13"><type><INT /></type></variable>
+            <variable name="y_v" address="%QW14"><type><INT /></type></variable>
+            <variable name="z_v" address="%QW15"><type><INT /></type></variable>
+            <variable name="prog_id" address="%QW30"><type><INT /></type><initialValue><simpleValue value="3" /></initialValue></variable>
+          </localVars>
+        </interface>
+        <body><ST><html:p>
+prog_id := 3;
+
+swx := drv_x.sw;
+swy := drv_y.sw;
+swz := drv_z.sw;
+faultd := ((swx AND 16#0008) &lt;&gt; 0) OR ((swy AND 16#0008) &lt;&gt; 0) OR ((swz AND 16#0008) &lt;&gt; 0);
+fault_any := faultd;
+oe_ok := (pstep_ax = 4);
+all_oe := oe_ok;
+pen_up_now := (z_fb &gt; 1);
+hold := quickstop OR (NOT run) OR faultd;
+
+(* ---- C5/C6/C7 abort: quickstop / fault / run off ---- *)
+IF quickstop OR (NOT run) OR faultd THEN
+    pl_step := 0;
+    go_x_exe := FALSE;
+    go_y_exe := FALSE;
+    go_z_exe := FALSE;
+    jog_exe := FALSE;
+    plot_done := FALSE;
+    IF quickstop OR faultd THEN
+        abt := TRUE;
+    END_IF;
+END_IF;
+IF cmd_reset AND (NOT quickstop) AND (NOT faultd) THEN
+    abt := FALSE;
+END_IF;
+
+(* ---- drive enable handshake (CiA402: 0x06 -&gt; 0x07 -&gt; 0x0F) ---- *)
+IF NOT run THEN
+    cw_x := 16#0006;
+    cw_y := 16#0006;
+    cw_z := 16#0006;
+    pstep_ax := 0;
+ELSIF faultd THEN
+    cw_x := 16#0000;
+    cw_y := 16#0000;
+    cw_z := 16#0000;
+    pstep_ax := 0;
+ELSE
+    CASE pstep_ax OF
+        0:  cw_x := 16#0006;
+            cw_y := 16#0006;
+            cw_z := 16#0006;
+            IF ((swx AND 16#0001) &lt;&gt; 0) AND ((swy AND 16#0001) &lt;&gt; 0) AND ((swz AND 16#0001) &lt;&gt; 0) THEN
+                pstep_ax := 1;
+            END_IF;
+        1:  cw_x := 16#0007;
+            cw_y := 16#0007;
+            cw_z := 16#0007;
+            IF ((swx AND 16#0002) &lt;&gt; 0) AND ((swy AND 16#0002) &lt;&gt; 0) AND ((swz AND 16#0002) &lt;&gt; 0) THEN
+                pstep_ax := 2;
+            END_IF;
+        2:  cw_x := 16#000F;
+            cw_y := 16#000F;
+            cw_z := 16#000F;
+            IF ((swx AND 16#0004) &lt;&gt; 0) AND ((swy AND 16#0004) &lt;&gt; 0) AND ((swz AND 16#0004) &lt;&gt; 0) THEN
+                pstep_ax := 3;
+            END_IF;
+        3:  cw_x := 16#000F;
+            cw_y := 16#000F;
+            cw_z := 16#000F;
+            pstep_ax := 4;
+        4:  cw_x := 16#000F;
+            cw_y := 16#000F;
+            cw_z := 16#000F;
+            IF quickstop THEN
+                cw_x := 16#0002;
+                cw_y := 16#0002;
+                cw_z := 16#0002;
+                pstep_ax := 0;
+            END_IF;
+    END_CASE;
+END_IF;
+
+(* ---- targets: plot sequencer (level-held fire, continuous tracking) ---- *)
+IF pl_step = 0 THEN
+    IF (NOT oe_ok) OR abt OR (NOT run) THEN
+        go_x_exe := FALSE;
+        go_y_exe := FALSE;
+        jog_exe := FALSE;
+    END_IF;
+    (* C1/AC3: manual positioning rejected while pen down *)
+    IF cmd_go AND pen_up_now AND oe_ok AND (NOT abt) AND run THEN
+        tx := x_sp;
+        ty := y_sp;
+        go_x_exe := TRUE;
+        go_y_exe := TRUE;
+    END_IF;
+    (* C1/AC2: jog only while pen up *)
+    IF jog_fwd AND (NOT jog_rev) AND pen_up_now AND oe_ok AND (NOT abt) AND run THEN
+        IF x_fb &lt; 98 THEN
+            tx := x_fb + 2;
+        END_IF;
+        jog_exe := TRUE;
+    ELSIF jog_rev AND (NOT jog_fwd) AND pen_up_now AND oe_ok AND (NOT abt) AND run THEN
+        IF x_fb &gt; 2 THEN
+            tx := x_fb - 2;
+        END_IF;
+        jog_exe := TRUE;
+    ELSE
+        jog_exe := FALSE;
+    END_IF;
+    IF (NOT go_x_exe) AND (NOT go_y_exe) AND (NOT jog_exe) THEN
+        IF cmd_home THEN
+            tz := 10;
+        ELSE
+            tz := z_sp;
+        END_IF;
+        go_z_exe := TRUE;
+    END_IF;
+ELSIF pl_step = 1 THEN
+    tx := 50;
+    ty := 25;
+    tz := 10;
+ELSIF pl_step = 2 THEN
+    tz := 0;
+ELSIF (pl_step &gt;= 3) AND (pl_step &lt;= 26) THEN
+    ang := INT_TO_REAL(pl_step - 2) * 0.2617994;
+    tx := REAL_TO_INT(50.0 + 25.0 * SIN(ang) + 0.5);
+    ty := REAL_TO_INT(50.0 - 25.0 * COS(ang) + 0.5);
+    tz := 0;
+ELSIF pl_step = 27 THEN
+    tx := 50;
+    ty := 25;
+    tz := 0;
+ELSIF pl_step = 28 THEN
+    tz := 10;
+ELSIF pl_step = 29 THEN
+    tx := 50;
+    ty := 50;
+    tz := 10;
+END_IF;
+
+(* ---- C7: draw start gate ---- *)
+IF (pl_step = 0) AND cmd_draw AND run AND oe_ok AND (NOT abt) AND (NOT quickstop) AND (NOT faultd) THEN
+    plot_done := FALSE;
+    go_x_exe := TRUE;
+    go_y_exe := TRUE;
+    go_z_exe := TRUE;
+    pl_step := 1;
+END_IF;
+
+fire_x := go_x_exe OR jog_exe;
+fire_y := go_y_exe;
+
+(* C3: pen-down segments limited to half speed (20) *)
+IF (pl_step &gt;= 3) AND (pl_step &lt;= 27) THEN
+    vxy := 20.0;
+ELSE
+    vxy := 40.0;
+END_IF;
+
+ix_x(fire := fire_x, pos_target := tx, hold_req := hold, VMAX := vxy, ACCEL := 80.0, POSWIN := 2.0, MAXPOS := 100.0);
+ix_y(fire := fire_y, pos_target := ty, hold_req := hold, VMAX := vxy, ACCEL := 80.0, POSWIN := 2.0, MAXPOS := 100.0);
+ix_z(fire := go_z_exe, pos_target := tz, hold_req := hold, VMAX := 20.0, ACCEL := 60.0, POSWIN := 1.0, MAXPOS := 10.0);
+
+drv_x(cw := cw_x, Setpoint := ix_x.Setpoint, pos_fb := x_fb);
+drv_y(cw := cw_y, Setpoint := ix_y.Setpoint, pos_fb := y_fb);
+drv_z(cw := cw_z, Setpoint := ix_z.Setpoint, pos_fb := z_fb);
+
+x_v := drv_x.v_cmd;
+y_v := drv_y.v_cmd;
+z_v := drv_z.v_cmd;
+x_sw := WORD_TO_INT(drv_x.sw);
+y_sw := WORD_TO_INT(drv_y.sw);
+z_sw := WORD_TO_INT(drv_z.sw);
+
+(* ---- sequencer advance: all axes idle and done ---- *)
+IF (pl_step &lt;&gt; 0) AND (NOT ix_x.Busy) AND (NOT ix_y.Busy) AND (NOT ix_z.Busy)
+   AND ix_x.Done AND ix_y.Done AND ix_z.Done THEN
+    IF pl_step = 29 THEN
+        plot_done := TRUE;
+        pl_step := 0;
+        go_x_exe := FALSE;
+        go_y_exe := FALSE;
+        go_z_exe := TRUE;
+    ELSE
+        pl_step := pl_step + 1;
+    END_IF;
+END_IF;
+
+pen_down := (z_fb &lt;= 2);
+any_moving := (x_v &lt;&gt; 0) OR (y_v &lt;&gt; 0) OR (z_v &lt;&gt; 0);
+move_done := (pl_step = 0) AND (NOT ix_x.Busy) AND (NOT ix_y.Busy) AND ix_x.Done AND ix_y.Done AND (NOT go_x_exe) AND (NOT jog_exe);
+</html:p></ST></body>
+      </pou>
+    </pous>
+  </types>
+  <instances>
+    <configurations />
+  </instances>
+</project>

@@ -1,0 +1,29 @@
+{
+  "gate": "generate",
+  "ok": false,
+  "errors": [
+    "[xml2st] XML 无法解析: mismatched tag: line 223, column 96"
+  ],
+  "attribution": {
+    "gate": "generate",
+    "errors": [
+      "[xml2st] XML 无法解析: mismatched tag: line 223, column 96"
+    ],
+    "pitfalls": [],
+    "similar_fixes": [],
+    "repair_hints": [
+      "检查生成的 PLCML/XML 文件第 223 行附近（重点第 96 列）的开闭标签是否配对，特别是自闭合、嵌套容器(body/block/pou 等)标签",
+      "对生成的 XML 运行 xmllint --noout 等格式校验，在提交 xml2st 前拦截结构性错误",
+      "增加证据回传：输出第 210~230 行原文片段，便于定位具体不匹配的标签名"
+    ],
+    "llm_diagnosis": {
+      "root_cause": "证据不足：仅知 XML 在 line 223 col 96 处存在标签不匹配（mismatched tag），无法判断是生成代码问题还是上游转换问题",
+      "repair_hints": [
+        "检查生成的 PLCML/XML 文件第 223 行附近（重点第 96 列）的开闭标签是否配对，特别是自闭合、嵌套容器(body/block/pou 等)标签",
+        "对生成的 XML 运行 xmllint --noout 等格式校验，在提交 xml2st 前拦截结构性错误",
+        "增加证据回传：输出第 210~230 行原文片段，便于定位具体不匹配的标签名"
+      ],
+      "advisory": true
+    }
+  }
+}
