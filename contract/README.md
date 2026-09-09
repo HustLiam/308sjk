@@ -10,6 +10,8 @@
 |---|---|
 | `components.v1.1.json` | 机器可读契约（类型/参数/quantity/后端支持），生成器输入可直接消费 |
 | `组件契约表.md` | 人类可读契约表（同源生成，供 Prompt / 评审引用） |
+| `example1.json` | **反向导出实例**：从龙门模型（MJCF）逆向提取的完整 spec——展示「模型→spec」逆映射形态与信息边界 |
+| `example1_iomap.json` | 上例的 io_map 地址分配产物（%QW0–5 / %IW0–5） |
 | `scene.spec.example.json` | **参考 spec**：绘图工位完整示例。其中 `io_map` 为 csk 代拟范本（gc 尚未交付 io 表，正式版由 gc 出） |
 
 ## 工作流（全程序调用，无人工补写环节）
