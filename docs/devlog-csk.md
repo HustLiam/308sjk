@@ -1,3 +1,18 @@
+## 2026-09-09 (1) example1：龙门模型反向导出 spec + io_map（契约包增补）
+
+### 做法
+
+只读 MJCF 模型文件提取：关节 range→travel、执行器 ctrlrange→io range、gantry_base
+pos→pose、option→physics_dt/gravity、floor/default→ground、axisSpeed 取自组装注释
+（运行时参数在模型数据面的唯一痕迹）。模型不携带的 8 个字段（scene_id/spec_version/
+units/solver/lighting/资产 id/script）取 schema 合法缺省并逐项标注——**模型→spec 存在
+信息损失边界，正方向才是无损的**。
+
+### 验证
+
+闸门通过（1 资产/6 IO）；规范化整文件往返 diff（忽略 model 名/注释）与原模型
+**完全一致**；正向三步命令复跑（validate→build-mjcf→viewer 落笔画方块墨迹完整）。
+
 ## 2026-09-08 (3) 契约发布 v1.1 + 工作流机制化：纯命令完成「检查→创建→仿真」
 
 ### 动机（对上轮的纠偏）
