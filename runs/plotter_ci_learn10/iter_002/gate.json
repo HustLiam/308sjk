@@ -1,0 +1,29 @@
+{
+  "gate": "generate",
+  "ok": false,
+  "errors": [
+    "[xml2st] XML 无法解析: mismatched tag: line 209, column 100"
+  ],
+  "attribution": {
+    "gate": "generate",
+    "errors": [
+      "[xml2st] XML 无法解析: mismatched tag: line 209, column 100"
+    ],
+    "pitfalls": [],
+    "similar_fixes": [],
+    "repair_hints": [
+      "检查并修复 XML 第 209 行附近的标签闭合：确认开始标签与结束标签名称一致、嵌套正确，无遗漏或多余的结束标签。",
+      "对生成的 XML 强制执行良构性校验（如 xmllint）后再进入 xml2st 环节，避免非法 XML 下发。",
+      "若上游由模板拼接生成 XML，检查模板中条件分支的开放/闭合标签是否成对输出。"
+    ],
+    "llm_diagnosis": {
+      "root_cause": "代码问题：生成的 PLCml XML 在第 209 行存在标签不匹配（mismatched tag），导致 xml2st 无法解析。",
+      "repair_hints": [
+        "检查并修复 XML 第 209 行附近的标签闭合：确认开始标签与结束标签名称一致、嵌套正确，无遗漏或多余的结束标签。",
+        "对生成的 XML 强制执行良构性校验（如 xmllint）后再进入 xml2st 环节，避免非法 XML 下发。",
+        "若上游由模板拼接生成 XML，检查模板中条件分支的开放/闭合标签是否成对输出。"
+      ],
+      "advisory": true
+    }
+  }
+}

@@ -1,0 +1,298 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0201" xmlns:html="http://www.w3.org/1999/xhtml">
+  <fileHeader companyName="" productName="PLCopen Editor" productVersion="1.0" creationDateTime="2024-01-01T00:00:00" />
+  <contentHeader name="plotter_ci_learn3" modificationDateTime="2024-01-01T00:00:00" />
+  <types>
+    <dataTypes />
+    <pous>
+      <pou name="INTERP" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="fire"><type><BOOL /></type></variable>
+            <variable name="pos_target"><type><INT /></type></variable>
+            <variable name="hold_req"><type><BOOL /></type></variable>
+            <variable name="VMAX"><type><REAL /></type></variable>
+            <variable name="ACCEL"><type><REAL /></type></variable>
+            <variable name="POSWIN"><type><REAL /></type></variable>
+            <variable name="MAXPOS"><type><INT /></type></variable>
+          </inputVars>
+          <outputVars>
+            <variable name="Setpoint"><type><INT /></type></variable>
+            <variable name="Busy"><type><BOOL /></type></variable>
+            <variable name="Done"><type><BOOL /></type></variable>
+          </outputVars>
+          <localVars>
+            <variable name="SCAN_T"><type><REAL /></type><initialValue><simpleValue value="0.02" /></initialValue></variable>
+            <variable name="pos"><type><REAL /></type><initialValue><simpleValue value="0.0" /></initialValue></variable>
+            <variable name="tgt"><type><REAL /></type><initialValue><simpleValue value="0.0" /></initialValue></variable>
+            <variable name="vel"><type><REAL /></type><initialValue><simpleValue value="0.0" /></initialValue></variable>
+            <variable name="edge_ir"><type><BOOL /></type></variable>
+            <variable name="dist"><type><REAL /></type></variable>
+            <variable name="stop_d"><type><REAL /></type></variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <html:p>
+IF fire AND NOT edge_ir THEN
+    IF pos_target &gt; MAXPOS OR pos_target &lt; 0 THEN
+        (* target out of range: no start *)
+        Done := TRUE;
+    ELSE
+        tgt := INT_TO_REAL(pos_target);
+        Busy := TRUE;
+        Done := FALSE;
+    END_IF;
+ELSIF fire AND NOT Busy AND (ABS(INT_TO_REAL(pos_target) - tgt) &gt; 0.499) THEN
+    (* continuous tracking: new target starts new trajectory while fire held *)
+    tgt := INT_TO_REAL(pos_target);
+    Busy := TRUE;
+    Done := FALSE;
+END_IF;
+edge_ir := fire;
+
+IF hold_req THEN
+    IF vel &gt; 0.0 THEN vel := MAX(0.0, vel - ACCEL * SCAN_T);
+    ELSIF vel &lt; 0.0 THEN vel := MIN(0.0, vel + ACCEL * SCAN_T);
+    END_IF;
+ELSIF Busy THEN
+    dist := tgt - pos;
+    stop_d := (vel * vel) / (2.0 * ACCEL);
+    IF ABS(dist) &lt;= stop_d THEN
+        IF dist &gt;= 0.0 THEN vel := MAX(0.0, vel - ACCEL * SCAN_T);
+        ELSE vel := MIN(0.0, vel + ACCEL * SCAN_T);
+        END_IF;
+        IF vel = 0.0 AND ABS(dist) &lt;= POSWIN THEN
+            pos := tgt;
+            Busy := FALSE;
+            Done := TRUE;
+        END_IF;
+    ELSE
+        IF dist &gt; 0.0 THEN vel := MIN(VMAX, vel + ACCEL * SCAN_T);
+        ELSE vel := MAX(-VMAX, vel - ACCEL * SCAN_T);
+        END_IF;
+    END_IF;
+END_IF;
+
+pos := pos + vel * SCAN_T;
+Setpoint := REAL_TO_INT(pos);
+            </html:p>
+          </ST>
+        </body>
+      </pou>
+      <pou name="PLC_PRG" pouType="program">
+        <interface>
+          <localVars>
+            <variable name="ix_x"><type><derived name="INTERP" /></type></variable>
+            <variable name="ix_y"><type><derived name="INTERP" /></type></variable>
+            <variable name="ix_z"><type><derived name="INTERP" /></type></variable>
+            <variable name="draw_pv"><type><BOOL /></type></variable>
+            <variable name="go_pv"><type><BOOL /></type></variable>
+            <variable name="home_pv"><type><BOOL /></type></variable>
+            <variable name="go_exe"><type><BOOL /></type></variable>
+            <variable name="home_exe"><type><BOOL /></type></variable>
+            <variable name="man_done"><type><BOOL /></type></variable>
+            <variable name="fire_x"><type><BOOL /></type></variable>
+            <variable name="fire_y"><type><BOOL /></type></variable>
+            <variable name="fire_z"><type><BOOL /></type></variable>
+            <variable name="hold_all"><type><BOOL /></type></variable>
+            <variable name="pl_tx"><type><INT /></type><initialValue><simpleValue value="50" /></initialValue></variable>
+            <variable name="pl_ty"><type><INT /></type><initialValue><simpleValue value="50" /></initialValue></variable>
+            <variable name="pl_tz"><type><INT /></type><initialValue><simpleValue value="10" /></initialValue></variable>
+            <variable name="pl_step"><type><INT /></type><initialValue><simpleValue value="0" /></initialValue></variable>
+            <variable name="seg"><type><INT /></type><initialValue><simpleValue value="0" /></initialValue></variable>
+            <variable name="kk"><type><INT /></type></variable>
+            <variable name="tx_use"><type><INT /></type></variable>
+            <variable name="ty_use"><type><INT /></type></variable>
+            <variable name="tz_use"><type><INT /></type></variable>
+            <variable name="ang"><type><REAL /></type></variable>
+            <variable name="verr"><type><REAL /></type></variable>
+          </localVars>
+          <localVars>
+            <variable name="prog_id" address="%QW20"><type><INT /></type><initialValue><simpleValue value="3" /></initialValue></variable>
+            <variable name="run" address="%QX0.0"><type><BOOL /></type></variable>
+            <variable name="cmd_home" address="%QX0.1"><type><BOOL /></type></variable>
+            <variable name="cmd_go" address="%QX0.2"><type><BOOL /></type></variable>
+            <variable name="jog_fwd" address="%QX0.3"><type><BOOL /></type></variable>
+            <variable name="jog_rev" address="%QX0.4"><type><BOOL /></type></variable>
+            <variable name="quickstop" address="%QX0.5"><type><BOOL /></type></variable>
+            <variable name="cmd_reset" address="%QX0.7"><type><BOOL /></type></variable>
+            <variable name="cmd_draw" address="%QX2.0"><type><BOOL /></type></variable>
+            <variable name="all_oe" address="%QX1.0"><type><BOOL /></type></variable>
+            <variable name="move_done" address="%QX1.1"><type><BOOL /></type></variable>
+            <variable name="any_moving" address="%QX1.2"><type><BOOL /></type></variable>
+            <variable name="fault_any" address="%QX1.3"><type><BOOL /></type></variable>
+            <variable name="pen_down" address="%QX2.1"><type><BOOL /></type></variable>
+            <variable name="plot_done" address="%QX2.2"><type><BOOL /></type></variable>
+            <variable name="x_fb" address="%QW0"><type><INT /></type></variable>
+            <variable name="y_fb" address="%QW1"><type><INT /></type></variable>
+            <variable name="z_fb" address="%QW2"><type><INT /></type></variable>
+            <variable name="x_sp" address="%QW10"><type><INT /></type></variable>
+            <variable name="y_sp" address="%QW11"><type><INT /></type></variable>
+            <variable name="z_sp" address="%QW12"><type><INT /></type></variable>
+            <variable name="x_sw" address="%QW6"><type><INT /></type></variable>
+            <variable name="y_sw" address="%QW7"><type><INT /></type></variable>
+            <variable name="z_sw" address="%QW8"><type><INT /></type></variable>
+            <variable name="x_v" address="%QW13"><type><INT /></type></variable>
+            <variable name="y_v" address="%QW14"><type><INT /></type></variable>
+            <variable name="z_v" address="%QW15"><type><INT /></type></variable>
+          </localVars>
+        <localVars><variable name="dbg_0" address="%QW16"><type><INT /></type></variable><variable name="dbg_1" address="%QW17"><type><INT /></type></variable><variable name="dbg_2" address="%QW18"><type><INT /></type></variable><variable name="dbg_3" address="%QW19"><type><INT /></type></variable></localVars></interface>
+        <body>
+          <ST>
+            
+dbg_0 := pl_step;
+dbg_1 := BOOL_TO_INT(go_exe);
+dbg_2 := BOOL_TO_INT(home_exe);
+dbg_3 := BOOL_TO_INT(man_done);<html:p>
+prog_id := 3;
+
+(* physical pen state: pure position judgement *)
+pen_down := (z_fb &lt;= 2);
+
+(* fault source: none wired in this plant; diagnostic word bit3 mirror *)
+fault_any := FALSE;
+
+(* enable chain: C2/AC1/AC6 *)
+all_oe := run AND NOT quickstop;
+
+(* edge memories *)
+IF cmd_draw AND NOT draw_pv AND all_oe AND NOT quickstop AND (pl_step = 0) AND (z_fb &gt;= 9) THEN
+    plot_done := FALSE;
+    man_done := FALSE;
+    go_exe := FALSE;
+    seg := 0;
+    pl_step := 1;
+END_IF;
+draw_pv := cmd_draw;
+
+IF cmd_go AND NOT go_pv AND (z_fb &gt;= 9) AND (pl_step = 0) AND all_oe AND NOT quickstop THEN
+    go_exe := TRUE;
+    man_done := FALSE;
+END_IF;
+go_pv := cmd_go;
+
+IF cmd_home AND NOT home_pv AND all_oe AND NOT quickstop THEN
+    home_exe := TRUE;
+END_IF;
+home_pv := cmd_home;
+
+(* abort on quickstop or fault: C3/C6 level abort, auto release *)
+IF quickstop OR fault_any THEN
+    pl_step := 0;
+    go_exe := FALSE;
+    home_exe := FALSE;
+    plot_done := FALSE;
+    man_done := FALSE;
+END_IF;
+
+(* sequence step targets *)
+CASE pl_step OF
+    0: pl_tx := pl_tx;  (* idle: keep last *)
+    1: pl_tx := 50; pl_ty := 25; pl_tz := 10;  (* pen up, position at circle start *)
+    2: pl_tz := 0;                              (* pen down, XY unchanged *)
+    3: IF seg &lt;= 23 THEN kk := seg; ELSE kk := 0; END_IF;
+       ang := INT_TO_REAL(kk) * 0.2617994;      (* 2*pi/24 *)
+       pl_tx := REAL_TO_INT(50.0 + 25.0 * SIN(ang));
+       pl_ty := REAL_TO_INT(50.0 - 25.0 * COS(ang));
+       pl_tz := 0;
+    4: pl_tz := 10;                             (* pen up *)
+    5: pl_tx := 50; pl_ty := 50; pl_tz := 10;   (* return to center *)
+END_CASE;
+
+(* target selection *)
+IF pl_step &lt;&gt; 0 THEN
+    tx_use := pl_tx;
+    ty_use := pl_ty;
+    tz_use := pl_tz;
+ELSIF home_exe THEN
+    tz_use := 10;
+    tx_use := x_sp;
+    ty_use := y_sp;
+ELSE
+    tx_use := x_sp;
+    ty_use := y_sp;
+    tz_use := z_sp;
+END_IF;
+
+(* fire flags: level held during sequence / manual moves; XY fire gated by pen-up (C1) *)
+fire_x := all_oe AND NOT quickstop AND ((pl_step &lt;&gt; 0) OR go_exe) AND (pl_step &lt;&gt; 0 OR z_fb &gt;= 9);
+fire_y := fire_x;
+fire_z := all_oe AND NOT quickstop;
+hold_all := (NOT all_oe) OR quickstop;
+
+ix_x(fire := fire_x, pos_target := tx_use, hold_req := hold_all, VMAX := 40.0, ACCEL := 80.0, POSWIN := 2.0, MAXPOS := 100);
+ix_y(fire := fire_y, pos_target := ty_use, hold_req := hold_all, VMAX := 40.0, ACCEL := 80.0, POSWIN := 2.0, MAXPOS := 100);
+ix_z(fire := fire_z, pos_target := tz_use, hold_req := hold_all, VMAX := 20.0, ACCEL := 40.0, POSWIN := 1.0, MAXPOS := 10);
+
+(* sequence advance: all axes idle and done *)
+IF (pl_step &lt;&gt; 0) AND (NOT ix_x.Busy) AND (NOT ix_y.Busy) AND (NOT ix_z.Busy)
+   AND ix_x.Done AND ix_y.Done AND ix_z.Done THEN
+    CASE pl_step OF
+        1: pl_step := 2;
+        2: pl_step := 3; seg := 1;
+        3: IF seg &gt;= 24 THEN pl_step := 4; ELSE seg := seg + 1; END_IF;
+        4: pl_step := 5;
+        5: plot_done := TRUE; pl_step := 0;
+    END_CASE;
+END_IF;
+
+(* manual move completion *)
+IF go_exe AND (NOT ix_x.Busy) AND (NOT ix_y.Busy) AND ix_x.Done AND ix_y.Done THEN
+    go_exe := FALSE;
+    man_done := TRUE;
+END_IF;
+
+IF home_exe AND (NOT ix_z.Busy) AND ix_z.Done AND (z_fb &gt;= 9) THEN
+    home_exe := FALSE;
+END_IF;
+
+(* velocity commands: servo toward interp setpoint, clamped to axis limits (C5/AC8) *)
+IF all_oe AND NOT quickstop AND ix_x.Busy THEN
+    verr := INT_TO_REAL(ix_x.Setpoint - x_fb) * 10.0;
+    IF verr &gt; 40.0 THEN verr := 40.0; END_IF;
+    IF verr &lt; -40.0 THEN verr := -40.0; END_IF;
+    x_v := REAL_TO_INT(verr);
+ELSE
+    x_v := 0;
+END_IF;
+
+IF all_oe AND NOT quickstop AND ix_y.Busy THEN
+    verr := INT_TO_REAL(ix_y.Setpoint - y_fb) * 10.0;
+    IF verr &gt; 40.0 THEN verr := 40.0; END_IF;
+    IF verr &lt; -40.0 THEN verr := -40.0; END_IF;
+    y_v := REAL_TO_INT(verr);
+ELSE
+    y_v := 0;
+END_IF;
+
+IF all_oe AND NOT quickstop AND ix_z.Busy THEN
+    verr := INT_TO_REAL(ix_z.Setpoint - z_fb) * 10.0;
+    IF verr &gt; 20.0 THEN verr := 20.0; END_IF;
+    IF verr &lt; -20.0 THEN verr := -20.0; END_IF;
+    z_v := REAL_TO_INT(verr);
+ELSE
+    z_v := 0;
+END_IF;
+
+(* diagnostic status words: bit0 = drive ready (always, power-on self check), bit10 = in position *)
+x_sw := 1;
+IF ix_x.Done AND (NOT ix_x.Busy) THEN x_sw := x_sw + 1024; END_IF;
+y_sw := 1;
+IF ix_y.Done AND (NOT ix_y.Busy) THEN y_sw := y_sw + 1024; END_IF;
+z_sw := 1;
+IF ix_z.Done AND (NOT ix_z.Busy) THEN z_sw := z_sw + 1024; END_IF;
+
+(* indicators *)
+any_moving := (x_v &lt;&gt; 0) OR (y_v &lt;&gt; 0) OR (z_v &lt;&gt; 0);
+move_done := man_done;
+            </html:p>
+          </ST>
+        </body>
+      </pou>
+    </pous>
+  </types>
+  <instances>
+    <configurations />
+  </instances>
+</project>

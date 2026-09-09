@@ -1,0 +1,110 @@
+{
+  "gate": "acceptance",
+  "ok": false,
+  "errors": [
+    "[verify] 程序身份确认: plotter_circle (prog_id=3)",
+    "[1] 上电（run=0）：三轴就绪；初始笔位 z=0",
+    "  PASS X 轴 sw.bit0=1（0031）",
+    "  PASS Y 轴 sw.bit0=1（0031）",
+    "  PASS Z 轴 sw.bit0=1（0031）",
+    "  PASS all_oe=FALSE",
+    "  PASS pen_down=TRUE（初始触纸）",
+    "[2] run=1 → 三轴使能",
+    "  PASS all_oe=TRUE（0.19s）",
+    "[3] 落笔态 cmd_go(60,40,0)：X/Y 请求被笔互锁拒绝",
+    "  PASS X/Y 未运动（互锁拒绝，AC5）",
+    "[4] cmd_draw：抬笔→(50,25)→落笔画整圆→回圆心(50,50,10)",
+    "    [trace t=2s] pos=(44,25,0) v=(42,0,0) pen=1 done=0 moving=1",
+    "    [trace t=4s] pos=(67,32,0) v=(0,0,0) pen=1 done=0 moving=0",
+    "    [trace t=6s] pos=(74,56,0) v=(0,0,0) pen=1 done=0 moving=0",
+    "    [trace t=8s] pos=(58,74,0) v=(-16,0,0) pen=1 done=0 moving=1",
+    "    [trace t=10s] pos=(37,71,0) v=(-16,-16,0) pen=1 done=0 moving=1",
+    "    [trace t=12s] pos=(27,48,0) v=(0,16,0) pen=1 done=0 moving=1",
+    "    [trace t=14s] pos=(38,29,0) v=(0,-16,0) pen=1 done=0 moving=1",
+    "    [trace t=16s] pos=(51,25,10) v=(0,0,0) pen=0 done=0 moving=0",
+    "  PASS 画圆序列完成 plot_done=TRUE（17.1s ≤ 30s，AC1）",
+    "  FAIL 终态回圆心 (50,50,10)（实际 (51,49,1)，AC6）",
+    "  PASS 落笔期间 XY 联动发生过（采样 156）",
+    "  FAIL 落笔轨迹在圆包围盒（x 1..78, y 1..75，越界 11 次，AC7）",
+    "  FAIL 完成后抬笔",
+    "（验收暂停：段 [4] 存在失败，后续段未执行；已通过段：[1] [2] [3]——先修复本段，通过后重跑继续）",
+    "运行时内部状态时间线（诊断口自动采集）：",
+    "    [diag t=0.5s] pstep_ax=4 pl_step=3 go_x_exe=1 go_y_exe=1 go_z_exe=1 jog_exe=0",
+    "    [diag t=1.0s] pstep_ax=4 pl_step=3 go_x_exe=1 go_y_exe=1 go_z_exe=1 jog_exe=0",
+    "    [diag t=1.5s] pstep_ax=4 pl_step=3 go_x_exe=1 go_y_exe=1 go_z_exe=1 jog_exe=0",
+    "    [diag t=2.0s] pstep_ax=4 pl_step=3 go_x_exe=1 go_y_exe=1 go_z_exe=1 jog_exe=0",
+    "    [diag t=2.5s] pstep_ax=4 pl_step=3 go_x_exe=1 go_y_exe=1 go_z_exe=1 jog_exe=0",
+    "    [diag t=3.0s] pstep_ax=4 pl_step=4 go_x_exe=1 go_y_exe=1 go_z_exe=1 jog_exe=0",
+    "    [diag t=3.5s] pstep_ax=4 pl_step=5 go_x_exe=1 go_y_exe=1 go_z_exe=1 jog_exe=0",
+    "    [diag t=4.0s] pstep_ax=4 pl_step=6 go_x_exe=1 go_y_exe=1 go_z_exe=1 jog_exe=0",
+    "    [diag t=4.5s] pstep_ax=4 pl_step=7 go_x_exe=1 go_y_exe=1 go_z_exe=1 jog_exe=0",
+    "    [diag t=5.0s] pstep_ax=4 pl_step=8 go_x_exe=1 go_y_exe=1 go_z_exe=1 jog_exe=0",
+    "    [diag t=5.5s] pstep_ax=4 pl_step=9 go_x_exe=1 go_y_exe=1 go_z_exe=1 jog_exe=0",
+    "    [diag t=6.0s] pstep_ax=4 pl_step=9 go_x_exe=1 go_y_exe=1 go_z_exe=1 jog_exe=0",
+    "    [diag t=6.5s] pstep_ax=4 pl_step=10 go_x_exe=1 go_y_exe=1 go_z_exe=1 jog_exe=0",
+    "    [diag t=7.0s] pstep_ax=4 pl_step=11 go_x_exe=1 go_y_exe=1 go_z_exe=1 jog_exe=0"
+  ],
+  "attribution": {
+    "gate": "acceptance",
+    "errors": [
+      "[verify] 程序身份确认: plotter_circle (prog_id=3)",
+      "[1] 上电（run=0）：三轴就绪；初始笔位 z=0",
+      "  PASS X 轴 sw.bit0=1（0031）",
+      "  PASS Y 轴 sw.bit0=1（0031）",
+      "  PASS Z 轴 sw.bit0=1（0031）",
+      "  PASS all_oe=FALSE",
+      "  PASS pen_down=TRUE（初始触纸）",
+      "[2] run=1 → 三轴使能"
+    ],
+    "pitfalls": [
+      {
+        "id": "P21",
+        "title": "pen_down 写成含使能条件的复合信号，上电恒 FALSE",
+        "diagnosis": "pen_down（笔态输出）被写成 run AND all_oe AND NOT quickstop AND … AND z_fb<=2 的复合命令信号——run=0（未使能）时恒 FALSE，上电初始触纸验收必挂。pen_down 是物理笔位的事实陈述：笔在纸上就是在纸上，与使能/序列/急停状态无关",
+        "fix": "pen_down := (z_fb <= 2)（纯物理阈值判定，不得复合任何条件）；'落笔期间禁止手动 X/Y' 这类互锁用独立信号复合（go_ok := … AND pen_down），不要把条件揉进 pen_down 本身"
+      },
+      {
+        "id": "P06",
+        "title": "REAL 初值必须带小数点",
+        "diagnosis": "REAL 变量初值写成整数（40 而非 40.0）",
+        "fix": "REAL 初值必须 50.0 形式；INTERP 类参数逐个核对"
+      },
+      {
+        "id": "P10",
+        "title": "PLC_PRG 内单扫描选通赋值被吞",
+        "diagnosis": "主程序内单扫描选通/边沿记忆变量的赋值被优化器静默丢弃（症状：序列器步进空转、FB 状态不翻转、手动路径正常）",
+        "fix": "改连续跟踪模式：触发线全程电平保持，目标值变化自动起新轨迹（INTERP 增 fire AND NOT Busy AND 目标变化分支）；或经 %QX 线圈级信号驱动。PLC_PRG 内不写单扫描脉冲逻辑"
+      },
+      {
+        "id": "P12",
+        "title": "缺 prog_id 程序身份",
+        "diagnosis": "场景程序缺 prog_id AT %QW20 声明与每周期写入（契约② v1.1），在线验收 require_program 必挂",
+        "fix": "定位变量块加 prog_id AT %QW20（INT，初值=场景号），ST 本体首行 prog_id := N;"
+      },
+      {
+        "id": "P18",
+        "title": "驱动状态机 state 无初值，402 卡在未定义状态",
+        "diagnosis": "DRIVE402 的 state 声明缺 ':= 1' 初值，上电停在 CASE 未覆盖的状态 0，无转移出口：sw 恒 0、v_out 恒 0、MC_POWER 握手死等 sw.bit0。序列器与插补器本身健康（设定值能 ramp 到位）。",
+        "fix": "FB 接口声明改 state : INT := 1（SOD 起步）；所有 CASE 状态机选择器同规则检查。"
+      }
+    ],
+    "similar_fixes": [],
+    "repair_hints": [
+      "pen_down := (z_fb <= 2)（纯物理阈值判定，不得复合任何条件）；'落笔期间禁止手动 X/Y' 这类互锁用独立信号复合（go_ok := … AND pen_down），不要把条件揉进 pen_down 本身",
+      "REAL 初值必须 50.0 形式；INTERP 类参数逐个核对",
+      "改连续跟踪模式：触发线全程电平保持，目标值变化自动起新轨迹（INTERP 增 fire AND NOT Busy AND 目标变化分支）；或经 %QX 线圈级信号驱动。PLC_PRG 内不写单扫描脉冲逻辑",
+      "定位变量块加 prog_id AT %QW20（INT，初值=场景号），ST 本体首行 prog_id := N;",
+      "FB 接口声明改 state : INT := 1（SOD 起步）；所有 CASE 状态机选择器同规则检查。"
+    ]
+  },
+  "lessons": [
+    {
+      "sim": 0.32,
+      "gate": "acceptance",
+      "task": "plotter_ci_traj4",
+      "fix_summary": "落笔后 XY 不动/序列卡死的修复：INTERP 本体严格对齐权威骨架（无 pos_fb 同步分支），三轴联合步进条件 NOT Busy AND Done AND 物理窗口",
+      "outcome": "resolved",
+      "kind": "flip"
+    }
+  ]
+}

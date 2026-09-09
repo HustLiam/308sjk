@@ -1,0 +1,29 @@
+{
+  "gate": "deploy",
+  "ok": false,
+  "errors": [
+    "matiec 编译失败:\nOptimizing ST program...\nGenerating C files...\n./st_files/94201.st:213: error: unknown syntax error.\n\n1 error(s) found. Bailing out!\nError generating C files\nCompilation finished with errors!"
+  ],
+  "attribution": {
+    "gate": "deploy",
+    "errors": [
+      "matiec 编译失败:\nOptimizing ST program...\nGenerating C files...\n./st_files/94201.st:213: error: unknown syntax error.\n\n1 error(s) found. Bailing out!\nError generating C files\nCompilation finished with errors!"
+    ],
+    "pitfalls": [],
+    "similar_fixes": [],
+    "repair_hints": [
+      "检查 ./st_files/94201.st 第 213 行及其上下文的 ST 语法（如缺失分号/END_IF、非法标识符、不支持的语句或指令），与 matiec 语法规范逐一比对",
+      "隔离验证：提取第 213 行附近语句到独立最小用例，用 matiec 单独编译以复现并精确定位语法问题",
+      "补充证据：提供第 213 行附近的源码片段及该文件的生成配置，以便进行更精确的归因"
+    ],
+    "llm_diagnosis": {
+      "root_cause": "证据不足：仅知 ./st_files/94201.st 第 213 行存在 matiec 无法解析的语法错误，无法进一步定位具体成因（代码问题/场景问题/环境问题均有可能）",
+      "repair_hints": [
+        "检查 ./st_files/94201.st 第 213 行及其上下文的 ST 语法（如缺失分号/END_IF、非法标识符、不支持的语句或指令），与 matiec 语法规范逐一比对",
+        "隔离验证：提取第 213 行附近语句到独立最小用例，用 matiec 单独编译以复现并精确定位语法问题",
+        "补充证据：提供第 213 行附近的源码片段及该文件的生成配置，以便进行更精确的归因"
+      ],
+      "advisory": true
+    }
+  }
+}

@@ -52,6 +52,7 @@ _LOCAL.trust_env = False
 from .attribution import AttributionEngine  # noqa: E402
 from .config import PROJECT_ROOT, RUNS_DIR, get_api_key  # noqa: E402
 from .consistency_check import consistency_check  # noqa: E402
+from .memory import normalize_errors  # noqa: E402
 from .pipeline import PLCGenerator  # noqa: E402
 from .scene_gen import SceneSpecGenerator  # noqa: E402
 from .spec_validator import validate_requirement_spec  # noqa: E402
@@ -60,19 +61,6 @@ MAX_ITERS = 6
 DEPLOY_URL = "http://127.0.0.1:8600/deploy"
 ACCEPTANCE_TIMEOUT_S = 600
 FEEDBACK_TAIL_LINES = 40   # 反馈包失败证据尾部行数上限（全量证据落 gate.json）
-
-# 失败签名归一化（零推进熔断用）：剥离采样时刻/时间戳/行号/st 文件名等
-# 易变成分——同质失败（仅数字时刻不同）折叠为同一签名。状态数值
-# （pl_step=1 → 2）是推进证据不是噪声，保留。
-_SIG_VOLATILE = [
-    (re.compile(r"t=\d+(?:\.\d+)?s"), "t=?s"),                    # [trace t=36s]/[diag t=3.5s]
-    (re.compile(r"\b\d{2}:\d{2}:\d{2}\b"), "TS"),                 # 时:分:秒
-    (re.compile(r"\b\d{4}-\d{2}-\d{2}\b"), "DATE"),               # 日期
-    (re.compile(r"(?<=\w):\d+(?::\d+)?"), ":N"),                  # 文件:行(列) 号
-    (re.compile(r"\bline\s+\d+", re.IGNORECASE), "line N"),
-    (re.compile(r"[\w./\\-]*\w+\.st\b", re.IGNORECASE), "F.st"),  # st 文件名（含临时路径）
-    (re.compile(r"iter_\d+"), "iter_N"),
-]
 
 # 闸门名 → 对话化说法（叙述器用）
 _GATE_NAMES = {"generate": "代码生成", "xml2st": "格式契约", "consistency": "三方一致性",
@@ -129,21 +117,119 @@ class Orchestrator:
     @staticmethod
     def _fail_signature(errors):
         """errors → 归一化签名（连续同质失败判定，md5 前 16 位）。"""
-        norm = "\n".join(str(e) for e in (errors or []))
-        for pat, sub in _SIG_VOLATILE:
-            norm = pat.sub(sub, norm)
         import hashlib
-        return hashlib.md5(norm.encode("utf-8", "ignore")).hexdigest()[:16]
+        return hashlib.md5(normalize_errors(errors).encode(
+            "utf-8", "ignore")).hexdigest()[:16]
+
+    @staticmethod
+    def _st_bodies(xml_text):
+        """XML 文本 → {POU 名: ST 本体文本}（diff 用；失败返回 {}）。"""
+        import tempfile
+        try:
+            with tempfile.NamedTemporaryFile("w", suffix=".xml", delete=False,
+                                             encoding="utf-8") as fh:
+                fh.write(xml_text)
+            _probs, model = xml2st.parse(fh.name)
+            import os as _os
+            _os.unlink(fh.name)
+            return {p["name"]: p.get("body", "") for p in model.get("pous", [])}
+        except Exception:
+            return {}
+
+    @classmethod
+    def _diff_skeleton(cls, old_xml, new_xml, max_lines=30):
+        """两版工程 ST 本体差异 → 骨架级行 diff（经验库借鉴用，非全文）。"""
+        import difflib
+        old, new = cls._st_bodies(old_xml or ""), cls._st_bodies(new_xml or "")
+        hunks = []
+        for pou in sorted(set(old) | set(new)):
+            a = (old.get(pou) or "").splitlines()
+            b = (new.get(pou) or "").splitlines()
+            if a == b:
+                continue
+            diff = [l for l in difflib.unified_diff(a, b, lineterm="", n=0)
+                    if l[:1] in "+-" and not l.startswith(("+++", "---"))]
+            if diff:
+                hunks.append("[%s]\n%s" % (pou, "\n".join(diff[:max_lines])))
+        return hunks[:4]
 
     def _fail(self, iter_dir, i, gate, errors, history):
         """统一闸门失败处理：归因 → 增强反馈包 → 留档。返回 feedback。"""
         errors = [str(e) for e in (errors or ["（闸门失败但未携带错误详情）"])]
         attribution = self.attribution.attribute(gate, errors)
         feedback = self._pack_feedback(errors, history, attribution)
+        lessons = self.attribution.memory.match_lessons(errors, gate=gate)
+        if lessons:
+            feedback += "\n" + self._render_lessons(lessons)
         history.append({"iter": i, "gate": gate, "errors": errors})
         self._dump_gate(iter_dir, gate, ok=False, errors=errors,
-                        attribution=attribution)
+                        attribution=attribution, lessons=lessons)
         return feedback
+
+    @staticmethod
+    def _render_lessons(lessons):
+        """经验库借鉴段（相似度分级：detail 级带变更骨架，方向级只给修法）。"""
+        lines = ["历史相似修复（经验库借鉴——骨架级参考，按当前工程实际调整，禁止整段照抄）："]
+        for ls in lessons:
+            lines.append("▸ 相似度 %.2f｜闸门 %s｜来自任务 %s（%s%s）"
+                         % (ls["sim"], ls.get("gate"), ls.get("task") or "?",
+                            "已验证通过" if ls.get("outcome") == "resolved" else "终验通过",
+                            "｜LLM 提炼" if ls.get("kind") == "distilled" else ""))
+            lines.append("  修法：%s" % ls.get("fix_summary", ""))
+            for hunk in ls.get("diff_hunks", []):
+                lines.append("  变更骨架：\n%s" % hunk)
+        lines.append("（以上为经验借鉴，不得违反 skill 硬规则——FB 骨架冻结 / 序列器模板 /"
+                     " 状态机显式初值；越界修改会被闸门拒绝。）")
+        return "\n".join(lines)
+
+    # ---------------- 自动化学习沉淀（战役结束：A 确定性翻转记录 + B LLM 提炼） ----------------
+    def _learn_from_outcome(self, spec, history, base_xml, final_xml,
+                            final_mode, ok, shape=None):
+        """final / best_effort 后的知识沉淀。
+
+        A（确定性）：成功且经 repair 修复 → 记录"失败→修复骨架"经验对
+        （history 末位失败即被修复对象，diff 取修复基底→final 产物）。
+        B（LLM）：连续 ≥2 轮同质失败族 → 归因引擎提炼泛化经验（advisory；
+        无 client 自动跳过）。失败经验也记录（outcome 标注未收敛，不参与检索）。
+        """
+        mem = self.attribution.memory
+        task = spec.get("task_id")
+        fails = [h for h in history if not h.get("ok")]
+        if ok and fails and final_mode == "repair" and base_xml:
+            last = fails[-1]
+            hunks = self._diff_skeleton(base_xml, final_xml)
+            mem.record_lesson(
+                last["gate"], last["errors"],
+                "上轮失败经定向修复后全过（变更骨架见 diff_hunks）",
+                diff_hunks=hunks, outcome="resolved", task=task, shape=shape)
+        elif fails:
+            mem.record_lesson(
+                fails[-1]["gate"], fails[-1]["errors"],
+                "此役未收敛（教训：见诊断）", outcome="abandoned", task=task,
+                shape=shape)
+        # B：同质失败族（连续 ≥2 轮同签名）→ LLM 蒸馏泛化经验
+        family = []
+        for h in fails:
+            if family and self._fail_signature(family[-1]["errors"]) == \
+                    self._fail_signature(h["errors"]) and family[-1]["gate"] == h["gate"]:
+                family.append(h)
+                continue
+            if len(family) >= 2:
+                self._distill_family(mem, task, family, ok, shape)
+            family = [h]
+        if len(family) >= 2:
+            self._distill_family(mem, task, family, ok, shape)
+
+    def _distill_family(self, mem, task, family, ok, shape=None):
+        rep = family[0]
+        resolution = ("该失败族最终被修复（本役 %s）" % ("通过验收" if ok else "未收敛"))
+        distilled = self.attribution.distill_lesson(
+            rep["gate"], rep["errors"], resolution=resolution)
+        if distilled:
+            mem.record_lesson(
+                rep["gate"], rep["errors"], distilled["fix"],
+                diagnosis=distilled["diagnosis"], task=task, shape=shape,
+                kind="distilled", outcome="resolved" if ok else "abandoned")
 
     # ---------------- 闸门 ----------------
     def deploy_gate(self, xml_path):
@@ -488,6 +574,7 @@ class Orchestrator:
             iter_dir = run_dir / ("iter_%03d" % i)
             iter_dir.mkdir(exist_ok=True)
             notify("iter_start", {"iter": i})
+            entry_base = repair_base   # 进循环时的修复基底（= 上轮产物，学习 diff 用）
 
             # ---- 生成策略：LLM 可用且有修复基础（上轮过静态闸门、后续闸门失败）
             #    → 定向修复（最小修改，三次实证远稳于从头重生成）；否则全新生成。
@@ -496,6 +583,19 @@ class Orchestrator:
                             and getattr(generator, "client", None) is not None
                             and repair_fails < 3)
             traj_kw = {"trajectory": trajectory} if trajectory is not None else {}
+            # 经验预注入（自动化学习）：首轮 fresh 生成前，把同形状任务的
+            # 历史 resolved 教训注入 system prompt——借鉴前置到生成时，
+            # 直指首轮质量（数据实证：10 役 9 役首轮烧在 generate/deploy）
+            if i == 1 and trajectory is not None:
+                hints = self.attribution.memory.recent_lessons(
+                    shape=trajectory.get("shape"))
+                if hints:
+                    traj_kw["experience_hint"] = "\n".join(
+                        "·（%s%s）%s%s" % (
+                            h.get("task") or "历史任务",
+                            "｜诊断：" + h["diagnosis"] if h.get("diagnosis") else "",
+                            h.get("fix_summary", ""),
+                            "") for h in hints)
             if would_repair and not force_fresh:
                 gen = generator.repair(repair_base, spec, feedback, **traj_kw)
                 mode = "repair"
@@ -606,6 +706,8 @@ class Orchestrator:
 
             self._dump_gate(iter_dir, "all", ok=True, gates=gates)
             history.append({"iter": i, "gate": "all", "ok": True})
+            self._learn_from_outcome(spec, history, entry_base, xml_text, mode, ok=True,
+                                      shape=(trajectory or {}).get("shape"))
             self._consolidate(generator, spec, gates, history)
             self._finalize(run_dir, iter_dir, i, history)
             notify("final", {"iter": i, "run_dir": str(run_dir)})
@@ -620,6 +722,8 @@ class Orchestrator:
                 best.get("gate"), best.get("errors", []),
                 "迭代上限未收敛（人工介入点 2），best=%s" % best.get("gate"), "abandoned")
         self._write_summary(run_dir, history, best)
+        self._learn_from_outcome(spec, history, None, None, "fresh", ok=False,
+                                  shape=(trajectory or {}).get("shape"))
         notify("best_effort", {"run_dir": str(run_dir)})
         return {"status": "best_effort", "iter": (best or {}).get("iter"), "run_dir": run_dir}
 
@@ -648,7 +752,8 @@ class Orchestrator:
         return "\n".join(lines)
 
     @staticmethod
-    def _dump_gate(iter_dir, gate, ok, errors=None, gates=None, attribution=None):
+    def _dump_gate(iter_dir, gate, ok, errors=None, gates=None, attribution=None,
+                   lessons=None):
         payload = {"gate": gate, "ok": ok}
         if errors:
             payload["errors"] = errors
@@ -656,6 +761,8 @@ class Orchestrator:
             payload["gates"] = gates
         if attribution:
             payload["attribution"] = attribution
+        if lessons:
+            payload["lessons"] = lessons       # 经验库借鉴留档（自动化学习可观测性）
         (iter_dir / "gate.json").write_text(
             json.dumps(payload, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
 
@@ -843,11 +950,12 @@ def main():
         if not api_key:
             print("未配置 API Key（ZHIPUAI_API_KEY）且未指定 --seed；退出。")
             return 2
-        # 轨迹参数化路线：LLM 按权威步表现场生成，不注入策展场景卡
-        # （圆/方同构卡=把答案放进 few-shot，违背泛化口径）
+        # 轨迹参数化路线：LLM 按权威步表现场生成，**不注入任何模式卡**
+        # （自动化学习口径：只靠 skill 契约+硬规则+经验库相似度借鉴，
+        # 卡注入=把答案放进 few-shot，无法度量真实学习能力）
         generator = PLCGenerator(client=BigModelClient(api_key), model=MODEL,
-                                 generic_patterns_only=(args.no_curated_patterns
-                                                        or trajectory is not None),
+                                 no_cards=(args.no_curated_patterns
+                                           or trajectory is not None),
                                  address_table=address_table)
 
     scenario = args.scenario

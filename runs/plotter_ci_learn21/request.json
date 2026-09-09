@@ -1,0 +1,397 @@
+{
+  "schema_version": "1.0.0-draft.3",
+  "task_id": "plotter_ci_learn21",
+  "task_goal": "三轴绘图机绘制整圆：圆心 (50,50)、半径 25。工艺序列：抬笔（z=10）状态下 X/Y 定位到圆周起点 (50,25) → 落笔（z=0）→ 笔保持落下状态沿 24 段等分折线依次插补整圆并回到起点闭合 → 抬笔（z=10）→ X/Y 回圆心 (50,50)。外部接口角色：操作面板/主站写 run、cmd_draw、quickstop 等指令与 x_sp/y_sp/z_sp 设定值；PLC 输出 x_v/y_v/z_v 速度指令由仿真侧电机执行并经 x_fb/y_fb/z_fb 回读。安全策略：落笔（pen_down=1）期间仅允许沿圆轨迹的联动进给，禁止手动定位/手动点动；急停受控减速并中止绘图，plot_done 熄灭。",
+  "io_list": [
+    {
+      "name": "run",
+      "dir": "input",
+      "type": "BOOL",
+      "range": null,
+      "device": "驱动使能主令开关（安全回路就绪后允许三轴驱动器上电；断开=受控断电）"
+    },
+    {
+      "name": "cmd_home",
+      "dir": "input",
+      "type": "BOOL",
+      "range": null,
+      "device": "回参考点按钮（Z 参考点=抬笔安全位）"
+    },
+    {
+      "name": "cmd_go",
+      "dir": "input",
+      "type": "BOOL",
+      "range": null,
+      "device": "手动定位启动按钮（目标位置由 NC 设定值通道给出；落笔状态下 X/Y 请求被安全互锁拒绝）"
+    },
+    {
+      "name": "jog_fwd",
+      "dir": "input",
+      "type": "BOOL",
+      "range": null,
+      "device": "X 轴手动进给正向按钮（电平有效，仅抬笔状态允许）"
+    },
+    {
+      "name": "jog_rev",
+      "dir": "input",
+      "type": "BOOL",
+      "range": null,
+      "device": "X 轴手动进给反向按钮（电平有效，仅抬笔状态允许）"
+    },
+    {
+      "name": "quickstop",
+      "dir": "input",
+      "type": "BOOL",
+      "range": null,
+      "device": "急停（安全继电器触点，电平有效；受控减速并中止绘图）"
+    },
+    {
+      "name": "cmd_reset",
+      "dir": "input",
+      "type": "BOOL",
+      "range": null,
+      "device": "故障复位按钮"
+    },
+    {
+      "name": "cmd_draw",
+      "dir": "input",
+      "type": "BOOL",
+      "range": null,
+      "device": "绘图启动按钮（整圆绘制序列：抬笔定位 (50,25) → 落笔 24 段折线整圆闭合 → 抬笔回圆心 (50,50)）"
+    },
+    {
+      "name": "all_oe",
+      "dir": "output",
+      "type": "BOOL",
+      "range": null,
+      "device": "就绪指示灯（三轴驱动器全部使能）"
+    },
+    {
+      "name": "move_done",
+      "dir": "output",
+      "type": "BOOL",
+      "range": null,
+      "device": "定位完成指示灯（手动定位完成汇总；绘图序列期间熄灭）"
+    },
+    {
+      "name": "any_moving",
+      "dir": "output",
+      "type": "BOOL",
+      "range": null,
+      "device": "运动中指示灯（任一轴速度指令非零）"
+    },
+    {
+      "name": "fault_any",
+      "dir": "output",
+      "type": "BOOL",
+      "range": null,
+      "device": "故障指示灯（任一驱动器故障位）"
+    },
+    {
+      "name": "pen_down",
+      "dir": "output",
+      "type": "BOOL",
+      "range": null,
+      "device": "笔触纸指示灯（Z 行程下限区，含入场容差）"
+    },
+    {
+      "name": "plot_done",
+      "dir": "output",
+      "type": "BOOL",
+      "range": null,
+      "device": "绘图完成指示灯（抬笔回圆心后点亮；急停/故障中止时熄灭）"
+    },
+    {
+      "name": "x_fb",
+      "dir": "input",
+      "type": "INT",
+      "range": [
+        0,
+        100
+      ],
+      "device": "X 轴位置反馈（编码器当量）",
+      "unit": "%"
+    },
+    {
+      "name": "y_fb",
+      "dir": "input",
+      "type": "INT",
+      "range": [
+        0,
+        100
+      ],
+      "device": "Y 轴位置反馈（编码器当量）",
+      "unit": "%"
+    },
+    {
+      "name": "z_fb",
+      "dir": "input",
+      "type": "INT",
+      "range": [
+        0,
+        10
+      ],
+      "device": "Z 轴笔位反馈（0=笔尖触纸，10=抬笔）",
+      "unit": "mm"
+    },
+    {
+      "name": "x_sp",
+      "dir": "input",
+      "type": "INT",
+      "range": [
+        0,
+        100
+      ],
+      "device": "X 轴定位设定值（NC 写入，先于定位启动建立）",
+      "unit": "%"
+    },
+    {
+      "name": "y_sp",
+      "dir": "input",
+      "type": "INT",
+      "range": [
+        0,
+        100
+      ],
+      "device": "Y 轴定位设定值（NC 写入）",
+      "unit": "%"
+    },
+    {
+      "name": "z_sp",
+      "dir": "input",
+      "type": "INT",
+      "range": [
+        0,
+        10
+      ],
+      "device": "Z 轴笔位设定值（手动抬/落笔；不受笔互锁限制）",
+      "unit": "mm"
+    },
+    {
+      "name": "x_sw",
+      "dir": "output",
+      "type": "INT",
+      "range": [
+        0,
+        65535
+      ],
+      "device": "X 驱动器状态字（诊断通道；bit3=故障，bit10=到位）"
+    },
+    {
+      "name": "y_sw",
+      "dir": "output",
+      "type": "INT",
+      "range": [
+        0,
+        65535
+      ],
+      "device": "Y 驱动器状态字（诊断通道）"
+    },
+    {
+      "name": "z_sw",
+      "dir": "output",
+      "type": "INT",
+      "range": [
+        0,
+        65535
+      ],
+      "device": "Z 驱动器状态字（诊断通道）"
+    },
+    {
+      "name": "x_v",
+      "dir": "output",
+      "type": "INT",
+      "range": [
+        -120,
+        120
+      ],
+      "device": "X 轴速度指令（伺服驱动器给定，带符号）",
+      "unit": "%/s"
+    },
+    {
+      "name": "y_v",
+      "dir": "output",
+      "type": "INT",
+      "range": [
+        -120,
+        120
+      ],
+      "device": "Y 轴速度指令（伺服驱动器给定，带符号）",
+      "unit": "%/s"
+    },
+    {
+      "name": "z_v",
+      "dir": "output",
+      "type": "INT",
+      "range": [
+        -120,
+        120
+      ],
+      "device": "Z 轴速度指令（伺服驱动器给定，带符号；轴组态限速 20）",
+      "unit": "mm/s"
+    }
+  ],
+  "constraints": [
+    {
+      "id": "C1",
+      "kind": "interlock",
+      "desc": "笔互锁：pen_down=1（落笔，z_fb≈0）期间，手动定位 cmd_go 与 X/Y 手动点动 jog_fwd/jog_rev 的运动请求必须被拒绝，仅允许沿圆轨迹的联动插补进给"
+    },
+    {
+      "id": "C2",
+      "kind": "interlock",
+      "desc": "抬笔定位时序：cmd_draw 置位后必须先确认抬笔（z_fb≈10、pen_down=0）到位，才允许 X/Y 轴向圆周起点 (50,25) 运动；Z 轴运动期间 X/Y 速度指令必须为 0"
+    },
+    {
+      "id": "C3",
+      "kind": "interlock",
+      "desc": "落笔绘制时序：到达圆周起点 (50,25) 且 X/Y 到位（驱动器状态字 bit10=1）后，方可落笔（z 目标 0）；落笔完成前禁止 X/Y 启动折线插补"
+    },
+    {
+      "id": "C4",
+      "kind": "interlock",
+      "desc": "绘制期间 Z 轴必须保持落笔位置（z_fb≈0），Z 速度指令 z_v 保持为 0；24 段折线依次插补，每段到达容差（POSWIN 量级）内才进入下一段，最后一段返回起点 (50,25) 实现闭合"
+    },
+    {
+      "id": "C5",
+      "kind": "interlock",
+      "desc": "闭合后抬笔（z 目标 10）并确认 pen_down=0，才允许 X/Y 回圆心 (50,50)；plot_done 仅在回圆心定位完成后置位"
+    },
+    {
+      "id": "C6",
+      "kind": "exception",
+      "desc": "急停处理：quickstop=1 期间三轴速度指令必须立即归零（受控减速），绘图序列中止，plot_done 保持/恢复为 0"
+    },
+    {
+      "id": "C7",
+      "kind": "exception",
+      "desc": "驱动器故障（任一状态字 bit3=1）时中止绘图并置 fault_any=1；需 cmd_reset 且故障消除后方可重新启动绘图"
+    },
+    {
+      "id": "C8",
+      "kind": "timing",
+      "desc": "使能握手时序：run 置位后三轴依次使能，全部使能完成（all_oe=1）后才允许接受 cmd_draw 启动绘图序列"
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "AC1",
+      "desc": "run 上升沿后三轴驱动器全部使能并点亮就绪灯",
+      "type": "event_delay",
+      "from": {
+        "signal": "run",
+        "edge": "rising"
+      },
+      "to": {
+        "signal": "all_oe",
+        "edge": "rising"
+      },
+      "op": "<=",
+      "value": 2.0,
+      "unit": "s"
+    },
+    {
+      "id": "AC2",
+      "desc": "使能就绪且抬笔状态下按下 cmd_draw，抬笔定位起点 (50,25) 并落笔开始绘制",
+      "type": "event_delay",
+      "from": {
+        "signal": "cmd_draw",
+        "edge": "rising"
+      },
+      "to": {
+        "signal": "pen_down",
+        "edge": "rising"
+      },
+      "op": "<=",
+      "value": 8.0,
+      "unit": "s"
+    },
+    {
+      "id": "AC3",
+      "desc": "安全联锁：落笔（笔触纸）期间手动定位命令不得引起运动（手动运动被拒绝）",
+      "type": "forbidden_state",
+      "when": {
+        "signal": "pen_down",
+        "equals": 1
+      },
+      "forbid": {
+        "signal": "move_done",
+        "equals": 1
+      }
+    },
+    {
+      "id": "AC4",
+      "desc": "安全联锁：落笔期间手动点动正向被拒绝，X 轴不得产生正向运动指令",
+      "type": "forbidden_state",
+      "when": {
+        "signal": "pen_down",
+        "equals": 1
+      },
+      "forbid": {
+        "signal": "x_v",
+        "equals": 40
+      }
+    },
+    {
+      "id": "AC5",
+      "desc": "安全联锁：落笔期间 Z 轴不得离开笔触纸位置（绘制中抬笔即断线）",
+      "type": "forbidden_state",
+      "when": {
+        "signal": "pen_down",
+        "equals": 1
+      },
+      "forbid": {
+        "signal": "z_fb",
+        "equals": 10
+      }
+    },
+    {
+      "id": "AC6",
+      "desc": "急停期间任何轴不得有速度指令输出",
+      "type": "forbidden_state",
+      "when": {
+        "signal": "quickstop",
+        "equals": 1
+      },
+      "forbid": {
+        "signal": "any_moving",
+        "equals": 1
+      }
+    },
+    {
+      "id": "AC7",
+      "desc": "绘图全序列（定位起点→24 段折线整圆闭合→抬笔回圆心）完成并点亮绘图完成灯；周长约 157%，折线速度取限速约 40%/s 并加加减速裕量与通信延迟",
+      "type": "event_delay",
+      "from": {
+        "signal": "pen_down",
+        "edge": "rising"
+      },
+      "to": {
+        "signal": "plot_done",
+        "edge": "rising"
+      },
+      "op": "<=",
+      "value": 15.0,
+      "unit": "s"
+    },
+    {
+      "id": "AC8",
+      "desc": "绘图序列结束后笔架终态位于圆心 (50,50) 且抬笔至 10mm（容差 ≥ 轴 POSWIN 及量化粒度）",
+      "type": "region_containment",
+      "asset": "Plotter3Axis/pen",
+      "region_center": [
+        50,
+        50,
+        10
+      ],
+      "tolerance": 2.5,
+      "check_at": "end"
+    },
+    {
+      "id": "AC9",
+      "desc": "仿真健康：整圆绘制过程中各轴位置反馈不发散、始终位于行程范围内（x_fb/y_fb∈[0,100]、z_fb∈[0,10]），无轨迹越界",
+      "type": "sim_health"
+    }
+  ],
+  "prog_id": 3
+}

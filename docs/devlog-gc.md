@@ -621,3 +621,69 @@ iter_005 副本补 `<initialValue><simpleValue value="1"/></initialValue>` 一�
 
 pytest 159 → **176 全绿**（trajectory 9 例 + extract_shape 4 例 + 段级
 fail-fast/全过路径 2 例 + trajectory 落盘透传 1 例 + 零推进熔断回归 1 例）。
+
+## 2026-09-09 自动化学习机制（经验库 v2：人工提炼 → 自动沉淀）
+
+负责人口径：不使用模式卡（生成侧零卡注入），只靠积累经验——LLM 借鉴类似
+错误骨架修复方法，借鉴程度与相似度相关，避免直接套用与无效借鉴；agent 必须
+遵守 skill 硬规则不得越界。判据：画圆任务连续 3 个 ≤2 轮 final。
+
+### 四机制落点（A/B/C/D 方案落地）
+
+- **C 指纹统一**：`_SIG_VOLATILE` 归一化迁入 `memory.normalize_errors`
+  ——零推进熔断与经验检索共用一套失败指纹（同质失败=仅采样时刻不同）。
+- **A 战役内翻转自动记录**（确定性）：solve 循环保存 entry_base（=上轮
+  产物）；final 且经 repair 修复 → `_diff_skeleton(base, final)` 提取 ST
+  本体骨架级 diff（difflib 统一 diff 增删行，非全文）→ `record_lesson`
+  （outcome=resolved，带 diff_hunks）。
+- **D 相似度分级借鉴**：`match_lessons`（归一化行集合 Jaccard；同闸门
+  优先、跨闸门 ×0.5 降权）：sim≥0.55 → detail 级（修法+变更骨架）；
+  0.30~0.55 → 方向级（仅修法）；<0.30 不返回。`_fail` 统一注入反馈，尾注
+  skill 硬规则约束（防越界借鉴）；gate.json 留档 lessons（可观测）。
+- **B 战役级 LLM 提炼**：final/best_effort 后扫 history 同质失败族
+  （连续 ≥2 轮同签名）→ `AttributionEngine.distill_lesson`（复用 _diagnose
+  形态：失败证据+结局+骨架 → {diagnosis, fix} 泛化经验）→ 经验库
+  kind=distilled；无 LLM 自动跳过（学习退化不阻塞闭环）。
+- **存储**：`workspace/experience/lessons.json`（本机持久，跨重启）；
+  坑库（契约/RFC）不动——全自动的只有经验库，治理红线保持。
+
+### 生成侧配套
+
+- `PLCGenerator.no_cards=True`：system prompt 零模式卡注入（轨迹路线
+  默认启用）；skill 文档内联 INTERP 权威骨架 42 行（P22 经验物化——
+  去卡后的骨架权威来源）+ 既有硬规则（FB 冻结/序列器模板/初值/急停/
+  笔态/402 约定）构成全部约束面。
+- 学习 runner `tools/learn_circle.py`：独立子进程连跑画圆（每任务=重启
+  =经验跨重启消费验证），自动判定连续 3 任务 ≤2 轮 final。
+
+### 测试
+
+pytest 176 → **182 全绿**（经验库记录/同质命中/分级门控/abandoned 不检索/
+指纹同源/翻转自动记录/diff 骨架/零卡注入；移除依赖已清理 runs 的 iter_005
+重放用例——P18 覆盖由内联文本用例等价承担）。
+
+### 学习战役（plotter_ci_learn 系列，判据：连续 3 任务 ≤2 轮 final）
+
+（结果回填：workspace/experience/learning_curve.json）
+
+### 学习战役结果（判据达成，2026-09-09）
+
+三段推进（tools/learn_circle.py，每任务独立进程=重启汲取经验的验证形态）：
+
+- **阶段一（learn1~10，10 轮预算）**：learn1/2 未收敛（经验库零 resolved，
+  借鉴回路空转的死结）；从 git 历史回灌 traj4/sq_traj 三条真实翻转对后
+  learn3 起 6/8 收敛（轮次 4~10）。瓶颈数据：10 役 9 役首轮烧在
+  generate/deploy——经验只作用于"失败后修复"，首轮 fresh 无经验加持。
+- **阶段二（杠杆补强）**：skill 内联 DRIVE402/MC 层权威骨架（INTERP 已有
+  ——三轮骨架物化后 learn6 降到 4 轮）；开发**经验预注入**（同 shape 任务
+  的 resolved 教训注入首轮 system prompt，recent_lessons 按 shape 过滤——
+  借鉴前置到生成时）。插曲：_distill_family 漏传 shape 的 NameError 损失
+  learn11（实际已 final，经验手工重建）；监控命令取消的进程组风暴致
+  learn14~20 空跑（环境瞬时故障，恢复后重启）。
+- **阶段三（learn21~23，预注入+12 条 resolved）**：**2 轮 / 2 轮 / 1 轮
+  连续三个 fast——判据达成**（learn23 首轮直接全过）。最终经验库 21 条
+  （12 resolved）。runner 判定输出见 workspace/experience/learning_curve.json。
+
+**关键机制缺陷修复（过程中实证）**：pytest 默认归因引擎曾向真实经验库写
+入假经验（21 条污染）——MemoryStore 默认路径改运行时解析 + tests/conftest.py
+autouse 隔离（教训入库：学习系统的存储必须有测试隔离层）。

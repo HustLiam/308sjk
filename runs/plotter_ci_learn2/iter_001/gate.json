@@ -1,0 +1,32 @@
+{
+  "gate": "deploy",
+  "ok": false,
+  "errors": [
+    "matiec 编译失败:\nOptimizing ST program...\nGenerating C files...\n./st_files/244508.st:26-9..26-27: error: Data type mismatch for '>' expression.\n1 error(s) found. Bailing out!\nError generating C files\nCompilation finished with errors!"
+  ],
+  "attribution": {
+    "gate": "deploy",
+    "errors": [
+      "matiec 编译失败:\nOptimizing ST program...\nGenerating C files...\n./st_files/244508.st:26-9..26-27: error: Data type mismatch for '>' expression.\n1 error(s) found. Bailing out!\nError generating C files\nCompilation finished with errors!"
+    ],
+    "pitfalls": [
+      {
+        "id": "P05",
+        "title": "BOOL→INT 需显式转换",
+        "diagnosis": "BOOL 与 INT 混算（如把布尔累加进 INT 计数）",
+        "fix": "一律 BOOL_TO_INT()/INT_TO_BOOL() 显式转换"
+      },
+      {
+        "id": "P03",
+        "title": "INT 不能位运算",
+        "diagnosis": "对 INT 做 AND/OR 位运算（cw/sw 控制字状态字场景高发：声明成 INT 而非 WORD）",
+        "fix": "cw/sw 一律声明 WORD 再做位运算；比较用 (sw AND 16#0008) <> 0"
+      }
+    ],
+    "similar_fixes": [],
+    "repair_hints": [
+      "一律 BOOL_TO_INT()/INT_TO_BOOL() 显式转换",
+      "cw/sw 一律声明 WORD 再做位运算；比较用 (sw AND 16#0008) <> 0"
+    ]
+  }
+}

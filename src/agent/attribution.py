@@ -68,6 +68,56 @@ class AttributionEngine:
         return result
 
     # ---------------- LLM 兜底 ----------------
+    def distill_lesson(self, gate, errors, resolution=None, diff_hunks=None):
+        """战役级经验提炼（自动化学习 B 机制）：失败证据 → 泛化经验。
+
+        输入：同质失败族的代表证据 +（可选）结局说明与修复骨架；
+        输出 {"diagnosis", "fix"}（advisory，进经验库供相似度检索）。
+        无 client / 解析失败返回 None（学习退化不阻塞主流程）。
+        """
+        if not (self.enabled and self.client and errors):
+            return None
+        evidence = "\n".join("- %s" % str(e)[:300] for e in errors[:10])
+        context = ""
+        if resolution:
+            context += "\n结局：%s" % str(resolution)[:300]
+        if diff_hunks:
+            context += "\n修复变更骨架：\n%s" % "\n".join(str(h)[:400] for h in diff_hunks[:4])
+        prompt = (
+            "你是 PLC 生成闭环的知识蒸馏工程师。闸门「%s」出现连续同质失败：\n\n%s%s\n\n"
+            "请把它提炼为一条**可复用的泛化经验**（不是针对本工程的补丁），输出 JSON"
+            "（单个 ```json 代码块）：\n"
+            '{"diagnosis": "这类失败的症状与根因（一句话，面向未来同类任务）",\n'
+            ' "fix": "修法（面向生成器的可执行指令，1~3 条）"}\n'
+            "只依据证据，不臆测；证据不足就写证据不足。" % (gate, evidence, context))
+        payload = {"model": self.model,
+                   "messages": [{"role": "user", "content": prompt}],
+                   "max_tokens": 1024, "temperature": 0.2,
+                   "thinking": {"type": "disabled"}}
+        try:
+            data = self.client.chat_completions(payload)
+        except RuntimeError as exc:
+            if "thinking" in str(exc) or "400" in str(exc):
+                payload.pop("thinking")
+                try:
+                    data = self.client.chat_completions(payload)
+                except RuntimeError:
+                    return None
+            else:
+                return None
+        text = (data["choices"][0]["message"].get("content") or "")
+        m = _FENCE_RE.search(text)
+        candidate = m.group(1) if m else text
+        start = candidate.find("{")
+        if start < 0:
+            return None
+        try:
+            out = json.loads(candidate[start:candidate.rfind("}") + 1])
+        except ValueError:
+            return None
+        if out.get("diagnosis") and out.get("fix"):
+            return {"diagnosis": str(out["diagnosis"]), "fix": str(out["fix"])}
+        return None
     def _diagnose(self, gate, errors, context=None):
         evidence = "\n".join("- %s" % e[:300] for e in errors[:10])
         if context:

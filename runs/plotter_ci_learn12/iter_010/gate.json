@@ -1,0 +1,29 @@
+{
+  "gate": "generate",
+  "ok": false,
+  "errors": [
+    "[xml2st] XML 无法解析: mismatched tag: line 25, column 114"
+  ],
+  "attribution": {
+    "gate": "generate",
+    "errors": [
+      "[xml2st] XML 无法解析: mismatched tag: line 25, column 114"
+    ],
+    "pitfalls": [],
+    "similar_fixes": [],
+    "repair_hints": [
+      "重新生成 PLCML 时，输出前对 XML 做良构性自检（如 xmllint --noout），确保所有元素正确开闭",
+      "重点检查第 25 行附近的标签：确认开标签与闭标签名称完全一致，自闭合标签使用 <tag/> 形式，不得混用",
+      "若行内嵌入了 ST 表达式或长属性值，确保其中不含未转义的尖括号（<、> 需转义为 &lt;、&gt;）"
+    ],
+    "llm_diagnosis": {
+      "root_cause": "代码问题：生成的 PLCML/XML 源文件在第 25 行第 114 列存在标签不匹配（某元素开标签与闭标签名称不一致或缺失闭合），导致 xml2st 解析失败",
+      "repair_hints": [
+        "重新生成 PLCML 时，输出前对 XML 做良构性自检（如 xmllint --noout），确保所有元素正确开闭",
+        "重点检查第 25 行附近的标签：确认开标签与闭标签名称完全一致，自闭合标签使用 <tag/> 形式，不得混用",
+        "若行内嵌入了 ST 表达式或长属性值，确保其中不含未转义的尖括号（<、> 需转义为 &lt;、&gt;）"
+      ],
+      "advisory": true
+    }
+  }
+}

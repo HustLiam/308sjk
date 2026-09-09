@@ -1,0 +1,31 @@
+{
+  "gate": "consistency",
+  "ok": false,
+  "errors": [
+    "R4: 定位变量 'quickstop' 在 XML 中重复声明",
+    "R4: 地址 %QX0.5 被 'quickstop' 与 'quickstop' 重复占用"
+  ],
+  "attribution": {
+    "gate": "consistency",
+    "errors": [
+      "R4: 定位变量 'quickstop' 在 XML 中重复声明",
+      "R4: 地址 %QX0.5 被 'quickstop' 与 'quickstop' 重复占用"
+    ],
+    "pitfalls": [],
+    "similar_fixes": [],
+    "repair_hints": [
+      "在生成变量声明前按变量名去重（如建立已声明变量名集合），确保每个定位变量仅声明一次",
+      "在分配 %QX 地址前检查地址占用表，已被占用的地址不得再次分配给任何变量",
+      "修复后重新运行 consistency 闸门，验证 XML 中 'quickstop' 仅存在一条声明且 %QX0.5 无重复占用"
+    ],
+    "llm_diagnosis": {
+      "root_cause": "代码问题：生成器对定位变量 'quickstop' 重复输出了声明（同变量、同地址 %QX0.5 出现两次），导致 XML 重复声明与地址冲突",
+      "repair_hints": [
+        "在生成变量声明前按变量名去重（如建立已声明变量名集合），确保每个定位变量仅声明一次",
+        "在分配 %QX 地址前检查地址占用表，已被占用的地址不得再次分配给任何变量",
+        "修复后重新运行 consistency 闸门，验证 XML 中 'quickstop' 仅存在一条声明且 %QX0.5 无重复占用"
+      ],
+      "advisory": true
+    }
+  }
+}

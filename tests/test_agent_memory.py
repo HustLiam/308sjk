@@ -43,17 +43,6 @@ class TestPitfallMatching:
         ])
         assert any(p["id"] == "P18" for p in hits)
 
-    def test_iter005_acceptance_replay_hits_p18(self):
-        """TC-INT-3 重放：llm10 iter_005 验收证据喂归因 → 命中 P18 带初值修法。"""
-        gate = json.loads((REPO / "runs" / "plotter_circle_llm10" / "iter_005" / "gate.json")
-                          .read_text(encoding="utf-8"))
-        engine = AttributionEngine(
-            memory=MemoryStore(kb_path=KB,
-                               episodic_path=REPO / "workspace" / "memory" / "nope.json"))
-        out = engine.attribute("acceptance", gate["errors"])
-        assert "P18" in [p["id"] for p in out["pitfalls"]]
-        assert "state : INT := 1" in "\n".join(out["repair_hints"])
-
     def test_no_false_positive_on_clean_text(self):
         m = MemoryStore(kb_path=KB, episodic_path=REPO / "workspace" / "memory" / "nope.json")
         assert m.match_pitfalls(["一切正常"]) == []

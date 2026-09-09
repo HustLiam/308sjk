@@ -53,7 +53,8 @@ class PLCGenerator:
     """
 
     def __init__(self, client, model="glm-5.3", max_rounds=3, seed_xml=None,
-                 generic_patterns_only=False, address_table=None, report=None):
+                 generic_patterns_only=False, address_table=None, report=None,
+                 no_cards=False):
         self.client = client
         self.model = model
         self.max_rounds = max_rounds
@@ -62,6 +63,9 @@ class PLCGenerator:
         self.skill_prompt = SKILL_PATH.read_text(encoding="utf-8")
         # True=仅静态 CATALOG 通用原语（泛化验证：不借助自动策展的同构场景卡）
         self.generic_patterns_only = generic_patterns_only
+        # True=完全不注入模式卡（自动化学习路线：LLM 只靠 skill 契约+硬规则+
+        # 经验库相似度借鉴，杜绝 few-shot 直接套用）
+        self.no_cards = no_cards
         # ⓪ 侧地址分配表（AML 通道 → %Q 地址）：设备契约，前置注入 prompt，
         # 让首次生成即按站约定表分配（R6 仍是闸门兜底）
         self.address_table = address_table or {}
@@ -108,8 +112,11 @@ class PLCGenerator:
     # ---------------- prompt 拼装 ----------------
     def build_messages(self, spec, feedback=None, trajectory=None):
         io_list = spec.get("io_list", [])
-        cards = render_cards(pattern_cards(spec.get("task_goal", ""), io_list,
-                                           include_curated=not self.generic_patterns_only))
+        if self.no_cards:
+            cards = ""      # 自动化学习路线：不注入任何模式卡（经验库借鉴替代）
+        else:
+            cards = render_cards(pattern_cards(spec.get("task_goal", ""), io_list,
+                                               include_curated=not self.generic_patterns_only))
         io_rendered = json.dumps(io_list, ensure_ascii=False, indent=2)
         constraints = spec.get("constraints", [])
         user = (
@@ -129,14 +136,17 @@ class PLCGenerator:
             user += "约束清单：%s\n" % json.dumps(constraints, ensure_ascii=False)
         if feedback:
             user += ("\n--- 上一轮反馈（必须全部修复）---\n%s\n" % feedback)
+        system = self.skill_prompt
+        if not self.no_cards:
+            system += "\n\n## 参考模式（已验收场景，勿照抄变量名）\n" + cards
         messages = [
-            {"role": "system", "content": self.skill_prompt + "\n\n## 参考模式（已验收场景，勿照抄变量名）\n" + cards},
+            {"role": "system", "content": system},
             {"role": "user", "content": user},
         ]
         return messages
 
     # ---------------- 主入口 ----------------
-    def generate(self, spec, feedback=None, trajectory=None):
+    def generate(self, spec, feedback=None, trajectory=None, experience_hint=None):
         """生成并过闸。返回 {ok, xml, rounds, history, errors}。"""
         io_list = spec.get("io_list", [])
 
@@ -147,6 +157,10 @@ class PLCGenerator:
                     "history": [{"round": 0, "ok": ok, "errors": errors}], "errors": errors}
 
         messages = self.build_messages(spec, feedback, trajectory)
+        if experience_hint:
+            messages[0]["content"] += (
+                "\n\n## 历史经验要点（本站同类任务自动化学到的教训——生成时就遵守，"
+                "不要等问题出现再修）\n%s" % experience_hint)
         history, errors = [], []
         for rnd in range(1, self.max_rounds + 1):
             self.report("正在联系模型%s生成完整 PLCopen 工程…"
@@ -176,12 +190,14 @@ class PLCGenerator:
                 "history": history, "errors": errors}
 
     # ---------------- 定向修复（LLM 迭代默认策略） ----------------
-    def repair(self, previous_xml, spec, feedback, attempts=None, trajectory=None):
+    def repair(self, previous_xml, spec, feedback, attempts=None, trajectory=None,
+               experience_hint=None):
         """定向修复：上一轮产物作 assistant 上下文 + 失败证据/归因的最小修改。
 
         三次实证（prog_id 补丁/画圆地址修复/spec refine）：远稳于从头重生成——
         重生成会随机丢失已修复项（温度采样），最小修改保真未提及内容。
         返回结构同 generate；静态双闸门照常把关，失败自动回灌（≤attempts 轮）。
+        （experience_hint 仅首轮 fresh 使用，repair 走 match_lessons 失败匹配借鉴。）
         """
         attempts = attempts or max(2, self.max_rounds - 1)
         io_list = spec.get("io_list", [])

@@ -1,0 +1,29 @@
+{
+  "gate": "generate",
+  "ok": false,
+  "errors": [
+    "[xml2st] XML 无法解析: mismatched tag: line 88, column 95"
+  ],
+  "attribution": {
+    "gate": "generate",
+    "errors": [
+      "[xml2st] XML 无法解析: mismatched tag: line 88, column 95"
+    ],
+    "pitfalls": [],
+    "similar_fixes": [],
+    "repair_hints": [
+      "重新生成 XML 时严格遵守良构性：每个开标签必须有对应闭标签，或使用自闭合形式，注意大小写一致",
+      "生成后先执行 XML 良构性校验（如 xmllint）再送入 xml2st 闸门，重点检查第 88 行附近的嵌套块（如 body/pou/block 等容器元素）是否提前闭合或漏闭合",
+      "若 XML 由模板拼接生成，检查条件分支或循环拼接处是否可能产生孤立的闭合标签"
+    ],
+    "llm_diagnosis": {
+      "root_cause": "代码问题：生成的 PLCML/XML 在第 88 行存在标签不匹配（开闭标签不一致或嵌套错误），导致 xml2st 无法解析",
+      "repair_hints": [
+        "重新生成 XML 时严格遵守良构性：每个开标签必须有对应闭标签，或使用自闭合形式，注意大小写一致",
+        "生成后先执行 XML 良构性校验（如 xmllint）再送入 xml2st 闸门，重点检查第 88 行附近的嵌套块（如 body/pou/block 等容器元素）是否提前闭合或漏闭合",
+        "若 XML 由模板拼接生成，检查条件分支或循环拼接处是否可能产生孤立的闭合标签"
+      ],
+      "advisory": true
+    }
+  }
+}

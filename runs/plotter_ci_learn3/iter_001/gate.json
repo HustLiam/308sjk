@@ -1,0 +1,29 @@
+{
+  "gate": "generate",
+  "ok": false,
+  "errors": [
+    "[xml2st] XML 无法解析: mismatched tag: line 90, column 93"
+  ],
+  "attribution": {
+    "gate": "generate",
+    "errors": [
+      "[xml2st] XML 无法解析: mismatched tag: line 90, column 93"
+    ],
+    "pitfalls": [],
+    "similar_fixes": [],
+    "repair_hints": [
+      "检查生成产物 XML 第90行附近的标签闭合：确认开标签与闭标签名称、嵌套层级完全一致",
+      "对第90行之前最近一次修改/生成的元素做配对校验（如 export/step/transition 等自闭合或闭合标签是否遗漏）",
+      "在 xml2st 闸门前增加 XML well-formedness 预校验（如 xmllint），失败时输出首个不匹配标签的行号与父节点路径"
+    ],
+    "llm_diagnosis": {
+      "root_cause": "证据不足：仅知 XML 在第90行第93列存在标签不匹配（mismatched tag），无法判定是生成代码问题、场景问题还是环境问题",
+      "repair_hints": [
+        "检查生成产物 XML 第90行附近的标签闭合：确认开标签与闭标签名称、嵌套层级完全一致",
+        "对第90行之前最近一次修改/生成的元素做配对校验（如 export/step/transition 等自闭合或闭合标签是否遗漏）",
+        "在 xml2st 闸门前增加 XML well-formedness 预校验（如 xmllint），失败时输出首个不匹配标签的行号与父节点路径"
+      ],
+      "advisory": true
+    }
+  }
+}
