@@ -1,0 +1,576 @@
+{
+  "contract_version": "1.1",
+  "generated_from": "scenegen.components.REGISTRY",
+  "direction_semantics": {
+    "in": "指令进仿真（PLC 输出 → io_map.dir=output）",
+    "out": "量测出仿真（PLC 输入 → io_map.dir=input）"
+  },
+  "types": {
+    "articular_arm": {
+      "backends": {
+        "usd": true,
+        "mjcf": false
+      },
+      "quantities": [
+        {
+          "name": "joint_cmd",
+          "direction": "in",
+          "dtype": "float"
+        },
+        {
+          "name": "joint_pos",
+          "direction": "out",
+          "dtype": "float"
+        }
+      ],
+      "params": [
+        {
+          "name": "asset_path",
+          "kind": "str",
+          "required": true,
+          "default": null
+        }
+      ]
+    },
+    "bin_chute": {
+      "backends": {
+        "usd": true,
+        "mjcf": false
+      },
+      "quantities": [
+        {
+          "name": "object_inside",
+          "direction": "out",
+          "dtype": "bool"
+        }
+      ],
+      "params": [
+        {
+          "name": "size",
+          "kind": "vec3",
+          "required": true,
+          "default": null
+        }
+      ]
+    },
+    "contact_pad": {
+      "backends": {
+        "usd": true,
+        "mjcf": false
+      },
+      "quantities": [
+        {
+          "name": "in_contact",
+          "direction": "out",
+          "dtype": "bool"
+        }
+      ],
+      "params": []
+    },
+    "conveyor_belt": {
+      "backends": {
+        "usd": true,
+        "mjcf": false
+      },
+      "quantities": [
+        {
+          "name": "run_cmd",
+          "direction": "in",
+          "dtype": "bool"
+        },
+        {
+          "name": "speed_setpoint",
+          "direction": "in",
+          "dtype": "float"
+        },
+        {
+          "name": "measured_speed",
+          "direction": "out",
+          "dtype": "float"
+        }
+      ],
+      "params": [
+        {
+          "name": "length",
+          "kind": "float",
+          "required": true,
+          "default": null,
+          "minimum": 0.1,
+          "maximum": 20
+        },
+        {
+          "name": "width",
+          "kind": "float",
+          "required": true,
+          "default": null,
+          "minimum": 0.05,
+          "maximum": 5
+        },
+        {
+          "name": "height",
+          "kind": "float",
+          "required": true,
+          "default": null,
+          "minimum": 0.01,
+          "maximum": 2
+        },
+        {
+          "name": "max_speed",
+          "kind": "float",
+          "required": true,
+          "default": null,
+          "minimum": 0.0,
+          "maximum": 10,
+          "exclusive_min": true
+        }
+      ]
+    },
+    "gantry_xyz": {
+      "backends": {
+        "usd": true,
+        "mjcf": true
+      },
+      "quantities": [
+        {
+          "name": "x_cmd",
+          "direction": "in",
+          "dtype": "float"
+        },
+        {
+          "name": "y_cmd",
+          "direction": "in",
+          "dtype": "float"
+        },
+        {
+          "name": "z_cmd",
+          "direction": "in",
+          "dtype": "float"
+        },
+        {
+          "name": "x_pos",
+          "direction": "out",
+          "dtype": "float"
+        },
+        {
+          "name": "y_pos",
+          "direction": "out",
+          "dtype": "float"
+        },
+        {
+          "name": "z_pos",
+          "direction": "out",
+          "dtype": "float"
+        }
+      ],
+      "params": [
+        {
+          "name": "travel_x",
+          "kind": "float",
+          "required": true,
+          "default": null,
+          "minimum": 0.05,
+          "maximum": 3.0,
+          "exclusive_min": true
+        },
+        {
+          "name": "travel_y",
+          "kind": "float",
+          "required": true,
+          "default": null,
+          "minimum": 0.05,
+          "maximum": 3.0,
+          "exclusive_min": true
+        },
+        {
+          "name": "travel_z",
+          "kind": "float",
+          "required": true,
+          "default": null,
+          "minimum": 0.01,
+          "maximum": 1.0,
+          "exclusive_min": true
+        },
+        {
+          "name": "speed",
+          "kind": "float",
+          "required": false,
+          "default": 0.5,
+          "minimum": 0.0,
+          "maximum": 5.0,
+          "exclusive_min": true
+        }
+      ]
+    },
+    "ground": {
+      "backends": {
+        "usd": false,
+        "mjcf": true
+      },
+      "quantities": [],
+      "params": [
+        {
+          "name": "size",
+          "kind": "vec2",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "friction",
+          "kind": "float",
+          "required": false,
+          "default": 0.8,
+          "minimum": 0.0,
+          "maximum": 5.0,
+          "exclusive_min": true
+        }
+      ]
+    },
+    "hmi_panel": {
+      "backends": {
+        "usd": false,
+        "mjcf": true
+      },
+      "quantities": [],
+      "params": [
+        {
+          "name": "buttons",
+          "kind": "str_list",
+          "required": false,
+          "default": []
+        },
+        {
+          "name": "lamps",
+          "kind": "str_list",
+          "required": false,
+          "default": []
+        }
+      ]
+    },
+    "linear_axis": {
+      "backends": {
+        "usd": false,
+        "mjcf": true
+      },
+      "quantities": [
+        {
+          "name": "cmd",
+          "direction": "in",
+          "dtype": "float"
+        },
+        {
+          "name": "pos",
+          "direction": "out",
+          "dtype": "float"
+        }
+      ],
+      "params": [
+        {
+          "name": "axis",
+          "kind": "enum",
+          "required": true,
+          "default": null,
+          "values": [
+            "x",
+            "y",
+            "z"
+          ]
+        },
+        {
+          "name": "axis_type",
+          "kind": "enum",
+          "required": false,
+          "default": "linear",
+          "values": [
+            "linear"
+          ]
+        },
+        {
+          "name": "stroke",
+          "kind": "vec2",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "unit",
+          "kind": "str",
+          "required": false,
+          "default": "%"
+        },
+        {
+          "name": "vmax",
+          "kind": "float",
+          "required": false,
+          "default": 40.0,
+          "minimum": 0.0,
+          "maximum": 1000.0,
+          "exclusive_min": true
+        },
+        {
+          "name": "accel",
+          "kind": "float",
+          "required": false,
+          "default": 80.0,
+          "minimum": 0.0,
+          "maximum": 10000.0,
+          "exclusive_min": true
+        },
+        {
+          "name": "poswin",
+          "kind": "float",
+          "required": false,
+          "default": 2.0,
+          "minimum": 0.0,
+          "maximum": 1000.0,
+          "exclusive_min": true
+        },
+        {
+          "name": "scale_m_per_unit",
+          "kind": "float",
+          "required": true,
+          "default": null,
+          "minimum": 1e-06,
+          "maximum": 10.0,
+          "exclusive_min": true
+        }
+      ]
+    },
+    "pen": {
+      "backends": {
+        "usd": false,
+        "mjcf": true
+      },
+      "quantities": [],
+      "params": [
+        {
+          "name": "tip_diameter_mm",
+          "kind": "float",
+          "required": false,
+          "default": 0.5,
+          "minimum": 0.01,
+          "maximum": 10.0,
+          "exclusive_min": true
+        },
+        {
+          "name": "stroke_mm",
+          "kind": "float",
+          "required": false,
+          "default": 10.0,
+          "minimum": 0.1,
+          "maximum": 1000.0,
+          "exclusive_min": true
+        }
+      ]
+    },
+    "photoelectric_sensor": {
+      "backends": {
+        "usd": true,
+        "mjcf": false
+      },
+      "quantities": [
+        {
+          "name": "beam_broken",
+          "direction": "out",
+          "dtype": "bool"
+        }
+      ],
+      "params": [
+        {
+          "name": "beam_direction",
+          "kind": "vec3",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "beam_length",
+          "kind": "float",
+          "required": true,
+          "default": null,
+          "minimum": 0.0,
+          "maximum": 5.0,
+          "exclusive_min": true
+        }
+      ]
+    },
+    "pneumatic_cylinder": {
+      "backends": {
+        "usd": true,
+        "mjcf": false
+      },
+      "quantities": [
+        {
+          "name": "extend_cmd",
+          "direction": "in",
+          "dtype": "bool"
+        },
+        {
+          "name": "position",
+          "direction": "out",
+          "dtype": "float"
+        },
+        {
+          "name": "at_end",
+          "direction": "out",
+          "dtype": "bool"
+        }
+      ],
+      "params": [
+        {
+          "name": "axis",
+          "kind": "enum",
+          "required": true,
+          "default": null,
+          "values": [
+            "x",
+            "y",
+            "z"
+          ]
+        },
+        {
+          "name": "stroke",
+          "kind": "float",
+          "required": true,
+          "default": null,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "exclusive_min": true
+        },
+        {
+          "name": "rod_diameter",
+          "kind": "float",
+          "required": false,
+          "default": 0.02,
+          "minimum": 0.0,
+          "maximum": 0.2,
+          "exclusive_min": true
+        },
+        {
+          "name": "extend_speed",
+          "kind": "float",
+          "required": false,
+          "default": 1.0,
+          "minimum": 0.0,
+          "maximum": 5.0,
+          "exclusive_min": true
+        },
+        {
+          "name": "retract_speed",
+          "kind": "float",
+          "required": false,
+          "default": 1.0,
+          "minimum": 0.0,
+          "maximum": 5.0,
+          "exclusive_min": true
+        },
+        {
+          "name": "housing",
+          "kind": "float",
+          "required": false,
+          "default": 0.08,
+          "minimum": 0.0,
+          "maximum": 0.5,
+          "exclusive_min": true
+        }
+      ]
+    },
+    "rigid_box": {
+      "backends": {
+        "usd": true,
+        "mjcf": false
+      },
+      "quantities": [
+        {
+          "name": "position",
+          "direction": "out",
+          "dtype": "float"
+        }
+      ],
+      "params": [
+        {
+          "name": "size",
+          "kind": "float",
+          "required": true,
+          "default": null,
+          "minimum": 0.0,
+          "maximum": 2.0,
+          "exclusive_min": true
+        },
+        {
+          "name": "mass",
+          "kind": "float",
+          "required": true,
+          "default": null,
+          "minimum": 0.0,
+          "maximum": 100.0,
+          "exclusive_min": true
+        },
+        {
+          "name": "color",
+          "kind": "str",
+          "required": false,
+          "default": "#c0504d"
+        }
+      ]
+    },
+    "tool_head": {
+      "backends": {
+        "usd": false,
+        "mjcf": true
+      },
+      "quantities": [],
+      "params": [
+        {
+          "name": "carries",
+          "kind": "str",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "acceptance_asset",
+          "kind": "bool",
+          "required": false,
+          "default": false
+        }
+      ]
+    },
+    "vacuum_gripper": {
+      "backends": {
+        "usd": true,
+        "mjcf": false
+      },
+      "quantities": [
+        {
+          "name": "suck_cmd",
+          "direction": "in",
+          "dtype": "bool"
+        },
+        {
+          "name": "holding",
+          "direction": "out",
+          "dtype": "bool"
+        }
+      ],
+      "params": []
+    },
+    "work_table": {
+      "backends": {
+        "usd": false,
+        "mjcf": true
+      },
+      "quantities": [],
+      "params": [
+        {
+          "name": "size",
+          "kind": "vec3",
+          "required": true,
+          "default": null
+        },
+        {
+          "name": "paper_area",
+          "kind": "str",
+          "required": false,
+          "default": ""
+        }
+      ]
+    }
+  }
+}

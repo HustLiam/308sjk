@@ -1,0 +1,12 @@
+{
+  "plc_output_coils": 0,
+  "plc_output_registers": 6,
+  "sensor_block_registers": 6,
+  "openplc_polling": {
+    "request": "FC03 read holding registers",
+    "server": "127.0.0.1:5020",
+    "start": 0,
+    "length": 6,
+    "target": "%IW0"
+  }
+}
