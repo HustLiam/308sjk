@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://www.plcopen.org/xml/tc6_0201">
-  <fileHeader companyName="" productName="Agent Pipeline" productVersion="0.7.0"
-              creationDateTime="2026-09-02T21:00:00"
-              description="Three-axis motion control, CSP architecture (Cyclic Synchronous Position). Layer 1: INTERP FB (interpolation engine) — trapezoidal trajectory planner in the PLC, outputs one position setpoint per scan. Layer 2: DRIVE402 FB (drive model) — receives cyclic position setpoints, closes position loop (P + setpoint-rate feedforward), CiA 402 state machine, velocity output to motor. Layer 3: MC_Power/MC_Reset/MC_MoveAbsolute/MC_MoveJog/MC_Stop/MC_Home API. PLC only plans and streams setpoints; the drive does the loops." />
-  <contentHeader name="motion3axis.project" modificationDateTime="2026-09-02T21:00:00">
+  <fileHeader companyName="" productName="Agent Pipeline" productVersion="0.8.0"
+              creationDateTime="2026-09-09T12:00:00"
+              description="Three-axis motion control, CSP architecture (Cyclic Synchronous Position). Layer 1: INTERP FB (interpolation engine) — trapezoidal trajectory planner in the PLC, outputs one position setpoint per scan, per-command dynamics (vel/acc/dec) and abort semantics. Layer 2: DRIVE402 FB (drive model) — receives cyclic position setpoints, closes position loop (P + setpoint-rate feedforward), CiA 402 state machine, velocity output to motor. Layer 3: PLCopen Motion Control aligned MC API — MC_Power/MC_Reset/MC_Stop/MC_Halt/MC_MoveAbsolute/MC_MoveRelative/MC_MoveJog/MC_Home plus MC_ReadStatus/MC_ReadActualPosition; standard status outputs (Done/Busy/Active/CommandAborted/Error/ErrorID). PLC only plans and streams setpoints; the drive does the loops." />
+  <contentHeader name="motion3axis.project" modificationDateTime="2026-09-09T12:00:00">
     <coordinateInfo>
       <fbd><scaling x="1" y="1" /></fbd>
       <ld><scaling x="1" y="1" /></ld>
@@ -25,6 +25,15 @@
             <variable name="hold_req">
               <type><BOOL /></type>
             </variable>
+            <variable name="vel_req">
+              <type><REAL /></type>
+            </variable>
+            <variable name="acc_req">
+              <type><REAL /></type>
+            </variable>
+            <variable name="dec_req">
+              <type><REAL /></type>
+            </variable>
           </inputVars>
           <outputVars>
             <variable name="Setpoint">
@@ -34,6 +43,9 @@
               <type><BOOL /></type>
             </variable>
             <variable name="Done">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="Aborted">
               <type><BOOL /></type>
             </variable>
           </outputVars>
@@ -60,14 +72,6 @@
               <type><REAL /></type>
               <initialValue><simpleValue value="0.02" /></initialValue>
             </variable>
-            <variable name="VMAX">
-              <type><REAL /></type>
-              <initialValue><simpleValue value="40.0" /></initialValue>
-            </variable>
-            <variable name="ACCEL">
-              <type><REAL /></type>
-              <initialValue><simpleValue value="80.0" /></initialValue>
-            </variable>
             <variable name="POSWIN">
               <type><REAL /></type>
               <initialValue><simpleValue value="2.0" /></initialValue>
@@ -78,35 +82,43 @@
           <ST>
             <xhtml xmlns="http://www.w3.org/1999/xhtml">IF fire AND NOT edge_ir THEN
     IF pos_target &gt; 100 OR pos_target &lt; 0 THEN
-        (* 目标越程: 不启动插补, 保持原位 *)
+        (* 目标越程: 命令立即结束(保持原位)——MC 层应先拦截报 ErrorID=1, 此为兜底 *)
         Done := TRUE;
     ELSE
         tgt := INT_TO_REAL(pos_target);
         Busy := TRUE;
         Done := FALSE;
+        Aborted := FALSE;
     END_IF;
 END_IF;
 edge_ir := fire;
 
 IF hold_req THEN
-    IF vel &gt; 0.0 THEN vel := MAX(0.0, vel - ACCEL * SCAN_T);
-    ELSIF vel &lt; 0.0 THEN vel := MIN(0.0, vel + ACCEL * SCAN_T);
+    (* 受控减速(MC_Halt): 减到零速即中止, 报 Aborted 供 MC 层置 CommandAborted *)
+    IF vel &gt; 0.0 THEN vel := MAX(0.0, vel - dec_req * SCAN_T);
+    ELSIF vel &lt; 0.0 THEN vel := MIN(0.0, vel + dec_req * SCAN_T);
+    END_IF;
+    IF vel = 0.0 AND Busy THEN
+        Busy := FALSE;
+        Done := FALSE;
+        Aborted := TRUE;
     END_IF;
 ELSIF Busy THEN
     dist := tgt - pos;
-    stop_d := (vel * vel) / (2.0 * ACCEL);
+    stop_d := (vel * vel) / (2.0 * dec_req);
     IF ABS(dist) &lt;= stop_d THEN
-        IF dist &gt;= 0.0 THEN vel := MAX(0.0, vel - ACCEL * SCAN_T);
-        ELSE vel := MIN(0.0, vel + ACCEL * SCAN_T);
+        IF dist &gt;= 0.0 THEN vel := MAX(0.0, vel - dec_req * SCAN_T);
+        ELSE vel := MIN(0.0, vel + dec_req * SCAN_T);
         END_IF;
         IF vel = 0.0 AND ABS(dist) &lt;= POSWIN THEN
             pos := tgt;
             Busy := FALSE;
             Done := TRUE;
+            Aborted := FALSE;
         END_IF;
     ELSE
-        IF dist &gt; 0.0 THEN vel := MIN(VMAX, vel + ACCEL * SCAN_T);
-        ELSE vel := MAX(-VMAX, vel - ACCEL * SCAN_T);
+        IF dist &gt; 0.0 THEN vel := MIN(vel_req, vel + acc_req * SCAN_T);
+        ELSE vel := MAX(-vel_req, vel - acc_req * SCAN_T);
         END_IF;
     END_IF;
 END_IF;
@@ -255,6 +267,12 @@ END_IF;</xhtml>
             <variable name="Enable">
               <type><BOOL /></type>
             </variable>
+            <variable name="EnablePositive">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="EnableNegative">
+              <type><BOOL /></type>
+            </variable>
           </inputVars>
           <inOutVars>
             <variable name="cw">
@@ -268,6 +286,12 @@ END_IF;</xhtml>
             <variable name="Status">
               <type><BOOL /></type>
             </variable>
+            <variable name="Busy">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="Error">
+              <type><BOOL /></type>
+            </variable>
           </outputVars>
           <localVars>
             <variable name="pstep">
@@ -277,10 +301,11 @@ END_IF;</xhtml>
         </interface>
         <body>
           <ST>
-            <xhtml xmlns="http://www.w3.org/1999/xhtml">IF Enable AND pstep = 4 AND (sw AND 16#0004) = 0 AND (sw AND 16#0008) = 0 THEN
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* PLCopen MC_Power 对齐版; CiA402 不分方向, EnablePositive/Negative 仅作门控 *)
+IF Enable AND (EnablePositive OR EnableNegative) AND pstep = 4 AND (sw AND 16#0004) = 0 AND (sw AND 16#0008) = 0 THEN
     pstep := 0;
 END_IF;
-IF Enable THEN
+IF Enable AND (EnablePositive OR EnableNegative) THEN
     CASE pstep OF
         0: cw := (cw AND 16#00F0) OR 16#0006;  pstep := 1;
         1: IF (sw AND 16#0001) &lt;&gt; 0 THEN cw := (cw AND 16#00F0) OR 16#0007; pstep := 2; END_IF;
@@ -291,7 +316,9 @@ ELSE
     cw := (cw AND 16#00F0) OR 16#0006;
     pstep := 0;
 END_IF;
-Status := (sw AND 16#0004) &lt;&gt; 0;</xhtml>
+Status := (sw AND 16#0004) &lt;&gt; 0;
+Busy := Enable AND pstep &lt; 4;
+Error := (sw AND 16#0008) &lt;&gt; 0;</xhtml>
           </ST>
         </body>
       </pou>
@@ -314,12 +341,18 @@ Status := (sw AND 16#0004) &lt;&gt; 0;</xhtml>
             <variable name="Done">
               <type><BOOL /></type>
             </variable>
+            <variable name="Busy">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="Error">
+              <type><BOOL /></type>
+            </variable>
           </outputVars>
           <localVars>
             <variable name="edge_rs">
               <type><BOOL /></type>
             </variable>
-            <variable name="busy">
+            <variable name="busy_rs">
               <type><BOOL /></type>
             </variable>
           </localVars>
@@ -327,18 +360,20 @@ Status := (sw AND 16#0004) &lt;&gt; 0;</xhtml>
         <body>
           <ST>
             <xhtml xmlns="http://www.w3.org/1999/xhtml">IF fire AND NOT edge_rs THEN
-    busy := TRUE;
+    busy_rs := TRUE;
 END_IF;
 edge_rs := fire;
-IF busy THEN
+IF busy_rs THEN
     IF (sw AND 16#0008) &lt;&gt; 0 THEN
         cw := cw OR 16#0080;
     ELSE
         cw := cw AND 16#FF7F;
-        busy := FALSE;
+        busy_rs := FALSE;
     END_IF;
 END_IF;
-Done := NOT busy AND (sw AND 16#0008) = 0 AND NOT fire;</xhtml>
+Busy := busy_rs;
+Error := (sw AND 16#0008) &lt;&gt; 0 AND NOT busy_rs;
+Done := NOT busy_rs AND (sw AND 16#0008) = 0 AND NOT fire;</xhtml>
           </ST>
         </body>
       </pou>
@@ -347,6 +382,9 @@ Done := NOT busy AND (sw AND 16#0008) = 0 AND NOT fire;</xhtml>
           <inputVars>
             <variable name="fire">
               <type><BOOL /></type>
+            </variable>
+            <variable name="v_act">
+              <type><INT /></type>
             </variable>
           </inputVars>
           <inOutVars>
@@ -361,6 +399,12 @@ Done := NOT busy AND (sw AND 16#0008) = 0 AND NOT fire;</xhtml>
             <variable name="Done">
               <type><BOOL /></type>
             </variable>
+            <variable name="Busy">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="Error">
+              <type><BOOL /></type>
+            </variable>
           </outputVars>
         </interface>
         <body>
@@ -370,7 +414,60 @@ Done := NOT busy AND (sw AND 16#0008) = 0 AND NOT fire;</xhtml>
     Done := FALSE;
 ELSE
     Done := TRUE;
-END_IF;</xhtml>
+END_IF;
+Busy := fire AND v_act &lt;&gt; 0;
+Error := (sw AND 16#0008) &lt;&gt; 0;</xhtml>
+          </ST>
+        </body>
+      </pou>
+      <pou name="MC_HALT" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="fire">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="ax_busy">
+              <type><BOOL /></type>
+            </variable>
+          </inputVars>
+          <outputVars>
+            <variable name="Stopping">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="Done">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="Busy">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="Error">
+              <type><BOOL /></type>
+            </variable>
+          </outputVars>
+          <localVars>
+            <variable name="edge_hl">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="done_latch">
+              <type><BOOL /></type>
+            </variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* PLCopen MC_Halt: 受控减速到零速(不失能), 活动命令被中止(CommandAborted) *)
+IF fire AND NOT edge_hl THEN
+    done_latch := FALSE;
+    Stopping := TRUE;
+END_IF;
+edge_hl := fire;
+IF Stopping AND NOT ax_busy THEN
+    Stopping := FALSE;
+    done_latch := TRUE;
+END_IF;
+Busy := Stopping;
+Done := done_latch AND NOT Stopping;
+Error := FALSE;</xhtml>
           </ST>
         </body>
       </pou>
@@ -383,10 +480,34 @@ END_IF;</xhtml>
             <variable name="Position">
               <type><INT /></type>
             </variable>
+            <variable name="Velocity">
+              <type><REAL /></type>
+            </variable>
+            <variable name="Acceleration">
+              <type><REAL /></type>
+            </variable>
+            <variable name="Deceleration">
+              <type><REAL /></type>
+            </variable>
+            <variable name="sw">
+              <type><WORD /></type>
+            </variable>
+            <variable name="abort_bus">
+              <type><BOOL /></type>
+            </variable>
           </inputVars>
           <inOutVars>
             <variable name="interp_exe">
               <type><BOOL /></type>
+            </variable>
+            <variable name="dyn_vel">
+              <type><REAL /></type>
+            </variable>
+            <variable name="dyn_acc">
+              <type><REAL /></type>
+            </variable>
+            <variable name="dyn_dec">
+              <type><REAL /></type>
             </variable>
           </inOutVars>
           <outputVars>
@@ -396,23 +517,177 @@ END_IF;</xhtml>
             <variable name="Busy">
               <type><BOOL /></type>
             </variable>
+            <variable name="Active">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="CommandAborted">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="Error">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="ErrorID">
+              <type><INT /></type>
+            </variable>
           </outputVars>
           <localVars>
             <variable name="edge_ma">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="edge_ab">
               <type><BOOL /></type>
             </variable>
           </localVars>
         </interface>
         <body>
           <ST>
-            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* 触发插补引擎的 fire 线 *)
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* PLCopen MC_MoveAbsolute 对齐版; fire=Execute(matiec 保留字映射) *)
+(* ErrorID: 0=无 1=目标越程 2=轴故障 3=轴未使能 *)
 IF fire AND NOT edge_ma THEN
-    interp_exe := TRUE;
+    Error := FALSE;
+    ErrorID := 0;
+    CommandAborted := FALSE;
+    IF (sw AND 16#0008) &lt;&gt; 0 THEN
+        Error := TRUE;
+        ErrorID := 2;
+    ELSIF (sw AND 16#0004) = 0 THEN
+        Error := TRUE;
+        ErrorID := 3;
+    ELSIF Position &lt; 0 OR Position &gt; 100 THEN
+        Error := TRUE;
+        ErrorID := 1;
+    ELSE
+        interp_exe := TRUE;
+        dyn_vel := Velocity;
+        dyn_acc := Acceleration;
+        dyn_dec := Deceleration;
+    END_IF;
 END_IF;
 edge_ma := fire;
-(* interp_exe 保持 TRUE 直到运动完成(由 PLC_PRG 的 INTERP.Done 清零) *)
-Done := NOT interp_exe;
-Busy := interp_exe;</xhtml>
+
+(* 中止(STOP/HALT/失能)传播: 取中止信号上升沿, 避免上一命令的锁存中止误杀新命令 *)
+IF interp_exe AND abort_bus AND NOT edge_ab THEN
+    interp_exe := FALSE;
+    CommandAborted := TRUE;
+END_IF;
+edge_ab := abort_bus;
+Busy := interp_exe;
+Active := interp_exe;
+Done := NOT interp_exe AND NOT Error;</xhtml>
+          </ST>
+        </body>
+      </pou>
+      <pou name="MC_MOVERELATIVE" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="fire">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="Distance">
+              <type><INT /></type>
+            </variable>
+            <variable name="ActualPosition">
+              <type><INT /></type>
+            </variable>
+            <variable name="Velocity">
+              <type><REAL /></type>
+            </variable>
+            <variable name="Acceleration">
+              <type><REAL /></type>
+            </variable>
+            <variable name="Deceleration">
+              <type><REAL /></type>
+            </variable>
+            <variable name="sw">
+              <type><WORD /></type>
+            </variable>
+            <variable name="abort_bus">
+              <type><BOOL /></type>
+            </variable>
+          </inputVars>
+          <inOutVars>
+            <variable name="interp_exe">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="abs_tgt">
+              <type><INT /></type>
+            </variable>
+            <variable name="dyn_vel">
+              <type><REAL /></type>
+            </variable>
+            <variable name="dyn_acc">
+              <type><REAL /></type>
+            </variable>
+            <variable name="dyn_dec">
+              <type><REAL /></type>
+            </variable>
+          </inOutVars>
+          <outputVars>
+            <variable name="Done">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="Busy">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="Active">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="CommandAborted">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="Error">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="ErrorID">
+              <type><INT /></type>
+            </variable>
+          </outputVars>
+          <localVars>
+            <variable name="edge_rl">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="edge_ab">
+              <type><BOOL /></type>
+            </variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* PLCopen MC_MoveRelative: 触发时绝对目标 = 实际位置 + Distance *)
+(* ErrorID: 0=无 1=目标越程 2=轴故障 3=轴未使能 *)
+IF fire AND NOT edge_rl THEN
+    Error := FALSE;
+    ErrorID := 0;
+    CommandAborted := FALSE;
+    IF (sw AND 16#0008) &lt;&gt; 0 THEN
+        Error := TRUE;
+        ErrorID := 2;
+    ELSIF (sw AND 16#0004) = 0 THEN
+        Error := TRUE;
+        ErrorID := 3;
+    ELSE
+        abs_tgt := ActualPosition + Distance;
+        IF abs_tgt &lt; 0 OR abs_tgt &gt; 100 THEN
+            Error := TRUE;
+            ErrorID := 1;
+        ELSE
+            interp_exe := TRUE;
+            dyn_vel := Velocity;
+            dyn_acc := Acceleration;
+            dyn_dec := Deceleration;
+        END_IF;
+    END_IF;
+END_IF;
+edge_rl := fire;
+
+IF interp_exe AND abort_bus AND NOT edge_ab THEN
+    interp_exe := FALSE;
+    CommandAborted := TRUE;
+END_IF;
+edge_ab := abort_bus;
+Busy := interp_exe;
+Active := interp_exe;
+Done := NOT interp_exe AND NOT Error;</xhtml>
           </ST>
         </body>
       </pou>
@@ -425,6 +700,15 @@ Busy := interp_exe;</xhtml>
             <variable name="JogBackward">
               <type><BOOL /></type>
             </variable>
+            <variable name="Velocity">
+              <type><REAL /></type>
+            </variable>
+            <variable name="cur_pos">
+              <type><INT /></type>
+            </variable>
+            <variable name="sw">
+              <type><WORD /></type>
+            </variable>
           </inputVars>
           <inOutVars>
             <variable name="jog_pos">
@@ -435,16 +719,36 @@ Busy := interp_exe;</xhtml>
             <variable name="Busy">
               <type><BOOL /></type>
             </variable>
+            <variable name="Error">
+              <type><BOOL /></type>
+            </variable>
           </outputVars>
+          <localVars>
+            <variable name="jog_step">
+              <type><INT /></type>
+            </variable>
+            <variable name="edge_jg">
+              <type><BOOL /></type>
+            </variable>
+          </localVars>
         </interface>
         <body>
           <ST>
-            <xhtml xmlns="http://www.w3.org/1999/xhtml">IF JogForward AND jog_pos &lt; 97 THEN
-    jog_pos := jog_pos + 1;
-ELSIF JogBackward AND jog_pos &gt; 3 THEN
-    jog_pos := jog_pos - 1;
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* PLCopen MC_MoveJog 对齐版: 步进量 = Velocity * 扫描周期(下限 1);
+   起跳锚定实际位置(松开后设定点回到 INTERP, 锚定消除跨命令位置跳变) *)
+IF (JogForward OR JogBackward) AND NOT edge_jg AND NOT Busy THEN
+    jog_pos := cur_pos;
 END_IF;
-Busy := JogForward OR JogBackward;</xhtml>
+edge_jg := JogForward OR JogBackward;
+jog_step := REAL_TO_INT(Velocity * 0.02);
+IF jog_step &lt; 1 THEN jog_step := 1; END_IF;
+IF JogForward AND jog_pos &lt; 97 THEN
+    jog_pos := jog_pos + jog_step;
+ELSIF JogBackward AND jog_pos &gt; 3 THEN
+    jog_pos := jog_pos - jog_step;
+END_IF;
+Busy := JogForward OR JogBackward;
+Error := (sw AND 16#0008) &lt;&gt; 0;</xhtml>
           </ST>
         </body>
       </pou>
@@ -454,6 +758,9 @@ Busy := JogForward OR JogBackward;</xhtml>
             <variable name="fire">
               <type><BOOL /></type>
             </variable>
+            <variable name="sw">
+              <type><WORD /></type>
+            </variable>
           </inputVars>
           <inOutVars>
             <variable name="home_exe">
@@ -462,6 +769,12 @@ Busy := JogForward OR JogBackward;</xhtml>
           </inOutVars>
           <outputVars>
             <variable name="Done">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="Busy">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="Error">
               <type><BOOL /></type>
             </variable>
           </outputVars>
@@ -478,7 +791,81 @@ Busy := JogForward OR JogBackward;</xhtml>
 END_IF;
 edge_hm := fire;
 (* home_exe 保持 TRUE 直到运动完成 *)
-Done := NOT home_exe;</xhtml>
+Busy := home_exe;
+Done := NOT home_exe;
+Error := (sw AND 16#0008) &lt;&gt; 0;</xhtml>
+          </ST>
+        </body>
+      </pou>
+      <pou name="MC_READSTATUS" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="Enable">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="sw">
+              <type><WORD /></type>
+            </variable>
+            <variable name="interp_busy">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="v_act">
+              <type><INT /></type>
+            </variable>
+          </inputVars>
+          <outputVars>
+            <variable name="Valid">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="Moving">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="StandStill">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="Disabled">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="ErrorStop">
+              <type><BOOL /></type>
+            </variable>
+          </outputVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* PLCopen MC_ReadStatus 精简子集: 状态字映射 *)
+Valid := Enable;
+Disabled := Enable AND (sw AND 16#0004) = 0;
+ErrorStop := Enable AND (sw AND 16#0008) &lt;&gt; 0;
+Moving := Enable AND (interp_busy OR v_act &lt;&gt; 0);
+StandStill := Enable AND (sw AND 16#0004) &lt;&gt; 0 AND NOT interp_busy AND v_act = 0;</xhtml>
+          </ST>
+        </body>
+      </pou>
+      <pou name="MC_READACTUALPOSITION" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="Enable">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="ActualPosition">
+              <type><INT /></type>
+            </variable>
+          </inputVars>
+          <outputVars>
+            <variable name="Valid">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="Position">
+              <type><INT /></type>
+            </variable>
+          </outputVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* PLCopen MC_ReadActualPosition 精简版 *)
+Valid := Enable;
+Position := ActualPosition;</xhtml>
           </ST>
         </body>
       </pou>
@@ -509,6 +896,12 @@ Done := NOT home_exe;</xhtml>
             <variable name="cmd_reset" address="%QX0.7">
               <type><BOOL /></type>
             </variable>
+            <variable name="cmd_halt" address="%QX2.0">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="cmd_rel" address="%QX2.1">
+              <type><BOOL /></type>
+            </variable>
           </localVars>
           <localVars>
             <variable name="x_fb" address="%QW0">
@@ -518,6 +911,15 @@ Done := NOT home_exe;</xhtml>
               <type><INT /></type>
             </variable>
             <variable name="z_fb" address="%QW2">
+              <type><INT /></type>
+            </variable>
+            <variable name="rel_x_d" address="%QW3">
+              <type><INT /></type>
+            </variable>
+            <variable name="rel_y_d" address="%QW4">
+              <type><INT /></type>
+            </variable>
+            <variable name="rel_z_d" address="%QW5">
               <type><INT /></type>
             </variable>
           </localVars>
@@ -549,6 +951,15 @@ Done := NOT home_exe;</xhtml>
               <type><INT /></type>
             </variable>
             <variable name="z_v" address="%QW15">
+              <type><INT /></type>
+            </variable>
+            <variable name="x_err_id" address="%QW16">
+              <type><INT /></type>
+            </variable>
+            <variable name="y_err_id" address="%QW17">
+              <type><INT /></type>
+            </variable>
+            <variable name="z_err_id" address="%QW18">
               <type><INT /></type>
             </variable>
             <variable name="all_oe" address="%QX1.0">
@@ -590,6 +1001,15 @@ Done := NOT home_exe;</xhtml>
             <variable name="x_jog_pos">
               <type><INT /></type>
             </variable>
+            <variable name="x_tgt">
+              <type><INT /></type>
+            </variable>
+            <variable name="y_tgt">
+              <type><INT /></type>
+            </variable>
+            <variable name="z_tgt">
+              <type><INT /></type>
+            </variable>
             <variable name="go_x_exe">
               <type><BOOL /></type>
             </variable>
@@ -607,6 +1027,53 @@ Done := NOT home_exe;</xhtml>
             </variable>
             <variable name="hm_z_exe">
               <type><BOOL /></type>
+            </variable>
+            <variable name="rel_x_exe">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="rel_y_exe">
+              <type><BOOL /></type>
+            </variable>
+            <variable name="rel_z_exe">
+              <type><BOOL /></type>
+            </variable>
+          </localVars>
+          <localVars>
+            <variable name="x_vel_bus">
+              <type><REAL /></type>
+              <initialValue><simpleValue value="40.0" /></initialValue>
+            </variable>
+            <variable name="x_acc_bus">
+              <type><REAL /></type>
+              <initialValue><simpleValue value="80.0" /></initialValue>
+            </variable>
+            <variable name="x_dec_bus">
+              <type><REAL /></type>
+              <initialValue><simpleValue value="80.0" /></initialValue>
+            </variable>
+            <variable name="y_vel_bus">
+              <type><REAL /></type>
+              <initialValue><simpleValue value="40.0" /></initialValue>
+            </variable>
+            <variable name="y_acc_bus">
+              <type><REAL /></type>
+              <initialValue><simpleValue value="80.0" /></initialValue>
+            </variable>
+            <variable name="y_dec_bus">
+              <type><REAL /></type>
+              <initialValue><simpleValue value="80.0" /></initialValue>
+            </variable>
+            <variable name="z_vel_bus">
+              <type><REAL /></type>
+              <initialValue><simpleValue value="40.0" /></initialValue>
+            </variable>
+            <variable name="z_acc_bus">
+              <type><REAL /></type>
+              <initialValue><simpleValue value="80.0" /></initialValue>
+            </variable>
+            <variable name="z_dec_bus">
+              <type><REAL /></type>
+              <initialValue><simpleValue value="80.0" /></initialValue>
             </variable>
           </localVars>
           <localVars>
@@ -631,6 +1098,15 @@ Done := NOT home_exe;</xhtml>
             <variable name="st_z">
               <type><derived name="MC_STOP" /></type>
             </variable>
+            <variable name="hlt_x">
+              <type><derived name="MC_HALT" /></type>
+            </variable>
+            <variable name="hlt_y">
+              <type><derived name="MC_HALT" /></type>
+            </variable>
+            <variable name="hlt_z">
+              <type><derived name="MC_HALT" /></type>
+            </variable>
             <variable name="go_x">
               <type><derived name="MC_MOVEABSOLUTE" /></type>
             </variable>
@@ -639,6 +1115,15 @@ Done := NOT home_exe;</xhtml>
             </variable>
             <variable name="go_z">
               <type><derived name="MC_MOVEABSOLUTE" /></type>
+            </variable>
+            <variable name="rel_x">
+              <type><derived name="MC_MOVERELATIVE" /></type>
+            </variable>
+            <variable name="rel_y">
+              <type><derived name="MC_MOVERELATIVE" /></type>
+            </variable>
+            <variable name="rel_z">
+              <type><derived name="MC_MOVERELATIVE" /></type>
             </variable>
             <variable name="jg_x">
               <type><derived name="MC_MOVEJOG" /></type>
@@ -651,6 +1136,24 @@ Done := NOT home_exe;</xhtml>
             </variable>
             <variable name="hm_z">
               <type><derived name="MC_HOME" /></type>
+            </variable>
+            <variable name="rds_x">
+              <type><derived name="MC_READSTATUS" /></type>
+            </variable>
+            <variable name="rds_y">
+              <type><derived name="MC_READSTATUS" /></type>
+            </variable>
+            <variable name="rds_z">
+              <type><derived name="MC_READSTATUS" /></type>
+            </variable>
+            <variable name="rap_x">
+              <type><derived name="MC_READACTUALPOSITION" /></type>
+            </variable>
+            <variable name="rap_y">
+              <type><derived name="MC_READACTUALPOSITION" /></type>
+            </variable>
+            <variable name="rap_z">
+              <type><derived name="MC_READACTUALPOSITION" /></type>
             </variable>
             <variable name="ix_x">
               <type><derived name="INTERP" /></type>
@@ -682,33 +1185,64 @@ x_sw := dv_x.sw;
 y_sw := dv_y.sw;
 z_sw := dv_z.sw;
 
+(* ---- 目标总线默认 = 绝对定位字（MC_MOVERELATIVE 触发时改写为 叠加目标） ---- *)
+x_tgt := x_sp;
+y_tgt := y_sp;
+z_tgt := z_sp;
+
 (* ---- 使能 / 复位 / 快停（快停最后落笔 = 优先级最高） ---- *)
-pwr_x(Enable := run AND NOT quickstop, cw := x_cw, sw := x_sw);
-pwr_y(Enable := run AND NOT quickstop, cw := y_cw, sw := y_sw);
-pwr_z(Enable := run AND NOT quickstop, cw := z_cw, sw := z_sw);
+pwr_x(Enable := run AND NOT quickstop, EnablePositive := TRUE, EnableNegative := TRUE, cw := x_cw, sw := x_sw);
+pwr_y(Enable := run AND NOT quickstop, EnablePositive := TRUE, EnableNegative := TRUE, cw := y_cw, sw := y_sw);
+pwr_z(Enable := run AND NOT quickstop, EnablePositive := TRUE, EnableNegative := TRUE, cw := z_cw, sw := z_sw);
 rs_x(fire := cmd_reset, cw := x_cw, sw := x_sw);
-st_x(fire := quickstop, cw := x_cw, sw := x_sw);
-st_y(fire := quickstop, cw := y_cw, sw := y_sw);
-st_z(fire := quickstop, cw := z_cw, sw := z_sw);
+st_x(fire := quickstop, v_act := x_v, cw := x_cw, sw := x_sw);
+st_y(fire := quickstop, v_act := y_v, cw := y_cw, sw := y_sw);
+st_z(fire := quickstop, v_act := z_v, cw := z_cw, sw := z_sw);
 
-(* ---- MC 指令层 → 触发插补引擎 ---- *)
-go_x(fire := cmd_go, Position := x_sp, interp_exe := go_x_exe);
-go_y(fire := cmd_go, Position := y_sp, interp_exe := go_y_exe);
-go_z(fire := cmd_go, Position := z_sp, interp_exe := go_z_exe);
-hm_x(fire := cmd_home, home_exe := hm_x_exe);
-hm_y(fire := cmd_home, home_exe := hm_y_exe);
-hm_z(fire := cmd_home, home_exe := hm_z_exe);
-jg_x(JogForward := jog_fwd, JogBackward := jog_rev, jog_pos := x_jog_pos);
+(* ---- MC 读块（后续命令/状态聚合消费） ---- *)
+rap_x(Enable := TRUE, ActualPosition := x_fb);
+rap_y(Enable := TRUE, ActualPosition := y_fb);
+rap_z(Enable := TRUE, ActualPosition := z_fb);
 
-(* ---- 插补引擎：每扫描输出插补点（回零时目标强制 0） ---- *)
-ix_x(fire := go_x_exe OR hm_x_exe, pos_target := x_sp, hold_req := FALSE);
-ix_y(fire := go_y_exe OR hm_y_exe, pos_target := y_sp, hold_req := FALSE);
-ix_z(fire := go_z_exe OR hm_z_exe, pos_target := z_sp, hold_req := FALSE);
+(* ---- MC 指令层 ---- *)
+go_x(fire := cmd_go, Position := x_sp, Velocity := 40.0, Acceleration := 80.0, Deceleration := 80.0,
+     sw := x_sw, abort_bus := ix_x.Aborted,
+     interp_exe := go_x_exe, dyn_vel := x_vel_bus, dyn_acc := x_acc_bus, dyn_dec := x_dec_bus);
+go_y(fire := cmd_go, Position := y_sp, Velocity := 40.0, Acceleration := 80.0, Deceleration := 80.0,
+     sw := y_sw, abort_bus := ix_y.Aborted,
+     interp_exe := go_y_exe, dyn_vel := y_vel_bus, dyn_acc := y_acc_bus, dyn_dec := y_dec_bus);
+go_z(fire := cmd_go, Position := z_sp, Velocity := 40.0, Acceleration := 80.0, Deceleration := 80.0,
+     sw := z_sw, abort_bus := ix_z.Aborted,
+     interp_exe := go_z_exe, dyn_vel := z_vel_bus, dyn_acc := z_acc_bus, dyn_dec := z_dec_bus);
+rel_x(fire := cmd_rel, Distance := rel_x_d, ActualPosition := rap_x.Position, Velocity := 40.0, Acceleration := 80.0, Deceleration := 80.0,
+     sw := x_sw, abort_bus := ix_x.Aborted,
+     interp_exe := rel_x_exe, abs_tgt := x_tgt, dyn_vel := x_vel_bus, dyn_acc := x_acc_bus, dyn_dec := x_dec_bus);
+rel_y(fire := cmd_rel, Distance := rel_y_d, ActualPosition := rap_y.Position, Velocity := 40.0, Acceleration := 80.0, Deceleration := 80.0,
+     sw := y_sw, abort_bus := ix_y.Aborted,
+     interp_exe := rel_y_exe, abs_tgt := y_tgt, dyn_vel := y_vel_bus, dyn_acc := y_acc_bus, dyn_dec := y_dec_bus);
+rel_z(fire := cmd_rel, Distance := rel_z_d, ActualPosition := rap_z.Position, Velocity := 40.0, Acceleration := 80.0, Deceleration := 80.0,
+     sw := z_sw, abort_bus := ix_z.Aborted,
+     interp_exe := rel_z_exe, abs_tgt := z_tgt, dyn_vel := z_vel_bus, dyn_acc := z_acc_bus, dyn_dec := z_dec_bus);
+hm_x(fire := cmd_home, sw := x_sw, home_exe := hm_x_exe);
+hm_y(fire := cmd_home, sw := y_sw, home_exe := hm_y_exe);
+hm_z(fire := cmd_home, sw := z_sw, home_exe := hm_z_exe);
+jg_x(JogForward := jog_fwd, JogBackward := jog_rev, Velocity := 50.0, cur_pos := x_fb, sw := x_sw, jog_pos := x_jog_pos);
+hlt_x(fire := cmd_halt, ax_busy := ix_x.Busy);
+hlt_y(fire := cmd_halt, ax_busy := ix_y.Busy);
+hlt_z(fire := cmd_halt, ax_busy := ix_z.Busy);
 
-(* ---- INTERP 完成后清触发线 ---- *)
-IF ix_x.Done THEN go_x_exe := FALSE; hm_x_exe := FALSE; END_IF;
-IF ix_y.Done THEN go_y_exe := FALSE; hm_y_exe := FALSE; END_IF;
-IF ix_z.Done THEN go_z_exe := FALSE; hm_z_exe := FALSE; END_IF;
+(* ---- 插补引擎：每扫描输出插补点（回零时目标=当前定位字, 场景约定 sp=0） ---- *)
+ix_x(fire := go_x_exe OR hm_x_exe OR rel_x_exe, pos_target := x_tgt,
+     hold_req := hlt_x.Stopping, vel_req := x_vel_bus, acc_req := x_acc_bus, dec_req := x_dec_bus);
+ix_y(fire := go_y_exe OR hm_y_exe OR rel_y_exe, pos_target := y_tgt,
+     hold_req := hlt_y.Stopping, vel_req := y_vel_bus, acc_req := y_acc_bus, dec_req := y_dec_bus);
+ix_z(fire := go_z_exe OR hm_z_exe OR rel_z_exe, pos_target := z_tgt,
+     hold_req := hlt_z.Stopping, vel_req := z_vel_bus, acc_req := z_acc_bus, dec_req := z_dec_bus);
+
+(* ---- INTERP 结束（完成或中止）后清触发线 ---- *)
+IF ix_x.Done OR ix_x.Aborted THEN go_x_exe := FALSE; hm_x_exe := FALSE; rel_x_exe := FALSE; END_IF;
+IF ix_y.Done OR ix_y.Aborted THEN go_y_exe := FALSE; hm_y_exe := FALSE; rel_y_exe := FALSE; END_IF;
+IF ix_z.Done OR ix_z.Aborted THEN go_z_exe := FALSE; hm_z_exe := FALSE; rel_z_exe := FALSE; END_IF;
 
 (* ---- 插补点路由：点动时用 jog_pos，否则用 INTERP 输出 ---- *)
 IF jg_x.Busy THEN
@@ -727,11 +1261,19 @@ y_v := dv_y.v_cmd;
 dv_z(cw := z_cw, Setpoint := z_interp, pos_fb := z_fb);
 z_v := dv_z.v_cmd;
 
-(* ---- 应用状态 ---- *)
+(* ---- 应用状态聚合（经 MC_ReadStatus） ---- *)
+rds_x(Enable := TRUE, sw := x_sw, interp_busy := ix_x.Busy, v_act := x_v);
+rds_y(Enable := TRUE, sw := y_sw, interp_busy := ix_y.Busy, v_act := y_v);
+rds_z(Enable := TRUE, sw := z_sw, interp_busy := ix_z.Busy, v_act := z_v);
 all_oe := pwr_x.Status AND pwr_y.Status AND pwr_z.Status;
 move_done := go_x.Done AND go_y.Done AND go_z.Done;
-any_moving := (x_v &lt;&gt; 0) OR (y_v &lt;&gt; 0) OR (z_v &lt;&gt; 0);
-fault_any := (x_sw AND 16#0008) &lt;&gt; 0 OR (y_sw AND 16#0008) &lt;&gt; 0 OR (z_sw AND 16#0008) &lt;&gt; 0;</xhtml>
+any_moving := rds_x.Moving OR rds_y.Moving OR rds_z.Moving;
+fault_any := rds_x.ErrorStop OR rds_y.ErrorStop OR rds_z.ErrorStop;
+
+(* ---- ErrorID 诊断出口（相对命令优先报告） ---- *)
+IF rel_x.Error THEN x_err_id := rel_x.ErrorID; ELSE x_err_id := go_x.ErrorID; END_IF;
+IF rel_y.Error THEN y_err_id := rel_y.ErrorID; ELSE y_err_id := go_y.ErrorID; END_IF;
+IF rel_z.Error THEN z_err_id := rel_z.ErrorID; ELSE z_err_id := go_z.ErrorID; END_IF;</xhtml>
           </ST>
         </body>
       </pou>

@@ -195,9 +195,9 @@ L3 在线验收   逐场景 run_deploy 部署 + scenario_<场景>.py 验收（�
 
 | 场景 | XML | 轴配置 | 考察点 | 结果 |
 |---|---|---|---|---|
-| 三轴运动控制（CSP 完整版） | motion3axis.xml | 3× 直线 | CSP 四层：INTERP→DRIVE402(CiA 402 状态机+位置环)→MC API→应用层 | 35/35 |
+| 三轴运动控制（CSP 完整版 + PLCopen MC 对齐 v4.0） | motion3axis.xml | 3× 直线 | 四层：INTERP（可变动力学+中止）→DRIVE402(CiA 402 状态机+位置环)→**MC API（PLCopen MC Part 1 单轴对齐：Power/Reset/Stop/Halt/MoveAbsolute/MoveRelative/MoveJog/Home/ReadStatus/ReadActualPosition，含 ErrorID/CommandAborted 全状态组）**→应用层 | 47/47（连续 6 轮复验绿） |
 
-验收脚本 `scenario_motion3axis.py` 一身两角——CiA 402 主站（应用指令+读状态字位）+ 三轴电机仿真（按速度指令积分编码器），覆盖 8 组 35 项（CSP 语义：越程由插补层安全拒绝）：上电 RTSO → MC_Power 使能序列（bit0→bit1→bit2）→ 三轴并发定位 → 仅 Z 轴运动 → 快停 QSA 受控减速+释放重使能+重发指令 → 点动按住移动/松开停止 → 故障注入 FRA/FA+MC_Reset 复位+重使能 → 回零+失能。
+验收脚本 `scenario_motion3axis.py` 一身两角——PLCopen MC / CiA 402 主站（应用指令+目标/距离寄存器+读状态字与 ErrorID）+ 三轴电机仿真（按速度指令积分编码器），覆盖 11 组 47 项（CSP 语义：越程由 MC 层拒绝报 ErrorID=1）：上电 RTSO → MC_Power 使能序列 → 三轴并发定位 → 仅 Z 轴运动 → 快停 QSA 受控减速+释放重使能+重发指令 → 点动按住前进/松开停止（起跳锚定实际位置）→ **越程 MC 层拒绝（err_id=1，轴不动不失能）** → **MC_Halt 受控暂停（减速停不失能+重发恢复）** → **MC_MoveRelative 相对定位（实际位置+距离）与越程拒绝** → 回零+失能 → 全程不变量。
 
 **场景覆盖度**：当前场景库为 motion3axis 单场景（三轴运动控制 CSP 完整栈，作为双链路联调基准）。其余运动场景（axis_osc / xy_pick / z_lift / mixed_lin_rot）与非运动场景（分拣/液位/交通/PID）均按决策移除，历史见 git；《运动控制代码生成方案》与 `tools/gen_scenarios.py` 生成器保留，场景可按需再生。prog_id 分配：motion3axis=1，新场景从 2 顺延。
 
@@ -208,11 +208,34 @@ L3 在线验收   逐场景 run_deploy 部署 + scenario_<场景>.py 验收（�
 3. **模拟量统一约定**：双链路统一用 **INT @ %QW + 定点换算**（不用 `REAL` 与 `%I` 区——仅链路 A 技术上可行，为保证两链路跑同一份代码而统一弃用），换算系数在 io_map 中声明；
 4. **线圈访问红线**：仿真侧桥接若走链路 B，线圈写必须经 `modbus_io.SafeCoilIO`（§5.2）。
 
+### 6.1 链路 A L3 工具链 Docker recipe（2026-09-09 lx 实测，Windows 无 WSL/Linux 机可用）
+
+L3（真 iec2c+gcc 编译回环）不需要专用 Linux 机器——用 OpenPLC 镜像里的 matiec + python 官方镜像即可：
+
+```bash
+# ① 从 openplc 容器提取 matiec（iec2c 二进制 + lib/ 标准库，~8MB，落 workspace/ 不入库）：
+mkdir -p workspace/matiec_toolchain
+docker cp openplc:/workdir/utils/matiec_src/iec2c workspace/matiec_toolchain/iec2c
+docker cp openplc:/workdir/utils/matiec_src/lib   workspace/matiec_toolchain/lib
+
+# ② python 容器内跑 L3（注意：-v 源路径用正斜杠；gcc 须连带 libc6-dev，slim 镜像不带）：
+docker run --rm \
+  -v "D:/<repo>:/repo" \
+  -v "D:/<repo>/workspace/matiec_toolchain:/workdir/utils/matiec_src" \
+  --entrypoint bash python:3.12-slim -c "
+    apt-get update -qq && apt-get install -y -qq --no-install-recommends gcc libc6-dev &&
+    pip install -q jsonschema;
+    export MATEC=/workdir/utils/matiec_src/iec2c CC=gcc MATEC_ROOT=/workdir/utils/matiec_src &&
+    cd /repo && python3 toolchain/tests/test_link_a.py"
+```
+
+坑三条（均已踩过）：`fdamador/openplc` 的 entrypoint 直接起 webserver（**必须 `--entrypoint bash`** 否则命令被吞、容器悬挂）；镜像是 Debian 9（EOL，apt 源失效，别指望在里面装包）；Windows 挂载源路径**正斜杠**才可靠（反斜杠第二块挂载会静默变空目录）。该 matiec 的关键版本特性（shim_gen 已适配）：定位变量外部引用为 `type*` 指针语义（shim 充当 glue）；`POUS.c` 被资源 `.c` 文本包含（unity build，勿单独编译）；头文件在 `lib/C/`；`iec2c -I <root>/lib` 指定标准库目录；入口符号恒为 `config_init__/config_run__`（配置头文件名随 CONFIGURATION 名变）。
+
 ## 7. 待办（按优先级）
 
-1. **双链路联调**：同一场景 A/B 双跑、trace 比对行为一致性（总体方案风险表"双链路行为不一致"的应对；**依赖 csk 链路 A 就绪**，已在协作看板提请求）；
-2. **场景库扩充**：2026-09-03 按指令精简为 motion3axis 单场景（三轴运动控制基线）；后续场景（运动扩展与其余应用域）按 gc 模式库需求重建，prog_id 从 2 顺延；
-3. **配合事项**（非本侧实现）：三方一致性检查器归 gc（复用本侧 `xml2st.parse()`，见其文档 §5）；模拟量 INT 定点换算的量程字段随 io_map 契约定稿（主方案 §3.3，csk 落地），本侧参与评审。
+1. **双链路联调**：同一场景 A/B 双跑、trace 比对行为一致性（总体方案风险表"双链路行为不一致"的应对）。**链路 A L3 回环已于 2026-09-09 lx 实测通过**（Docker recipe 见 §6.1；含 csk 侧 toolchain 四处版本适配修正，待 csk 复核）——下一步 motion3axis A/B trace 比对，等 csk 判定引擎/trace 口径；
+2. **场景库扩充**：2026-09-03 按指令精简为 motion3axis 单场景（三轴运动控制基线）；后续场景（运动扩展与其余应用域）按 gc 模式库需求重建，prog_id 从 2 顺延——gc 分支已新增 plotter3axis(=2)/plotter_circle(=3)，编号合规（2026-09-09 lx 复核）；
+3. **配合事项**（非本侧实现）：三方一致性检查器归 gc（复用本侧 `xml2st.parse()`，见其文档 §5）；模拟量 INT 定点换算的量程字段随 io_map 契约定稿（主方案 §3.3，csk 落地）——**契约③ draft.1 lx 评审已回**（2026-09-09，结论见看板：结构 ✅ + %IW pattern 收紧意见）。
 
 ## 8. 仓库实现索引与快速开始
 

@@ -27,7 +27,7 @@ class TestBaseline:
         assert problems == []
         assert model["station"] == "Motion3AxisStation"
         assert len(model["devices"]) == 4          # gantry + 三轴
-        assert len(model["io_points"]) == 24
+        assert len(model["io_points"]) == 32   # 2026-09-09 PLCopen MC 对齐 +8
         assert [a["axis"] for a in model["kinematics"]["axes"]] == ["x_axis", "y_axis", "z_axis"]
 
     def test_io_dir_type_counts_match_spec(self):
@@ -66,7 +66,7 @@ class TestIOListPrefill:
         io_items, pending = build_io_list(model)
         assert pending == []
         by_name = {i["name"]: i for i in io_items}
-        assert len(by_name) == len(SPEC["io_list"]) == 24
+        assert len(by_name) == len(SPEC["io_list"]) == 32
         for item in SPEC["io_list"]:
             got = by_name[item["name"]]
             assert got["dir"] == item["dir"] and got["type"] == item["type"]
@@ -77,9 +77,10 @@ class TestIOListPrefill:
     def test_int_without_range_goes_pending(self):
         # INT 缺量程：预填仍产出条目（range=None），pending 提示须补充——LLM/人工补全对象
         model, _ = parse_aml(AML)
-        model["io_points"][12]["range"] = None     # x_fb
+        idx_fb = next(i for i, p in enumerate(model["io_points"]) if p["name"] == "x_fb")
+        model["io_points"][idx_fb]["range"] = None
         io_items, pending = build_io_list(model)
-        assert io_items[12]["range"] is None
+        assert io_items[idx_fb]["range"] is None
         assert any("x_fb" in note and "量程" in note for note in pending)
 
 
@@ -193,7 +194,7 @@ class TestCLI:
             capture_output=True, text=True, encoding="utf-8", errors="replace")
         assert proc.returncode == 0, proc.stderr
         items = json.loads(proc.stdout)
-        assert len(items) == 24 and items[0]["name"] == "run"
+        assert len(items) == 32 and items[0]["name"] == "run"
 
 
 # ---------------- 三轴绘图仪示例（IEC 62714/CAEX 3.0 全结构） ----------------

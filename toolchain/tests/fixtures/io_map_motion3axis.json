@@ -1,0 +1,30 @@
+{
+  "io_map_version": "1.0.0-draft.1",
+  "scene_id": "motion3axis_link_a_test",
+  "entries": [
+    { "plc_var": "run",        "dir": "input",  "type": "bool",
+      "modbus": { "area": "coils", "address": 0, "plc_addr": "%QX0.0", "length": 1, "encoding": "bool01" },
+      "bind": { "asset": "motion3axis", "quantity": "run" } },
+    { "plc_var": "cmd_home",   "dir": "input",  "type": "bool",
+      "modbus": { "area": "coils", "address": 1, "plc_addr": "%QX0.1", "length": 1, "encoding": "bool01" },
+      "bind": { "asset": "motion3axis", "quantity": "cmd_home" } },
+    { "plc_var": "x_fb",       "dir": "input",  "type": "analog", "scale": 0.1,
+      "modbus": { "area": "sensor_block", "address": 0, "plc_addr": "%QW0", "length": 1, "encoding": "int16_be" },
+      "bind": { "asset": "motion3axis", "quantity": "x_pos", "range": [0, 3000] } },
+    { "plc_var": "x_sw",       "dir": "output", "type": "word",
+      "modbus": { "area": "holding_registers", "address": 6, "plc_addr": "%QW6", "length": 1, "encoding": "int16_be" },
+      "bind": { "asset": "motion3axis", "quantity": "x_statusword" } },
+    { "plc_var": "x_sp",       "dir": "output", "type": "analog", "scale": 0.1,
+      "modbus": { "area": "holding_registers", "address": 10, "plc_addr": "%QW10", "length": 1, "encoding": "int16_be" },
+      "bind": { "asset": "motion3axis", "quantity": "x_setpoint", "range": [0, 3000] } },
+    { "plc_var": "move_done",  "dir": "output", "type": "bool",
+      "modbus": { "area": "coils", "address": 9, "plc_addr": "%QX1.1", "length": 1, "encoding": "bool01" },
+      "bind": { "asset": "motion3axis", "quantity": "move_done" } },
+    { "plc_var": "prog_id",    "dir": "output", "type": "analog",
+      "modbus": { "area": "holding_registers", "address": 20, "plc_addr": "%QW20", "length": 1, "encoding": "int16_be" },
+      "bind": { "asset": "motion3axis", "quantity": "prog_id" } },
+    { "plc_var": "echo",       "dir": "output", "type": "bool",
+      "modbus": { "area": "coils", "address": 8, "plc_addr": "%QX1.0", "length": 1, "encoding": "bool01" },
+      "bind": { "asset": "motion3axis", "quantity": "echo" } }
+  ]
+}

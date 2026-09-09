@@ -215,6 +215,83 @@
       "type": "BOOL",
       "range": null,
       "device": "任一轴故障（sw bit3）"
+    },
+    {
+      "name": "cmd_halt",
+      "dir": "input",
+      "type": "BOOL",
+      "range": null,
+      "device": "MC_Halt 受控暂停指令（上升沿，减速停不失能）"
+    },
+    {
+      "name": "cmd_rel",
+      "dir": "input",
+      "type": "BOOL",
+      "range": null,
+      "device": "MC_MoveRelative 相对定位指令（上升沿）"
+    },
+    {
+      "name": "rel_x_d",
+      "dir": "input",
+      "type": "INT",
+      "range": [
+        -100,
+        100
+      ],
+      "unit": "%",
+      "device": "X 相对定位距离（触发时叠加实际位置）"
+    },
+    {
+      "name": "rel_y_d",
+      "dir": "input",
+      "type": "INT",
+      "range": [
+        -100,
+        100
+      ],
+      "unit": "%",
+      "device": "Y 相对定位距离"
+    },
+    {
+      "name": "rel_z_d",
+      "dir": "input",
+      "type": "INT",
+      "range": [
+        -100,
+        100
+      ],
+      "unit": "%",
+      "device": "Z 相对定位距离"
+    },
+    {
+      "name": "x_err_id",
+      "dir": "output",
+      "type": "INT",
+      "range": [
+        0,
+        3
+      ],
+      "device": "X MC 块 ErrorID（0=无 1=越程 2=轴故障 3=未使能）"
+    },
+    {
+      "name": "y_err_id",
+      "dir": "output",
+      "type": "INT",
+      "range": [
+        0,
+        3
+      ],
+      "device": "Y MC 块 ErrorID"
+    },
+    {
+      "name": "z_err_id",
+      "dir": "output",
+      "type": "INT",
+      "range": [
+        0,
+        3
+      ],
+      "device": "Z MC 块 ErrorID"
     }
   ],
   "constraints": [

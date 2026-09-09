@@ -76,10 +76,13 @@ curl -X POST http://127.0.0.1:8600/deploy --data-binary @src/plc/motion3axis.xml
 │   │   ├── scenario_plotter_circle.py # 圆形绘图在线验收
 │   │   ├── run_regression.py          # 静态、单测、在线三级回归
 │   │   └── stop_plc.py                # 停止 OpenPLC 运行程序
-│   └── plc/                           # 已验收 PLCopen XML 场景库
-│       ├── motion3axis.xml
-│       ├── plotter3axis.xml
-│       └── plotter_circle.xml
+│   ├── plc/                           # 已验收 PLCopen XML 场景库
+│   │   ├── motion3axis.xml
+│   │   ├── plotter3axis.xml
+│   │   └── plotter_circle.xml
+│   ├── scenegen/                      # csk ②b 确定性支撑：SceneSpec 校验/USD 构建/Modbus 地址分配
+│   ├── runtime/                       # csk ③b 运行时：Modbus TCP 桥 + 独立运行时 + 示教器
+│   └── toolchain/                     # csk 链路 A：io_map→C shim→DLL 工具链
 ├── contract/                          # SceneSpec/组件契约及对接示例
 │   ├── components.v1.1.json
 │   ├── scene.spec.example.json

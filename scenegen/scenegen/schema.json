@@ -1,0 +1,108 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SceneSpec v1.1",
+  "description": "LLM 生成的场景中间表示；确定性转换为 USD。类型特定的参数规则由组件注册表（scenegen.components）另行校验。",
+  "type": "object",
+  "required": ["scene_id", "spec_version", "assets", "io_map", "script"],
+  "properties": {
+    "scene_id": { "type": "string", "pattern": "^[a-z0-9_]{1,64}$" },
+    "spec_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+$" },
+    "units": { "enum": ["m"] },
+    "physics": {
+      "type": "object",
+      "properties": {
+        "gravity": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
+        "physics_dt": { "type": "number", "exclusiveMinimum": 0, "maximum": 0.05 },
+        "solver": { "enum": ["tgs", "pgs"] }
+      },
+      "additionalProperties": false
+    },
+    "ground": {
+      "type": "object",
+      "properties": {
+        "size": { "type": "array", "items": { "type": "number", "exclusiveMinimum": 0 }, "minItems": 2, "maxItems": 2 },
+        "friction": { "type": "number", "exclusiveMinimum": 0, "maximum": 5 }
+      },
+      "additionalProperties": false
+    },
+    "lighting": { "type": "string" },
+    "assets": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/asset" } },
+    "io_map": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/ioEntry" } },
+    "script": { "$ref": "#/definitions/script" }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "pose": {
+      "type": "object",
+      "required": ["position"],
+      "properties": {
+        "position": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
+        "rpy_deg": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 }
+      },
+      "additionalProperties": false
+    },
+    "asset": {
+      "type": "object",
+      "required": ["id", "type", "pose"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$" },
+        "type": { "type": "string" },
+        "parent": { "type": "string" },
+        "pose": { "$ref": "#/definitions/pose" },
+        "params": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "ioEntry": {
+      "type": "object",
+      "required": ["plc_var", "dir", "type", "bind"],
+      "properties": {
+        "plc_var": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$" },
+        "dir": { "enum": ["input", "output"] },
+        "type": { "enum": ["bool", "float"] },
+        "bind": {
+          "type": "object",
+          "required": ["asset", "quantity"],
+          "properties": {
+            "asset": { "type": "string" },
+            "quantity": { "type": "string" },
+            "range": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
+          },
+          "additionalProperties": false
+        },
+        "modbus": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "script": {
+      "type": "object",
+      "required": ["termination"],
+      "properties": {
+        "spawn_schedule": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["asset_template", "at_time", "position"],
+            "properties": {
+              "asset_template": { "type": "string" },
+              "at_time": { "type": "array", "items": { "type": "number", "minimum": 0 }, "minItems": 1 },
+              "position": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 }
+            },
+            "additionalProperties": false
+          }
+        },
+        "perturbations": { "type": "array" },
+        "termination": {
+          "type": "object",
+          "required": ["max_sim_time"],
+          "properties": {
+            "max_sim_time": { "type": "number", "exclusiveMinimum": 0, "maximum": 600 },
+            "early_stop": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
