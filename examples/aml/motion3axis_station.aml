@@ -51,6 +51,14 @@
         <Attribute Name="address"><Value>%QX0.7</Value></Attribute>
         <Attribute Name="description"><Value>MC_Reset 故障复位（上升沿）</Value></Attribute>
       </ExternalInterface>
+      <ExternalInterface Name="cmd_halt" ID="if_cmd_halt" RefBaseClassPath="308sjkInterfaceClassLib/Signal/DigitalInput">
+        <Attribute Name="address"><Value>%QX2.0</Value></Attribute>
+        <Attribute Name="description"><Value>MC_Halt 受控暂停指令（上升沿，减速停不失能）</Value></Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="cmd_rel" ID="if_cmd_rel" RefBaseClassPath="308sjkInterfaceClassLib/Signal/DigitalInput">
+        <Attribute Name="address"><Value>%QX2.1</Value></Attribute>
+        <Attribute Name="description"><Value>MC_MoveRelative 相对定位指令（上升沿）</Value></Attribute>
+      </ExternalInterface>
 
       <ExternalInterface Name="all_oe" ID="if_all_oe" RefBaseClassPath="308sjkInterfaceClassLib/Signal/DigitalOutput">
         <Attribute Name="address"><Value>%QX1.0</Value></Attribute>
@@ -95,6 +103,13 @@
           <Attribute Name="range_max"><Value>100</Value></Attribute>
           <Attribute Name="unit"><Value>%</Value></Attribute>
         </ExternalInterface>
+        <ExternalInterface Name="rel_x_d" ID="if_rel_x_d" RefBaseClassPath="308sjkInterfaceClassLib/Signal/AnalogInput">
+          <Attribute Name="address"><Value>%QW3</Value></Attribute>
+          <Attribute Name="description"><Value>X 相对定位距离（触发时叠加实际位置）</Value></Attribute>
+          <Attribute Name="range_min"><Value>-100</Value></Attribute>
+          <Attribute Name="range_max"><Value>100</Value></Attribute>
+          <Attribute Name="unit"><Value>%</Value></Attribute>
+        </ExternalInterface>
         <ExternalInterface Name="x_sw" ID="if_x_sw" RefBaseClassPath="308sjkInterfaceClassLib/Signal/AnalogOutput">
           <Attribute Name="address"><Value>%QW6</Value></Attribute>
           <Attribute Name="description"><Value>X 驱动状态字（CiA 402 编码：bit0/1/2/3/4/5/6/10/12）</Value></Attribute>
@@ -107,6 +122,12 @@
           <Attribute Name="range_min"><Value>-120</Value></Attribute>
           <Attribute Name="range_max"><Value>120</Value></Attribute>
           <Attribute Name="unit"><Value>%/s</Value></Attribute>
+        </ExternalInterface>
+        <ExternalInterface Name="x_err_id" ID="if_x_err_id" RefBaseClassPath="308sjkInterfaceClassLib/Signal/AnalogOutput">
+          <Attribute Name="address"><Value>%QW16</Value></Attribute>
+          <Attribute Name="description"><Value>X MC 块 ErrorID（0=无 1=越程 2=轴故障 3=未使能）</Value></Attribute>
+          <Attribute Name="range_min"><Value>0</Value></Attribute>
+          <Attribute Name="range_max"><Value>3</Value></Attribute>
         </ExternalInterface>
       </InternalElement>
 
@@ -136,6 +157,13 @@
           <Attribute Name="range_max"><Value>100</Value></Attribute>
           <Attribute Name="unit"><Value>%</Value></Attribute>
         </ExternalInterface>
+        <ExternalInterface Name="rel_y_d" ID="if_rel_y_d" RefBaseClassPath="308sjkInterfaceClassLib/Signal/AnalogInput">
+          <Attribute Name="address"><Value>%QW4</Value></Attribute>
+          <Attribute Name="description"><Value>Y 相对定位距离</Value></Attribute>
+          <Attribute Name="range_min"><Value>-100</Value></Attribute>
+          <Attribute Name="range_max"><Value>100</Value></Attribute>
+          <Attribute Name="unit"><Value>%</Value></Attribute>
+        </ExternalInterface>
         <ExternalInterface Name="y_sw" ID="if_y_sw" RefBaseClassPath="308sjkInterfaceClassLib/Signal/AnalogOutput">
           <Attribute Name="address"><Value>%QW7</Value></Attribute>
           <Attribute Name="description"><Value>Y 驱动状态字</Value></Attribute>
@@ -148,6 +176,12 @@
           <Attribute Name="range_min"><Value>-120</Value></Attribute>
           <Attribute Name="range_max"><Value>120</Value></Attribute>
           <Attribute Name="unit"><Value>%/s</Value></Attribute>
+        </ExternalInterface>
+        <ExternalInterface Name="y_err_id" ID="if_y_err_id" RefBaseClassPath="308sjkInterfaceClassLib/Signal/AnalogOutput">
+          <Attribute Name="address"><Value>%QW17</Value></Attribute>
+          <Attribute Name="description"><Value>Y MC 块 ErrorID</Value></Attribute>
+          <Attribute Name="range_min"><Value>0</Value></Attribute>
+          <Attribute Name="range_max"><Value>3</Value></Attribute>
         </ExternalInterface>
       </InternalElement>
 
@@ -177,6 +211,13 @@
           <Attribute Name="range_max"><Value>100</Value></Attribute>
           <Attribute Name="unit"><Value>%</Value></Attribute>
         </ExternalInterface>
+        <ExternalInterface Name="rel_z_d" ID="if_rel_z_d" RefBaseClassPath="308sjkInterfaceClassLib/Signal/AnalogInput">
+          <Attribute Name="address"><Value>%QW5</Value></Attribute>
+          <Attribute Name="description"><Value>Z 相对定位距离</Value></Attribute>
+          <Attribute Name="range_min"><Value>-100</Value></Attribute>
+          <Attribute Name="range_max"><Value>100</Value></Attribute>
+          <Attribute Name="unit"><Value>%</Value></Attribute>
+        </ExternalInterface>
         <ExternalInterface Name="z_sw" ID="if_z_sw" RefBaseClassPath="308sjkInterfaceClassLib/Signal/AnalogOutput">
           <Attribute Name="address"><Value>%QW8</Value></Attribute>
           <Attribute Name="description"><Value>Z 驱动状态字</Value></Attribute>
@@ -189,6 +230,12 @@
           <Attribute Name="range_min"><Value>-120</Value></Attribute>
           <Attribute Name="range_max"><Value>120</Value></Attribute>
           <Attribute Name="unit"><Value>%/s</Value></Attribute>
+        </ExternalInterface>
+        <ExternalInterface Name="z_err_id" ID="if_z_err_id" RefBaseClassPath="308sjkInterfaceClassLib/Signal/AnalogOutput">
+          <Attribute Name="address"><Value>%QW18</Value></Attribute>
+          <Attribute Name="description"><Value>Z MC 块 ErrorID</Value></Attribute>
+          <Attribute Name="range_min"><Value>0</Value></Attribute>
+          <Attribute Name="range_max"><Value>3</Value></Attribute>
         </ExternalInterface>
       </InternalElement>
 

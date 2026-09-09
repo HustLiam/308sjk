@@ -36,9 +36,9 @@ def io_entries_from(io_list, **overrides):
 
 
 class TestExtractLocatedVars:
-    def test_motion3axis_has_24_external_vars(self):
+    def test_motion3axis_has_32_external_vars(self):
         located = extract_located_vars(MOTION_XML)
-        assert len(located) == 24  # 25 个定位变量 - prog_id（契约 v1.1 元信息豁免）
+        assert len(located) == 32  # 33 个定位变量 - prog_id（契约 v1.1 元信息豁免）；2026-09-09 PLCopen MC 对齐 +8
         by_name = {v["name"]: v for v in located}
         assert by_name["run"] == {"name": "run", "addr": "%QX0.0", "type": "BOOL"}
         assert by_name["x_fb"] == {"name": "x_fb", "addr": "%QW0", "type": "INT"}
