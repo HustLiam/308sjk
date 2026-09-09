@@ -1,6 +1,6 @@
 {
-  "scene_id": "plotter_cell_square",
-  "spec_version": "1.0",
+  "scene_id": "plotter_cell_square_draw",
+  "spec_version": "1.1",
   "units": "m",
   "physics": {
     "gravity": [
@@ -147,7 +147,7 @@
     {
       "id": "plot_head",
       "type": "tool_head",
-      "parent": "y_axis",
+      "parent": "z_axis",
       "pose": {
         "position": [
           0.5,
@@ -204,6 +204,47 @@
           "move_done",
           "pen_down",
           "plot_done"
+        ]
+      }
+    }
+  ],
+  "io_map": [
+    {
+      "plc_var": "x_fb",
+      "dir": "input",
+      "type": "float",
+      "bind": {
+        "asset": "x_axis",
+        "quantity": "pos",
+        "range": [
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "plc_var": "y_fb",
+      "dir": "input",
+      "type": "float",
+      "bind": {
+        "asset": "y_axis",
+        "quantity": "pos",
+        "range": [
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "plc_var": "z_fb",
+      "dir": "input",
+      "type": "float",
+      "bind": {
+        "asset": "z_axis",
+        "quantity": "pos",
+        "range": [
+          0.0,
+          0.01
         ]
       }
     }
