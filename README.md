@@ -1,10 +1,9 @@
 # SIMENS PLC — Agent 生成 61131-10 代码并闭环仿真（OpenPLC 运行时）
 
 课题目标：开发一个 agent，理解用户工艺需求 → 生成 **IEC 61131-10（PLCopen XML）** 代码 →
-自动部署到软 PLC 运行 → 变量接入 Isaac Sim 虚拟仿真 → 通过仿真反馈迭代优化代码。
+自动部署到软 PLC 运行 → 变量接入 MuJoCo 物理仿真 → 通过仿真反馈迭代优化代码。
 
 本仓库（`lx` 分支）为 **OpenPLC 运行时版本**：全链路纯 API、零 GUI、无许可证限制。
-CODESYS 版本的历史实现见 git 历史（保留作标准符合性验收参考）。
 
 ## 链路
 
@@ -18,7 +17,7 @@ workspace/program.st
 OpenPLC v3 运行时（Docker / WSL2 / 远程 Linux）
         │ ③ Modbus TCP :502（%QX→线圈 %QW→保持寄存器）
         ▼
-scenario_motion3axis.py（验收）/ 未来的 Isaac Sim 桥接
+scenario_motion3axis.py（验收）/ 未来的 仿真桥接
 ```
 
 ## 快速开始

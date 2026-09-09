@@ -3,7 +3,7 @@
 """
 端到端闭环编排器（solve 循环的权威实现骨架，gc 文档 §4）。
 
-当前形态：**半环**（不含 Isaac 仿真侧）——
+当前形态：**半环**（不含仿真侧）——
   ① spec 装载 + 契约校验（需求理解 LLM 澄清后续接入，人工介入点 1 保留为文件确认）
   ② PLC 代码生成（PLCGenerator，LLM 或种子模式）
   闸门1 xml2st 本地契约校验（毫秒级，失败即短路不进下一环）
@@ -12,7 +12,7 @@
   闸门4 链路 B 验收（可选，scenario_<场景>.py 在线验收；OpenPLC 不在线记 skipped）
   通过 → final/ 冻结；MAX_ITERS(6) 未过 → best_effort（通过准则数最多一轮 + 失败报告）
 
-全环（gen_scene_spec → build_usd → run_isaac_headless → evaluate → verdict 归因路由）
+全环（gen_scene_spec → mujoco_build → run_sim_headless → evaluate → verdict 归因路由）
 在仿真侧接口就绪后接入（csk 文档 §7.4 表），本骨架已预留挂点。
 
 产物落盘（gc 文档 §4，全量入 git）：
