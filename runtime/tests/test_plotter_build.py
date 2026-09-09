@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from gantry_bridge import GantryBridge, derive_layout, load_io_map, pack_f32, unpack_f32  # noqa: E402
 from mujoco_build import build_mjcf, load_spec  # noqa: E402
+from acceptance import load_poswin  # noqa: E402
 
 PORT = 15420
 _port_seq = iter(range(PORT, PORT + 50))
@@ -156,9 +157,19 @@ def make_plotter_sim(port=None):
     return bridge, state, data, jid
 
 
+def test_load_poswin_from_spec():
+    """poswin 提取：plotter 按参数换算（2%×0.01=20mm，1mm×0.001=1mm）；gantry 用缺省。"""
+    pw = load_poswin(load_spec(REPO_SPEC))
+    assert pw == {"X": 0.02, "Y": 0.02, "Z": 0.001}, f"plotter poswin {pw}"
+    pw_g = load_poswin(load_spec(os.path.normpath(os.path.join(
+        HERE, "..", "..", "scenegen", "out", "gantry", "scene.spec.json"))))
+    assert pw_g == {"X": 0.005, "Y": 0.005, "Z": 0.005}, f"gantry 缺省 poswin {pw_g}"
+
+
 def test_closed_loop_command_moves_joint():
-    """写 X=0.5 → 反馈经斜坡（0.4 m/s）到达 ≈0.5（真实 qpos，非指令回声）。"""
+    """写 X=0.5 → 反馈经斜坡（0.4 m/s）到达，稳态在 poswin（20mm）内（spec 驱动验收）。"""
     from pymodbus.client import ModbusTcpClient
+    poswin = load_poswin(load_spec(REPO_SPEC))
     bridge, state, _, _ = make_plotter_sim()
     layout = bridge.layout
     try:
@@ -171,10 +182,11 @@ def test_closed_loop_command_moves_joint():
         while time.time() < deadline:
             rr = cli.read_holding_registers(address=layout["X"]["pos_reg"], count=2, slave=1)
             x = unpack_f32(rr.registers)
-            if abs(x - 0.5) < 0.005:
+            if abs(x - 0.5) < poswin["X"]:
                 break
             time.sleep(0.1)
-        assert x is not None and abs(x - 0.5) < 0.005, f"X 反馈未到达 0.5（当前 {x}）"
+        assert x is not None and abs(x - 0.5) < poswin["X"], \
+            f"X 未在 poswin({poswin['X']}) 内到位（当前 {x}）"
         cli.close()
     finally:
         state["stop"] = True
@@ -184,6 +196,7 @@ def test_closed_loop_command_moves_joint():
 def test_overrange_clamped_to_travel():
     """超程 9.9m → 钳位到行程 1.0（行程随 spec 走，非内置缺省 0.6）。"""
     from pymodbus.client import ModbusTcpClient
+    poswin = load_poswin(load_spec(REPO_SPEC))
     bridge, state, _, _ = make_plotter_sim()
     layout = bridge.layout
     try:
@@ -196,10 +209,11 @@ def test_overrange_clamped_to_travel():
         while time.time() < deadline:
             rr = cli.read_holding_registers(address=layout["X"]["pos_reg"], count=2, slave=1)
             x = unpack_f32(rr.registers)
-            if abs(x - 1.0) < 0.005:
+            if abs(x - 1.0) < poswin["X"]:
                 break
             time.sleep(0.1)
-        assert x is not None and abs(x - 1.0) < 0.005, f"超程未钳位到 1.0（当前 {x}）"
+        assert x is not None and abs(x - 1.0) < poswin["X"], \
+            f"超程未钳位到 1.0（当前 {x}）"
         cli.close()
     finally:
         state["stop"] = True

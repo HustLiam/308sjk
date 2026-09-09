@@ -27,7 +27,9 @@ GANTRY_CONST = {
     "saddle_half": (0.045, 0.21, 0.03),
     "head_half": (0.05, 0.05, 0.04),
     "slider_half": (0.03, 0.03, 0.045),
-    "pen_length": 0.135,                # 笔尖到 z_carriage 原点的距离
+    "pen_length": 0.135,                # 笔尖（球面最低点）到 z_carriage 原点距离；
+                                        # MJCF 轴长 = pen_length − pen_radius（球头半径补偿，
+                                        # 否则 q=0 时球面悬空半径高度——2026-09-09 落笔 7mm 根因）
     "pen_radius": 0.0075,
 }
 
@@ -111,8 +113,9 @@ def build_mjcf(spec: dict) -> str:
                    damping="{c['damping'][2]:.6g}"/>
             <geom name="slider" type="box" size="{_vec(c['slider_half'])}" mass="{c['mass'][2]:.6g}"
                   pos="0 0 0.155" contype="0" conaffinity="0" rgba="0.16 0.42 0.66 1"/>
-            <!-- 笔向下悬伸：q=0 时笔尖触纸（距纸面 ~1mm 静置位），抬笔 = +Z 行程 -->
-            <geom name="pen" type="capsule" fromto="0 0 {-c['pen_length']:.6g} 0 0 0"
+            <!-- 笔向下悬伸：q=0 时笔尖球面触纸（胶囊最低面 = 轴线端点 + 半径，轴长已补半径），
+                 抬笔 = +Z 行程；伺服压纸的力平衡稳态由接触判据语义覆盖（csk 文档 §7.1） -->
+            <geom name="pen" type="capsule" fromto="0 0 {-c['pen_length'] + c['pen_radius']:.6g} 0 0 0"
                   size="{c['pen_radius']:.6g}" mass="0.02" rgba="0.85 0.2 0.2 1"/>
           </body>
         </body>
@@ -244,7 +247,7 @@ def _plotter_xml(spec: dict) -> str:
             <geom name="slider" type="box" size="0.04 0.04 0.015" mass="{c['mass'][2]:.6g}"
                   pos="0 0 0.02" contype="0" conaffinity="0" rgba="0.16 0.42 0.66 1"/>
             <!-- 笔（tool_head 载具为链尾滑块，R3）；笔尖有碰撞：任何故障下停在纸/台面 -->
-            <geom name="pen" type="capsule" fromto="0 0 {-pen_len:.6g} 0 0 0"
+            <geom name="pen" type="capsule" fromto="0 0 {-pen_len + tip_r:.6g} 0 0 0"
                   size="{tip_r:.6g}" mass="0.02" rgba="0.85 0.2 0.2 1"/>
           </body>
         </body>

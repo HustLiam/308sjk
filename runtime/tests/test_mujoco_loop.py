@@ -214,6 +214,28 @@ def test_rate_limit_step_becomes_ramp():
         bridge.stop()
 
 
+def test_pen_down_press_settles_near_zero():
+    """根治回归（2026-09-09）：落笔指令 Z=0 → 稳态 qz 应 <1mm。
+
+    修复前稳态 7.01mm = 笔胶囊球头半径（fromto 是轴线端点，未补半径，球面在
+    qz=r 处触纸）；几何补偿后球面在 q=0 触纸，力平衡稳态只剩接触穿透量（µm 级）。
+    接触类目标的验收语义（判接触建立而非位置相等）见 csk 文档 §7.1 / 共同议题。"""
+    import mujoco
+    model = mujoco.MjModel.from_xml_string(build_mjcf(load_spec(REPO_SPEC)))
+    model.opt.timestep = 1.0 / 120
+    data = mujoco.MjData(model)
+    az = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, "drive_z")
+    jz = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "joint_z")
+    data.ctrl[az] = 0.2                                  # 抬笔
+    for _ in range(120):
+        mujoco.mj_step(model, data)
+    data.ctrl[az] = 0.0                                  # 落笔
+    for _ in range(360):
+        mujoco.mj_step(model, data)
+    qz = float(data.qpos[jz])
+    assert qz < 0.001, f"落笔稳态 qz={qz*1000:.2f}mm，应 <1mm（球头半径补偿失效？）"
+
+
 # ---------------- 独立脚本入口 ----------------
 
 if __name__ == "__main__":
