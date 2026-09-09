@@ -6,10 +6,10 @@
 当前形态：**半环**（不含 Isaac 仿真侧）——
   ① spec 装载 + 契约校验（需求理解 LLM 澄清后续接入，人工介入点 1 保留为文件确认）
   ② PLC 代码生成（PLCGenerator，LLM 或种子模式）
-  ②b 场景描述生成（SceneSpecGenerator，确定性：scene.spec.json + io_map.json）
+  ②b 场景描述生成（SceneSpecGenerator，确定性：scene.spec.json 内嵌 io_map——契约 v1.1）
   闸门1 xml2st 本地契约校验（毫秒级，失败即短路不进下一环）
-  闸门2 三方一致性（XML 定位变量 ≡ io_list；提供 io_map 后 R5 全腿激活）
-  闸门2b scene 闸门（②b 产物自检 + R5 全腿复跑：XML ≡ io_list ≡ io_map）
+  闸门2 三方一致性（XML 定位变量 ≡ io_list；提供 io_map 后 R5 腿激活）
+  闸门2b scene 闸门（②b 产物自检 + R5 腿复跑：XML ≡ io_list ≡ scene.io_map ⊆ io_list）
   闸门3 部署（可选，POST /deploy :8600 真编译；服务不在线记为 skipped，不阻塞；
        成功后 GET /status 做运行时观测——仅记录不参与裁定，程序身份兜底仍在
        验收脚本 require_program 内，闸门4 消费语义 lx 已确认，编排器不重复校验）
@@ -20,8 +20,8 @@
 接口就绪后接入（csk 文档 §7.4 表），本骨架已预留挂点。
 
 产物落盘（gc 文档 §4，全量入 git）：
-  runs/<task_id>/request.json + iter_NNN/{plcopen.xml, plc.st, scene.spec.json,
-  io_map.json, gate.json} + final/ + summary.md
+  runs/<task_id>/request.json + iter_NNN/{plcopen.xml, plc.st, scene.spec.json
+  （内嵌 io_map）, gate.json} + final/ + summary.md
 
 用法:
     python -m src.agent.orchestrator examples/specs/motion3axis.spec.json        # LLM 生成
@@ -641,29 +641,27 @@ class Orchestrator:
 
             gates = {"xml2st": True, "consistency": [p for p in problems2 if p.startswith("SKIP")] or True}
 
-            # ---- ②b 场景描述生成（确定性）+ 闸门2b：R5 全腿（XML ≡ io_list ≡ io_map）----
+            # ---- ②b 场景描述生成（确定性，契约 v1.1）+ 闸门2b：R5 腿（XML ≡ io_list ≡ scene.io_map）----
             if scene_generator is not None:
                 try:
                     scene_out = scene_generator.generate(spec, device_model)
                 except ValueError as exc:  # 生成器自检失败（spec 异常或内部回归）
                     feedback = fail(iter_dir, i, "scene", [str(exc)], mode)
-                    notify("gate_failed", {"iter": i, "gate": "scene"})
+                    notify("gate_failed", {"iter": i, "gate": "scene", "mode": mode})
                     continue
                 (iter_dir / "scene.spec.json").write_text(
                     json.dumps(scene_out["scene"], ensure_ascii=False, indent=2), encoding="utf-8")
-                (iter_dir / "io_map.json").write_text(
-                    json.dumps(scene_out["io_map"], ensure_ascii=False, indent=2), encoding="utf-8")
                 ok5, problems5 = consistency_check(iter_dir / "plcopen.xml",
                                                    spec["io_list"], scene_out["io_map"],
                                                    device_model=device_model)
                 hard5 = [p for p in problems5 if not p.startswith("SKIP")]
                 if not ok5 or hard5:
                     feedback = fail(iter_dir, i, "scene", hard5, mode)
-                    notify("gate_failed", {"iter": i, "gate": "scene"})
+                    notify("gate_failed", {"iter": i, "gate": "scene", "mode": mode})
                     continue
                 gates["scene"] = {"ok": True,
                                   "assets": len(scene_out["scene"]["assets"]),
-                                  "io_map_vars": len(scene_out["io_map"]["mappings"]),
+                                  "io_map_vars": len(scene_out["io_map"]),
                                   "r5": "active"}
 
             if deploy:
@@ -848,7 +846,7 @@ def main():
     parser.add_argument("--max-iters", type=int, default=MAX_ITERS)
     parser.add_argument("--runs-root", default=None, help="runs/ 根目录（默认仓库 runs/）")
     parser.add_argument("--no-scene", action="store_true",
-                        help="跳过 ②b 场景描述生成（默认启用：scene.spec.json + io_map.json）")
+                        help="跳过 ②b 场景描述生成（默认启用：scene.spec.json 含内嵌 io_map）")
     parser.add_argument("--aml", default=None,
                         help="AutomationML 设备描述（⓪）——前置 ① 需求理解，需配合 --request")
     parser.add_argument("--modbus-host", default=None,

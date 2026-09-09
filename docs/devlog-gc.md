@@ -687,3 +687,68 @@ pytest 176 → **182 全绿**（经验库记录/同质命中/分级门控/abando
 **关键机制缺陷修复（过程中实证）**：pytest 默认归因引擎曾向真实经验库写
 入假经验（21 条污染）——MemoryStore 默认路径改运行时解析 + tests/conftest.py
 autouse 隔离（教训入库：学习系统的存储必须有测试隔离层）。
+
+## 2026-09-09（下）②b 场景生成对齐 csk 契约包 v1.1（contract/）
+
+### 背景与输入
+
+master 新增 `contract/`（csk→gc 契约包 v1.1，2026-09-08；2026-09-09 增补 example1），
+声明为 gc 生成 scene.spec.json 的**唯一权威**：components.v1.1.json（15 类型机器可读
+契约）/ 组件契约表.md（同源人类可读）/ scene.spec.example.json（绘图工位范本，io_map
+为 csk 代拟）/ example1.json + example1_iomap.json（龙门 MJCF 反向导出 + 地址分配产物）。
+已 `git checkout origin/master -- contract schemas/io_map.schema.json` 引入 gc 分支。
+
+### 关键裁决（与 v0 的差异全部以契约为准）
+
+1. **io_map 内嵌 scene.spec.json**（Schema required 字段），独立 io_map.json 工件废止。
+   v0 的 mappings/io_channel{plc_addr,modbus}/scale{offset,factor} 字段全部移除——
+   **地址分配移交 csk build-mjcf**（iomap.assign_modbus 按 io_map 声明顺序确定性产出
+   %QX 逐位/%QW float32 大端 2 寄存器/%IW 传感区块，即 example1_iomap.json 形态）。
+   ⓪ 侧 AML 地址对账职责不受影响（R6 仍查 XML≡AML），只是 gc 不再在 scene 产物里
+   代 csk 分配仿真侧地址。
+2. **bind={asset, quantity}**（v0 为 {prim="/World/x_axis", quantity=joint_pos}）。
+   quantity 词汇表按契约注册表：linear_axis 只有 cmd(in,float)/pos(out,float)——
+   v0 的 joint_pos/vel_cmd/status_word 与 panel 的 *_btn/*_lamp/*_target 全部废止。
+   路由规则改为 `<axis>_fb`→`<axis>_axis`.pos、`<axis>_cmd`→cmd（生成与自检同一
+   函数 route_physical_channels，防两处规则漂移）。
+3. **按钮/灯不进 io_map**（hmi_panel 无注册 quantity）：落 panel.params.buttons/lamps，
+   csk 运行时按名接线（范本实证）。NC 设定值(sp)/状态字(sw)/速度指令(v)为非物理通道
+   不进 io_map——速度指令轴要仿真支持须 RFC 给 linear_axis 加 vel quantity。
+4. **range 一律 SI 米制** = stroke × scale_m_per_unit（x: [0,100]%×0.01→[0,1]m；
+   z: [0,10]mm×0.001→[0,0.01]m；round(,9) 规避浮点尾差保证逐字节确定性）。
+5. **注册表运行时加载**：load_contract() 扫 contract/components.v*.json 取最高版本，
+   spec_version 随契约版本（当前 1.1）。契约换版只换文件不改代码；参数校验规则
+   （enum/float 界/vec2/vec3/str/str_list/必填/未知参数）全部从 JSON 约束元数据泛化
+   实现，与 csk validate._check_params 同源同语义——**vmax:null 类缺陷**（v0 无模型
+   时落 null，契约闸门拒数字类型）由 _clean_params 剔除缺省解决。
+
+### R5 语义变更（contract 引发的检查器适配）
+
+覆盖检查从双向改为**单向 io_map ⊆ io_list**：契约 v1.1 的 io_map 只含可绑物理通道，
+按钮/灯/NC/诊断通道合法缺位。反向安全性（可绑通道不得静默丢失）转移到 ②b 自检的
+**路由覆盖规则**（V3：route_physical_channels 判定可绑的通道必须在 io_map 且绑定一致）。
+类型对账 bool↔BOOL、float↔INT（ioEntry enum {bool,float}；契约③ io_map.json 的
+{bool,analog,word} 一并兼容）。R5 接受 list（内嵌形态）与 {entries:[...]}（契约③
+build 产物）两种形态，旧 {mappings} 形态废止。
+
+### 交叉验证（pxr 未装的替代法）
+
+本机无 USD Core（pxr），csk scenegen.components 顶层 import pxr。用 types.ModuleType
+桩掉 pxr 子模块后运行其 validate.py 本体（registry/规则代码原样执行）。结果：
+- contract/example1.json（gantry_xyz，9 USD 类型内）**通过**——ioEntry 形态获真闸门背书；
+- contract/scene.spec.example.json（绘图范本，6 MJCF 类型）**被拒**："未知组件类型
+  linear_axis/...，封闭枚举: [9 个 USD 类型]"——**csk master 的 REGISTRY 落后于其
+  契约 JSON**（6 个 MJCF 类型已声明未合入）；gc 生成物受阻项与其自家范本完全同集
+  （仅类型缺口+其级联 bind 报错，无 Schema/结构/参数/量纲类错误）。
+- 结论：gc 按契约包（声明权威）生成，登记看板共同议题待 csk 合入；本侧自检（契约
+  JSON 驱动，同规则）已覆盖参数/绑定合法性。
+
+### 其他适配
+
+- plot_head/pen 挂**链尾轴**（v0 硬编码 parent=y_axis，单轴场景自检失败）；无轴不生成。
+- 编排器闸门2b / chat 交付清单同步（scene.spec.json 单工件，gates.scene.io_map_vars
+  计内嵌条目）；final 冻结 copytree 自动跟随。
+- 测试重写：test_scene_gen（契约加载/生成形态/cmd 路由/降级/V0~V4 负例/契约范本
+  自检回归——范本以合成 io_list 喂入 V0~V4 全过）、test_consistency_check R5 新语义
+  （子集合法/类型不匹配/bind 形态/契约③ wrapper）、test_orchestrator（无独立
+  io_map.json、io_map_vars=3）。pytest 182→190 全绿。

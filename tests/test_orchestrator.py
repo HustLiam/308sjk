@@ -159,7 +159,7 @@ class TestGeneratorSeedGate:
 
 
 class TestSceneGate:
-    """闸门2b：②b 场景描述生成（确定性）+ R5 全腿一致性。"""
+    """闸门2b：②b 场景描述生成（确定性，契约 v1.1）+ R5 腿一致性。"""
 
     PLOTTER_SPEC = json.loads((REPO / "examples" / "specs" / "plotter3axis.spec.json")
                               .read_text(encoding="utf-8"))
@@ -176,12 +176,13 @@ class TestSceneGate:
         assert result["status"] == "final"
         iter1 = Path(result["run_dir"]) / "iter_001"
         scene = json.loads((iter1 / "scene.spec.json").read_text(encoding="utf-8"))
-        io_map = json.loads((iter1 / "io_map.json").read_text(encoding="utf-8"))
         assert scene["scene_id"] == self.PLOTTER_SPEC["task_id"]
-        assert len(io_map["mappings"]) == len(self.PLOTTER_SPEC["io_list"])
+        assert {e["plc_var"] for e in scene["io_map"]} == {"x_fb", "y_fb", "z_fb"}
+        assert not (iter1 / "io_map.json").exists()       # 契约 v1.1：io_map 内嵌，无独立工件
         gate = json.loads((iter1 / "gate.json").read_text(encoding="utf-8"))
         assert gate["gates"]["scene"]["r5"] == "active"
-        assert (Path(result["run_dir"]) / "final" / "io_map.json").is_file()  # 冻结含 ②b 产物
+        assert gate["gates"]["scene"]["io_map_vars"] == 3
+        assert (Path(result["run_dir"]) / "final" / "scene.spec.json").is_file()  # 冻结含 ②b 产物
 
     def test_scene_gate_failure_goes_best_effort(self, tmp_path):
         class BrokenGen:
@@ -199,7 +200,7 @@ class TestSceneGate:
         orch = Orchestrator(runs_root=tmp_path)
         result = orch.solve(SPEC, PLCGenerator(client=None, seed_xml=MOTION_XML))
         assert result["status"] == "final"
-        assert not (Path(result["run_dir"]) / "iter_001" / "io_map.json").exists()
+        assert not (Path(result["run_dir"]) / "iter_001" / "scene.spec.json").exists()
 
 
 class TestStatusProbe:

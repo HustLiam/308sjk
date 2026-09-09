@@ -13,9 +13,9 @@
 | ⓪ AutomationML 解析 | IEC 62714 AML → device_model.json（设备/IO/拓扑/运动学） | `src/agent/aml_parser.py` + CLI `tools/aml_parser.py` | ✅ 完成（`schemas/device_model.schema.json` v1.0.0-draft.1 + 双示例：motion3axis_station + **plotter3axis_station（CAEX 3.0 全结构新参考样式**：InstanceHierarchy+三类类库、信号方向挂 PLC 通道、InternalLink=电气接线）；确定性解析 + io_list 预填契约测试 ×2） |
 | ① 需求理解模块 | 自然语言 → 结构化需求规格；**requirement_spec.json Schema 的定义权** | `requirement_spec.json` + JSON Schema | 🟨 Schema **v1.0.0-draft.3**（draft.2 + lx 收紧建议落实：range 完整落入有符号/无符号域之一），待 csk 评审后冻结；**模块 v0 已落地**（`src/agent/requirement.py`：LLM 模式 io_list 逐字锚定预填+修复回路 / 离线模板模式 / pending 澄清；绘图仪 spec 由 glm-5.3 一轮产出+人工介入点 1 修正后冻结 `examples/specs/plotter3axis.spec.json`）；LLM 多轮澄清未接 |
 | ②a/②b 的 LLM 生成本体 | PLCopen XML 生成器（在 lx 契约上）、失败归因分析 LLM | 生成器 Prompt 工程 + ST 模式库 | 🟨 生成器 v0 已实现（`src/agent/pipeline.py` + `patternlib.py` + `prompts/plcgen_skill.md`，种子=motion3axis+plotter3axis，xml2st+一致性双闸门回灌；client 流式降级支持万 token 长生成）；**绘图仪种子已落地**（`src/plc/plotter3axis.xml`：CSP 栈逐字复用 + INTERP_Z 笔轴 + 9 步绘图序列器 + 笔互锁，双闸门绿）；归因 LLM 未启动 |
-| 闭环编排器 | solve 循环、两个编译/校验短路、迭代记忆、终止与 best-effort、反馈包拼装与路由 | `orchestrator/` | 🟨 半环五闸门（`src/agent/orchestrator.py`：生成→xml2st→一致性→**scene（②b 产物自检 + R5 全腿）**→部署可选→链路 B 验收可选；/status 观测仅记录不裁定；CLI `--aml/--request` 直通 ⓪→①；runs/plotter3axis_demo final 冻结）；仿真全环等 csk 接口 |
-| ②b 场景描述生成 | spec → scene.spec.json + io_map.json（csk 分支 f39debd 收窄：SceneSpec JSON 生成归 gc） | `src/agent/scene_gen.py` | ✅ v0 已落地（确定性生成：8 资产封闭集 + **io_map v1.0.0-draft.1**（mappings 按主方案 §3.3，地址从 ⓪ 侧 AML 通道确定性导出）；自检 V1~V4；**R5 全腿已在编排器激活**；LLM 布局创意后续仅限 pose/params） |
-| 跨模块一致性 | io_list 单一源头的落地：**三方一致性检查器**（定位变量 ≡ io_list ≡ io_map） | `consistency_check.py` | ✅ 完成（R1~R5 全腿激活；io_map 腿由 ②b 产物供给，每轮闸门2b 执行） |
+| 闭环编排器 | solve 循环、两个编译/校验短路、迭代记忆、终止与 best-effort、反馈包拼装与路由 | `orchestrator/` | 🟨 半环五闸门（`src/agent/orchestrator.py`：生成→xml2st→一致性→**scene（②b 产物自检 + R5 腿）**→部署可选→链路 B 验收可选；/status 观测仅记录不裁定；CLI `--aml/--request` 直通 ⓪→①；runs/plotter3axis_demo final 冻结）；仿真全环等 csk 接口 |
+| ②b 场景描述生成 | spec → **scene.spec.json（内嵌 io_map，契约 v1.1）**（csk 分支 f39debd 收窄：SceneSpec JSON 生成归 gc） | `src/agent/scene_gen.py` | ✅ **v1 契约对齐已落地**（确定性生成：组件注册表运行时加载 `contract/components.v*.json`；io_map 只含可绑物理通道（fb→pos/cmd→cmd，range SI 米制）；地址分配移交 csk build-mjcf；自检 V0~V4 含路由覆盖；编排器闸门2b 消费——**受阻项：csk master REGISTRY 缺 6 个 MJCF 类型，见看板共同议题**；LLM 布局创意后续仅限 pose/params） |
+| 跨模块一致性 | io_list 单一源头的落地：**三方一致性检查器**（定位变量 ≡ io_list ≡ io_map） | `consistency_check.py` | ✅ 完成（R1~R5；R5 腿按契约 v1.1 改子集覆盖语义——io_map ⊆ io_list（ioEntry 对账 bool↔BOOL/float↔INT，bind={asset,quantity}），反向覆盖由 ②b 路由覆盖自检保证；io_map 腿由 ②b 产物供给，每轮闸门2b 执行） |
 
 不归本侧的：xml2st 校验/部署/Modbus 验收（PLC 侧）；SceneSpec→USD 构建、Isaac lockstep 运行、trace 采集、**确定性判定引擎**（仿真验证侧）。判定引擎给出 PASS/FAIL，本侧消费它并决定下一步。
 
@@ -111,20 +111,25 @@ AutomationML(设备描述)              用户（自然语言）
 
 ### 3.3 场景描述生成器（②b 的 LLM 本体）
 
-- **输入**：requirement_spec（task_goal / io_list）+ 组件类型清单（csk 维护的封闭枚举，来自组件库 quantity 清单）+ 场景类失败反馈（迭代时）；
-- **输出**：`scene.spec.json`（场景描述）+ `io_map.json`——先过 csk 的 SceneSpec Schema 与物理校验闸门（失败即短路回喂），再交 ③b 确定性构建；
-- **约定**：LLM 不写 USD；`type` 封闭枚举由评审方（csk）维护，发明新类型在校验被拒；规范与校验器的权威定义在 csk 文档 §4。
+- **输入**：requirement_spec（task_goal / io_list）+ **契约包 `contract/`（csk→gc，v1.1 唯一权威：组件类型/参数/quantity/单位制）** + 场景类失败反馈（迭代时）；
+- **输出**：`scene.spec.json` **单一工件，内嵌 io_map**（ioEntry 数组）——先过 csk 的 `scenegen.cli validate` 闸门（失败即短路回喂），再交 csk `build-mjcf` 确定性构建（io_map 地址分配在该步：输出 %QX/%QW/%IW 分配 + `st_io_declaration.st`）；
+- **约定**：LLM 不写 USD；`type` 封闭枚举以 `contract/components.v*.json` 运行时加载（契约换版只换文件，代码不动）；发明新类型走 RFC。
 
-> **落地状态（v0，2026-09-07）**：`src/agent/scene_gen.py`——**确定性生成**（同输入
-> 逐字节同输出；csk 分支 f39debd 已收窄 SceneSpec JSON 生成归 gc）。产物：
-> scene.spec.json（资产封闭集 {work_table, linear_axis, tool_head, pen, hmi_panel,
-> ground}——gc 生成侧目录，待 csk 组件库冻结后对齐）+ **io_map.json v1.0.0-draft.1**
->（mappings 按主方案 §3.3：plc_var / io_channel{plc_addr + modbus{area,address}} /
-> bind{prim, quantity} / dir / type / range / scale；**地址从 ⓪ 侧 AML 通道确定性
-> 导出**——io_points.address 作为 io_map 对账源的首次实现）。自检 V1~V4（资产
-> 封闭集/结构、io_map 结构、双向覆盖、bind.prim 落在场景资产内），编排器闸门2b
-> 消费并以 R5 全腿对账。LLM 布局创意后续只允许改 pose/params——io_map 骨架是对账
-> 契约，不交给概率性组件。
+> **落地状态（v1，2026-09-09，契约 v1.1 对齐）**：`src/agent/scene_gen.py`——
+> **确定性生成**（同输入逐字节同输出）。产物 scene.spec.json：资产契约 15 类型
+> 注册表驱动（v0 的 gc 自维护目录废止）；**io_map 内嵌**且只收录可绑物理通道
+>（路由：`<axis>_fb`→`<axis>_axis`.pos / `<axis>_cmd`→cmd；range=stroke×
+> scale_m_per_unit **SI 米制**）；按钮/灯不进 io_map（hmi_panel 无注册 quantity，
+> 落 panel.params.buttons/lamps，csk 运行时按名接线）；**地址字段移除**——地址
+> 分配归 csk build-mjcf 按声明顺序确定性产出（`contract/example1_iomap.json` 形态）；
+> NC 设定值（sp）/状态字（sw）/速度指令（v）为非物理通道不进 io_map（速度指令轴
+> 需仿真支持须 RFC 增 quantity）。自检 V0~V4（场景骨架/契约参数规则（枚举数值界
+> 未知参数 parent）/ioEntry 结构/io_map ⊆ io_list + **路由覆盖**（可绑通道不得
+> 静默丢失）/bind 合法性（asset 存在·quantity 注册·方向 dtype 匹配））。交叉
+> 验证：契约自带 example1.json（gantry）过 csk 真闸门；绘图范本与 gc 生成物受阻
+> 于 csk master 实现缺口（其 REGISTRY 仅 9 个 USD 类型，6 个 MJCF 类型已在契约
+> JSON 声明但未合入其运行时——见看板共同议题）。LLM 布局创意后续只允许改
+> pose/params——io_map 骨架是对账契约，不交给概率性组件。
 
 ## 4. 端到端编排器（闭环本体——本节为 solve 循环的权威定义）
 
@@ -174,11 +179,15 @@ runs/<date>_<task>/
 ```
 plc_project.xml --(lx xml2st parse)--> 定位变量表 {name, addr, type, dir}
 requirement_spec.io_list ------------------------------------┐
-io_map.json（仿真侧产出）------------------------------------┤
+io_map（契约 v1.1：scene.spec 内嵌 ioEntry / csk 契约③ io_map.json）---┤
                     consistency_check：名称/类型/地址/方向逐条对账
 ```
 
-- 检查点：`io_list` 每条在定位变量表与 io_map 中均有对应且名称逐字一致；地址不冲突、位宽匹配（BOOL↔%QX，INT↔%QW）；方向语义正确（input↔Isaac→PLC，output↔PLC→Isaac）；
+- 检查点：`io_list` 每条在定位变量表有逐字同名变量（R2 双向）；io_map 每条 ioEntry
+  的 plc_var ∈ io_list 且 dir/类型兼容（R5，**子集覆盖**——契约 v1.1 的 io_map 只含
+  可绑物理通道，按钮/灯与 NC/诊断通道不在其列，反向覆盖由 ②b 路由覆盖自检保证）；
+  地址不冲突、位宽匹配（BOOL↔%QX，INT↔%QW）；方向语义正确（input↔仿真→PLC，
+  output↔PLC→仿真）；
 - 调用时机：编排器在**生成后、仿真前**调用（对应总体方案 §3.2 前置校验第 3 步）；
 - 任何一方修改（改代码变量名 / 改 io_map 绑定）都触发重查——单一源头 + 自动对账，杜绝三方漂移。
 
@@ -190,7 +199,7 @@ io_map.json（仿真侧产出）------------------------------------┤
 | lx（PLC 侧） | 契约文档 §3：ST 子集 / 定位变量位宽 / 显式拒绝清单 —— 生成器 Prompt 的硬约束 | 本侧遵守 |
 | 仿真侧 | requirement_spec → SceneSpec 生成与 USD 构建；`run_isaac_headless(usd, io_map, dll)`；`evaluate()` → verdict.json | 本侧调用 |
 | 仿真侧 | acceptance 四类准则结构（csk 文档 §7.1）——需求 Schema 与判定引擎逐字对齐 | 双方共守 |
-| 跨链路 | 模拟量统一 **INT @ %QW + 定点换算**（双链路一致约定）——生成器负责落码，换算系数写入 io_map（量程换算字段） | 本侧落实 |
+| 跨链路 | 模拟量统一 **INT @ %QW + 定点换算**（lx 链路 B）——生成器负责落码；契约 v1.1 仿真链路 scene.io_map 不再携带 scale/地址（SI 米制 range，换算归桥，float32/INT16 为共同议题） | 本侧落实 |
 
 ## 7. 实施计划（对齐总体方案 §5）
 
@@ -213,10 +222,10 @@ io_map.json（仿真侧产出）------------------------------------┤
 1. ~~requirement_spec JSON Schema 草案 + 三方评审冻结~~ → 草案 **v1.0.0-draft.3**（draft.2 + lx 收紧建议落实：range 完整落入有符号/无符号域之一），**评审冻结进行中**——lx ✅（建议已闭环）/ 待 csk（RFC 流程，主方案 §8.3）；
 2. ~~与仿真侧确认 acceptance 四类准则的最终字段结构（以 csk §7.1 为底稿）~~ → 字段已逐字对齐其 §7.1，待其评审确认（`check_at` 冻结 "end"，扩展走 RFC）；
 3. ~~PLC 生成器 v0：模式库整理 + Prompt 骨架 + xml2st 错误回喂通路联调~~ → 已完成（`src/agent/`：pipeline / patternlib / prompts；xml2st+一致性双闸门回灌；client 流式降级支持万 token 长生成；绘图仪种子已入 src/plc/）；
-4. ~~一致性检查器原型（可直接复用 lx 的 `xml2st.parse()`）~~ → 已完成（`src/agent/consistency_check.py`，R1 复用 xml2st.parse；**R5 io_map 腿已由 ②b 产物激活**）；
+4. ~~一致性检查器原型（可直接复用 lx 的 `xml2st.parse()`）~~ → 已完成（`src/agent/consistency_check.py`，R1 复用 xml2st.parse；R5 io_map 腿由 ②b 产物激活，2026-09-09 按契约 v1.1 改 ioEntry 子集覆盖语义）；
 5. ~~编排器骨架：先串"生成→编译闸门→部署→链路 B 验收"的半环（不含 Isaac）~~ → 半环五闸门（+闸门2b scene/R5 全腿、/status 观测、CLI 直通 ⓪→①）；仿真全环待 csk 判定引擎与 ③b 接口；
 6. ~~⓪ AutomationML 解析模块（架构 v2.0 新增职责）~~ → 已完成（+ plotter3axis_station.aml：IEC 62714/CAEX 3.0 全结构参考样式）；
-7. ~~②b 场景描述生成器 v0（等 csk SceneSpec Schema）~~ → 已落地确定性 v0（scene.spec + io_map draft.1；资产封闭集待 csk 对齐冻结）；
+7. ~~②b 场景描述生成器 v0（等 csk SceneSpec Schema）~~ → 已落地确定性 v0；**2026-09-09 对齐契约 v1.1 升 v1**（contract/ 驱动：内嵌 io_map、SI range、地址分配移交 csk build-mjcf）；待 csk 闸门补 6 个 MJCF 类型注册后走真闸门回归；
 8. ~~需求理解 LLM 澄清回路~~ → **对话式形态已落地**（`src/agent/chat.py`：AML+需求输入 → 规格回显（逐条准则含谓词明细）→ 用户自然语言修正（`refine()` 定向最小修改，上轮 spec 作上下文）→ 确认后自主闭环；闸门环境自动探测；`--request --confirm --seed` 可脚本化）。LLM 对粗需求的**主动反问**未接（现状：回显+人工审，弱项为 forbidden_state 等值谓词健全性——回显已明示谓词供核对）；
 9. 归因分析 LLM（消费 verdict.json → report.md，区分代码/场景问题并路由）——待 csk 判定引擎；
 10. plotter3axis 在线验收（需 OpenPLC 环境：run_regression.py L3 自动发现场景对）+ lx 复核代拟的 scenario 脚本后纳入场景库。

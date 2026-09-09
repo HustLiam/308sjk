@@ -42,20 +42,87 @@ curl -X POST http://127.0.0.1:8600/deploy --data-binary @src/plc/motion3axis.xml
 ## 目录结构
 
 ```
-src/
-  plc/motion3axis.xml       # 61131-10 交付物（agent 未来产出的形态）
-  pipeline/xml2st.py        # 校验 + XML→ST 转换（纯标准库）
-  pipeline/openplc_client.py# OpenPLC v3 HTTP 客户端
-  pipeline/run_deploy.py    # 部署编排器（结果 JSON 供回喂）
-  pipeline/serve.py         # POST /deploy HTTP 服务
-  agent/                    # gc 智能体与闭环侧（spec 校验/生成器/一致性/编排）
-schemas/requirement_spec.schema.json  # 契约① Schema 草案（gc 拥有，待三方评审冻结）
-examples/specs/             # requirement_spec 基准示例（motion3axis，对齐已验收 XML）
-runs/                       # 编排器每轮产物（iter_NNN/final，全量入 git）
-tests/                      # pytest 单测
-docs/                       # 方案与详细设计文档
-workspace/                  # 本地生成物（不入库）
+308sjk/
+├── src/
+│   ├── agent/                         # 智能体、知识与闭环编排
+│   │   ├── aml_parser.py              # AutomationML → device_model
+│   │   ├── requirement.py             # 自然语言需求理解与规格修正
+│   │   ├── spec_validator.py          # requirement_spec 语义校验
+│   │   ├── trajectory.py              # 方形/圆形确定性轨迹规划
+│   │   ├── pipeline.py                # PLCopen XML 生成与定向修复
+│   │   ├── patternlib.py              # 已验收 PLC 模式卡检索与策展
+│   │   ├── scene_gen.py               # SceneSpec 与 IO 映射确定性生成
+│   │   ├── consistency_check.py       # XML、io_list、IO 映射一致性检查
+│   │   ├── attribution.py             # 失败归因：知识库优先、LLM 兜底
+│   │   ├── memory.py                  # 修复记忆与自动学习经验库
+│   │   ├── orchestrator.py            # 多闸门生成—验证—反馈循环
+│   │   ├── chat.py                    # 对话式 Agent CLI
+│   │   ├── client.py                  # 大模型 API 客户端
+│   │   ├── config.py                  # 模型、路径与环境配置
+│   │   ├── prompts/
+│   │   │   ├── specgen_skill.md       # 需求规格生成 Skill
+│   │   │   └── plcgen_skill.md        # PLCopen XML 生成 Skill
+│   │   └── knowledge/
+│   │       ├── pitfalls.json          # 已知错误签名、诊断与修法
+│   │       └── patterns.json          # 自动策展的已验收模式注册表
+│   ├── pipeline/                      # PLC 转换、部署与在线验收
+│   │   ├── xml2st.py                  # PLCopen XML 校验及 XML→ST 转换
+│   │   ├── openplc_client.py          # OpenPLC HTTP 客户端
+│   │   ├── run_deploy.py              # 上传、matiec 编译及启动
+│   │   ├── serve.py                   # /deploy、/status、/health 服务
+│   │   ├── modbus_io.py               # Modbus IO 与程序身份检查
+│   │   ├── scenario_motion3axis.py    # 三轴运动在线验收
+│   │   ├── scenario_plotter3axis.py   # 正方形绘图在线验收
+│   │   ├── scenario_plotter_circle.py # 圆形绘图在线验收
+│   │   ├── run_regression.py          # 静态、单测、在线三级回归
+│   │   └── stop_plc.py                # 停止 OpenPLC 运行程序
+│   └── plc/                           # 已验收 PLCopen XML 场景库
+│       ├── motion3axis.xml
+│       ├── plotter3axis.xml
+│       └── plotter_circle.xml
+├── contract/                          # SceneSpec/组件契约及对接示例
+│   ├── components.v1.1.json
+│   ├── scene.spec.example.json
+│   ├── example1.json
+│   ├── example1_iomap.json
+│   ├── 组件契约表.md
+│   └── README.md
+├── schemas/                           # 机器可校验的数据契约
+│   ├── device_model.schema.json
+│   ├── requirement_spec.schema.json
+│   └── io_map.schema.json
+├── examples/
+│   ├── aml/                           # AML设备站示例
+│   │   ├── motion3axis_station.aml
+│   │   └── plotter3axis_station.aml
+│   └── specs/                         # 需求规格基准示例
+│       ├── motion3axis.spec.json
+│       └── plotter3axis.spec.json
+├── tools/
+│   ├── aml_parser.py                  # AML解析命令行入口
+│   ├── gen_scenarios.py               # 场景代码生成辅助工具
+│   └── learn_circle.py                # 圆轨迹自动学习实验工具
+├── tests/                             # 解析、生成、契约、记忆与编排单测
+│   ├── conftest.py
+│   └── test_*.py
+├── docs/                              # 总体方案、三侧设计、协作及变更记录
+├── runs/                              # 每个任务的可追溯迭代产物
+│   └── <task>/
+│       ├── request.json
+│       ├── trajectory.json
+│       ├── iter_NNN/                  # XML、ST、SceneSpec、IO映射、闸门证据
+│       ├── final/                     # 通过轮次的冻结快照
+│       └── summary.md
+├── workspace/                         # 本地运行产物，不作为源码
+│   ├── program.st / deploy_result.json / *.log
+│   ├── memory/fixes.json              # 跨会话修复记忆
+│   └── experience/                    # lessons.json、learning_curve.json
+├── requirements.txt                   # Python依赖
+├── AGENTS.md                          # 工作区协作与操作约束
+└── README.md
 ```
+
+`__pycache__/`、`.pytest_cache/`、`.env` 等解释器缓存和本地配置未列入项目目录。
 
 ## 协作开发
 

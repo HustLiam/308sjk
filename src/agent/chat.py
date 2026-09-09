@@ -264,8 +264,7 @@ def main():
         final = run_dir / "final"
         print("✅ 搞定了！第 %s 轮全部通过。你要的交付物都在这里：" % res["iter"])
         for name, desc in (("plcopen.xml", "PLC 控制代码（IEC 61131-10）"),
-                           ("scene.spec.json", "仿真场景描述"),
-                           ("io_map.json", "IO 映射表"),
+                           ("scene.spec.json", "仿真场景描述（契约 v1.1，内嵌 io_map）"),
                            ("gate.json", "全部验证证据")):
             print("   %-16s %s\n     %s" % (name, desc, final / name))
     else:
