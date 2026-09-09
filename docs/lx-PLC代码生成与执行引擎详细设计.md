@@ -195,9 +195,9 @@ L3 在线验收   逐场景 run_deploy 部署 + scenario_<场景>.py 验收（�
 
 | 场景 | XML | 轴配置 | 考察点 | 结果 |
 |---|---|---|---|---|
-| 三轴运动控制（CSP 完整版） | motion3axis.xml | 3× 直线 | CSP 四层：INTERP→DRIVE402(CiA 402 状态机+位置环)→MC API→应用层 | 35/35 |
+| 三轴运动控制（CSP 完整版 + PLCopen MC 对齐 v4.0） | motion3axis.xml | 3× 直线 | 四层：INTERP（可变动力学+中止）→DRIVE402(CiA 402 状态机+位置环)→**MC API（PLCopen MC Part 1 单轴对齐：Power/Reset/Stop/Halt/MoveAbsolute/MoveRelative/MoveJog/Home/ReadStatus/ReadActualPosition，含 ErrorID/CommandAborted 全状态组）**→应用层 | 47/47（连续 6 轮复验绿） |
 
-验收脚本 `scenario_motion3axis.py` 一身两角——CiA 402 主站（应用指令+读状态字位）+ 三轴电机仿真（按速度指令积分编码器），覆盖 8 组 35 项（CSP 语义：越程由插补层安全拒绝）：上电 RTSO → MC_Power 使能序列（bit0→bit1→bit2）→ 三轴并发定位 → 仅 Z 轴运动 → 快停 QSA 受控减速+释放重使能+重发指令 → 点动按住移动/松开停止 → 故障注入 FRA/FA+MC_Reset 复位+重使能 → 回零+失能。
+验收脚本 `scenario_motion3axis.py` 一身两角——PLCopen MC / CiA 402 主站（应用指令+目标/距离寄存器+读状态字与 ErrorID）+ 三轴电机仿真（按速度指令积分编码器），覆盖 11 组 47 项（CSP 语义：越程由 MC 层拒绝报 ErrorID=1）：上电 RTSO → MC_Power 使能序列 → 三轴并发定位 → 仅 Z 轴运动 → 快停 QSA 受控减速+释放重使能+重发指令 → 点动按住前进/松开停止（起跳锚定实际位置）→ **越程 MC 层拒绝（err_id=1，轴不动不失能）** → **MC_Halt 受控暂停（减速停不失能+重发恢复）** → **MC_MoveRelative 相对定位（实际位置+距离）与越程拒绝** → 回零+失能 → 全程不变量。
 
 **场景覆盖度**：当前场景库为 motion3axis 单场景（三轴运动控制 CSP 完整栈，作为双链路联调基准）。其余运动场景（axis_osc / xy_pick / z_lift / mixed_lin_rot）与非运动场景（分拣/液位/交通/PID）均按决策移除，历史见 git；《运动控制代码生成方案》与 `tools/gen_scenarios.py` 生成器保留，场景可按需再生。prog_id 分配：motion3axis=1，新场景从 2 顺延。
 
