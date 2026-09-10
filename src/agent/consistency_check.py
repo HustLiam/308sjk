@@ -33,6 +33,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "pipeline"))
 import xml2st  # noqa: E402  lx 侧契约实现（R1 复用）
+from .scene_gen import is_driver_channel  # noqa: E402  仿真侧驱动通道豁免判定（②b 定义）
 
 ADDRESS_RE = xml2st.ADDRESS_RE
 
@@ -153,7 +154,11 @@ def _check_io_map(problems, io_map, io_list):
         plc_var = entry.get("plc_var")
         point = io_by_name.get(plc_var)
         if point is None:
-            problems.append("R5: %s 的 plc_var %r 不在 io_list 中" % (path, plc_var))
+            if is_driver_channel(entry):
+                pass  # 仿真侧驱动通道（②b 合成的 <axis>_cmd 位置指令）非 PLC 对外变量，
+                      # 豁免 ⊆ 检查——待 RFC 把位置指令通道并入契约②后改为真实对账
+            else:
+                problems.append("R5: %s 的 plc_var %r 不在 io_list 中" % (path, plc_var))
             continue
         if entry.get("dir") is not None and entry["dir"] != point.get("dir"):
             problems.append("R5: %s 方向不一致——io_map=%r，io_list=%r" % (path, entry["dir"], point["dir"]))

@@ -43,6 +43,47 @@ class TestPitfallMatching:
         ])
         assert any(p["id"] == "P18" for p in hits)
 
+    def test_p23_else_fallback_oscillation_replay(self):
+        """P23 重放：plotter_cell iter_003 真实验收失败（cmd_home 后 Z 不动/
+        抬笔超时=CASE ELSE 复位兜底+多实例 FB 振荡族）必须命中坑库。
+        错误原文内嵌自该战役 gate.json（runs 产物已清理，出处见 P23.source）。"""
+        errors = [
+        "[verify] 程序身份确认: plotter3axis (prog_id=2)",
+        "[1] 上电（run=0）：三轴 Ready To Switch On；初始笔位 z=0（触纸）",
+        "  PASS X 轴 sw.bit0=1 (实际 0031)",
+        "  PASS Y 轴 sw.bit0=1 (实际 0031)",
+        "  PASS Z 轴 sw.bit0=1 (实际 0031)",
+        "  PASS all_oe=FALSE",
+        "  PASS pen_down=TRUE（初始笔触纸）",
+        "[2] run=1 → 三轴使能（AC1：≤2s）",
+        "  PASS 三轴 Operation Enabled（all_oe=TRUE，实际 0.21s ≤ 2s）",
+        "  PASS X 轴 bit2=1 bit4=1 bit5=1 (实际 0437)",
+        "  PASS Y 轴 bit2=1 bit4=1 bit5=1 (实际 0437)",
+        "  PASS Z 轴 bit2=1 bit4=1 bit5=1 (实际 0437)",
+        "[2b] cmd_home（落笔态）：Z 回参考点=抬笔安全位（AC2：pen_down↓ ≤3s）",
+        "  FAIL 笔抬离纸面（pen_down=FALSE，实际 3.29s ≤ 3s，AC2）",
+        "  FAIL Z 到参考位 10（实际 0）",
+        "（验收暂停：段 [2] 存在失败，后续段未执行；已通过段：[1]——先修复本段，通过后重跑继续）",
+        "运行时内部状态时间线（诊断口自动采集）：",
+        "    [diag t=0.5s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_z_exe=0 dr_x_exe=1",
+        "    [diag t=1.0s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_z_exe=0 dr_x_exe=1",
+        "    [diag t=1.5s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_z_exe=0 dr_x_exe=1",
+        "    [diag t=2.0s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_z_exe=0 dr_x_exe=1",
+        "    [diag t=2.5s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_z_exe=0 dr_x_exe=1",
+        "    [diag t=3.0s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_z_exe=0 dr_x_exe=1",
+        "    [diag t=3.5s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_z_exe=0 dr_x_exe=1",
+        "    [diag t=4.0s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_z_exe=0 dr_x_exe=1",
+        "    [diag t=4.5s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_z_exe=0 dr_x_exe=1",
+        "    [diag t=5.0s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_z_exe=0 dr_x_exe=1",
+        "    [diag t=5.5s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_z_exe=0 dr_x_exe=1",
+        "    [diag t=6.0s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_z_exe=0 dr_x_exe=1",
+        "    [diag t=6.5s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_z_exe=0 dr_x_exe=1",
+        "    [diag t=7.0s] pl_step=1 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_z_exe=0 dr_x_exe=1"
+        ]
+        m = MemoryStore(kb_path=KB, episodic_path=REPO / "workspace" / "memory" / "nope.json")
+        hits = m.match_pitfalls(errors)
+        assert hits and hits[0]["id"] == "P23", [h["id"] for h in hits]
+
     def test_no_false_positive_on_clean_text(self):
         m = MemoryStore(kb_path=KB, episodic_path=REPO / "workspace" / "memory" / "nope.json")
         assert m.match_pitfalls(["一切正常"]) == []

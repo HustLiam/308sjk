@@ -9,6 +9,10 @@ scene.spec.json，其中内嵌 io_map（ioEntry 数组）——字段语义以 c
 
   · 资产类型封闭：type 必须取自 contract/components.v*.json 注册表（本模块运行时
     加载该契约文件，不维护平行的类型目录）；需要新组件 → 走 RFC，不发明类型名；
+  · 三轴设备走 **gantry_xyz 单资产路线**（csk 组装器原生分支=完整机械结构+逐轴
+    位置执行器；travel=stroke×scale、speed=首轴 vmax×scale、pose=笔尖行程原点）；
+    io_list 缺位置指令变量时合成 <axis>_cmd 驱动通道（见 is_driver_channel）；
+    非三轴设备降级 linear_axis 族装配（v0 形态）；
   · io_map 只收录**可绑物理通道**（bind.quantity 必须是该组件注册的 quantity）：
     路由规则 `<axis>_fb`→`<axis>_axis`.pos（direction=out）、`<axis>_cmd`→cmd
     （direction=in）；dir=output 绑 in 量、dir=input 绑 out 量；
@@ -39,11 +43,35 @@ SCENE_SPEC_VERSION = None  # 由契约版本决定（见 _init_contract）
 
 _CONTRACT_DIR = Path(__file__).resolve().parents[2] / "contract"
 
-# io_list 名称 → 物理通道路由（fb=位置反馈→pos；cmd=位置指令→cmd）
+# io_list 名称 → 物理通道路由（fb=位置反馈；cmd=位置指令）
 _AXIS_RE = re.compile(r"^([xyz])_(fb|cmd)$")
+_SYNTH_CMD_RE = re.compile(r"^([xyz])_cmd$")
 _SCALE_BY_UNIT = {"%": 0.01, "mm": 0.001}  # unit → scale_m_per_unit（降级默认规则）
 # io_list 类型 → ioEntry 类型（契约 enum bool|float；模拟量 INT 工程值走 float 通道）
 _ENTRY_TYPE = {"BOOL": "bool", "INT": "float"}
+
+# gantry 路线（2026-09-09 裁决：取 csk 组装器原生单资产分支的完整机械结构——
+# 底板/立柱/导轨/三级滑座/带球头补偿的笔/逐轴位置执行器）。代价：work_table
+# （paper_area 百分比）与 hmi_panel（buttons/lamps）不能与 gantry 共存（组装器
+# 检测到 plotter 族资产即转多资产简化路径），语义由验收脚本侧承载。
+_WORKSPACE_CENTER = (0.5, 0.5)                 # 笔尖扫掠区中心（继承 v0 工位布局）
+_GANTRY_FALLBACK_TRAVEL = {"x": 1.0, "y": 1.0, "z": 0.01}  # 缺轴信息时的行程缺省（米）
+_GANTRY_SPEED_DEFAULT = 0.5                    # 无 vmax 时的轴速缺省（米/秒，csk 库值）
+
+
+def is_driver_channel(entry):
+    """判定 io_map 条目是否为「仿真侧驱动通道」（gantry 位置指令合成通道）。
+
+    io_list 现为速度指令型（x_v 驱动伺服），无位置指令对外变量；为使模型可被
+    驱动，②b 按 gantry quantity 合成 <axis>_cmd（dir=output）三条通道。它们不
+    是 PLC 对外变量（不在 io_list），R5/V3 对该形态定向豁免；**待 RFC 把位置
+    指令通道并入契约②（io_list/XML/AML 同步）后撤销豁免、改为真实对账**。
+    """
+    var = str(entry.get("plc_var", ""))
+    return bool(_SYNTH_CMD_RE.match(var)
+                and entry.get("dir") == "output"
+                and entry.get("type") == "float"
+                and (entry.get("bind") or {}).get("quantity") == var)
 
 
 def _version_key(path):
@@ -87,6 +115,76 @@ def _clean_params(raw):
     return {k: v for k, v in raw.items() if v is not None}
 
 
+def _axes_info(device_model, io_list=()):
+    """归一化三轴信息 {axis: {stroke, scale, vmax}}（优先 device_model 运动学；
+    无模型时从 io_list 的 <axis>_fb 量程/单位推断；再缺省的键不在此补——
+    是否可走 gantry 由调用方按可解析轴集判定，缺口由 _gantry_asset 用库缺省填）。"""
+    axes = {}
+    for a in (device_model or {}).get("kinematics", {}).get("axes", []):
+        name = a.get("axis") or a.get("device", "").rsplit("/", 1)[-1]
+        short = name.replace("_axis", "")
+        unit = a.get("unit") or "%"
+        axes[short] = {"stroke": a.get("stroke") or [0, 100],
+                       "scale": _SCALE_BY_UNIT.get(unit, 0.01),
+                       "vmax": a.get("vmax")}
+    if not axes:
+        for item in io_list:
+            m = _AXIS_RE.match(item.get("name", ""))
+            if m and m.group(2) == "fb":
+                unit = item.get("unit") or "%"
+                axes[m.group(1)] = {"stroke": item.get("range") or [0, 100],
+                                    "scale": _SCALE_BY_UNIT.get(unit, 0.01),
+                                    "vmax": None}
+    return axes
+
+
+def _travel_of(info, fallback):
+    if info is None or info.get("stroke") is None:
+        return fallback
+    lo, hi = info["stroke"]
+    return round((float(hi) - float(lo)) * info["scale"], 9)
+
+
+def _clamp_to_contract(param_name, value):
+    """按契约参数界钳位。当前唯一触发点：travel_z 开区间下界 >0.01 恰好排除
+    绘图笔 10mm 行程（10×0.001=0.01）——钳到下界+10% 余量（笔行程量级保留，
+    0=落笔/travel=抬笔语义不变）；**待与 csk 对齐 z 下界后移除**（RFC 议题）。"""
+    for p in CONTRACT_TYPES.get("gantry_xyz", {}).get("params", []):
+        if p.get("name") != param_name:
+            continue
+        lo = p.get("minimum")
+        if lo is None or value > lo:
+            return value
+        return round(lo * 1.1, 9) if p.get("exclusive_min") else round(lo, 9)
+    return value
+
+
+def _gantry_asset(device_model, io_list=()):
+    """gantry_xyz 单资产（csk 组装器原生分支：完整机械结构+位置执行器）。
+
+    travel_* = stroke×scale（米，按契约界钳位）；speed 取首轴（x）vmax×scale
+    （单速参数约束下以主轴为准）；pose = 笔尖行程原点（组装器按 travel 铺底板/
+    纸面——扫掠区以 _WORKSPACE_CENTER 为中心，与 v0 工位布局对齐）。
+    """
+    info = _axes_info(device_model, io_list)
+    travel = {ax: _clamp_to_contract("travel_%s" % ax,
+                                     _travel_of(info.get(ax), fb))
+              for ax, fb in _GANTRY_FALLBACK_TRAVEL.items()}
+    vmax_x, scale_x = info.get("x", {}).get("vmax"), info.get("x", {}).get("scale")
+    speed = round(vmax_x * scale_x, 9) if vmax_x and scale_x else _GANTRY_SPEED_DEFAULT
+    cx, cy = _WORKSPACE_CENTER
+    return {
+        "id": "gantry", "type": "gantry_xyz",
+        "pose": {"position": [round(cx - travel["x"] / 2, 9),
+                              round(cy - travel["y"] / 2, 9), 0.0],
+                 "rpy_deg": [0, 0, 0]},
+        "params": _clean_params({
+            "travel_x": travel["x"], "travel_y": travel["y"],
+            "travel_z": travel["z"], "speed": speed,
+        }),
+    }
+
+
 def _axis_assets(device_model, io_list=()):
     """轴资产确定性生成：优先 device_model 运动学参数；无模型时从 io_list 的
     <axis>_fb 量程/单位推断（降级路径）。scale_m_per_unit 按单位缺省规则导出。"""
@@ -125,10 +223,54 @@ def _axis_assets(device_model, io_list=()):
 def route_physical_channels(io_list, scene):
     """io_list → 契约 io_map 条目（确定性；同一函数供生成与自检复用）。
 
-    只路由可绑物理通道：<axis>_fb（dir=input，INT）→ <axis>_axis.pos；
-    <axis>_cmd（dir=output，INT）→ <axis>_axis.cmd。range=stroke×scale（SI 米）。
-    其余通道（按钮/灯/NC 设定值/状态字/速度指令）无契约 quantity，不路由。
+    gantry_xyz 场景：<axis>_fb → gantry.<axis>_pos、<axis>_cmd → gantry.<axis>_cmd
+    （range=travel，SI 米）；io_list 缺位置指令变量时**合成** <axis>_cmd 三条驱动
+    通道（见 is_driver_channel——待 RFC 并入契约②后撤销）。
+    linear_axis 族（降级路径）：<axis>_fb → <axis>_axis.pos、<axis>_cmd → cmd，
+    range=stroke×scale。其余通道（按钮/灯/NC/状态字/速度指令）无契约 quantity 不路由。
     """
+    gantry = next((a for a in scene.get("assets", [])
+                   if a.get("type") == "gantry_xyz"), None)
+    if gantry is not None:
+        return _route_gantry(io_list, gantry)
+    return _route_linear_axes(io_list, scene)
+
+
+def _route_gantry(io_list, gantry):
+    p = gantry.get("params", {})
+    travel = {"x": p.get("travel_x", 1.0), "y": p.get("travel_y", 1.0),
+              "z": p.get("travel_z", 0.01)}
+    entries = []
+    for item in io_list:
+        m = _AXIS_RE.match(item.get("name", ""))
+        if not m:
+            continue
+        axis, kind = m.groups()
+        expect_dir = "input" if kind == "fb" else "output"
+        if item.get("dir") != expect_dir or _ENTRY_TYPE.get(item.get("type")) != "float":
+            continue
+        entries.append({
+            "plc_var": item["name"],
+            "dir": expect_dir,
+            "type": "float",
+            "bind": {"asset": gantry["id"],
+                     "quantity": "%s_%s" % (axis, "pos" if kind == "fb" else "cmd"),
+                     "range": [0.0, round(float(travel[axis]), 9)]},
+        })
+    # 驱动通道合成：io_list 无真实 <axis>_cmd 输出变量时补齐（模型可驱动的最低形态）
+    have = {e["plc_var"] for e in entries}
+    for axis in ("x", "y", "z"):
+        var = "%s_cmd" % axis
+        if var not in have:
+            entries.append({
+                "plc_var": var, "dir": "output", "type": "float",
+                "bind": {"asset": gantry["id"], "quantity": var,
+                         "range": [0.0, round(float(travel[axis]), 9)]},
+            })
+    return entries
+
+
+def _route_linear_axes(io_list, scene):
     by_id = {a["id"]: a for a in scene.get("assets", [])}
     entries = []
     for item in io_list:
@@ -163,36 +305,43 @@ class SceneSpecGenerator:
 
     def generate(self, spec, device_model=None):
         io_list = spec.get("io_list", [])
-        assets = [{
-            "id": "ground", "type": "ground",
-            "pose": {"position": [0, 0, 0]},
-            "params": {"size": [1.5, 1.5], "friction": 0.8},
-        }, {
-            "id": "table", "type": "work_table",
-            "pose": {"position": [0.5, 0.5, 0.0]},
-            "params": {"size": [1.2, 1.2, 0.75], "paper_area": "20..80 x 20..80"},
-        }]
-        assets.extend(axis_assets := _axis_assets(device_model, io_list))
-        if axis_assets:  # 轴链按声明顺序，tool/pen 挂链尾（契约 README 字段语义 §5）
-            tail = axis_assets[-1]["id"]
+        if set(_axes_info(device_model, io_list)) >= {"x", "y", "z"}:
+            # gantry 路线：三轴设备走 csk 组装器原生单资产分支（完整机械结构 +
+            # 逐轴位置执行器）；work_table/hmi_panel 语义不进 spec（组装器按 travel
+            # 铺底板/纸面，按钮/灯由验收脚本侧承载）
+            assets = [_gantry_asset(device_model, io_list)]
+        else:
+            # 降级路径：非三轴设备保持 linear_axis 族装配（v0 形态）
+            assets = [{
+                "id": "ground", "type": "ground",
+                "pose": {"position": [0, 0, 0]},
+                "params": {"size": [1.5, 1.5], "friction": 0.8},
+            }, {
+                "id": "table", "type": "work_table",
+                "pose": {"position": [0.5, 0.5, 0.0]},
+                "params": {"size": [1.2, 1.2, 0.75], "paper_area": "20..80 x 20..80"},
+            }]
+            assets.extend(axis_assets := _axis_assets(device_model, io_list))
+            if axis_assets:  # 轴链按声明顺序，tool/pen 挂链尾（契约 README §5）
+                tail = axis_assets[-1]["id"]
+                assets.append({
+                    "id": "plot_head", "type": "tool_head", "parent": tail,
+                    "pose": {"position": [0.5, 0.5, 0.79]},
+                    "params": {"carries": "pen", "acceptance_asset": True},
+                })
+                assets.append({
+                    "id": "pen", "type": "pen", "parent": "plot_head",
+                    "pose": {"position": [0.5, 0.5, 0.785]},
+                    "params": {"tip_diameter_mm": 0.5, "stroke_mm": 10},
+                })
             assets.append({
-                "id": "plot_head", "type": "tool_head", "parent": tail,
-                "pose": {"position": [0.5, 0.5, 0.79]},
-                "params": {"carries": "pen", "acceptance_asset": True},
+                "id": "panel", "type": "hmi_panel",
+                "pose": {"position": [-0.35, 0.5, 0.0]},
+                "params": {"buttons": sorted(p["name"] for p in io_list if p["dir"] == "input"
+                                              and p["type"] == "BOOL"),
+                           "lamps": sorted(p["name"] for p in io_list if p["dir"] == "output"
+                                           and p["type"] == "BOOL")},
             })
-            assets.append({
-                "id": "pen", "type": "pen", "parent": "plot_head",
-                "pose": {"position": [0.5, 0.5, 0.785]},
-                "params": {"tip_diameter_mm": 0.5, "stroke_mm": 10},
-            })
-        assets.append({
-            "id": "panel", "type": "hmi_panel",
-            "pose": {"position": [-0.35, 0.5, 0.0]},
-            "params": {"buttons": sorted(p["name"] for p in io_list if p["dir"] == "input"
-                                          and p["type"] == "BOOL"),
-                       "lamps": sorted(p["name"] for p in io_list if p["dir"] == "output"
-                                       and p["type"] == "BOOL")},
-        })
 
         io_map = route_physical_channels(io_list, {"assets": assets})
         scene = {
@@ -267,7 +416,8 @@ def validate_scene_outputs(scene, io_list):
        参数符合契约规则）；
     V2 io_map 结构（ioEntry：plc_var/dir/type{bool,float}/bind{asset,quantity}，
        plc_var 唯一）；
-    V3 对账（每条 ioEntry ⊆ io_list 且 dir/类型兼容；路由覆盖——route_physical_
+    V3 对账（每条 ioEntry ⊆ io_list 且 dir/类型兼容——**合成的仿真侧驱动通道
+       （is_driver_channel）豁免**，待 RFC 并入契约②；路由覆盖——route_physical_
        channels 判定可绑的物理通道必须全部在 io_map，杜绝静默丢通道）；
     V4 绑定合法（bind.asset 是场景资产、quantity 已注册于该类型、dir↔quantity
        方向匹配、type↔dtype 匹配、range 若有则下界<上界）。
@@ -318,7 +468,10 @@ def validate_scene_outputs(scene, io_list):
             continue
         point = io_by_name.get(var)
         if point is None:
-            problems.append("V3: %s 的 plc_var %r 不在 io_list" % (path, var))
+            if is_driver_channel(e):
+                pass  # 仿真侧驱动通道（合成 <axis>_cmd）豁免 ⊆ 检查——待 RFC 并入契约②后撤销
+            else:
+                problems.append("V3: %s 的 plc_var %r 不在 io_list" % (path, var))
             continue
         if e["dir"] != point.get("dir"):
             problems.append("V3: %s dir=%r 与 io_list %r 不一致" % (path, e["dir"], point.get("dir")))
@@ -349,13 +502,14 @@ def validate_scene_outputs(scene, io_list):
         if rng is not None and not (isinstance(rng, (list, tuple)) and len(rng) == 2 and rng[0] < rng[1]):
             problems.append("V4: %s bind.range 须为 [min,max] 且 min<max" % path)
 
-    routed = {e["plc_var"]: e for e in route_physical_channels(io_list, scene)}
-    for var, expect in routed.items():
-        got = next((e for e in entries if isinstance(e, dict) and e.get("plc_var") == var), None)
+    # 路由覆盖按绑定（asset+quantity）判存在——plc_var 命名归 io_list/范本自由
+    # （csk example1 用 AxisX_cmd，与合成 x_cmd 同绑 gantry.x_cmd，覆盖即满足）
+    routed = route_physical_channels(io_list, scene)
+    for expect in routed:
+        key = (expect["bind"]["asset"], expect["bind"]["quantity"])
+        got = next((e for e in entries if isinstance(e, dict)
+                    and (e.get("bind", {}).get("asset"), e.get("bind", {}).get("quantity")) == key),
+                   None)
         if got is None:
-            problems.append("V3: 可绑物理通道 %r 未进 io_map（路由覆盖，杜绝静默丢通道）" % var)
-        elif (got.get("bind", {}).get("asset") != expect["bind"]["asset"]
-              or got.get("bind", {}).get("quantity") != expect["bind"]["quantity"]):
-            problems.append("V3: %r 绑定与确定性路由不一致（期望 %s.%s）"
-                            % (var, expect["bind"]["asset"], expect["bind"]["quantity"]))
+            problems.append("V3: 可绑物理通道 %s.%s 未进 io_map（路由覆盖，杜绝静默丢通道）" % key)
     return problems

@@ -752,3 +752,77 @@ build 产物）两种形态，旧 {mappings} 形态废止。
   自检回归——范本以合成 io_list 喂入 V0~V4 全过）、test_consistency_check R5 新语义
   （子集合法/类型不匹配/bind 形态/契约③ wrapper）、test_orchestrator（无独立
   io_map.json、io_map_vars=3）。pytest 182→190 全绿。
+
+## 2026-09-09（夜）②b 切换 gantry_xyz 单资产路线 + 驱动通道合成（本地实验，未提交）
+
+### 决策背景
+
+plotter 多资产 spec 在 csk mujoco_build 的 `_plotter_xml` 简化路径下机械结构不完整
+（无底座/立柱/导轨，滑座为无碰撞小方块）；gantry_xyz 原生分支才有完整机构
+（四级 body 链+三位置执行器+球头补偿笔）。负责人裁决走 gantry 路线保模型准确性。
+
+### 实现（src/agent/scene_gen.py + consistency_check.py）
+
+1. **gantry 装配**：三轴可解析（运动学 ∪ `<axis>_fb` 推断 ⊇ {x,y,z}）→ 单资产
+   gantry_xyz；travel=stroke×scale、speed=首轴 vmax×scale、pose=笔尖行程原点
+   （扫掠区中心继承 v0 工位 (0.5,0.5)→pose (0,0,0)）。非三轴降级 legacy
+   linear_axis 族（v0 装配原样保留）。
+2. **契约下界钳位**：travel_z 开区间下界 >0.01 恰好排除 10mm 笔行程（10×0.001=0.01）
+   ——`_clamp_to_contract` 按契约元数据钳到下界+10%（0.011），语义不变；
+   **RFC 议题：travel_z 下界 vs 绘图笔行程**。
+3. **驱动通道合成**：io_list 现为速度指令型（x_v），无位置指令变量可绑 → 模型
+   不可驱动。按 gantry quantity 合成 `<axis>_cmd`（dir=output，range=travel）三条；
+   io_list 已有真实 `<axis>_cmd` 时不重复。`is_driver_channel()` 判定豁免形态，
+   R5/V3 对其定向豁免 ⊆ 检查（待 RFC 把位置指令通道并入契约②后撤销豁免）。
+4. **路由覆盖改按绑定判存在**（asset+quantity），plc_var 命名自由——csk example1
+   的 AxisX_cmd 与合成 x_cmd 同绑 gantry.x_cmd，覆盖即满足。
+5. 交叉验证（origin/csk 真实现）：validate PASS；mujoco_build 组装出
+   gantry_base→x/y/z_carriage 四级机构 + drive_x/y/z 三执行器（travel 1/1/0.011）；
+   iomap.assign_modbus 产出 fb→%IW0-4 / cmd→%QW0-4（模型可驱动）。
+
+### 遗留（RFC 议题，登记待推进）
+
+- io_list 位置指令化（x_v→x_cmd 或并存）：动契约②（AML 通道表/XML/②a skill/
+  R5 撤豁免），三方知情；
+- travel_z 下界 0.01 vs 绘图笔 10mm 行程；
+- 观察：gantry_bridge.derive_layout 的 cmd 寄存器推位（sensor_end+2i）与
+  assign_modbus 的 %QW0-4 编址不一致（csk 侧内部缝，jog GUI 可用、OpenPLC 桥
+  轮询需对齐——移交 csk）。
+
+pytest 190→192 全绿。**未提交未推送（本地实验态）。**
+
+## 2026-09-09（深夜）[2b] 抬笔反复失败战役的根因闭环与知识沉淀（P23）
+
+### 现象与战役
+
+plotter_cell（画正方形，LLM 战役）iter_002~005 反复死于验收 [2b]：cmd_home 后
+笔抬离超时（3.3s > 3s）且 z_fb 停 0。经验库检索实证：iter_002 无命中（<0.30）、
+iter_003 仅 0.32 弱命中且偏题——**该失败族此前无任何可复用经验**，坑库 Top 命中
+（P21/P18）也指向错误方向。
+
+### 根因（三组对照实验在线实证）
+
+逐周期采样发现三轴 sw **同步**在 0031↔0033↔0437 间循环（all_oe 闪烁）：
+- 补丁 A（删 MC_POWER pstep=4 自愈分支）：仍振荡 → 非自愈分支；
+- 补丁 B（Enable 硬接 TRUE）：仍振荡 → 非使能输入；
+- 补丁 C（**仅删 DRIVE402 的 `ELSE state := 1` 与 `ELSE sw := 0` 两个 CASE
+  兜底 + pstep 显式初值**）：三轴 sw 立即恒稳 0437，[2b] 通过，完整验收推进到
+  后续段（iter_003 剩余 X/Y 互锁缺陷属另一族）。
+
+定性：LLM 给 CASE 状态机加的 ELSE 复位兜底（旧 skill 规则"一律带 ELSE"误导）
+在三轴同款 FB 多实例并行下被 matiec 优化器合并缺陷周期性触发——驱动被反复拽回
+重握手；cmd_home 脉冲时刻 all_oe=FALSE 则回参考点直接拒动（z_sw=0437 停原位
+形成假到位）。与 iter_006（自愈稳定版）diff 交叉印证：其修复恰是删 ELSE。
+
+### 沉淀（本轮改动，未提交）
+
+- 坑库 **P23**（runtime 域）：签名含"笔抬离纸面/Z 到参考位 10（实际 0）/
+  Z 轴 bit2=1..."验收原文，诊断含三组对照实验结论，修法=封闭值域+显式初值时
+  CASE 不加 ELSE 复位兜底、多实例同款 FB 禁止 ELSE 复位到重握手态；
+- skill 硬规则修订（plcgen_skill.md）：废除"CASE 一律带 ELSE"旧表述，改为
+  P23 边界规则（多实例 FB 无 ELSE / 空兜底；单实例兜安全态且禁触发全握手重跑）；
+- 重放单测 test_p23_else_fallback_oscillation_replay（iter_003 真实 gate.json
+  错误 → P23 必须榜首命中）。pytest 193 全绿。
+
+诊断工具留 workspace/（probe_2b.py / probe_tl / iter003_* 补丁对照件，不入库）。
+运行时已重部署 plotter3axis 种子复位。**未提交未推送。**

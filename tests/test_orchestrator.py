@@ -177,11 +177,13 @@ class TestSceneGate:
         iter1 = Path(result["run_dir"]) / "iter_001"
         scene = json.loads((iter1 / "scene.spec.json").read_text(encoding="utf-8"))
         assert scene["scene_id"] == self.PLOTTER_SPEC["task_id"]
-        assert {e["plc_var"] for e in scene["io_map"]} == {"x_fb", "y_fb", "z_fb"}
+        assert [(a["type"]) for a in scene["assets"]] == ["gantry_xyz"]   # gantry 单资产路线
+        assert {e["plc_var"] for e in scene["io_map"]} == {
+            "x_fb", "y_fb", "z_fb", "x_cmd", "y_cmd", "z_cmd"}           # fb+合成驱动通道
         assert not (iter1 / "io_map.json").exists()       # 契约 v1.1：io_map 内嵌，无独立工件
         gate = json.loads((iter1 / "gate.json").read_text(encoding="utf-8"))
         assert gate["gates"]["scene"]["r5"] == "active"
-        assert gate["gates"]["scene"]["io_map_vars"] == 3
+        assert gate["gates"]["scene"]["io_map_vars"] == 6
         assert (Path(result["run_dir"]) / "final" / "scene.spec.json").is_file()  # 冻结含 ②b 产物
 
     def test_scene_gate_failure_goes_best_effort(self, tmp_path):
