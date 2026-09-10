@@ -74,7 +74,7 @@ def _check_io_point(problems, item, idx):
     if not _is_ident(name):
         _err(problems, path, "name %r 不是合法标识符（与 ST 定位变量/io_map 对账键）" % (name,))
     if item.get("dir") not in IO_DIRS:
-        _err(problems, path, "dir 必须是 input|output（input=Isaac→PLC，output=PLC→Isaac），实际 %r"
+        _err(problems, path, "dir 必须是 input|output（input=仿真→PLC，output=PLC→仿真），实际 %r"
              % (item.get("dir"),))
     vtype = item.get("type")
     if vtype not in IO_TYPES:

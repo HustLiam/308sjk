@@ -2,7 +2,7 @@
 
 > 本文档是《总体实施方案》中 **②a PLC 代码生成模块（生成契约与闸门）**、**③a PLC 执行引擎（链路 B）**与 **④ 验证模块的 PLC 侧行为验收**的详细设计与实施记录，负责人 **lx**。
 >
-> 与仿真验证侧（csk，《csk-仿真环境与IO闭环详细设计》，负责 ③b（USD 构建/组件库/Isaac/trace）、④（判定引擎）及链路 A 构建，兼 ②b 场景描述评审）的衔接方式：**同一份 PLCopen XML + io_map.json**。链路 A（matiec 编译为 C 库、Isaac Sim 进程内 lockstep）与链路 B（OpenPLC 软 PLC + Modbus TCP）跑同一份代码，本文档负责其中的代码契约与链路 B 的全部实现。
+> 与仿真验证侧（csk，《csk-仿真环境与IO闭环详细设计》，负责 ③b（MJCF 构建/组件库/MuJoCo 运行时/trace）、④（判定引擎）及链路 A 构建，兼 ②b 场景描述评审）的衔接方式：**同一份 PLCopen XML + io_map.json**。链路 A（matiec 编译为 C 库、MuJoCo 进程内 lockstep）与链路 B（OpenPLC 软 PLC + Modbus TCP）跑同一份代码，本文档负责其中的代码契约与链路 B 的全部实现。
 
 ---
 
@@ -23,7 +23,7 @@
         ▼
 ②a 代码生成（agent 产出 plc_project.xml —— 唯一源码，强制 61131-10）
         │
-        ├──► 【链路 A · 仿真侧负责】matiec iec2c → plc_logic.dll → Isaac 进程内 lockstep
+        ├──► 【链路 A · 仿真侧负责】matiec iec2c → plc_logic.dll → MuJoCo 进程内 lockstep
         │
         ▼    【链路 B · 本侧负责】
 xml2st 静态校验 + XML→ST ──► OpenPLC v3（Docker）：上传 / matiec 编译 / 启动
@@ -41,7 +41,7 @@ workspace/program.st       Modbus TCP :502
 1. **XML 是唯一源码**：agent 只产出 PLCopen XML；可执行 `.st` 由 xml2st 机械推导，人不手改、不直接编辑；
 2. **ST 本体子集**：POU 一律 ST 语言本体，类型限 PROGRAM / FUNCTION_BLOCK / FUNCTION；LD/FBD/SFC 图形本体不支持；
 3. **防信息丢失**：未支持的构造（自定义 DUT、action/method、persistentVars、configuration 内容等）一律**显式拒绝并逐条报错**，绝不静默丢弃——错误信息直接回喂 agent；
-4. **全链路纯 API**：校验、上传、编译、启动、验证全部脚本化 / HTTP 化，零 GUI、零许可证限制（CODESYS 版因 Script Engine + 演示版时长限制废弃，保留于 git 历史作标准符合性参考）。
+4. **全链路纯 API**：校验、上传、编译、启动、验证全部脚本化 / HTTP 化，零 GUI、零许可证限制。
 
 对外接口约定：**带 `AT` 地址的定位变量即对外接口**——`%QX`/`%QW` 映射 Modbus 线圈/保持寄存器；不带 AT 的变量是 POU 内部状态，不对外发布。
 
@@ -182,7 +182,7 @@ L3 在线验收   逐场景 run_deploy 部署 + scenario_<场景>.py 验收（�
 
 实测怪癖：OpenPLC 的 Modbus 服务端在**窄范围线圈写入**（fc05 单线圈 / 少量 fc15）时会破坏同缓冲区的相邻位——例如写 %QX0.3 会把 %QX1.0 的电机自锁打掉。读-改-写整组线圈（fc15 覆盖完整 16 位跨度）则完全正常。
 
-封装约定：所有线圈写入一律"读整组 → 改一位 → 整组写回"；提供 `pulse()` 模拟按钮/光电信号。**未来 Isaac Sim 桥接若走链路 B，线圈访问必须经由此层，禁止裸 write_coil / 窄范围 write_coils。**
+封装约定：所有线圈写入一律"读整组 → 改一位 → 整组写回"；提供 `pulse()` 模拟按钮/光电信号。**未来 仿真桥接若走链路 B，线圈访问必须经由此层，禁止裸 write_coil / 窄范围 write_coils。**
 
 ### 5.3 冒烟验证与场景验收
 

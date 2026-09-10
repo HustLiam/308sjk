@@ -13,7 +13,7 @@
     OpenPLC v3 运行时（Docker/WSL2/远程 Linux）
         │ 编译失败 → 错误日志回喂 agent ↩
         ▼
-    start_plc → Modbus TCP :502 → Isaac Sim 桥接 / verify_modbus.py
+    start_plc → Modbus TCP :502 → 仿真桥接 / verify_modbus.py
 
 用法:
     python src/pipeline/run_deploy.py [--xml path.xml] [--url http://127.0.0.1:8080]

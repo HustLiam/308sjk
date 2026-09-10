@@ -2,7 +2,7 @@
 
 > 本文档是《总体实施方案》中 **① 需求理解模块**、**②a/②b 生成智能体的 LLM 本体**、**端到端闭环编排器（solve 循环、迭代管理、归因反馈的权威定义在本档 §3.2 / §4，csk 文档 §7.2–7.4 指向此处）**与**跨模块契约一致性**的详细设计，负责人：gc（智能体与闭环侧）。
 >
-> 三人分工全景：**PLC 执行侧（lx，见《lx-PLC代码生成与执行引擎详细设计》）** 负责代码契约与链路 B；**仿真验证侧（csk，见《csk-仿真环境与IO闭环详细设计》）** 负责 SceneSpec 规范/校验器、USD 构建与组件库（③b）、Isaac 运行时、判定引擎与链路 A 构建，兼 ②b 场景描述的**评审方**；**本侧（gc）** 负责双生成本体（②a PLC 代码 + ②b 场景描述）与闭环大脑——听懂需求、生成代码与场景、判定后归因、定向重生成、管住迭代直至收敛。
+> 三人分工全景：**PLC 执行侧（lx，见《lx-PLC代码生成与执行引擎详细设计》）** 负责代码契约与链路 B；**仿真验证侧（csk，见《csk-仿真环境与IO闭环详细设计》）** 负责 SceneSpec 规范/校验器、MJCF 构建与组件库（③b）、MuJoCo 运行时、判定引擎与链路 A 构建，兼 ②b 场景描述的**评审方**；**本侧（gc）** 负责双生成本体（②a PLC 代码 + ②b 场景描述）与闭环大脑——听懂需求、生成代码与场景、判定后归因、定向重生成、管住迭代直至收敛。
 
 ---
 
@@ -17,7 +17,7 @@
 | ②b 场景描述生成 | spec → **scene.spec.json（内嵌 io_map，契约 v1.1）**（csk 分支 f39debd 收窄：SceneSpec JSON 生成归 gc） | `src/agent/scene_gen.py` | ✅ **v1 契约对齐已落地**（确定性生成：组件注册表运行时加载 `contract/components.v*.json`；io_map 只含可绑物理通道（fb→pos/cmd→cmd，range SI 米制）；地址分配移交 csk build-mjcf；自检 V0~V4 含路由覆盖；编排器闸门2b 消费——**受阻项：csk master REGISTRY 缺 6 个 MJCF 类型，见看板共同议题**；LLM 布局创意后续仅限 pose/params） |
 | 跨模块一致性 | io_list 单一源头的落地：**三方一致性检查器**（定位变量 ≡ io_list ≡ io_map） | `consistency_check.py` | ✅ 完成（R1~R5；R5 腿按契约 v1.1 改子集覆盖语义——io_map ⊆ io_list（ioEntry 对账 bool↔BOOL/float↔INT，bind={asset,quantity}），反向覆盖由 ②b 路由覆盖自检保证；io_map 腿由 ②b 产物供给，每轮闸门2b 执行） |
 
-不归本侧的：xml2st 校验/部署/Modbus 验收（PLC 侧）；SceneSpec→USD 构建、Isaac lockstep 运行、trace 采集、**确定性判定引擎**（仿真验证侧）。判定引擎给出 PASS/FAIL，本侧消费它并决定下一步。
+不归本侧的：xml2st 校验/部署/Modbus 验收（PLC 侧）；SceneSpec→MJCF 构建、MuJoCo lockstep 运行、trace 采集、**确定性判定引擎**（仿真验证侧）。判定引擎给出 PASS/FAIL，本侧消费它并决定下一步。
 
 ## 1. 在总体架构中的位置
 
@@ -36,7 +36,7 @@ AutomationML(设备描述)              用户（自然语言）
    │     └► 编译闸门：lx 的 xml2st / POST /deploy（失败即短路） │
    │  ②b 场景生成（仿真侧 SceneSpec LLM）                      │
    │     └► 校验闸门：仿真侧 Schema/物理校验（失败即短路）      │
-   │  ③ 仿真执行：③a DLL + ③b json→USD→run_isaac_headless    │
+   │  ③ 仿真执行：③a DLL + ③b json→MJCF→run_sim_headless    │
    │  ④ 判定：仿真侧确定性规则引擎 ──► verdict.json             │
    │  归因（本侧 LLM）：区分代码问题 / 场景问题，路由重生成      │
    └── 未通过：带迭代记忆进入下一轮（≤6 轮）◄──────────────────┘
@@ -146,7 +146,7 @@ solve(request):
         history.append(scene_error); continue
     usd, io_map = build_usd(scene)                    # ③b 确定性构建（json→USD）
     consistency_check(xml, spec.io_list, io_map)      # 本侧：三方一致性（见 §5）
-    trace = run_isaac_headless(usd, io_map, dll)      # ③ 仿真执行（③a DLL × ③b）
+    trace = run_sim_headless(mjcf, io_map, dll)      # ③ 仿真执行（③a DLL × ③b）
     verdict = evaluate(spec.acceptance, trace)        # ④ 仿真侧确定性判定
     if verdict.ok: return finalize(i)                 # 冻结 final/ → 链路 B 验收
     history.append(verdict, analyze(trace, verdict))  # 归因入记忆 → 下一轮
@@ -197,7 +197,7 @@ io_map（契约 v1.1：scene.spec 内嵌 ioEntry / csk 契约③ io_map.json）-
 |---|---|---|
 | lx（PLC 侧） | `xml2st --check`（本地快速闸门）；`POST /deploy` :8600（真编译+部署，返回 deploy_result.json，errors 原样进反馈包） | 本侧调用 |
 | lx（PLC 侧） | 契约文档 §3：ST 子集 / 定位变量位宽 / 显式拒绝清单 —— 生成器 Prompt 的硬约束 | 本侧遵守 |
-| 仿真侧 | requirement_spec → SceneSpec 生成与 USD 构建；`run_isaac_headless(usd, io_map, dll)`；`evaluate()` → verdict.json | 本侧调用 |
+| 仿真侧 | requirement_spec → SceneSpec 生成与 MJCF 构建；`run_sim_headless(mjcf, io_map, dll)`；`evaluate()` → verdict.json | 本侧调用 |
 | 仿真侧 | acceptance 四类准则结构（csk 文档 §7.1）——需求 Schema 与判定引擎逐字对齐 | 双方共守 |
 | 跨链路 | 模拟量统一 **INT @ %QW + 定点换算**（lx 链路 B）——生成器负责落码；契约 v1.1 仿真链路 scene.io_map 不再携带 scale/地址（SI 米制 range，换算归桥，float32/INT16 为共同议题） | 本侧落实 |
 
@@ -223,7 +223,7 @@ io_map（契约 v1.1：scene.spec 内嵌 ioEntry / csk 契约③ io_map.json）-
 2. ~~与仿真侧确认 acceptance 四类准则的最终字段结构（以 csk §7.1 为底稿）~~ → 字段已逐字对齐其 §7.1，待其评审确认（`check_at` 冻结 "end"，扩展走 RFC）；
 3. ~~PLC 生成器 v0：模式库整理 + Prompt 骨架 + xml2st 错误回喂通路联调~~ → 已完成（`src/agent/`：pipeline / patternlib / prompts；xml2st+一致性双闸门回灌；client 流式降级支持万 token 长生成；绘图仪种子已入 src/plc/）；
 4. ~~一致性检查器原型（可直接复用 lx 的 `xml2st.parse()`）~~ → 已完成（`src/agent/consistency_check.py`，R1 复用 xml2st.parse；R5 io_map 腿由 ②b 产物激活，2026-09-09 按契约 v1.1 改 ioEntry 子集覆盖语义）；
-5. ~~编排器骨架：先串"生成→编译闸门→部署→链路 B 验收"的半环（不含 Isaac）~~ → 半环五闸门（+闸门2b scene/R5 全腿、/status 观测、CLI 直通 ⓪→①）；仿真全环待 csk 判定引擎与 ③b 接口；
+5. ~~编排器骨架：先串"生成→编译闸门→部署→链路 B 验收"的半环（不含仿真侧）~~ → 半环五闸门（+闸门2b scene/R5 全腿、/status 观测、CLI 直通 ⓪→①）；仿真全环待 csk 判定引擎与 ③b 接口；
 6. ~~⓪ AutomationML 解析模块（架构 v2.0 新增职责）~~ → 已完成（+ plotter3axis_station.aml：IEC 62714/CAEX 3.0 全结构参考样式）；
 7. ~~②b 场景描述生成器 v0（等 csk SceneSpec Schema）~~ → 已落地确定性 v0；**2026-09-09 对齐契约 v1.1 升 v1**（contract/ 驱动：内嵌 io_map、SI range、地址分配移交 csk build-mjcf）；待 csk 闸门补 6 个 MJCF 类型注册后走真闸门回归；
 8. ~~需求理解 LLM 澄清回路~~ → **对话式形态已落地**（`src/agent/chat.py`：AML+需求输入 → 规格回显（逐条准则含谓词明细）→ 用户自然语言修正（`refine()` 定向最小修改，上轮 spec 作上下文）→ 确认后自主闭环；闸门环境自动探测；`--request --confirm --seed` 可脚本化）。LLM 对粗需求的**主动反问**未接（现状：回显+人工审，弱项为 forbidden_state 等值谓词健全性——回显已明示谓词供核对）；
