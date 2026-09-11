@@ -146,7 +146,10 @@ def main():
     # ---- ⓪ 设备描述 ----
     aml = args.aml
     if aml is None:
-        aml = input("AML 设备描述路径 [回车=%s]: " % DEFAULT_AML.name).strip() or str(DEFAULT_AML)
+        if args.request:  # 脚本化模式（--request）无交互环境，直接用默认 AML
+            aml = str(DEFAULT_AML)
+        else:
+            aml = input("AML 设备描述路径 [回车=%s]: " % DEFAULT_AML.name).strip() or str(DEFAULT_AML)
     device_model, problems = parse_aml(aml)
     if problems:
         print("我读这份 AML 时发现了问题，先不往下走了：")
