@@ -653,7 +653,8 @@ class Orchestrator:
                     json.dumps(scene_out["scene"], ensure_ascii=False, indent=2), encoding="utf-8")
                 ok5, problems5 = consistency_check(iter_dir / "plcopen.xml",
                                                    spec["io_list"], scene_out["io_map"],
-                                                   device_model=device_model)
+                                                   device_model=device_model,
+                                                   scene=scene_out["scene"])
                 hard5 = [p for p in problems5 if not p.startswith("SKIP")]
                 if not ok5 or hard5:
                     feedback = fail(iter_dir, i, "scene", hard5, mode)

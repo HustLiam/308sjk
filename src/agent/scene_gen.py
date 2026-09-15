@@ -116,9 +116,10 @@ def _clean_params(raw):
 
 
 def _axes_info(device_model, io_list=()):
-    """归一化三轴信息 {axis: {stroke, scale, vmax}}（优先 device_model 运动学；
-    无模型时从 io_list 的 <axis>_fb 量程/单位推断；再缺省的键不在此补——
-    是否可走 gantry 由调用方按可解析轴集判定，缺口由 _gantry_asset 用库缺省填）。"""
+    """归一化三轴信息 {axis: {stroke, scale, vmax}}（优先 device_model 运动学
+    v1.1：vmax 读 limits 分层；无模型时从 io_list 的 <axis>_fb 量程/单位推断；
+    再缺省的键不在此补——是否可走 gantry 由调用方按可解析轴集判定，缺口由
+    _gantry_asset 用库缺省填）。"""
     axes = {}
     for a in (device_model or {}).get("kinematics", {}).get("axes", []):
         name = a.get("axis") or a.get("device", "").rsplit("/", 1)[-1]
@@ -126,7 +127,7 @@ def _axes_info(device_model, io_list=()):
         unit = a.get("unit") or "%"
         axes[short] = {"stroke": a.get("stroke") or [0, 100],
                        "scale": _SCALE_BY_UNIT.get(unit, 0.01),
-                       "vmax": a.get("vmax")}
+                       "vmax": (a.get("limits") or {}).get("vmax")}
     if not axes:
         for item in io_list:
             m = _AXIS_RE.match(item.get("name", ""))
@@ -185,25 +186,82 @@ def _gantry_asset(device_model, io_list=()):
     }
 
 
-def route_physical_channels(io_list, scene):
+def _axis_io_bindings(device_model):
+    """axis_objects.io → {short: {role: 通道名}}（device_model v1.1，生成方案 §6.2
+    ②b 行：通道名从 io 绑定取）。io 缺失/None 的轴不在此列（⓪ 已记 problems）。"""
+    out = {}
+    for a in (device_model or {}).get("kinematics", {}).get("axes", []):
+        name = a.get("axis") or a.get("device", "").rsplit("/", 1)[-1]
+        short = name[:-len("_axis")] if name.endswith("_axis") else name
+        if a.get("io"):
+            out[short] = a["io"]
+    return out
+
+
+def route_physical_channels(io_list, scene, device_model=None):
     """io_list → 契约 io_map 条目（确定性；同一函数供生成与自检复用）。
 
     <axis>_fb → gantry.<axis>_pos、<axis>_cmd → gantry.<axis>_cmd（range=travel，
     SI 米）；io_list 缺位置指令变量时**合成** <axis>_cmd 三条驱动通道（见
-    is_driver_channel——待 RFC 并入契约②后撤销）。其余通道（按钮/灯/NC/状态字/
-    速度指令）无契约 quantity 不路由。
+    is_driver_channel——待 RFC 并入契约②后撤销）。提供 device_model 时通道名
+    优先取 axis_objects.io 绑定（无绑定/无模型的轴回退 <axis>_fb 正则推断）。
+    其余通道（按钮/灯/NC 设定值/状态字/速度指令）无契约 quantity 不路由。
     """
     gantry = next((a for a in scene.get("assets", [])
                    if a.get("type") == "gantry_xyz"), None)
     if gantry is None:
         return []          # 非 gantry 资产无可绑通道（plotter 多资产模块已移除）
+    bindings = _axis_io_bindings(device_model)
+    if bindings:
+        return _route_gantry_bound(io_list, gantry, bindings)
     return _route_gantry(io_list, gantry)
 
 
-def _route_gantry(io_list, gantry):
+def _travel_params(gantry):
     p = gantry.get("params", {})
-    travel = {"x": p.get("travel_x", 1.0), "y": p.get("travel_y", 1.0),
-              "z": p.get("travel_z", 0.01)}
+    return {"x": p.get("travel_x", 1.0), "y": p.get("travel_y", 1.0),
+            "z": p.get("travel_z", 0.01)}
+
+
+def _entry(gantry, axis, plc_var, kind, travel):
+    return {
+        "plc_var": plc_var,
+        "dir": "input" if kind == "fb" else "output",
+        "type": "float",
+        "bind": {"asset": gantry["id"],
+                 "quantity": "%s_%s" % (axis, "pos" if kind == "fb" else "cmd"),
+                 "range": [0.0, round(float(travel[axis]), 9)]},
+    }
+
+
+def _route_gantry_bound(io_list, gantry, bindings):
+    """按 axis_objects.io 绑定路由（生成方案 §6.2）。绑定名即 io_points 实名
+    （role 推断按命名规则匹配，io_list 由 ⓪ 预填保证同源），故与正则路由
+    同产物；差异仅在命名偏离范本时以绑定点为准。"""
+    travel = _travel_params(gantry)
+    io_by_name = {item.get("name"): item for item in io_list}
+    entries = []
+    for axis in ("x", "y", "z"):
+        fb_var = bindings.get(axis, {}).get("fb", "%s_fb" % axis)
+        item = io_by_name.get(fb_var)
+        if item is None or item.get("dir") != "input" \
+                or _ENTRY_TYPE.get(item.get("type")) != "float":
+            continue
+        entries.append(_entry(gantry, axis, fb_var, "fb", travel))
+    have = {e["plc_var"] for e in entries}
+    for axis in ("x", "y", "z"):
+        var = "%s_cmd" % axis
+        if var not in have:
+            entries.append({
+                "plc_var": var, "dir": "output", "type": "float",
+                "bind": {"asset": gantry["id"], "quantity": var,
+                         "range": [0.0, round(float(travel[axis]), 9)]},
+            })
+    return entries
+
+
+def _route_gantry(io_list, gantry):
+    travel = _travel_params(gantry)
     entries = []
     for item in io_list:
         m = _AXIS_RE.match(item.get("name", ""))
@@ -243,7 +301,7 @@ class SceneSpecGenerator:
         # 三轴信息缺项用库缺省行程补齐（_GANTRY_FALLBACK_TRAVEL）
         assets = [_gantry_asset(device_model, io_list)]
 
-        io_map = route_physical_channels(io_list, {"assets": assets})
+        io_map = route_physical_channels(io_list, {"assets": assets}, device_model)
         scene = {
             "scene_id": spec.get("task_id", "task"),
             "spec_version": SCENE_SPEC_VERSION,

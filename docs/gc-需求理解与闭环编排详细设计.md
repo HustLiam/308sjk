@@ -10,12 +10,12 @@
 
 | 总体方案模块 | 本侧职责 | 关键产物 | 状态 |
 |---|---|---|---|
-| ⓪ AutomationML 解析 | IEC 62714 AML → device_model.json（设备/IO/拓扑/运动学） | `src/agent/aml_parser.py` + CLI `tools/aml_parser.py` | ✅ 完成（`schemas/device_model.schema.json` v1.0.0-draft.1 + 双示例：motion3axis_station + **plotter3axis_station（CAEX 3.0 全结构新参考样式**：InstanceHierarchy+三类类库、信号方向挂 PLC 通道、InternalLink=电气接线）；确定性解析 + io_list 预填契约测试 ×2） |
+| ⓪ AutomationML 解析 | IEC 62714 AML → device_model.json（设备/IO/拓扑/运动学） | `src/agent/aml_parser.py` + CLI `tools/aml_parser.py` | ✅ 完成（`schemas/device_model.schema.json` **v1.1.0-draft.1**（2026-09-15 RFC：kinematics.axes 分层 limits/defaults + io 角色绑定，rel_d=rel_{a}_d 前置命名）+ 双示例：motion3axis_station + **plotter3axis_station（CAEX 3.0 全结构新参考样式**：InstanceHierarchy+三类类库、信号方向挂 PLC 通道、InternalLink=电气接线）；确定性解析 + io_list 预填契约测试 ×2） |
 | ① 需求理解模块 | 自然语言 → 结构化需求规格；**requirement_spec.json Schema 的定义权** | `requirement_spec.json` + JSON Schema | 🟨 Schema **v1.0.0-draft.3**（draft.2 + lx 收紧建议落实：range 完整落入有符号/无符号域之一），待 csk 评审后冻结；**模块 v0 已落地**（`src/agent/requirement.py`：LLM 模式 io_list 逐字锚定预填+修复回路 / 离线模板模式 / pending 澄清；绘图仪 spec 由 glm-5.3 一轮产出+人工介入点 1 修正后冻结 `examples/specs/plotter3axis.spec.json`）；LLM 多轮澄清未接 |
 | ②a/②b 的 LLM 生成本体 | PLCopen XML 生成器（在 lx 契约上）、失败归因分析 LLM | 生成器 Prompt 工程 + ST 模式库 | 🟨 生成器 v0 已实现（`src/agent/pipeline.py` + `patternlib.py` + `prompts/plcgen_skill.md`，种子=motion3axis+plotter3axis，xml2st+一致性双闸门回灌；client 流式降级支持万 token 长生成）；**绘图仪种子已落地**（`src/plc/plotter3axis.xml`：CSP 栈逐字复用 + INTERP_Z 笔轴 + 9 步绘图序列器 + 笔互锁，双闸门绿）；归因 LLM 未启动 |
 | 闭环编排器 | solve 循环、两个编译/校验短路、迭代记忆、终止与 best-effort、反馈包拼装与路由 | `orchestrator/` | 🟨 半环五闸门（`src/agent/orchestrator.py`：生成→xml2st→一致性→**scene（②b 产物自检 + R5 检查）**→部署可选→链路 B 验收可选；/status 观测仅记录不裁定；CLI `--aml/--request` 直通 ⓪→①；runs/plotter3axis_demo final 冻结）；仿真全环等 csk 接口 |
 | ②b 场景描述生成 | spec → **scene.spec.json（内嵌 io_map，契约 v1.1）**（csk 分支 f39debd 收窄：SceneSpec JSON 生成归 gc） | `src/agent/scene_gen.py` | ✅ **v1 契约对齐已落地**（确定性生成：组件注册表运行时加载 `contract/components.v*.json`；io_map 只含可绑物理通道（fb→pos/cmd→cmd，range SI 米制）；地址分配移交 csk build-mjcf；自检 V0~V4 含路由覆盖；编排器闸门2b 消费——**受阻项：csk master REGISTRY 缺 6 个 MJCF 类型，见看板共同议题**；LLM 布局创意后续仅限 pose/params） |
-| 跨模块一致性 | io_list 单一源头的落地：**三方一致性检查器**（定位变量 ≡ io_list ≡ io_map） | `consistency_check.py` | ✅ 完成（R1~R5；R5 检查按契约 v1.1 改子集覆盖语义——io_map ⊆ io_list（ioEntry 对账 bool↔BOOL/float↔INT，bind={asset,quantity}），反向覆盖由 ②b 路由覆盖自检保证；io_map 数据由 ②b 产物供给，每轮闸门2b 执行） |
+| 跨模块一致性 | io_list 单一源头的落地：**三方一致性检查器**（定位变量 ≡ io_list ≡ io_map；轴参数 ≡ AML） | `consistency_check.py` | ✅ 完成（R1~R8（**R8**=轴参数三方比对 AML≡XML≡scene.spec，2026-09-15 RFC 落地，v3 形态 XML 记 SKIP）；R5 检查按契约 v1.1 改子集覆盖语义——io_map ⊆ io_list（ioEntry 对账 bool↔BOOL/float↔INT，bind={asset,quantity}），反向覆盖由 ②b 路由覆盖自检保证；io_map 数据由 ②b 产物供给，每轮闸门2b 执行） |
 
 不归本侧的：xml2st 校验/部署/Modbus 验收（PLC 侧）；SceneSpec→MJCF 构建、MuJoCo lockstep 运行、trace 采集、**确定性判定引擎**（仿真验证侧）。判定引擎给出 PASS/FAIL，本侧消费它并决定下一步。
 
@@ -188,6 +188,7 @@ io_map（契约 v1.1：scene.spec 内嵌 ioEntry / csk 契约③ io_map.json）-
   可绑物理通道，按钮/灯与 NC/诊断通道不在其列，反向覆盖由 ②b 路由覆盖自检保证）；
   地址不冲突、位宽匹配（BOOL↔%QX，INT↔%QW）；方向语义正确（input↔仿真→PLC，
   output↔PLC→仿真）；
+- R8（2026-09-15 RFC 落地）：**轴参数三方比对**——AML axis_objects ≡ XML 轴实例参数（POSWIN=INTERP 类型初值 / MC 调用动力学字面量=defaults / 行程=MC 越程界限，多轴行程不一记 SKIP 待 lx 参数化）≡ scene.spec 轴参数（travel=stroke×scale、speed=vmax×scale）；v3 形态 XML（INTERP 带 VMAX）记 SKIP 待种子升 v4.0；闸门2b 传 scene 时增比对 scene 侧；
 - 调用时机：编排器在**生成后、仿真前**调用（对应总体方案 §3.2 前置校验第 3 步）；
 - 任何一方修改（改代码变量名 / 改 io_map 绑定）都触发重查——单一源头 + 自动对账，杜绝三方漂移。
 
@@ -229,7 +230,7 @@ io_map（契约 v1.1：scene.spec 内嵌 ioEntry / csk 契约③ io_map.json）-
 8. ~~需求理解 LLM 澄清回路~~ → **对话式形态已落地**（`src/agent/chat.py`：AML+需求输入 → 规格回显（逐条准则含谓词明细）→ 用户自然语言修正（`refine()` 定向最小修改，上轮 spec 作上下文）→ 确认后自主跑完剩余流程（生成→闸门→验收）；闸门环境自动探测；`--request --confirm --seed` 可脚本化）。LLM 对粗需求的**主动反问**未接（现状：回显+人工审，弱项为 forbidden_state 等值谓词健全性——回显已明示谓词供核对）；
 9. 归因分析 LLM（消费 verdict.json → report.md，区分代码/场景问题并路由）——待 csk 判定引擎；
 10. plotter3axis 在线验收（需 OpenPLC 环境：run_regression.py L3 自动发现场景对）+ lx 复核代拟的 scenario 脚本后纳入场景库；
-11. **轴对象映射绑定 RFC**（device_model Schema v1.1，2026-09-15 gc 完成评估回区）——提案文本见 §10，待 lx 确认三处修订 + csk 知悉；评审通过后按 §10.4 排期实施（⓪ 升级 → ②a 轴对象展开器 → ②b 消费点改读 → R8 三方比对 → 双场景等价契约测试）。
+11. **轴对象映射绑定 RFC 实施中**（device_model Schema v1.1.0-draft.1；lx 2026-09-15 评审通过，三处修订并入生成方案 §6）——**步 1/2/3/4 已落地**（⓪ 分层+io 绑定 / ②a 展开器 axis_expand.py+模板，基准 1 字节级等价 / ②b 改读 limits / 一致性 R8，见 changelog「轴对象绑定 v1」）；**剩步 5**：plotter3axis 种子升 v4.0 + 等价基准 2（lx 配合）；后续把展开器接入生成主路（LLM 只写工艺层 process_body）。
 
 ## 10. RFC：轴对象映射绑定（device_model Schema v1.1）——gc 评估与提案（2026-09-15）
 
@@ -269,6 +270,8 @@ csk 侧零改动：契约包 v1.1 组件参数（linear_axis 的 stroke/speed）
 | 3 | ②b 消费点：`_axes_info` 改读 limits.vmax + 通道名取自 io 绑定 | 0.5 天 |
 | 4 | R8 三方轴参数比对（含负测试，缺 model 跳过） | 1 天 |
 | 5 | plotter3axis 种子升 v4.0 总线形态（现行仍 v3 形态 INTERP，devlog 2026-09-10 已登记为遗留）+ 等价契约测试（基准 2） | 0.5~1 天，可与步 2 并行 |
+
+**实施进展（2026-09-15）**：lx 评审通过（三处修订并入生成方案 §6，R8 编号确认）后当日落地步 1~4——Schema v1.1.0-draft.1 + aml_parser 分层与角色绑定；②a 展开器 `src/agent/axis_expand.py` + FB 库模板 `templates/motion_stack_v4.xml`，**基准 1 实测字节级等价**（强于 §6.3 树级"逐字段等价"）；②b/一致性 R8 同批。剩步 5（plotter 种子升 v4.0 + 基准 2，lx 配合）与"展开器接入生成主路"。
 
 版本与合入：device_model Schema `1.0.0-draft.1 → 1.1.0-draft.1`（评审通过后定 1.1.0）。aml_parser 是 device_model 唯一生产者，同批升级、不留旧字段兼容读；`runs/` 历史产物不回填。合入批次按 RFC 流程一次做完：改契约 + 本档 §5 增 R8 + lx 生成方案 §6 修订 + 主方案 §3.0 一句 + changelog 登记。
 

@@ -892,3 +892,72 @@ master 同步（bb0d5dd 合入 gc：motion3axis 种子战役 runs 入库 + 看�
 一行 + 变更记录一行）。纯文档改动，无代码变更；pytest 跑全量确认与改前一致。
 
 **未提交未推送。**
+
+## 2026-09-10 情景记忆与模式库清除（本地，未提交推送）
+
+- fixes.json（116 对）删除：action 字段全为收尾套话（95 abandoned"迭代上限未收敛"+
+  21 final"种子通过全部闸门"），无一条真实验证对——归因 match_fixes 消费的
+  similar_fixes/repair_hints 拼接实为噪音；删后 match_fixes 返空、repair_hints
+  回归纯坑库修法。写入点未停（orchestrator:719/781），下次战役收尾会重建文件。
+- patterns.json（2 张卡）git rm：plotter3axis/plotter_circle 两卡标签域（绘图族）
+  与零卡路线完全重叠、不可达；非绘图任务兜底=内置 CATALOG motion3axis。
+  _catalog 缺文件优雅降级（patternlib.py:50 is_file 判断）。下次种子战役
+  final+在线验收 ok 时 _consolidate 会重新策展登记（机制未停）。
+- 遗留决策点：① record_fix 停写或改写"坑库命中→修复→结局"真实验证对（反哺
+  坑库修法治愈率统计——情景记忆的独特价值）；② _consolidate 自动策展是否
+  保留（与"非绘图任务扩充卡源"演进一并决策）。
+- pytest 209 全绿；changelog 已登记。
+
+## 2026-09-15（下）轴对象绑定 RFC 开工：步 1~4 落地（lx 回执后当日，未提交）
+
+lx 15:31 回执通过后按 gc 文档 §10.4 排期实施。四个代码改动 + 一个顺手修：
+
+- **步 1 ⓪（aml_parser + Schema v1.1.0-draft.1）**：`_extract_axes` 重写——
+  limits{vmax,accel} / defaults{velocity,acceleration,deceleration}（AML 显式
+  声明优先，缺省回退 limits 同值、deceleration 回退 accel——lx §6.1 示例值
+  40/80/80 即回退语义，与种子 MC 调用逐字吻合）/ io 角色绑定（`AXIS_IO_ROLES`
+  表驱动：必需 fb/sp/sw/v 缺失记 problems 且 io=None；可选 rel_d 用 **rel 前置
+  模式 rel_{a}_d**（RFC 修订①）、err_id 缺省省略）；短名冲突检测（x_axis 与 x
+  同短名 → problems）。消费方同步：requirement._device_summary 与
+  scene_gen._axes_info 改读 limits。
+- **步 3 ②b**：`_axes_info` 读 limits.vmax；`route_physical_channels` 增
+  device_model 参数——有 axis io 绑定时走 `_route_gantry_bound`（通道名取
+  绑定），否则回退原正则路由（同产物：role 推断本就按 `<short>_fb` 匹配，
+  差异仅在命名偏离范本时以绑定点为准）；generate() 传入 device_model。
+- **步 4 一致性 R8**：`_check_axis_params`——POSWIN 取 INTERP 类型初值
+  （共享 FB，须全轴一致）；MC 动力学从 PLC_PRG 体 go/rel 调用字面量提取比对
+  defaults；行程从 MC_MOVEABSOLUTE 体内字面常量提取（全轴同行程才可比，多轴
+  行程不一记 SKIP——待 lx 参数化）；scene 侧 travel≡stroke×scale、
+  speed≡vmax×scale。v3 形态 XML（INTERP 带 VMAX）整体记 SKIP（plotter 种子
+  现状）。**踩坑：ElementTree 的 iter() 不支持 `{*}` 通配**（那是
+  find/findall 的 ElementPath 语法）——种子是 tc6_0201 命名空间文档，
+  `root.iter("pou")` 静默返回空；写 `_iter_local` 按 localname 迭代修复。
+  主入口增 scene 参数；编排器闸门2b 传 scene_out["scene"]。
+- **步 2 ②a 展开器（最大件）**：`src/agent/axis_expand.py` +
+  `src/agent/templates/motion_stack_v4.xml`（种子 FB 库+骨架逐字副本，PLC_PRG
+  段挖空为 @@PLC_PRG@@ 标记）。PLC_PRG 完整生成：七个 localVars 块（分组与
+  顺序与种子逐字一致——G1 站 BOOL 输入 / G2 fb+rel / G3 sp / G4 sw+v+err+聚合
+  +prog_id / G5 cw+interp+jog_pos+tgt+exe 触发线 / G6 动力学总线（初值=
+  defaults）/ G7 十二类 FB 实例）；ST 体全部轴派生接线（扫描头/目标总线/
+  使能-复位-快停/读块/命令层/插补/清触发/点动路由/驱动/聚合/ErrorID 路由）。
+  **关键发现：motion3axis 的 PLC_PRG 无工艺层序列**（纯轴派生），故基准 1
+  可做到全文档等价——实测**字节级一致**（44334 字节），强于 §6.3 树级判据。
+  poswin/行程全轴一致时**代入 FB 体字面常量**（转义形态 `&gt;`/`&lt;`；ST 字面
+  量用整数字形 100/0、POSWIN 初值用小数形 2.0——种子两种惯例并存）；
+  defaults≤limits 展开期校验（RFC 修订②）；jog_axis/jog_velocity/reset_axes
+  为应用配置参数（点动挂 x、50.0、复位挂 x——种子惯例）。
+  工艺层接口：process_vars/process_body 尾接（plotter 的 9 步序列器走此口，
+  LLM 只写工艺层的目标达成）。
+- **顺手修**：plotter_circle.xml 头注释 prog_id = 2 → 3（lx 2026-09-09 复核
+  意见；xml2st --check 复验通过，纯注释无行为变化）。
+
+测试：test_aml_parser 20→26（v1.1 结构断言 + plotter 可选角色 + 必需角色缺失
+负测试 + Schema 校验）、test_consistency_check 20→27（R8 基准绿 + 四负测试 +
+v3 SKIP）、tests/test_axis_expand.py 新增 6 项。**pytest 198→215 全绿**。
+
+遗留：步 5（plotter 种子升 v4.0 + 基准 2，lx 配合——建议直接用展开器产种子，
+工艺层走 process 注入）；展开器接入生成主路（pipeline LLM 只写 process_body）；
+lx 改种子 FB（INTERP 越程常量参数化）时等价测试变红 → 刷模板 + 代入逻辑改
+参数位 + R8 行程比对改读实例参数。
+
+**未提交未推送。**

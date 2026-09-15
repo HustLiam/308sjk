@@ -13,7 +13,9 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
+from agent.aml_parser import parse_aml  # noqa: E402
 from agent.consistency_check import consistency_check, extract_located_vars  # noqa: E402
+from agent.scene_gen import SceneSpecGenerator  # noqa: E402
 
 MOTION_XML = REPO / "src" / "plc" / "motion3axis.xml"
 SPEC = json.loads((REPO / "examples" / "specs" / "motion3axis.spec.json").read_text(encoding="utf-8"))
@@ -171,3 +173,79 @@ class TestR6DeviceAddresses:
         ok, problems = consistency_check(bad, self.SPEC["io_list"], device_model=self._model())
         assert not ok
         assert any(p.startswith("R6") and "x_sp" in p for p in problems)
+
+
+# ---------------- R8：轴参数三方比对（device_model v1.1，生成方案 §6.2） ----------------
+
+DEVICE_MODEL, _ = parse_aml(REPO / "examples" / "aml" / "motion3axis_station.aml")
+
+
+def _scene_of(io_list):
+    return SceneSpecGenerator().generate({"task_id": "t", "io_list": io_list},
+                                         DEVICE_MODEL)["scene"]
+
+
+class TestR8AxisParams:
+    def test_baseline_green_with_scene(self):
+        # 基准：AML↔XML↔scene.spec 三方全一致（motion3axis v4.0）
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, device_model=DEVICE_MODEL,
+                                         scene=_scene_of(IO_LIST))
+        assert ok, problems
+        assert not [p for p in problems if "R8" in p]
+
+    def test_poswin_mismatch_detected(self):
+        dm = json.loads(json.dumps(DEVICE_MODEL))
+        dm["kinematics"]["axes"][0]["poswin"] = 3.0
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, device_model=dm)
+        assert not ok
+        assert any("POSWIN 不一致" in p and "XML INTERP=2.0" in p for p in problems)
+
+    def test_defaults_mismatch_detected(self):
+        dm = json.loads(json.dumps(DEVICE_MODEL))
+        dm["kinematics"]["axes"][2]["defaults"]["velocity"] = 15.0
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, device_model=dm)
+        assert not ok
+        assert any("go_z 的 Velocity=40.0" in p and "velocity=15.0" in p for p in problems)
+
+    def test_stroke_mismatch_detected(self):
+        # 全轴同行程地偏离 XML 常量才可比（多轴行程不一走 SKIP——FB 体内共享常量
+        # 无法逐轴表达，lx 参数化后改逐轴实例参数比对）
+        dm = json.loads(json.dumps(DEVICE_MODEL))
+        for a in dm["kinematics"]["axes"]:
+            a["stroke"] = [0.0, 80.0]
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, device_model=dm)
+        assert not ok
+        assert any("MC 越程界限 [0.0,100.0]" in p and "AML stroke [0.0, 80.0]" in p
+                   for p in problems)
+
+    def test_mixed_stroke_skips_xml_side(self):
+        dm = json.loads(json.dumps(DEVICE_MODEL))
+        dm["kinematics"]["axes"][0]["stroke"] = [0.0, 80.0]
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, device_model=dm)
+        assert ok  # SKIP 不是硬问题
+        assert any("多轴行程不一" in p for p in problems)
+
+    def test_scene_travel_mismatch_detected(self):
+        scene = _scene_of(IO_LIST)
+        for a in scene["assets"]:
+            if a["type"] == "gantry_xyz":
+                a["params"]["travel_y"] = 0.7
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, device_model=DEVICE_MODEL,
+                                         scene=scene)
+        assert not ok
+        assert any("scene travel_y=0.7" in p for p in problems)
+
+    def test_missing_call_detected(self):
+        text = MOTION_XML.read_text(encoding="utf-8").replace("go_y(", "goY(", 2)
+        ok, problems = consistency_check(text, IO_LIST, device_model=DEVICE_MODEL)
+        assert not ok
+        assert any("缺 go_y 调用" in p for p in problems)
+
+    def test_v3_form_xml_skipped(self):
+        # plotter 种子仍 v3 形态（INTERP 带 VMAX）→ R8 记 SKIP 不误报
+        dm, _ = parse_aml(REPO / "examples" / "aml" / "plotter3axis_station.aml")
+        spec = json.loads((REPO / "examples" / "specs" / "plotter3axis.spec.json").read_text(encoding="utf-8"))
+        ok, problems = consistency_check(REPO / "src" / "plc" / "plotter3axis.xml",
+                                         spec["io_list"], device_model=dm)
+        assert ok  # 硬问题为零（v3 形态 SKIP + 其余检查须过）
+        assert any(p.startswith("SKIP: R8") and "v3" in p for p in problems)
