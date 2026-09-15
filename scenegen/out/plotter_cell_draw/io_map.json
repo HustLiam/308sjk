@@ -1,0 +1,62 @@
+[
+  {
+    "plc_var": "x_fb",
+    "dir": "input",
+    "type": "float",
+    "bind": {
+      "asset": "x_axis",
+      "quantity": "pos",
+      "range": [
+        0.0,
+        1.0
+      ]
+    },
+    "modbus": {
+      "area": "sensor_block",
+      "server_register": 0,
+      "plc_addr": "%IW0",
+      "length": 2,
+      "encoding": "float32_be"
+    }
+  },
+  {
+    "plc_var": "y_fb",
+    "dir": "input",
+    "type": "float",
+    "bind": {
+      "asset": "y_axis",
+      "quantity": "pos",
+      "range": [
+        0.0,
+        1.0
+      ]
+    },
+    "modbus": {
+      "area": "sensor_block",
+      "server_register": 2,
+      "plc_addr": "%IW2",
+      "length": 2,
+      "encoding": "float32_be"
+    }
+  },
+  {
+    "plc_var": "z_fb",
+    "dir": "input",
+    "type": "float",
+    "bind": {
+      "asset": "z_axis",
+      "quantity": "pos",
+      "range": [
+        0.0,
+        0.01
+      ]
+    },
+    "modbus": {
+      "area": "sensor_block",
+      "server_register": 4,
+      "plc_addr": "%IW4",
+      "length": 2,
+      "encoding": "float32_be"
+    }
+  }
+]
