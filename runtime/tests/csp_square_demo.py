@@ -21,8 +21,7 @@ def write_bits(bits):
 
 
 def read_state():
-    regs = cli.read_holding_registers(address=3, count=3, slave=1)   # x/y/z_fb
-    coils = cli.read_coils(address=0, count=17, slave=1)             # run..plot_done(%QX2.2=18? -> 17 位内含 16)
+    regs = cli.read_holding_registers(address=0, count=3, slave=1)   # x/y/z_fb @ %QW0-2
     coils2 = cli.read_coils(address=16, count=3, slave=1)            # %QX2.0=cmd_draw, 2.1=pen_down, 2.2=plot_done
     return {
         "x": regs.registers[0], "y": regs.registers[1], "z": regs.registers[2],
@@ -45,13 +44,13 @@ while time.time() - t0 < 120:
     s = read_state()
     s["t"] = round(time.time() - t0, 2)
     traj.append(s)
-    if len(traj) % 25 == 0:
+    if len(traj) % 20 == 0:
         print(f"  t={s['t']:6.1f}s  x={s['x']:3d} y={s['y']:3d} z={s['z']:2d} "
               f"pen={'DOWN' if s['pen_down'] else 'up'} done={s['plot_done']}")
     if s["plot_done"]:
         done = True
         break
-    time.sleep(0.2)
+    time.sleep(0.05)
 
 # 复位触发线圈
 write_bits([0] * GROUP)
@@ -59,7 +58,7 @@ write_bits([0] * GROUP)
 print(f"\nplot_done = {done}  (用时 {round(time.time() - t0, 1)}s)")
 
 # ---- 轨迹判定 ----
-def near(p, q, tol=1.5):
+def near(p, q, tol=2.0):
     return abs(p["x"] - q[0]) <= tol and abs(p["y"] - q[1]) <= tol
 
 

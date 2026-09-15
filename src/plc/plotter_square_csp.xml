@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://www.plcopen.org/xml/tc6_0201" xmlns:html="http://www.w3.org/1999/xhtml">
-  <fileHeader companyName="" productName="Agent Pipeline" productVersion="0.8.0" creationDateTime="2026-09-15T12:00:00" />
+  <fileHeader companyName="" productName="Agent Pipeline" productVersion="0.8.0" creationDateTime="2026-09-15T14:00:00" />
   <contentHeader name="plotter_square_csp.project" modificationDateTime="2026-09-15T12:00:00" />
   <types>
     <pous>
@@ -17,15 +17,15 @@
 <variable name="plot_done" address="%QX2.2"><type><BOOL /></type></variable>
 </localVars>
 <localVars>
-<variable name="AxisX_cmd" address="%QW0"><type><INT /></type></variable>
-<variable name="AxisY_cmd" address="%QW1"><type><INT /></type></variable>
-<variable name="AxisZ_cmd" address="%QW2"><type><INT /></type></variable>
+<variable name="x_cmd" address="%QW3"><type><INT /></type></variable>
+<variable name="y_cmd" address="%QW4"><type><INT /></type></variable>
+<variable name="z_cmd" address="%QW5"><type><INT /></type></variable>
 <variable name="prog_id" address="%QW20"><type><INT /></type></variable>
 </localVars>
 <localVars>
-<variable name="AxisX_pos" address="%QW3"><type><INT /></type></variable>
-<variable name="AxisY_pos" address="%QW4"><type><INT /></type></variable>
-<variable name="AxisZ_pos" address="%QW5"><type><INT /></type></variable>
+<variable name="x_fb" address="%QW0"><type><INT /></type></variable>
+<variable name="y_fb" address="%QW1"><type><INT /></type></variable>
+<variable name="z_fb" address="%QW2"><type><INT /></type></variable>
 </localVars>
 <localVars>
 <variable name="state"><type><INT /></type><initialValue><simpleValue value="0"/></initialValue></variable>
@@ -38,71 +38,71 @@
           <ST>
             <xhtml:p xmlns:xhtml="http://www.w3.org/1999/xhtml">prog_id := 4;
 
-(* CSP 形态：目标位置直接上总线（%QW0-2）；驱动器（仿真侧）轴速限速跟随并闭位置环 *)
-AxisX_cmd := x_tgt;
-AxisY_cmd := y_tgt;
-AxisZ_cmd := z_tgt;
+(* CSP 形态：目标位置上总线（cmd %QW3-5，反馈 %QW0-2）；驱动器（仿真侧）轴速限速跟随并闭位置环 *)
+x_cmd := x_tgt;
+y_cmd := y_tgt;
+z_cmd := z_tgt;
 
 (* 状态输出 *)
-pen_down := AxisZ_pos &lt;= 1;
-any_moving := (AxisX_pos &gt; AxisX_cmd + 1) OR (AxisX_pos &lt; AxisX_cmd - 1)
-           OR (AxisY_pos &gt; AxisY_cmd + 1) OR (AxisY_pos &lt; AxisY_cmd - 1)
-           OR (AxisZ_pos &gt; AxisZ_cmd + 1) OR (AxisZ_pos &lt; AxisZ_cmd - 1);
+pen_down := z_fb &lt;= 0;
+any_moving := (x_fb &gt; x_cmd + 1) OR (x_fb &lt; x_cmd - 1)
+           OR (y_fb &gt; y_cmd + 1) OR (y_fb &lt; y_cmd - 1)
+           OR (z_fb &gt; z_cmd + 1) OR (z_fb &lt; z_cmd - 1);
 
 IF cmd_reset THEN
     state := 0;
     plot_done := FALSE;
-    x_tgt := 50; y_tgt := 50; z_tgt := 10;
+    x_tgt := 50; y_tgt := 50; z_tgt := 1;
 ELSIF state = 0 THEN
-    x_tgt := 50; y_tgt := 50; z_tgt := 10;      (* 待机：抬笔回中心 *)
+    x_tgt := 50; y_tgt := 50; z_tgt := 1;      (* 待机：抬笔回中心 *)
     IF cmd_draw AND run THEN
         state := 1;
     END_IF;
 ELSE
     CASE state OF
         1:                                      (* 抬笔至安全高度 *)
-            z_tgt := 10;
-            IF AxisZ_pos &gt;= 9 THEN
+            z_tgt := 1;
+            IF z_fb &gt;= 1 THEN
                 state := 2;
             END_IF;
         2:                                      (* 抬笔态定位起点 (20,20) *)
-            x_tgt := 20; y_tgt := 20; z_tgt := 10;
-            IF (AxisX_pos &lt;= 21) AND (AxisX_pos &gt;= 19) AND (AxisY_pos &lt;= 21) AND (AxisY_pos &gt;= 19) THEN
+            x_tgt := 20; y_tgt := 20; z_tgt := 1;
+            IF (x_fb &lt;= 21) AND (x_fb &gt;= 19) AND (y_fb &lt;= 21) AND (y_fb &gt;= 19) THEN
                 state := 3;
             END_IF;
         3:                                      (* 落笔（接触建立，不判位置相等） *)
             z_tgt := 0;
-            IF AxisZ_pos &lt;= 1 THEN
+            IF z_fb &lt;= 0 THEN
                 state := 4;
             END_IF;
         4:                                      (* 边 1：(20,20)-&gt;(80,20) *)
             x_tgt := 80;
-            IF (AxisX_pos &lt;= 81) AND (AxisX_pos &gt;= 79) THEN
+            IF (x_fb &lt;= 81) AND (x_fb &gt;= 79) THEN
                 state := 5;
             END_IF;
         5:                                      (* 边 2：(80,20)-&gt;(80,80) *)
             y_tgt := 80;
-            IF (AxisY_pos &lt;= 81) AND (AxisY_pos &gt;= 79) THEN
+            IF (y_fb &lt;= 81) AND (y_fb &gt;= 79) THEN
                 state := 6;
             END_IF;
         6:                                      (* 边 3：(80,80)-&gt;(20,80) *)
             x_tgt := 20;
-            IF (AxisX_pos &lt;= 21) AND (AxisX_pos &gt;= 19) THEN
+            IF (x_fb &lt;= 21) AND (x_fb &gt;= 19) THEN
                 state := 7;
             END_IF;
         7:                                      (* 边 4：(20,80)-&gt;(20,20) 闭合 *)
             y_tgt := 20;
-            IF (AxisY_pos &lt;= 21) AND (AxisY_pos &gt;= 19) THEN
+            IF (y_fb &lt;= 21) AND (y_fb &gt;= 19) THEN
                 state := 8;
             END_IF;
         8:                                      (* 抬笔 *)
-            z_tgt := 10;
-            IF AxisZ_pos &gt;= 9 THEN
+            z_tgt := 1;
+            IF z_fb &gt;= 1 THEN
                 state := 9;
             END_IF;
         9:                                      (* 回中心并完成 *)
             x_tgt := 50; y_tgt := 50;
-            IF (AxisX_pos &lt;= 51) AND (AxisX_pos &gt;= 49) AND (AxisY_pos &lt;= 51) AND (AxisY_pos &gt;= 49) THEN
+            IF (x_fb &lt;= 51) AND (x_fb &gt;= 49) AND (y_fb &lt;= 51) AND (y_fb &gt;= 49) THEN
                 state := 10;
                 plot_done := TRUE;
             END_IF;

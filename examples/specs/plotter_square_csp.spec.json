@@ -1,6 +1,6 @@
 {
   "task_id": "plotter_square_csp",
-  "task_goal": "三轴绘图机在 XY 平面绘制边长 60（坐标区间 20..80）的正方形并闭合：抬笔定位起点 → 落笔沿四边 → 抬笔回中心。CSP 形态：PLC 输出插补位置目标（%QW0-2），驱动器（仿真侧/真机 CSP 模式）闭位置环；Z 0=落笔接触、10=抬笔安全高度",
+  "task_goal": "三轴绘图机在 XY 平面绘制边长 60（坐标区间 20..80）的正方形并闭合：抬笔定位起点 → 落笔沿四边 → 抬笔回中心。CSP 形态：PLC 输出插补位置目标（%QW0-2），驱动器（仿真侧/真机 CSP 模式）闭位置环；Z 0=落笔接触、10=抬笔安全高度。本版按 runs/latest 龙门场景接线（x_cmd/y_cmd/z_cmd %QW3-5，反馈 %QW0-2）",
   "io_list": [
     {
       "name": "run",
@@ -39,7 +39,7 @@
       "device": "绘图完成"
     },
     {
-      "name": "AxisX_cmd",
+      "name": "x_cmd",
       "dir": "output",
       "type": "INT",
       "range": [
@@ -49,7 +49,7 @@
       "device": "X 轴插补位置目标（CSP 上总线）"
     },
     {
-      "name": "AxisY_cmd",
+      "name": "y_cmd",
       "dir": "output",
       "type": "INT",
       "range": [
@@ -59,17 +59,17 @@
       "device": "Y 轴插补位置目标"
     },
     {
-      "name": "AxisZ_cmd",
+      "name": "z_cmd",
       "dir": "output",
       "type": "INT",
       "range": [
         0,
         10
       ],
-      "device": "Z 轴位置目标（0 落笔/10 抬笔）"
+      "device": "Z 轴位置目标（0 落笔/1 抬笔，龙门场景 z 行程 1m 量程 0..10）"
     },
     {
-      "name": "AxisX_pos",
+      "name": "x_fb",
       "dir": "input",
       "type": "INT",
       "range": [
@@ -79,7 +79,7 @@
       "device": "X 位置反馈"
     },
     {
-      "name": "AxisY_pos",
+      "name": "y_fb",
       "dir": "input",
       "type": "INT",
       "range": [
@@ -89,7 +89,7 @@
       "device": "Y 位置反馈"
     },
     {
-      "name": "AxisZ_pos",
+      "name": "z_fb",
       "dir": "input",
       "type": "INT",
       "range": [
