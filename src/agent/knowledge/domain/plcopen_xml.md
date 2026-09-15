@@ -5,7 +5,7 @@
 
 - **PX-01**（文档结构）唯一代码交付格式为 PLCopen XML（`<project>` 根，含
   `<pou>` 列表）；serve 部署端要求 body 以 `<?xml` 声明开头——LLM 产物从
-  `<project>` 片段提取后需补回声明（坑库 P15）。出处：pipeline.extract_xml。
+  `<project>` 片段提取后需补回声明（故障库 P15）。出处：pipeline.extract_xml。
 - **PX-02**（POU 结构）每个 `<pou>` 含 `<interface>`（inputVars/inOutVars/
   outputVars/localVars 四块，定位变量可出现在任一块）与 `<body><ST>`（xhtml
   CDATA 包裹的 ST 本体）。定位变量=带 `address` 属性的 variable；不带 AT 的

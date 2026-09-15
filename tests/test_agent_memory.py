@@ -45,7 +45,7 @@ class TestPitfallMatching:
 
     def test_p23_else_fallback_oscillation_replay(self):
         """P23 重放：plotter_cell iter_003 真实验收失败（cmd_home 后 Z 不动/
-        抬笔超时=CASE ELSE 复位兜底+多实例 FB 振荡族）必须命中坑库。
+        抬笔超时=CASE ELSE 复位兜底+多实例 FB 振荡族）必须命中故障库。
         错误原文内嵌自该战役 gate.json（runs 产物已清理，出处见 P23.source）。"""
         errors = [
         "[verify] 程序身份确认: plotter3axis (prog_id=2)",

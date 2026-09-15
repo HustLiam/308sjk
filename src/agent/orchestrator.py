@@ -109,7 +109,7 @@ class Orchestrator:
         self.max_iters = max_iters
         self.project_root = Path(project_root)
         self.acceptance_timeout = acceptance_timeout
-        # 归因引擎（确定性坑库优先，无命中时转 LLM 归因）——只进反馈包，不参与闸门裁定
+        # 归因引擎（确定性故障库优先，无命中时转 LLM 归因）——只进反馈包，不参与闸门裁定
         self.attribution = attribution_engine or AttributionEngine()
         self._addr_table = None
 
@@ -729,7 +729,7 @@ class Orchestrator:
     # ---------------- 产物 ----------------
     @staticmethod
     def _pack_feedback(errors, history, attribution=None):
-        """反馈包：失败证据原文 + 归因（坑库/历史修复/无命中时 LLM 归因）+ 迭代记忆。
+        """反馈包：失败证据原文 + 归因（故障库/历史修复/无命中时 LLM 归因）+ 迭代记忆。
 
         失败证据超 FEEDBACK_TAIL_LINES 行时截尾并注明（LLM token 预算不变，
         全量证据落该轮 gate.json——证据不再丢失）。
@@ -865,7 +865,7 @@ def main():
     parser.add_argument("--no-curated-patterns", action="store_true",
                         help="生成仅用静态 CATALOG 通用原语（排除自动策展场景卡）——泛化验证口径")
     parser.add_argument("--no-attribution", action="store_true",
-                        help="关闭归因引擎（默认启用：坑库签名匹配 + LLM 兜底，只进反馈不裁定）")
+                        help="关闭归因引擎（默认启用：故障库签名匹配 + LLM 兜底，只进反馈不裁定）")
     parser.add_argument("--request", default=None,
                         help="自然语言需求文本（或 .txt 文件路径），配合 --aml 使用")
     parser.add_argument("--confirm-params", action="store_true",

@@ -97,8 +97,8 @@ AutomationML(设备描述)              用户（自然语言）
 
 ### 3.2 归因分析 LLM（消费判定结果）——✅ v0 已落地
 
-> **落地状态（2026-09-07）**：`src/agent/attribution.py`——**确定性坑库优先、
-> 坑库未命中由 LLM 补充诊断**两层：错误文本先签匹配 `knowledge/pitfalls.json`（14 条：lx 避坑
+> **落地状态（2026-09-07）**：`src/agent/attribution.py`——**确定性故障库优先、
+> 故障库未命中由 LLM 补充诊断**两层：错误文本先签匹配 `knowledge/pitfalls.json`（14 条：lx 避坑
 > 1~8 + 联调新增 9~14）与情景记忆修复对（`memory.py`，跨会话）；未命中才 LLM
 > 小上下文诊断（输出标 advisory）。红线不变：归因只进反馈包（`_pack_feedback`
 > 增强）与 gate.json 留档，**不改变任何闸门裁定**。编排器 7 个失败点统一走
