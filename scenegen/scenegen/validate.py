@@ -49,6 +49,21 @@ def _check_params(asset: Dict[str, Any], errors: List[str]) -> None:
                   and all(isinstance(x, (int, float)) and not isinstance(x, bool) for x in v))
             if not ok:
                 errors.append(f"{asset['id']}: 参数 {spec.name} 须为 3 元数字数组")
+        elif spec.kind == "vec2":
+            # 【csk 2026-09-08 新增】gc plotter_cell 规格用到 2 元数字数组（stroke / ground.size）
+            ok = (isinstance(v, (list, tuple)) and len(v) == 2
+                  and all(isinstance(x, (int, float)) and not isinstance(x, bool) for x in v))
+            if not ok:
+                errors.append(f"{asset['id']}: 参数 {spec.name} 须为 2 元数字数组")
+        elif spec.kind == "bool":
+            # 【csk 2026-09-08 新增】布尔参数（tool_head.acceptance_asset）
+            if not isinstance(v, bool):
+                errors.append(f"{asset['id']}: 参数 {spec.name} 须为布尔")
+        elif spec.kind == "str_list":
+            # 【csk 2026-09-08 新增】字符串数组（hmi_panel.buttons/lamps）
+            ok = isinstance(v, (list, tuple)) and all(isinstance(x, str) for x in v)
+            if not ok:
+                errors.append(f"{asset['id']}: 参数 {spec.name} 须为字符串数组")
         elif spec.kind == "str":
             if not isinstance(v, str):
                 errors.append(f"{asset['id']}: 参数 {spec.name} 须为字符串")

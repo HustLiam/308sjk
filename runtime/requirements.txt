@@ -3,3 +3,5 @@
 # 因此服务端锁经典 3.x 线；GUI 客户端只用 ModbusTcpClient，任意 3.x 均可。
 pymodbus>=3.7,<3.9
 # tkinter 为 Python 自带，无需安装
+# MuJoCo 轻量仿真面（mujoco_jog_runtime.py，Isaac 的备选后端）
+mujoco>=3.2

@@ -797,6 +797,14 @@ class Orchestrator:
         if final_dir.exists():
             shutil.rmtree(final_dir)
         shutil.copytree(iter_dir, final_dir)
+        # 最新冻结交付物指针：runs/latest/ 只保留两份交付文件，每次成功覆盖
+        # （战役全量证据仍在各自 runs/<task_id>/final/，此目录是"最新一份"快捷取用处）
+        latest_dir = self.runs_root / "latest"
+        latest_dir.mkdir(parents=True, exist_ok=True)
+        for name in ("plcopen.xml", "scene.spec.json"):
+            src = final_dir / name
+            if src.exists():
+                shutil.copy2(src, latest_dir / name)
         self._write_summary(run_dir, history, {"iter": i, "gate": "all", "ok": True})
 
     @staticmethod

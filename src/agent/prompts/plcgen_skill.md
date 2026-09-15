@@ -65,74 +65,95 @@ IEC 61131-10 PLCopen XML 工程**。以下硬约束的权威定义在《lx-PLC�
   不能让驱动器停在 SOD（sw=0x40），否则上电自检类验收必挂；
 - **状态机变量必须显式初值**：一切被 CASE 索引的状态变量（402 的 state、
   序列器的 step/seq）声明时必须带 `:= 初值`；402 状态机从 1=SOD 起步
-  （0 不是合法状态）。CASE 一律带 ELSE 兜底（记错状态/复位用）——
-  无初值 + 无 ELSE 时上电落入未定义状态，驱动器永不使能（sw 恒 0）。
+  （0 不是合法状态）。无初值时上电落入未定义状态，驱动器永不使能（sw 恒 0）。
+  **CASE 兜底边界（P23，在线实证）**：三轴同款 FB 多实例（pwr/dv/interp）
+  下**禁止 ELSE 复位兜底**（`ELSE state := 1` / `ELSE sw := 0` 会被 matiec
+  优化器合并缺陷周期性触发——三轴 sw 同步 0031↔0033↔0437 循环、all_oe 闪烁，
+  cmd_home 时刻 all_oe=FALSE 拒动或抬笔超时）。封闭值域 + 显式初值时**不写
+  ELSE**；确需防记错状态用空兜底（ELSE 保持现状态不变）。仅单实例/应用层
+  序列器可用 ELSE 兜到安全态，且兜底动作不得触发驱动全握手重跑。
 
-## 基础 FB 骨架冻结（硬规则）
+## 基础 FB 骨架冻结（硬规则，v4.0——对齐《运动控制代码生成方案》§2 与 src/plc/motion3axis.xml）
 
-INTERP / DRIVE402 / MC_* FB **本体逐字沿用下方骨架**——在线验证过的原语；
-只允许改**实例参数**（VMAX/ACCEL/POSWIN/MAXPOS/行程）。禁止：给 INTERP
-增加 pos_fb 输入或 idle 同步分支；给 fire 沿分支加距离门槛；修改 Done/Busy
-置位条件；改造 402 状态机转移表。自创内部结构是序列器步进卡死（定位正常、
-落笔后 XY 死）的头号根因。
+INTERP / DRIVE402 / MC_* FB **本体逐字沿用下方骨架**（已验收原语）；只允许改
+**实例参数**（POSWIN 按轴覆写、MC 校验的行程上下限、动力学数值）。禁止：
+给 INTERP 增加 pos_fb 输入或 idle 同步分支；给 fire 沿分支加距离门槛；修改
+Done/Busy/Aborted 置位条件；改造 402 状态机转移表；把动力学写成 INTERP 内
+固定常量（v4.0 起动力学一律由 MC 块在触发沿锁存到 vel/acc/dec 总线）。
+自创内部结构是序列器步进卡死（定位正常、落笔后 XY 死）的头号根因。
+骨架与 master 演进同步由单测锁定（test_skill_skeleton_sync）。
 
-INTERP 权威骨架（接口：fire/pos_target/hold_req/VMAX/ACCEL/POSWIN/MAXPOS 入，
-Setpoint/Busy/Done 出；内部 SCAN_T REAL := 0.02、pos/tgt/vel/edge_ir）：
+INTERP v4.0 权威骨架（接口：fire/pos_target/hold_req/vel_req/acc_req/dec_req 入，
+Setpoint/Busy/Done/**Aborted** 出；内部 SCAN_T 0.02、POSWIN 按轴覆写、
+pos/vel/tgt/dist/stop_d/edge_ir——**无 VMAX/MAXPOS 参数**，越程由 MC 层拦）：
 
 ```st
+FUNCTION_BLOCK INTERP
+  VAR_INPUT
+    fire : BOOL; pos_target : INT; hold_req : BOOL;
+    vel_req : REAL; acc_req : REAL; dec_req : REAL;
+  END_VAR
+  VAR_OUTPUT
+    Setpoint : INT; Busy : BOOL; Done : BOOL; Aborted : BOOL;
+  END_VAR
+  VAR
+    edge_ir : BOOL; pos, vel, tgt, dist, stop_d : REAL;
+    SCAN_T : REAL := 0.02; POSWIN : REAL := 2.0;
+  END_VAR
 IF fire AND NOT edge_ir THEN
-    IF pos_target > MAXPOS OR pos_target < 0 THEN
-        (* 目标越程: 不启动插补, 保持原位 *)
+    IF pos_target > 100 OR pos_target < 0 THEN
+        (* 目标越程: 命令立即结束(保持原位)——MC 层应先拦截报 ErrorID=1, 此为兜底 *)
         Done := TRUE;
     ELSE
         tgt := INT_TO_REAL(pos_target);
-        Busy := TRUE;
-        Done := FALSE;
+        Busy := TRUE; Done := FALSE; Aborted := FALSE;
     END_IF;
-ELSIF fire AND NOT Busy AND (ABS(INT_TO_REAL(pos_target) - tgt) > 0.499) THEN
-    (* continuous tracking: new target starts new trajectory while fire held *)
-    tgt := INT_TO_REAL(pos_target);
-    Busy := TRUE;
-    Done := FALSE;
 END_IF;
 edge_ir := fire;
 
 IF hold_req THEN
-    IF vel > 0.0 THEN vel := MAX(0.0, vel - ACCEL * SCAN_T);
-    ELSIF vel < 0.0 THEN vel := MIN(0.0, vel + ACCEL * SCAN_T);
+    (* 受控减速(MC_Halt): 减到零速即中止, 报 Aborted 供 MC 层置 CommandAborted *)
+    IF vel > 0.0 THEN vel := MAX(0.0, vel - dec_req * SCAN_T);
+    ELSIF vel < 0.0 THEN vel := MIN(0.0, vel + dec_req * SCAN_T);
+    END_IF;
+    IF vel = 0.0 AND Busy THEN
+        Busy := FALSE; Done := FALSE; Aborted := TRUE;
     END_IF;
 ELSIF Busy THEN
     dist := tgt - pos;
-    stop_d := (vel * vel) / (2.0 * ACCEL);
+    stop_d := (vel * vel) / (2.0 * dec_req);
     IF ABS(dist) <= stop_d THEN
-        IF dist >= 0.0 THEN vel := MAX(0.0, vel - ACCEL * SCAN_T);
-        ELSE vel := MIN(0.0, vel + ACCEL * SCAN_T);
+        IF dist >= 0.0 THEN vel := MAX(0.0, vel - dec_req * SCAN_T);
+        ELSE vel := MIN(0.0, vel + dec_req * SCAN_T);
         END_IF;
         IF vel = 0.0 AND ABS(dist) <= POSWIN THEN
-            pos := tgt;
-            Busy := FALSE;
-            Done := TRUE;
+            pos := tgt; Busy := FALSE; Done := TRUE; Aborted := FALSE;
         END_IF;
     ELSE
-        IF dist > 0.0 THEN vel := MIN(VMAX, vel + ACCEL * SCAN_T);
-        ELSE vel := MAX(-VMAX, vel - ACCEL * SCAN_T);
+        IF dist > 0.0 THEN vel := MIN(vel_req, vel + acc_req * SCAN_T);
+        ELSE vel := MAX(-vel_req, vel - acc_req * SCAN_T);
         END_IF;
     END_IF;
 END_IF;
 
 pos := pos + vel * SCAN_T;
 Setpoint := REAL_TO_INT(pos);
+END_FUNCTION_BLOCK
 ```
 
-DRIVE402 权威骨架（接口：cw/Setpoint/pos_fb 入，sw/v_cmd 出；内部 state : INT := 1
-——SOD 起步、KP 8.0、QS_DECEL 200.0、SCAN_T 0.02）：
+多步工序（序列器）场景在此骨架上**加连续跟踪分支**（方案 §4.1 认可的扩展，
+plotter 实测形态）——插在 `END_IF;`（fire 沿块）与 `edge_ir := fire;` 之间：
 
 ```st
-(* ============ DRIVE402: 驱动器（CSP 跟随 + 位置环）============ *)
-(* 接收周期位置设定点（插补点），闭位置环，输出电机速度指令。 *)
-(* 不含轨迹规划——那是 PLC 侧 INTERP 的事。                  *)
-(* state: 1=SOD 2=RTSO 3=SO 4=OE 5=QSA 6=FRA 7=FA           *)
+ELSIF fire AND NOT Busy AND (ABS(INT_TO_REAL(pos_target) - tgt) > 0.499) THEN
+    tgt := INT_TO_REAL(pos_target);
+    Busy := TRUE; Done := FALSE; Aborted := FALSE;
+```
 
+DRIVE402 权威骨架（接口：cw/Setpoint/pos_fb 入，sw/v_cmd 出；内部
+state : INT := 1——SOD 起步、**KP 25.0、QS_DECEL 120.0**、SCAN_T 0.02）：
+
+```st
 cmd := cw AND 16#000F;
 
 IF state = 7 AND (cw AND 16#0080) <> 0 THEN
@@ -164,7 +185,7 @@ CASE state OF
     6: IF v_out = 0.0 THEN state := 7; END_IF;
 END_CASE;
 
-(* ---- 位置环：P 控制 + 设定值差分前馈 ---- *)
+(* ---- 位置环: P 控制 + 设定值差分前馈 ---- *)
 IF state >= 4 AND state <= 6 THEN
     v_ff := INT_TO_REAL(Setpoint - sp_prev) / SCAN_T;
     pos_err := INT_TO_REAL(Setpoint) - INT_TO_REAL(pos_fb);
@@ -185,14 +206,30 @@ END_IF;
 sp_prev := Setpoint;
 ```
 
-MC 层权威骨架（MC_POWER 握手 / MC_MOVEABSOLUTE 触发记忆，Done 随完成回清）：
+（402 状态机**无 ELSE 复位兜底**——P23：多实例同款 FB 下 ELSE state := 1 /
+sw := 0 会被优化器合并缺陷周期性触发，三轴重握手振荡。）
+
+MC 层 v4.0（PLCopen MC Part 1 单轴子集）。MC_POWER 握手全文（使能权威——
+掉使能重升自愈分支保留，单扫描 sw 判定在无 ELSE 干扰下实测稳定）：
 
 ```st
---- MC_POWER ---
-IF Enable AND pstep = 4 AND (sw AND 16#0004) = 0 AND (sw AND 16#0008) = 0 THEN
+FUNCTION_BLOCK MC_POWER
+  VAR_INPUT
+    Enable : BOOL; EnablePositive : BOOL; EnableNegative : BOOL;
+  END_VAR
+  VAR_IN_OUT
+    cw : WORD; sw : WORD;
+  END_VAR
+  VAR_OUTPUT
+    Status : BOOL; Busy : BOOL; Error : BOOL;
+  END_VAR
+  VAR
+    pstep : INT;
+  END_VAR
+IF Enable AND (EnablePositive OR EnableNegative) AND pstep = 4 AND (sw AND 16#0004) = 0 AND (sw AND 16#0008) = 0 THEN
     pstep := 0;
 END_IF;
-IF Enable THEN
+IF Enable AND (EnablePositive OR EnableNegative) THEN
     CASE pstep OF
         0: cw := (cw AND 16#00F0) OR 16#0006;  pstep := 1;
         1: IF (sw AND 16#0001) <> 0 THEN cw := (cw AND 16#00F0) OR 16#0007; pstep := 2; END_IF;
@@ -204,17 +241,105 @@ ELSE
     pstep := 0;
 END_IF;
 Status := (sw AND 16#0004) <> 0;
+Busy := Enable AND pstep < 4;
+Error := (sw AND 16#0008) <> 0;
+END_FUNCTION_BLOCK
+```
 
---- MC_MOVEABSOLUTE ---
-(* 触发插补引擎的 fire 线 *)
+核心命令/中止两块全文：
+
+```st
+FUNCTION_BLOCK MC_MOVEABSOLUTE
+  VAR_INPUT
+    fire : BOOL; Position : INT;
+    Velocity : REAL; Acceleration : REAL; Deceleration : REAL;
+    sw : WORD; abort_bus : BOOL;
+  END_VAR
+  VAR_IN_OUT
+    interp_exe : BOOL; dyn_vel : REAL; dyn_acc : REAL; dyn_dec : REAL;
+  END_VAR
+  VAR_OUTPUT
+    Done : BOOL; Busy : BOOL; Active : BOOL; CommandAborted : BOOL;
+    Error : BOOL; ErrorID : INT;
+  END_VAR
+  VAR
+    edge_ma : BOOL; edge_ab : BOOL;
+  END_VAR
+(* fire=Execute(matiec 保留字映射); ErrorID: 0=无 1=目标越程 2=轴故障 3=轴未使能 *)
 IF fire AND NOT edge_ma THEN
-    interp_exe := TRUE;
+    Error := FALSE; ErrorID := 0; CommandAborted := FALSE;
+    IF (sw AND 16#0008) <> 0 THEN
+        Error := TRUE; ErrorID := 2;
+    ELSIF (sw AND 16#0004) = 0 THEN
+        Error := TRUE; ErrorID := 3;
+    ELSIF Position < 0 OR Position > 100 THEN
+        Error := TRUE; ErrorID := 1;
+    ELSE
+        interp_exe := TRUE;
+        dyn_vel := Velocity; dyn_acc := Acceleration; dyn_dec := Deceleration;
+    END_IF;
 END_IF;
 edge_ma := fire;
-(* interp_exe 保持 TRUE 直到运动完成(由 PLC_PRG 的 INTERP.Done 清零) *)
-Done := NOT interp_exe;
+
+(* 中止(STOP/HALT/失能)传播: 取中止信号上升沿, 避免上一命令的锁存中止误杀新命令 *)
+IF interp_exe AND abort_bus AND NOT edge_ab THEN
+    interp_exe := FALSE;
+    CommandAborted := TRUE;
+END_IF;
+edge_ab := abort_bus;
 Busy := interp_exe;
+Active := interp_exe;
+Done := NOT interp_exe AND NOT Error;
+END_FUNCTION_BLOCK
 ```
+
+```st
+FUNCTION_BLOCK MC_HALT
+  VAR_INPUT
+    fire : BOOL; ax_busy : BOOL;
+  END_VAR
+  VAR_OUTPUT
+    Stopping : BOOL; Done : BOOL; Busy : BOOL; Error : BOOL;
+  END_VAR
+  VAR
+    edge_hl : BOOL; done_latch : BOOL;
+  END_VAR
+(* 受控减速到零速(不失能), 活动命令被中止(CommandAborted) *)
+IF fire AND NOT edge_hl THEN
+    done_latch := FALSE;
+    Stopping := TRUE;
+END_IF;
+edge_hl := fire;
+IF Stopping AND NOT ax_busy THEN
+    Stopping := FALSE;
+    done_latch := TRUE;
+END_IF;
+Busy := Stopping;
+Done := done_latch AND NOT Stopping;
+Error := FALSE;
+END_FUNCTION_BLOCK
+```
+
+其余 MC 块签名（完整骨架逐字取 motion3axis.xml）：
+- `MC_MOVERELATIVE(fire, Distance, ActualPosition, Velocity/Acceleration/Deceleration,
+  sw, abort_bus → interp_exe/dyn_* 总线)`：绝对目标 = **触发时** ActualPosition
+  + Distance（先采样后改写 x_tgt）；输出组同 MOVEABSOLUTE；
+- `MC_READSTATUS(Enable, sw, interp_busy, v_act → Valid, Moving, StandStill,
+  Disabled, ErrorStop)`：状态聚合唯一出口（any_moving/fault_any 路由
+  Moving/ErrorStop）；
+- `MC_READACTUALPOSITION(Enable, ActualPosition → Valid, Position)`；
+- `MC_HOME(fire, sw → Done/Busy/Error)`、`MC_STOP(fire 电平, v_act →
+  Done/Busy/Error)`、`MC_RESET(fire → Done/Busy/Error)`、`MC_MOVEJOG
+  (JogForward/JogBackward, Velocity, cur_pos → Busy/Error)`（骨架逐字取
+  motion3axis.xml）。
+
+**接线形态（v4.0 总线 = 手工 AXIS_REF）**：目标总线 `{axis}_tgt` 每扫描默认取
+`{axis}_sp`，MC_MOVERELATIVE 触发时改写；动力学总线 `{axis}_vel/acc/dec_bus`
+由 MC 块触发沿锁存；各命令块触发线 `{go/rel/hm}_{axis}_exe` **OR 后喂
+INTERP.fire**，Done/Aborted 时统一清零；hold_req 接 MC_HALT.Stopping；
+dv 直连 ix.Setpoint（CSP 内核直连）。命名与 IO 五通道规则见方案 §3.1
+（`{axis}_fb/rel_d/sp/sw/v/err_id AT %QW`，err_id=%QW16~18，cmd_halt=%QX2.0、
+cmd_rel=%QX2.1）。
 
 ## 多段轨迹序列器模板（连续跟踪模式——工艺序列的标准实现，源自运动控制生成方案 v2）
 
@@ -244,9 +369,9 @@ IF (pl_step <> 0) AND NOT ix_x.Busy AND NOT ix_y.Busy AND NOT ix_z.Busy
     END_IF;
 END_IF;
 
-(* INTERP 需含连续跟踪分支（fire 电平保持期间目标变化即起新轨迹）：
+(* 触发线经 MC 命令块置位（v4.0 总线形态），INTERP 用上方 v4.0 骨架+连续跟踪分支：
    ELSIF fire AND NOT Busy AND (ABS(INT_TO_REAL(pos_target) - tgt) > 0.499)
-   THEN tgt := INT_TO_REAL(pos_target); Busy := TRUE; Done := FALSE; *)
+   THEN tgt := INT_TO_REAL(pos_target); Busy := TRUE; Done := FALSE; Aborted := FALSE; *)
 ```
 
 要点：触发线**全程电平保持**（触发扫描置位、终止/完成才清零）；步进只改目标值；

@@ -116,6 +116,14 @@ class TestIoMapLeg:
         ok, problems = consistency_check(MOTION_XML, IO_LIST, io_map)
         assert any("R5" in p and "ghost_var" in p for p in problems)
 
+    def test_r5_synth_driver_channel_exempt(self):
+        """②b 合成的仿真侧驱动通道（<axis>_cmd，非 PLC 对外变量）豁免 ⊆ 检查。"""
+        entries = io_entries_from(IO_LIST) + [{
+            "plc_var": "x_cmd", "dir": "output", "type": "float",
+            "bind": {"asset": "gantry", "quantity": "x_cmd", "range": [0.0, 1.0]}}]
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, entries)
+        assert ok, problems
+
     def test_r5_bind_must_be_asset_quantity(self):
         io_map = io_entries_from(IO_LIST, patches=[(0, {"bind": {"prim": "/World/run"}})])
         ok, problems = consistency_check(MOTION_XML, IO_LIST, io_map)

@@ -390,6 +390,35 @@ def _footprint_arm(p: Dict[str, Any]) -> Optional[AABB]:
     return None  # 外部引用资产，包围盒未知，不参与布局检查
 
 
+def _build_plotter_static(stage, root: str, p: Dict[str, Any], ctx) -> Dict[str, str]:
+    raise NotImplementedError("plotter_cell 组件集无 USD 构建器（MuJoCo 专用，见 runtime/mujoco_build.py）")
+
+
+# ---------------- 【csk 2026-09-08 新增】gc plotter_cell_square 规格组件登记 ----------------
+# 依据 master:scene.spec.json（gc 上传）。参数面严格按 gc 送来的字段登记，未补造
+# spec 外参数；质量/伺服常数在 MJCF 组装侧沿用 gantry 库值（缺口已登记反馈 gc）。
+# hmi_panel 本轮仅登记参数面与缺省外观，按钮/灯的 IO 通道待 gc 补 io_map 后接入。
+
+
+def _fp_ground(p: Dict[str, Any]) -> AABB:
+    sx, sy = p["size"]
+    return ([-sx / 2, -sy / 2, 0.0], [sx / 2, sy / 2, 0.0])
+
+
+def _fp_work_table(p: Dict[str, Any]) -> AABB:
+    l, w, h = p["size"]
+    return ([-l / 2, -w / 2, 0.0], [l / 2, w / 2, h])
+
+
+def _fp_linear_axis(p: Dict[str, Any]) -> Optional[AABB]:
+    # 轴间 parent 未声明（链关系由 MJCF 组装规则按声明序定义），布局检查跳过——已登记反馈
+    return None
+
+
+def _fp_hmi_panel(p: Dict[str, Any]) -> AABB:
+    return ([-0.15, -0.12, 0.0], [0.15, 0.12, 0.35])   # 库缺省外观（spec 未给尺寸）
+
+
 def _hex_color(hexstr: str):
     hexstr = hexstr.lstrip("#")
     return tuple(int(hexstr[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
@@ -506,6 +535,78 @@ REGISTRY: Dict[str, ComponentDef] = {
         build=_build_arm,
         footprint=_footprint_arm,
     ),
+    # ---------------- 【csk 2026-09-08 新增】gc plotter_cell_square 组件（6 种） ----------------
+    "ground": ComponentDef(
+        type_name="ground",
+        quantities=(),
+        params=(
+            ParamSpec("size", "vec2", required=True),
+            ParamSpec("friction", "float", default=0.8, exclusive_min=True, minimum=0.0, maximum=5.0),
+        ),
+        build=_build_plotter_static,
+        footprint=_fp_ground,
+    ),
+    "work_table": ComponentDef(
+        type_name="work_table",
+        quantities=(),
+        params=(
+            ParamSpec("size", "vec3", required=True),
+            ParamSpec("paper_area", "str", default=""),
+        ),
+        build=_build_plotter_static,
+        footprint=_fp_work_table,
+    ),
+    "linear_axis": ComponentDef(
+        # 单根直线轴（io 通道按资产绑定：quantity "cmd"/"pos" 挂在具体轴资产上）
+        type_name="linear_axis",
+        quantities=(
+            Quantity("cmd", "in", "float"),
+            Quantity("pos", "out", "float"),
+        ),
+        params=(
+            ParamSpec("axis", "enum", required=True, values=("x", "y", "z")),
+            ParamSpec("axis_type", "enum", default="linear", values=("linear",)),
+            ParamSpec("stroke", "vec2", required=True),
+            ParamSpec("unit", "str", default="%"),
+            ParamSpec("vmax", "float", default=40.0, exclusive_min=True, minimum=0.0, maximum=1000.0),
+            ParamSpec("accel", "float", default=80.0, exclusive_min=True, minimum=0.0, maximum=10000.0),
+            ParamSpec("poswin", "float", default=2.0, exclusive_min=True, minimum=0.0, maximum=1000.0),
+            ParamSpec("scale_m_per_unit", "float", required=True, exclusive_min=True,
+                      minimum=1e-6, maximum=10.0),
+        ),
+        build=_build_plotter_static,
+        footprint=_fp_linear_axis,
+    ),
+    "tool_head": ComponentDef(
+        type_name="tool_head",
+        quantities=(),
+        params=(
+            ParamSpec("carries", "str", default=""),
+            ParamSpec("acceptance_asset", "bool", default=False),
+        ),
+        build=_build_plotter_static,
+        footprint=lambda p: None,      # 挂在运动链上，不参与布局检查
+    ),
+    "pen": ComponentDef(
+        type_name="pen",
+        quantities=(),
+        params=(
+            ParamSpec("tip_diameter_mm", "float", default=0.5, exclusive_min=True, minimum=0.01, maximum=10.0),
+            ParamSpec("stroke_mm", "float", default=10.0, exclusive_min=True, minimum=0.1, maximum=1000.0),
+        ),
+        build=_build_plotter_static,
+        footprint=lambda p: None,      # 挂在 tool_head 下
+    ),
+    "hmi_panel": ComponentDef(
+        type_name="hmi_panel",
+        quantities=(),                 # 按钮/灯通道待 gc 补 io_map 后登记（本轮未接入）
+        params=(
+            ParamSpec("buttons", "str_list", default=()),
+            ParamSpec("lamps", "str_list", default=()),
+        ),
+        build=_build_plotter_static,
+        footprint=_fp_hmi_panel,
+    ),
 }
 
 
@@ -527,6 +628,15 @@ def apply_params(cdef: ComponentDef, raw: Dict[str, Any]) -> Dict[str, Any]:
             v = raw[p.name]
             if p.kind == "vec3":
                 merged[p.name] = tuple(float(x) for x in v)
+            elif p.kind == "vec2":
+                # 【csk 2026-09-08 新增】2 元数字数组归一
+                merged[p.name] = tuple(float(x) for x in v)
+            elif p.kind == "bool":
+                # 【csk 2026-09-08 新增】布尔归一
+                merged[p.name] = bool(v)
+            elif p.kind == "str_list":
+                # 【csk 2026-09-08 新增】字符串数组归一为 tuple
+                merged[p.name] = tuple(str(x) for x in v)
             elif p.kind == "float":
                 merged[p.name] = float(v)
             elif p.kind == "str":
