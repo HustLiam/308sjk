@@ -271,13 +271,23 @@ def _extract_axes(ctx):
 
 # ---------------- 对外入口 ----------------
 
+def _is_file_quiet(source) -> bool:
+    """Path.is_file() 的跨平台安全版：Linux pathlib 对超长字符串（内存 XML 被
+    误当路径探测）抛 OSError(ENAMETOOLONG)，Windows 则吞掉返回 False——统一按
+    非文件处理，走 <memory> 分支。"""
+    try:
+        return Path(source).is_file()
+    except OSError:
+        return False
+
+
 def parse_aml(source):
     """解析 AML 文件路径或 XML 文本。返回 (device_model, problems)。
 
     device_model 结构见 schemas/device_model.schema.json（gc 拥有）；problems 为空即
     通过，非空时模型仍尽量完整产出（best-effort），问题文本可直接进反馈包。
     """
-    if isinstance(source, (str, Path)) and Path(source).is_file():
+    if isinstance(source, (str, Path)) and _is_file_quiet(source):
         text = Path(source).read_text(encoding="utf-8")
         display = Path(source).name
         from_file = True
