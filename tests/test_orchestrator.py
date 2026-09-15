@@ -186,6 +186,22 @@ class TestSceneGate:
         assert gate["gates"]["scene"]["io_map_vars"] == 6
         assert (Path(result["run_dir"]) / "final" / "scene.spec.json").is_file()  # 冻结含 ②b 产物
 
+    def test_latest_deliverables_pointer_overwritten(self, tmp_path):
+        """runs/latest/：最新冻结交付物两件套，每次成功覆盖。"""
+        from agent.aml_parser import parse_aml
+        from agent.scene_gen import SceneSpecGenerator
+        model, _ = parse_aml(REPO / "examples" / "aml" / "plotter3axis_station.aml")
+        latest = tmp_path / "latest"
+        orch = Orchestrator(runs_root=tmp_path)
+        result = orch.solve(self.PLOTTER_SPEC, PLCGenerator(client=None, seed_xml=self.PLOTTER_XML),
+                            scene_generator=SceneSpecGenerator(), device_model=model)
+        assert result["status"] == "final"
+        assert (latest / "plcopen.xml").is_file() and (latest / "scene.spec.json").is_file()
+        result2 = orch.solve(self.PLOTTER_SPEC, PLCGenerator(client=None, seed_xml=self.PLOTTER_XML),
+                             scene_generator=SceneSpecGenerator(), device_model=model)
+        assert result2["status"] == "final"
+        assert sorted(p2.name for p2 in latest.iterdir()) == ["plcopen.xml", "scene.spec.json"]
+
     def test_scene_gate_failure_goes_best_effort(self, tmp_path):
         class BrokenGen:
             def generate(self, spec, device_model=None):
