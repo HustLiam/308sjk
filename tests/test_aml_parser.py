@@ -12,6 +12,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import jsonschema
+
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
@@ -48,13 +50,48 @@ class TestBaseline:
                             "a": "Motion3AxisStation/gantry#x_mount",
                             "b": "Motion3AxisStation/gantry/x_axis#mech_flange"}
 
+    def test_device_model_schema_valid(self):
+        # device_model v1.1.0-draft.1：双基准 AML 解析产物须过 Schema
+        schema = json.loads((REPO / "schemas" / "device_model.schema.json").read_text(encoding="utf-8"))
+        for src in (AML, PLOTTER_AML):
+            model, _ = parse_aml(src)
+            jsonschema.validate(model, schema)
+
     def test_axis_params_match_plc_interp(self):
-        # 运动学参数取自 motion3axis.xml 的 INTERP 实例参数（VMAX/ACCEL/POSWIN）
-        model, _ = parse_aml(AML)
+        # 运动学参数取自 motion3axis.xml 的 v4.0 实例参数（limits/defaults/POSWIN，
+        # device_model v1.1 分层——生成方案 §6.1，2026-09-15 RFC）
+        model, problems = parse_aml(AML)
         x = model["kinematics"]["axes"][0]
         assert x["type"] == "linear" and x["stroke"] == [0.0, 100.0]
-        assert x["vmax"] == 40.0 and x["accel"] == 80.0 and x["poswin"] == 2.0
+        assert x["limits"] == {"vmax": 40.0, "accel": 80.0}
+        # AML 未显式声明 defaults → 回退 limits 同值（deceleration 回退 accel，
+        # 与种子 MC 调用 40/80/80 逐字吻合）
+        assert x["defaults"] == {"velocity": 40.0, "acceleration": 80.0, "deceleration": 80.0}
+        assert x["poswin"] == 2.0
+        assert x["io"] == {"fb": "x_fb", "sp": "x_sp", "sw": "x_sw", "v": "x_v",
+                           "rel_d": "rel_x_d", "err_id": "x_err_id"}
+        assert problems == []
         assert model["devices"][1]["electrical"] == {"voltage": 24.0, "power": 400.0}
+
+    def test_axis_io_roles_plotter_optional(self):
+        # plotter 基准：fb/sp/sw/v 必需角色齐备，rel_d/err_id 可选角色缺省省略
+        model, problems = parse_aml(PLOTTER_AML)
+        assert problems == []
+        z = {a["axis"]: a for a in model["kinematics"]["axes"]}["z_axis"]
+        assert z["io"] == {"fb": "z_fb", "sp": "z_sp", "sw": "z_sw", "v": "z_v"}
+        assert z["limits"] == {"vmax": 20.0, "accel": 60.0}
+        assert z["defaults"] == {"velocity": 20.0, "acceleration": 60.0, "deceleration": 60.0}
+
+    def test_axis_io_missing_required_role(self):
+        # 必需角色缺失 → problems 记录（不猜）+ io 置 None；可选角色缺失仅省略
+        aml = (REPO / "examples" / "aml" / "motion3axis_station.aml").read_text(encoding="utf-8")
+        broken = aml.replace('Name="x_fb"', 'Name="x_fbX"')  # fb 角色推断失败
+        model, problems = parse_aml(broken)
+        assert any("缺必需 io 通道 x_fb" in p and "role=fb" in p for p in problems)
+        x = {a["axis"]: a for a in model["kinematics"]["axes"]}["x_axis"]
+        assert x["io"] is None
+        y = {a["axis"]: a for a in model["kinematics"]["axes"]}["y_axis"]
+        assert y["io"]["fb"] == "y_fb"
 
 
 class TestIOListPrefill:
@@ -233,7 +270,7 @@ class TestPlotterStation:
         axes = {a["axis"]: a for a in model["kinematics"]["axes"]}
         assert set(axes) == {"x_axis", "y_axis", "z_axis"}
         assert axes["z_axis"]["stroke"] == [0.0, 10.0]      # 笔轴短行程
-        assert axes["z_axis"]["vmax"] == 20.0
+        assert axes["z_axis"]["limits"]["vmax"] == 20.0
         links = model["topology"]["links"]
         elec = [l for l in links if l["name"].startswith("wire_")]
         assert len(elec) == 26                               # 通道↔现场元件 全接线

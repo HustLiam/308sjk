@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/HustLiam/308sjk/schemas/device_model.schema.json",
   "title": "device_model",
-  "description": "⓪ AutomationML 解析器的输出（架构 v2.0，主方案 §3.0）：设备清单/IO 点位/拓扑连接/运动学参数/电气接口。device_model.json 是 ① 需求理解的结构化锚点——io_list 初始值由此填充（build_io_list），LLM 校验和补充而非从零生成。解析器为确定性代码（非 LLM）：同一 AML 输入必产出相同模型。版本 v1.0.0-draft.1。",
+  "description": "⓪ AutomationML 解析器的输出（架构 v2.0，主方案 §3.0）：设备清单/IO 点位/拓扑连接/运动学参数/电气接口。device_model.json 是 ① 需求理解的结构化锚点——io_list 初始值由此填充（build_io_list），LLM 校验和补充而非从零生成。解析器为确定性代码（非 LLM）：同一 AML 输入必产出相同模型。版本 v1.1.0-draft.1（2026-09-15 RFC：kinematics.axes 增 limits/defaults 分层与 io 角色绑定，原平铺 vmax/accel 迁入 limits）。",
   "type": "object",
   "required": ["schema_version", "source", "station", "devices", "io_points", "topology", "kinematics"],
   "additionalProperties": false,
@@ -110,10 +110,10 @@
       "properties": {
         "axes": {
           "type": "array",
-          "description": "轴对象（axis_type 显式声明的设备）；参数对接 lx INTERP（VMAX/ACCEL/POSWIN/WRAP）",
+          "description": "轴对象（axis_type 显式声明的设备；生成方案 §6.1，device_model v1.1）：AML 是轴参数唯一来源，②a/②b/R8 均消费此结构",
           "items": {
             "type": "object",
-            "required": ["axis", "device", "type", "stroke", "unit", "vmax", "accel", "poswin", "wrap"],
+            "required": ["axis", "device", "type", "stroke", "unit", "limits", "defaults", "poswin", "wrap", "io"],
             "additionalProperties": false,
             "properties": {
               "axis": { "type": "string", "description": "轴名（=设备名）" },
@@ -125,10 +125,43 @@
                 "description": "行程 [min,max]；声明不合法时为 null（problems 已记）"
               },
               "unit": { "type": ["string", "null"] },
-              "vmax": { "type": ["number", "null"] },
-              "accel": { "type": ["number", "null"] },
-              "poswin": { "type": ["number", "null"], "description": "到位窗（INTERP POSWIN 同义）" },
-              "wrap": { "type": ["number", "null"], "description": "rotary_modulo 回绕周期（如 360°）" }
+              "limits": {
+                "type": "object",
+                "required": ["vmax", "accel"],
+                "additionalProperties": false,
+                "description": "物理限幅；展开期校验 defaults ≤ limits（超限记 problems）。v4.0 INTERP 为命令级动力学无 VMAX，limits 暂不接线 INTERP",
+                "properties": {
+                  "vmax": { "type": ["number", "null"] },
+                  "accel": { "type": ["number", "null"] }
+                }
+              },
+              "defaults": {
+                "type": "object",
+                "required": ["velocity", "acceleration", "deceleration"],
+                "additionalProperties": false,
+                "description": "MC 调用缺省动力学；AML 显式声明优先，未声明回退 limits 同值（deceleration 回退 accel）",
+                "properties": {
+                  "velocity": { "type": ["number", "null"] },
+                  "acceleration": { "type": ["number", "null"] },
+                  "deceleration": { "type": ["number", "null"] }
+                }
+              },
+              "poswin": { "type": ["number", "null"], "description": "到位窗（INTERP POSWIN 同义，判定引擎共用容差源）" },
+              "wrap": { "type": ["number", "null"], "description": "rotary_modulo 回绕周期（如 360°）" },
+              "io": {
+                "type": ["object", "null"],
+                "description": "通道角色绑定（⓪ 按命名规则确定性推断）：必需 fb/sp/sw/v 缺失时为 null（problems 已记）；可选 rel_d（rel 前置命名 rel_{a}_d）/err_id 缺失时省略该键",
+                "required": ["fb", "sp", "sw", "v"],
+                "additionalProperties": false,
+                "properties": {
+                  "fb": { "type": "string", "description": "编码器反馈（{a}_fb）" },
+                  "sp": { "type": "string", "description": "目标位置（{a}_sp）" },
+                  "sw": { "type": "string", "description": "状态字（{a}_sw）" },
+                  "v": { "type": "string", "description": "速度指令（{a}_v）" },
+                  "rel_d": { "type": "string", "description": "相对距离入口（rel_{a}_d，v4.0）" },
+                  "err_id": { "type": "string", "description": "ErrorID 诊断出口（{a}_err_id，v4.0）" }
+                }
+              }
             }
           }
         }

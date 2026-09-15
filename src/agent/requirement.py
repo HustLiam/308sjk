@@ -88,7 +88,8 @@ def _device_summary(device_model):
         "  - %s: %s，行程 %s～%s %s，VMAX=%s，ACCEL=%s，POSWIN=%s" % (
             a.get("axis"), a.get("type"), (a.get("stroke") or [None, None])[0],
             (a.get("stroke") or [None, None])[1], a.get("unit") or "",
-            a.get("vmax"), a.get("accel"), a.get("poswin"))
+            (a.get("limits") or {}).get("vmax"), (a.get("limits") or {}).get("accel"),
+            a.get("poswin"))
         for a in axes]
     return "\n".join([
         "station: %s" % device_model.get("station"),
