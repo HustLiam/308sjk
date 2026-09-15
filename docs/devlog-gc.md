@@ -854,3 +854,41 @@ iter_003 仅 0.32 弱命中且偏题——**该失败族此前无任何可复用
   升 v4.0 总线形态属后续任务；skill 序列器模板已标注两种形态兼容。
 
 pytest 193→197 全绿。**未提交未推送。**
+
+## 2026-09-15 轴对象映射绑定 RFC 评估回区（响应 lx 09-09 提案与 09-15 催办）
+
+master 同步（bb0d5dd 合入 gc：motion3axis 种子战役 runs 入库 + 看板催办）后，
+按催办要求对《运动控制代码生成方案》§6 做接入性评估，提案文本落 gc 文档 §10。
+
+评估用的事实核验（全部只读操作，2026-09-15 于 master bb0d5dd）：
+
+- **两基准 AML 实跑**（`agent.aml_parser.parse_aml`）：motion3axis_station
+  32 io_points、x/y/z 六角色齐全（fb/sp/sw/v + `rel_x_d` 等 rel 三条 + err_id 三条），
+  problems=0；plotter3axis_station 26 io_points、仅 fb/sp/sw/v，rel_d/err_id 缺省
+  ——按 §6.1 可选角色省略合法，且与 plotter3axis.xml 现状（无 rel/err_id 定位
+  变量、26 点）一致。
+- **发现规范与实现的命名分歧**：§6.1 role 推断写 `{a}_rel_d`，v4.0 实际命名是
+  `rel_{a}_d`（motion3axis.xml:916-922 `rel_x_d/rel_y_d/rel_z_d` @ %QW3~5；AML
+  通道同名）。按原文模式 motion3axis 推断不到 rel_d → MC_MOVERELATIVE 不展开
+  → 等价基准 1 必失败。列为修订意见①。
+- **limits 消费点与 v4.0 模板的矛盾**：§6.2 "limits→INTERP 执行上限"，但 v4.0
+  INTERP 已无 VMAX/MAXPOS 参数（命令级动力学 vel/acc/dec_req，越程改 MC 层
+  ErrorID=1，devlog 2026-09-10 骨架同步时已核实）。改为"展开期校验
+  defaults ≤ limits + defaults 为 MC 动力学来源"。列为修订意见②。
+- **INTERP 体内越程常量**：motion3axis.xml INTERP ST 体写死
+  `pos_target > 100 OR pos_target < 0`（注释自称 MC 层之外第二道防线）——
+  非 [0,100] 行程轴（plotter z）不能逐字复用，建议参数化为带初值局部变量
+  （POSWIN 同法，motion3axis.xml:75 有初值 2.0 先例）。列为修订意见③，lx 域。
+- **数值吻合核验**：motion3axis.xml MC 调用 Velocity=40.0/Acceleration=80.0/
+  Deceleration=80.0（go_x/rel_x 等接线）与 AML vmax=40.0/accel=80.0 吻合——
+  §6.1 defaults 层提案值即现行接线值，等价基准 1 的参数面无障碍。
+- **plotter 基准前置**：plotter3axis.xml 仍 v3 形态 INTERP（VMAX 参数版，
+  2026-09-10 devlog 已登记），等价基准 2 需先升 v4.0——排期步 5 同批关闭。
+
+评估结论：四项（⓪ / ②a / ②b / R8）均可接入，无架构性障碍；排期 5~6 个工作日
+（评审通过后）。R8 编号理由：R7 已被 CASE 初值提案占用（待 lx 评审）。
+
+改动文件：gc 文档（§10 新增 + §9 待办 #11）、协作看板（gc 区块三处 + 共同议题
+一行 + 变更记录一行）。纯文档改动，无代码变更；pytest 跑全量确认与改前一致。
+
+**未提交未推送。**

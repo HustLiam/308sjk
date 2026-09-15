@@ -228,4 +228,52 @@ io_map（契约 v1.1：scene.spec 内嵌 ioEntry / csk 契约③ io_map.json）-
 7. ~~②b 场景描述生成器 v0（等 csk SceneSpec Schema）~~ → 已落地确定性 v0；**2026-09-09 对齐契约 v1.1 升 v1**（contract/ 驱动：内嵌 io_map、SI range、地址分配移交 csk build-mjcf）；待 csk 闸门补 6 个 MJCF 类型注册后走真闸门回归；
 8. ~~需求理解 LLM 澄清回路~~ → **对话式形态已落地**（`src/agent/chat.py`：AML+需求输入 → 规格回显（逐条准则含谓词明细）→ 用户自然语言修正（`refine()` 定向最小修改，上轮 spec 作上下文）→ 确认后自主跑完剩余流程（生成→闸门→验收）；闸门环境自动探测；`--request --confirm --seed` 可脚本化）。LLM 对粗需求的**主动反问**未接（现状：回显+人工审，弱项为 forbidden_state 等值谓词健全性——回显已明示谓词供核对）；
 9. 归因分析 LLM（消费 verdict.json → report.md，区分代码/场景问题并路由）——待 csk 判定引擎；
-10. plotter3axis 在线验收（需 OpenPLC 环境：run_regression.py L3 自动发现场景对）+ lx 复核代拟的 scenario 脚本后纳入场景库。
+10. plotter3axis 在线验收（需 OpenPLC 环境：run_regression.py L3 自动发现场景对）+ lx 复核代拟的 scenario 脚本后纳入场景库；
+11. **轴对象映射绑定 RFC**（device_model Schema v1.1，2026-09-15 gc 完成评估回区）——提案文本见 §10，待 lx 确认三处修订 + csk 知悉；评审通过后按 §10.4 排期实施（⓪ 升级 → ②a 轴对象展开器 → ②b 消费点改读 → R8 三方比对 → 双场景等价契约测试）。
+
+## 10. RFC：轴对象映射绑定（device_model Schema v1.1）——gc 评估与提案（2026-09-15）
+
+> 提案来源：lx 2026-09-09 看板发起、2026-09-15 催办（超 48h 规则）；规范全文在《运动控制代码生成方案》§6（lx 权威），本节不复写，只写 gc 侧的**评估结论、修订意见、迁移方案**。目的：轴参数只在 AML 定义一次——②a 与 ②b 消费 ⓪ 的确定性产物 `kinematics.axes`（axis_objects），一致性检查器比对三方，LLM 只做工艺层（序列/互锁/目标值），不生成也不改写轴参数。
+
+### 10.1 动机
+
+现行轴参数存在三个来源：AML（⓪ 提取，供 ②b 消费）、种子 XML（②a 逐字复用）、skill 骨架（生成 Prompt）。三处数值今天一致（motion3axis：vmax=40.0/accel=80.0/POSWIN=2.0），但一致靠人工维护——skill 骨架就曾落后 master 一个版本（v3.0 vs v4.0，靠指纹单测 c4f27ef 才关住）。本 RFC 把 AML 定为唯一来源：②a 的轴相关生成改为确定性展开（不再依赖 LLM 复用种子），②b 与一致性检查从同一份 axis_objects 取数。
+
+### 10.2 影响面（四项逐项评估，均可接入）
+
+评估基于 2026-09-15 对 master（bb0d5dd）的实际核验：
+
+1. **device_model v1.1（io 绑定 + limits/defaults 分层）——可接入，纯增量**。`aml_parser._extract_axes()`（src/agent/aml_parser.py:243）现产出平铺 vmax/accel/poswin/wrap/stroke，升级为 `limits{vmax,accel}` + `defaults{velocity,acceleration,deceleration}` + `io{fb,sp,sw,v,rel_d,err_id}` 角色绑定。实跑解析器核验两份基准 AML：motion3axis_station 32 点、三轴六角色齐全（fb/sp/sw/v/rel/err_id）；plotter3axis_station 26 点、含 fb/sp/sw/v，rel_d 与 err_id 缺省——按 §6.1 属可选角色，省略合法（展开器不生成 MC_MOVERELATIVE 接线与 ErrorID 诊断出口），与 plotter3axis.xml 现状（无 rel/err_id 定位变量）一致。
+2. **②a 按轴对象确定性展开——可接入，工作量最大的一项**。前置已具备：skill 骨架 v4.0 + 指纹防漂移单测（tests/test_skill_skeleton_sync.py，c4f27ef）。数值核验：motion3axis.xml 的 MC 调用动力学 Velocity=40.0/Acceleration=80.0/Deceleration=80.0 与 AML vmax/accel 吻合，defaults 层提案值即现行接线值；INTERP 的 POSWIN 是带初值的局部变量（2.0 ≡ AML poswin，motion3axis.xml:75），初值参数化机械可行。展开器为新增模块（axis_objects → FB 库 POU + 每轴实例组/接线/参数），不改动 LLM 生成工艺层的路径。
+3. **②b 组件引用——可接入，改动小**。`scene_gen._axes_info()`（src/agent/scene_gen.py:118）已消费 kinematics.axes 的 stroke/unit/vmax；v1.1 后改读 `limits.vmax`，通道名改从 `io` 绑定取（替代 `_AXIS_RE` 正则推断轴名）。路由规则 `<axis>_fb→pos / <axis>_cmd→cmd` 与 io_map 结构不变。
+4. **一致性新增轴参数比对——可接入，建议编号 R8**。R7 已被本侧 CASE 初值提案占用（待 lx 评审）。比对三方：AML axis_objects ≡ XML 轴实例参数（POSWIN 初值 / MC 调用动力学 / 越程界限）≡ scene.spec 轴参数（travel/speed）。device_model 为可选入参（与 R6 同法），缺模型时跳过该检查。
+
+csk 侧零改动：契约包 v1.1 组件参数（linear_axis 的 stroke/speed）现成，②b 消费点全部在 gc 代码内。
+
+### 10.3 对《运动控制代码生成方案》§6 的三处修订意见
+
+1. **rel_d 推断模式应改 `rel_{a}_d`**。§6.1 现文写 `{a}_rel_d`，但已验收 v4.0 的实际命名是 rel 前置：motion3axis.xml 定位变量 `rel_x_d/rel_y_d/rel_z_d`（%QW3~5），AML 通道同名。按原文模式 motion3axis 推断不到 rel_d 角色 → MC_MOVERELATIVE 不展开 → §6.3 等价基准 1 必然失败。
+2. **limits 的消费点需按 v4.0 重定义**。§6.2 现文"limits→INTERP 执行上限"，但 v4.0 INTERP 已无 VMAX/MAXPOS 参数（命令级动力学 vel/acc/dec_req，越程拦截改在 MC 层报 ErrorID=1；skill v4.0 骨架同形态）。建议机械消费定义为：展开期校验 defaults ≤ limits（违反记 problems、拒绝生成）+ defaults 作为 MC 调用动力学的来源；INTERP 侧不接线，后续若恢复保护限幅再接。
+3. **INTERP 体内越程界限现为字面常量，需参数化**。motion3axis.xml 的 INTERP ST 体内写死 `pos_target > 100 OR pos_target < 0`（MC 层拦截之外的第二道防线）。行程非 [0,100] 的轴（如 plotter z）无法逐字复用；建议改带初值局部变量（与 POSWIN 同法），属 lx 模板域小改，请确认。
+
+另有一条范围界定，建议写进 §6.3：**等价比对限定轴对象派生部分**（FB 库 POU 逐字 + 每轴实例组的参数与接线逐字段）；PLC_PRG 工艺层（序列器/互锁/目标表）不属轴对象派生，由种子提供，不进比对——否则实现时对"全 XML 等价"与"轴部分等价"会产生歧义。
+
+### 10.4 迁移方案与排期
+
+评审通过后按 §6.4 顺序执行，预估 5~6 个工作日：
+
+| 步 | 内容 | 预估 |
+|---|---|---|
+| 1 | ⓪ 升级：Schema 升 v1.1.0-draft.1（io 绑定按 `rel_{a}_d` 修订版）+ aml_parser 分层与角色推断 + 单测 + 双 AML 基准核验 | 1 天 |
+| 2 | ②a 轴对象展开器 + motion3axis 等价契约测试（基准 1） | 2~3 天 |
+| 3 | ②b 消费点：`_axes_info` 改读 limits.vmax + 通道名取自 io 绑定 | 0.5 天 |
+| 4 | R8 三方轴参数比对（含负测试，缺 model 跳过） | 1 天 |
+| 5 | plotter3axis 种子升 v4.0 总线形态（现行仍 v3 形态 INTERP，devlog 2026-09-10 已登记为遗留）+ 等价契约测试（基准 2） | 0.5~1 天，可与步 2 并行 |
+
+版本与合入：device_model Schema `1.0.0-draft.1 → 1.1.0-draft.1`（评审通过后定 1.1.0）。aml_parser 是 device_model 唯一生产者，同批升级、不留旧字段兼容读；`runs/` 历史产物不回填。合入批次按 RFC 流程一次做完：改契约 + 本档 §5 增 R8 + lx 生成方案 §6 修订 + 主方案 §3.0 一句 + changelog 登记。
+
+### 10.5 评审请求
+
+- **@lx**：确认 §10.3 三处修订（rel_d 模式 / limits 消费点 / INTERP 界限参数化）与 R8 编号；§6.2 ②a 行的模板依据（§2.2）随展开器实施如需细化由双方在看板迭代。
+- **@csk**：知悉——scene.spec 轴参数此后与 PLC 侧同源于 device_model，你侧闸门的组件参数校验不受影响；如无异议即视为同意。
+- 48h 未回复按指南 §6 线下拉齐。评审通过前 gc 不实施。
