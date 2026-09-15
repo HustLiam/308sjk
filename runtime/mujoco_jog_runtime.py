@@ -45,6 +45,13 @@ def parse_args():
     p.add_argument("--watch", action="store_true", help="每 2s 打印指令/反馈跟随表")
     p.add_argument("--viewer", action="store_true",
                    help="打开 MuJoCo 3D 交互视窗（需显示服务；无头环境自动回退）")
+    p.add_argument("--plc", action="store_true",
+                   help="启用 PLC 回环（lx 文档 §6.2：桥作客户端轮询 OpenPLC 的 %Q 区，"
+                        "换算归桥——int16 工程量 ↔ SI 米）")
+    p.add_argument("--plc-host", default="127.0.0.1", help="OpenPLC Modbus 地址")
+    p.add_argument("--plc-port", type=int, default=502, help="OpenPLC Modbus 端口")
+    p.add_argument("--plc-spec", default=None,
+                   help="PLC requirement_spec.json（取 io_list range 推导换算；缺省 1:1）")
     return p.parse_args()
 
 
@@ -104,6 +111,15 @@ def main():
     print(f"Modbus server ready (mujoco {mujoco.__version__}, in-process)")
     print(bridge.describe())
     print(f"physics: {args.physics_hz}Hz, scene: {args.scene}")
+
+    plc_link = None
+    if args.plc:
+        from plc_link import PlcLink
+        plc_link = PlcLink(bridge, io_map or [], spec=args.plc_spec,
+                           host=args.plc_host, port=args.plc_port)
+        plc_link.start()
+        print(f"PLC 回环已启动：轮询 OpenPLC {args.plc_host}:{args.plc_port} 的 %Q 区"
+              f"（通道 {len(plc_link.channels)}，换算归桥，周期 {plc_link.period_s * 1000:.0f}ms）")
 
     model.opt.timestep = 1.0 / args.physics_hz
     last_cmd = {a: 0.0 for a in AXES}       # 跟踪起点 = 0（作者位姿），阶跃必成斜坡
@@ -190,6 +206,8 @@ def main():
     except KeyboardInterrupt:
         print("\nCtrl+C，停止中…")
     finally:
+        if plc_link is not None:
+            plc_link.stop()
         if viewer_ctx is not None:
             viewer_ctx.close()
         bridge.stop()

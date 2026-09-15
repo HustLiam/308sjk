@@ -40,11 +40,13 @@ python runtime/mujoco_jog_runtime.py --scene <outdir>/scene.spec.json \
 7. **动力学参数**：当前组件契约不含质量/伺服（组装器按同级别库值默认）；需要精确
    动力学的场景请在 spec 外提出，随契约 v1.2 评估。
 
-## 地址分配规则（iomap，确定性）
+## 地址分配规则（iomap，确定性；2026-09-15 裁决升级）
 
-按 io_map **声明顺序**：输出 bool → 线圈 %QX 逐位；输出 float → 保持寄存器 %QW
-（float32 大端，2 寄存器/值）；输入 → 传感区块 %IW（bool 占 1 寄存器 0/1，float 占 2）。
-产物 `io_map.json / modbus_summary.json / st_io_declaration.st` 随 build-mjcf 落盘。
+按 io_map **声明顺序**，地址分两面：
+- **仿真面**（桥 :5020 / jog GUI，float32 大端）：输出 bool → 线圈逐位；输出 float → 保持寄存器（2 寄存器/值）；输入（bool/float）→ 传感区块（bool 1 寄存器 0/1，float 2 寄存器）；
+- **PLC 面**（OpenPLC :502，lx 文档 §6.2 / changelog「桥接裁决 v1.0」）：**全通道统一 %Q 区**——float（不分方向）→ %QW 1 寄存器（工程量定点 int16，换算归桥，由 runtime/plc_link.py 执行）；bool（不分方向）→ %QX 线圈（FC15 整组读写纪律）。%IW 不再使用。
+
+产物 `io_map.json / modbus_summary.json / st_io_declaration.st` 随 build-mjcf 落盘（modbus_summary 的 `plc_loop` 段即回环接线说明）。
 
 ## 版本与变更
 

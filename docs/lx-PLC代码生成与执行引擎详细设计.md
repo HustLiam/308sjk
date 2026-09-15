@@ -263,6 +263,8 @@ OpenPLC 容器（:502，Modbus 服务端，%Q 区即 io_map 地址表）
 
 csk 落地路径（已表态）：随 RFC 同步改 `iomap.py`（地址区全 %Q）+ `gantry_bridge.py`（换算归桥），桥布局合入后本表寄存器清单按最终 io_map 对表即可。
 
+> **实施状态（2026-09-15，lx 代 csk 落地——负责人授权 lx 全权负责桥接部分）**：① `scenegen/scenegen/iomap.py`——PLC 面全通道统一 %Q 区（float → %QW 1 寄存器 int16 定点、bool → %QX），仿真面 float32 布局原样保留，`modbus_summary` 换 `plc_loop` 段，ST 声明改 INT；components 依赖延迟导入（无 pxr 环境可用）；② 新增 `runtime/plc_link.py`——桥作客户端轮询 OpenPLC %Q 区（FC03 读指令 / FC16 写反馈 / FC15 整组线圈 / 15ms 周期 / 工程量↔米换算，兼容 gantry 与 linear_axis 两种绑定风格）；③ `mujoco_jog_runtime.py` 增 `--plc` 模式；④ `out/` 三处产物重生成；⑤ 测试：runtime 27 项（新增 plc_link 4 项：换算 round-trip/钳位/%Q 面地址/回环集成）+ 根 215 全绿。**语义边界**：plc_link 按位置指令通道接线（plotter_cell 形态）；CSP 速度指令型程序（motion3axis x_v）需驱动器积分模型（stage_link 语义），待后续接线。
+
 ## 7. 待办（按优先级）
 
 1. **双链路联调**：同一场景 A/B 双跑、trace 比对行为一致性（总体方案风险表"双链路行为不一致"的应对）。**链路 A L3 回环已于 2026-09-09 lx 实测通过**（Docker recipe 见 §6.1；含 csk 侧 toolchain 四处版本适配修正，待 csk 复核）——下一步 motion3axis A/B trace 比对，等 csk 判定引擎/trace 口径；

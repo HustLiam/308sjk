@@ -14,9 +14,10 @@
     "modbus": {
       "area": "sensor_block",
       "server_register": 0,
-      "plc_addr": "%IW0",
+      "plc_addr": "%QW0",
       "length": 2,
-      "encoding": "float32_be"
+      "encoding": "float32_be",
+      "plc_encoding": "int16_scaled"
     }
   },
   {
@@ -34,9 +35,10 @@
     "modbus": {
       "area": "sensor_block",
       "server_register": 2,
-      "plc_addr": "%IW2",
+      "plc_addr": "%QW1",
       "length": 2,
-      "encoding": "float32_be"
+      "encoding": "float32_be",
+      "plc_encoding": "int16_scaled"
     }
   },
   {
@@ -54,9 +56,10 @@
     "modbus": {
       "area": "sensor_block",
       "server_register": 4,
-      "plc_addr": "%IW4",
+      "plc_addr": "%QW2",
       "length": 2,
-      "encoding": "float32_be"
+      "encoding": "float32_be",
+      "plc_encoding": "int16_scaled"
     }
   }
 ]

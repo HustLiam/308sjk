@@ -140,8 +140,9 @@ def main() -> int:
     io_map = result["io_map"]
     by_var = {e["plc_var"]: e for e in io_map}
     assert by_var["AxisX_cmd"]["modbus"]["plc_addr"] == "%QW0"
-    assert by_var["AxisY_cmd"]["modbus"]["plc_addr"] == "%QW2"
-    assert by_var["AxisZ_cmd"]["modbus"]["plc_addr"] == "%QW4"
+    assert by_var["AxisY_cmd"]["modbus"]["plc_addr"] == "%QW1"
+    assert by_var["AxisZ_cmd"]["modbus"]["plc_addr"] == "%QW2"
+    assert by_var["AxisX_pos"]["modbus"]["plc_addr"] == "%QW3"   # PLC 面统一 %Q 区（2026-09-15 裁决）
     assert by_var["AxisX_pos"]["modbus"]["server_register"] == 0
     assert by_var["AxisX_pos"]["modbus"]["length"] == 2
     assert by_var["AxisX_cmd"]["usd_prim"] == "/World/gantry_1/joint_x"
@@ -149,13 +150,14 @@ def main() -> int:
     n += 1
 
     st = result["st_declaration"]
-    assert "AT %QW0 : REAL" in st and "AT %IW0 : REAL" in st
+    assert "AT %QW0 : INT" in st and "AT %QW3 : INT" in st
     n += 1
 
     summary = result["modbus_summary"]
     assert summary["plc_output_registers"] == 6
     assert summary["sensor_block_registers"] == 6
-    assert summary["openplc_polling"]["length"] == 6
+    assert summary["plc_loop"]["read_commands"]["length"] == 3
+    assert summary["plc_loop"]["write_feedback"]["start"] == 3
     n += 1
 
     issues = smoke.structural_check(result["scene_usd"], io_map)
