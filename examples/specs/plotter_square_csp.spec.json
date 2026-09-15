@@ -1,0 +1,127 @@
+{
+  "task_id": "plotter_square_csp",
+  "task_goal": "三轴绘图机在 XY 平面绘制边长 60（坐标区间 20..80）的正方形并闭合：抬笔定位起点 → 落笔沿四边 → 抬笔回中心。CSP 形态：PLC 输出插补位置目标（%QW0-2），驱动器（仿真侧/真机 CSP 模式）闭位置环；Z 0=落笔接触、10=抬笔安全高度",
+  "io_list": [
+    {
+      "name": "run",
+      "dir": "input",
+      "type": "BOOL",
+      "device": "OperatorPanel run 使能"
+    },
+    {
+      "name": "cmd_reset",
+      "dir": "input",
+      "type": "BOOL",
+      "device": "OperatorPanel 复位"
+    },
+    {
+      "name": "cmd_draw",
+      "dir": "input",
+      "type": "BOOL",
+      "device": "OperatorPanel 启动画方"
+    },
+    {
+      "name": "any_moving",
+      "dir": "output",
+      "type": "BOOL",
+      "device": "任一轴未到位"
+    },
+    {
+      "name": "pen_down",
+      "dir": "output",
+      "type": "BOOL",
+      "device": "笔接触状态（z<=1）"
+    },
+    {
+      "name": "plot_done",
+      "dir": "output",
+      "type": "BOOL",
+      "device": "绘图完成"
+    },
+    {
+      "name": "AxisX_cmd",
+      "dir": "output",
+      "type": "INT",
+      "range": [
+        0,
+        100
+      ],
+      "device": "X 轴插补位置目标（CSP 上总线）"
+    },
+    {
+      "name": "AxisY_cmd",
+      "dir": "output",
+      "type": "INT",
+      "range": [
+        0,
+        100
+      ],
+      "device": "Y 轴插补位置目标"
+    },
+    {
+      "name": "AxisZ_cmd",
+      "dir": "output",
+      "type": "INT",
+      "range": [
+        0,
+        10
+      ],
+      "device": "Z 轴位置目标（0 落笔/10 抬笔）"
+    },
+    {
+      "name": "AxisX_pos",
+      "dir": "input",
+      "type": "INT",
+      "range": [
+        0,
+        100
+      ],
+      "device": "X 位置反馈"
+    },
+    {
+      "name": "AxisY_pos",
+      "dir": "input",
+      "type": "INT",
+      "range": [
+        0,
+        100
+      ],
+      "device": "Y 位置反馈"
+    },
+    {
+      "name": "AxisZ_pos",
+      "dir": "input",
+      "type": "INT",
+      "range": [
+        0,
+        10
+      ],
+      "device": "Z 位置反馈"
+    }
+  ],
+  "constraints": [
+    {
+      "id": "C1",
+      "desc": "落笔期间禁止变更抬笔前置外的定位目标（序列器保证）",
+      "type": "interlock"
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "AC1",
+      "desc": "cmd_draw 置位后 plot_done 在 120s 内置位",
+      "type": "event_delay",
+      "max_s": 120
+    },
+    {
+      "id": "AC2",
+      "desc": "四角 (20,20)(80,20)(80,80)(20,80) 均被访问且落笔（z<=1）",
+      "type": "region_containment"
+    },
+    {
+      "id": "AC3",
+      "desc": "绘图期间 XY 始终在 [10,90]",
+      "type": "sim_health"
+    }
+  ]
+}

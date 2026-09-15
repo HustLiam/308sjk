@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0201" xmlns:html="http://www.w3.org/1999/xhtml">
+  <fileHeader companyName="" productName="Agent Pipeline" productVersion="0.8.0" creationDateTime="2026-09-15T12:00:00" />
+  <contentHeader name="plotter_square_csp.project" modificationDateTime="2026-09-15T12:00:00" />
+  <types>
+    <pous>
+      <pou name="PLC_PRG" pouType="program">
+        <interface>
+<localVars>
+<variable name="run" address="%QX0.0"><type><BOOL /></type></variable>
+<variable name="cmd_reset" address="%QX0.7"><type><BOOL /></type></variable>
+<variable name="cmd_draw" address="%QX2.0"><type><BOOL /></type></variable>
+</localVars>
+<localVars>
+<variable name="any_moving" address="%QX1.2"><type><BOOL /></type></variable>
+<variable name="pen_down" address="%QX2.1"><type><BOOL /></type></variable>
+<variable name="plot_done" address="%QX2.2"><type><BOOL /></type></variable>
+</localVars>
+<localVars>
+<variable name="AxisX_cmd" address="%QW0"><type><INT /></type></variable>
+<variable name="AxisY_cmd" address="%QW1"><type><INT /></type></variable>
+<variable name="AxisZ_cmd" address="%QW2"><type><INT /></type></variable>
+<variable name="prog_id" address="%QW20"><type><INT /></type></variable>
+</localVars>
+<localVars>
+<variable name="AxisX_pos" address="%QW3"><type><INT /></type></variable>
+<variable name="AxisY_pos" address="%QW4"><type><INT /></type></variable>
+<variable name="AxisZ_pos" address="%QW5"><type><INT /></type></variable>
+</localVars>
+<localVars>
+<variable name="state"><type><INT /></type><initialValue><simpleValue value="0"/></initialValue></variable>
+<variable name="x_tgt"><type><INT /></type><initialValue><simpleValue value="50"/></initialValue></variable>
+<variable name="y_tgt"><type><INT /></type><initialValue><simpleValue value="50"/></initialValue></variable>
+<variable name="z_tgt"><type><INT /></type><initialValue><simpleValue value="10"/></initialValue></variable>
+</localVars>
+</interface>
+        <body>
+          <ST>
+            <xhtml:p xmlns:xhtml="http://www.w3.org/1999/xhtml">prog_id := 4;
+
+(* CSP 形态：目标位置直接上总线（%QW0-2）；驱动器（仿真侧）轴速限速跟随并闭位置环 *)
+AxisX_cmd := x_tgt;
+AxisY_cmd := y_tgt;
+AxisZ_cmd := z_tgt;
+
+(* 状态输出 *)
+pen_down := AxisZ_pos &lt;= 1;
+any_moving := (AxisX_pos &gt; AxisX_cmd + 1) OR (AxisX_pos &lt; AxisX_cmd - 1)
+           OR (AxisY_pos &gt; AxisY_cmd + 1) OR (AxisY_pos &lt; AxisY_cmd - 1)
+           OR (AxisZ_pos &gt; AxisZ_cmd + 1) OR (AxisZ_pos &lt; AxisZ_cmd - 1);
+
+IF cmd_reset THEN
+    state := 0;
+    plot_done := FALSE;
+    x_tgt := 50; y_tgt := 50; z_tgt := 10;
+ELSIF state = 0 THEN
+    x_tgt := 50; y_tgt := 50; z_tgt := 10;      (* 待机：抬笔回中心 *)
+    IF cmd_draw AND run THEN
+        state := 1;
+    END_IF;
+ELSE
+    CASE state OF
+        1:                                      (* 抬笔至安全高度 *)
+            z_tgt := 10;
+            IF AxisZ_pos &gt;= 9 THEN
+                state := 2;
+            END_IF;
+        2:                                      (* 抬笔态定位起点 (20,20) *)
+            x_tgt := 20; y_tgt := 20; z_tgt := 10;
+            IF (AxisX_pos &lt;= 21) AND (AxisX_pos &gt;= 19) AND (AxisY_pos &lt;= 21) AND (AxisY_pos &gt;= 19) THEN
+                state := 3;
+            END_IF;
+        3:                                      (* 落笔（接触建立，不判位置相等） *)
+            z_tgt := 0;
+            IF AxisZ_pos &lt;= 1 THEN
+                state := 4;
+            END_IF;
+        4:                                      (* 边 1：(20,20)-&gt;(80,20) *)
+            x_tgt := 80;
+            IF (AxisX_pos &lt;= 81) AND (AxisX_pos &gt;= 79) THEN
+                state := 5;
+            END_IF;
+        5:                                      (* 边 2：(80,20)-&gt;(80,80) *)
+            y_tgt := 80;
+            IF (AxisY_pos &lt;= 81) AND (AxisY_pos &gt;= 79) THEN
+                state := 6;
+            END_IF;
+        6:                                      (* 边 3：(80,80)-&gt;(20,80) *)
+            x_tgt := 20;
+            IF (AxisX_pos &lt;= 21) AND (AxisX_pos &gt;= 19) THEN
+                state := 7;
+            END_IF;
+        7:                                      (* 边 4：(20,80)-&gt;(20,20) 闭合 *)
+            y_tgt := 20;
+            IF (AxisY_pos &lt;= 21) AND (AxisY_pos &gt;= 19) THEN
+                state := 8;
+            END_IF;
+        8:                                      (* 抬笔 *)
+            z_tgt := 10;
+            IF AxisZ_pos &gt;= 9 THEN
+                state := 9;
+            END_IF;
+        9:                                      (* 回中心并完成 *)
+            x_tgt := 50; y_tgt := 50;
+            IF (AxisX_pos &lt;= 51) AND (AxisX_pos &gt;= 49) AND (AxisY_pos &lt;= 51) AND (AxisY_pos &gt;= 49) THEN
+                state := 10;
+                plot_done := TRUE;
+            END_IF;
+    ELSE
+        state := 0;                              (* 意外状态：回待机 *)
+    END_CASE;
+END_IF;</xhtml:p>
+          </ST>
+        </body>
+      </pou>
+    </pous>
+  </types>
+  <instances>
+    <configurations />
+  </instances>
+</project>
