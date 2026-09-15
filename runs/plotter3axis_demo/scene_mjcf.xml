@@ -1,0 +1,63 @@
+<mujoco model="plotter3axis_demo">
+  <!-- 由 scene.spec.json 组装（mujoco_build.py）；关节 q=0 = 作者位姿，Z: 0=落笔 0.011=抬笔 -->
+  <option timestep="0.008333" gravity="0 0 -9.81"/>
+  <compiler angle="radian" autolimits="true"/>
+  <default>
+    <joint armature="0.01" frictionloss="0.1"/>
+    <geom friction="0.8 0.02 0.001" condim="3"/>
+  </default>
+  <worldbody>
+    <geom name="floor" type="plane" size="10 10 0.1" rgba="0.92 0.92 0.9 1"/>
+    <body name="gantry_base" pos="0 0 0">
+      <!-- 工作区布局：spec pose = 笔尖行程原点（左下角），纸张/底板以行程中心摆放，
+           笔尖扫掠 [pose, pose+travel] 恰好铺满纸面（USD 侧同样存在纸张偏置在
+           根原点的布局缺陷，见 devlog 2026-09-07(8)；MJCF 侧已修正） -->
+      <geom name="base_plate" type="box" size="0.62 0.62 0.02"
+            pos="0.5 0.5 0.02" rgba="0.75 0.76 0.78 1"/>
+      <geom name="paper" type="box" size="0.5 0.5 0.001"
+            pos="0.5 0.5 0.041" rgba="0.97 0.97 0.94 1"/>
+      <!-- 立柱/导轨为结构装饰件：与滑座在作者位姿天然互穿（滑座"骑"在导轨上），
+           关闭其碰撞以免顶死关节；功能接触（笔尖↔纸面、整体↔地面）不受影响 -->
+      <geom name="column_l" type="box" size="0.03 0.03 0.275"
+            pos="0.12 0 0.275"
+            contype="0" conaffinity="0" rgba="0.35 0.36 0.4 1"/>
+      <geom name="column_r" type="box" size="0.03 0.03 0.275"
+            pos="0.88 0 0.275"
+            contype="0" conaffinity="0" rgba="0.35 0.36 0.4 1"/>
+      <geom name="x_rail" type="box" size="0.61 0.035 0.035"
+            pos="0.5 0 0.55"
+            contype="0" conaffinity="0" rgba="0.35 0.36 0.4 1"/>
+      <body name="x_carriage" pos="0 0 0.5">
+        <joint name="joint_x" type="slide" axis="1 0 0" range="0 1"
+               damping="250"/>
+        <geom name="saddle" type="box" size="0.045 0.21 0.03" mass="4"
+              contype="0" conaffinity="0" rgba="0.2 0.55 0.85 1"/>
+        <body name="y_carriage" pos="0 0 -0.01">
+          <joint name="joint_y" type="slide" axis="0 1 0" range="0 1"
+                 damping="250"/>
+          <geom name="head" type="box" size="0.05 0.05 0.04" mass="3"
+                contype="0" conaffinity="0" rgba="0.2 0.55 0.85 1"/>
+          <body name="z_carriage" pos="0 0 -0.313">
+            <joint name="joint_z" type="slide" axis="0 0 1" range="0 0.011"
+                   damping="80"/>
+            <geom name="slider" type="box" size="0.03 0.03 0.045" mass="0.4"
+                  pos="0 0 0.155" contype="0" conaffinity="0" rgba="0.16 0.42 0.66 1"/>
+            <!-- 笔向下悬伸：q=0 时笔尖球面触纸（胶囊最低面 = 轴线端点 + 半径，轴长已补半径），
+                 抬笔 = +Z 行程；伺服压纸的力平衡稳态由接触判据语义覆盖（csk 文档 §7.1） -->
+            <geom name="pen" type="capsule" fromto="0 0 -0.1275 0 0 0"
+                  size="0.0075" mass="0.02" rgba="0.85 0.2 0.2 1"/>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+  <actuator>
+    <!-- 位置伺服：ctrl = 关节目标（米），运行时按 axisSpeed=0.4 m/s 速率限制写入 -->
+    <position name="drive_x" joint="joint_x" kp="6000"
+              ctrlrange="0 1"/>
+    <position name="drive_y" joint="joint_y" kp="6000"
+              ctrlrange="0 1"/>
+    <position name="drive_z" joint="joint_z" kp="4000"
+              ctrlrange="0 0.011"/>
+  </actuator>
+</mujoco>

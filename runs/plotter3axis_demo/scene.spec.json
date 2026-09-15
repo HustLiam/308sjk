@@ -1,0 +1,132 @@
+{
+  "scene_id": "plotter3axis_demo",
+  "spec_version": "1.1",
+  "units": "m",
+  "physics": {
+    "gravity": [
+      0,
+      0,
+      -9.81
+    ],
+    "physics_dt": 0.008333,
+    "solver": "tgs"
+  },
+  "ground": {
+    "size": [
+      1.5,
+      1.5
+    ],
+    "friction": 0.8
+  },
+  "lighting": "dome",
+  "assets": [
+    {
+      "id": "gantry",
+      "type": "gantry_xyz",
+      "pose": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rpy_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "params": {
+        "travel_x": 1.0,
+        "travel_y": 1.0,
+        "travel_z": 0.011,
+        "speed": 0.4
+      }
+    }
+  ],
+  "io_map": [
+    {
+      "plc_var": "x_fb",
+      "dir": "input",
+      "type": "float",
+      "bind": {
+        "asset": "gantry",
+        "quantity": "x_pos",
+        "range": [
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "plc_var": "y_fb",
+      "dir": "input",
+      "type": "float",
+      "bind": {
+        "asset": "gantry",
+        "quantity": "y_pos",
+        "range": [
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "plc_var": "z_fb",
+      "dir": "input",
+      "type": "float",
+      "bind": {
+        "asset": "gantry",
+        "quantity": "z_pos",
+        "range": [
+          0.0,
+          0.011
+        ]
+      }
+    },
+    {
+      "plc_var": "x_cmd",
+      "dir": "output",
+      "type": "float",
+      "bind": {
+        "asset": "gantry",
+        "quantity": "x_cmd",
+        "range": [
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "plc_var": "y_cmd",
+      "dir": "output",
+      "type": "float",
+      "bind": {
+        "asset": "gantry",
+        "quantity": "y_cmd",
+        "range": [
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "plc_var": "z_cmd",
+      "dir": "output",
+      "type": "float",
+      "bind": {
+        "asset": "gantry",
+        "quantity": "z_cmd",
+        "range": [
+          0.0,
+          0.011
+        ]
+      }
+    }
+  ],
+  "script": {
+    "termination": {
+      "max_sim_time": 90.0,
+      "early_stop": "plot_done settled"
+    }
+  }
+}

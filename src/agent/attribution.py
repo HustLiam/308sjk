@@ -18,6 +18,16 @@ import re
 
 from .memory import MemoryStore
 
+
+def _domain_index():
+    """领域知识条目索引（懒加载；知识库缺失返回空）。"""
+    try:
+        from .knowledge.domain.loader import entry_index
+        return entry_index()
+    except Exception:
+        return []
+
+
 _FENCE_RE = re.compile(r"```(?:json)?\s*([\s\S]*?)```", re.IGNORECASE)
 
 _DIAG_PROMPT = """你是工业 PLC 代码生成闭环的归因工程师。闸门「%s」失败，错误证据如下：
@@ -89,7 +99,10 @@ class AttributionEngine:
             "（单个 ```json 代码块）：\n"
             '{"diagnosis": "这类失败的症状与根因（一句话，面向未来同类任务）",\n'
             ' "fix": "修法（面向生成器的可执行指令，1~3 条）"}\n'
-            "只依据证据，不臆测；证据不足就写证据不足。" % (gate, evidence, context))
+            "只依据证据，不臆测；证据不足就写证据不足。"
+            "若症状命中领域知识条目（索引见下），diagnosis 中标注条目号（如 违 ST-09）。"
+            "\n\n条目索引：%s" % (gate, evidence, context,
+                                       "；".join("%s %s" % e for e in _domain_index())))
         payload = {"model": self.model,
                    "messages": [{"role": "user", "content": prompt}],
                    "max_tokens": 1024, "temperature": 0.2,

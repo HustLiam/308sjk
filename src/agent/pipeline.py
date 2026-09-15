@@ -139,6 +139,14 @@ class PLCGenerator:
         system = self.skill_prompt
         if not self.no_cards:
             system += "\n\n## 参考模式（已验收场景，勿照抄变量名）\n" + cards
+        # 领域知识条目索引（P3 接线）：按任务选域节选——长尾知识打底，骨架仍在 skill
+        try:
+            from .knowledge.domain.loader import domain_digest
+            digest = domain_digest(spec.get("task_goal", ""))
+            if digest:
+                system += "\n\n" + digest
+        except Exception:  # 知识库缺失不阻塞生成
+            pass
         messages = [
             {"role": "system", "content": system},
             {"role": "user", "content": user},

@@ -112,14 +112,17 @@ class TestGenerate:
         assert g["params"]["travel_x"] == 1.0 and g["params"]["travel_z"] == 0.011
         assert g["params"]["speed"] == 0.5
 
-    def test_legacy_linear_axis_family_for_partial_axes(self):
-        """非三轴设备降级 linear_axis 族装配（v0 形态：地面/台/轴/笔头/笔/面板）。"""
-        out = SceneSpecGenerator().generate(SINGLE_AXIS_SPEC, None)
-        ids = {a["id"] for a in out["scene"]["assets"]}
-        assert {"x_axis", "plot_head", "pen", "panel", "table"} <= ids
-        assert [e["plc_var"] for e in out["io_map"]] == ["x_fb"]
-        assert out["io_map"][0]["bind"] == {"asset": "x_axis", "quantity": "pos",
-                                            "range": [0.0, 1.0]}
+    def test_partial_axes_fall_back_to_default_travel(self):
+        """仅单轴信息时仍走 gantry 唯一路线，缺轴用库缺省行程补齐。"""
+        spec = {"task_id": "single_axis_demo", "io_list": [
+            {"name": "x_fb", "dir": "input", "type": "INT", "range": [0, 100], "unit": "%"}]}
+        out = SceneSpecGenerator().generate(spec, None)
+        g = out["scene"]["assets"][0]
+        assert g["type"] == "gantry_xyz"
+        assert g["params"]["travel_x"] == 1.0            # x 从 io_list 推断
+        assert g["params"]["travel_y"] == 1.0 and g["params"]["travel_z"] == 0.011  # 缺省+钳位
+        assert [e["plc_var"] for e in out["io_map"]] == ["x_fb", "x_cmd", "y_cmd", "z_cmd"]
+
 
 
 class TestValidateSceneOutputs:
@@ -164,12 +167,11 @@ class TestValidateSceneOutputs:
         assert any("未知参数" in p and "mystery" in p for p in problems)
 
     def test_parent_not_declared(self):
-        scene = SceneSpecGenerator().generate(SINGLE_AXIS_SPEC, None)["scene"]  # legacy 族含 parent 链
+        scene, io_list = self.base()
         scene["assets"].append({"id": "stow", "type": "tool_head",
                                 "parent": "nowhere", "pose": {"position": [0, 0, 0]},
                                 "params": {"carries": "pen"}})
-        assert any("V1" in p and "parent" in p
-                   for p in validate_scene_outputs(scene, SINGLE_AXIS_SPEC["io_list"]))
+        assert any("V1" in p and "parent" in p for p in validate_scene_outputs(scene, io_list))
 
     def test_synth_driver_channel_exempt_and_forgery_caught(self):
         """合成驱动通道豁免 ⊆ 检查；同名伪造（非豁免形态）仍报 V3。"""

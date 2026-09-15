@@ -12,7 +12,7 @@ scene.spec.json，其中内嵌 io_map（ioEntry 数组）——字段语义以 c
   · 三轴设备走 **gantry_xyz 单资产路线**（csk 组装器原生分支=完整机械结构+逐轴
     位置执行器；travel=stroke×scale、speed=首轴 vmax×scale、pose=笔尖行程原点）；
     io_list 缺位置指令变量时合成 <axis>_cmd 驱动通道（见 is_driver_channel）；
-    非三轴设备降级 linear_axis 族装配（v0 形态）；
+
   · io_map 只收录**可绑物理通道**（bind.quantity 必须是该组件注册的 quantity）：
     路由规则 `<axis>_fb`→`<axis>_axis`.pos（direction=out）、`<axis>_cmd`→cmd
     （direction=in）；dir=output 绑 in 量、dir=input 绑 out 量；
@@ -185,55 +185,19 @@ def _gantry_asset(device_model, io_list=()):
     }
 
 
-def _axis_assets(device_model, io_list=()):
-    """轴资产确定性生成：优先 device_model 运动学参数；无模型时从 io_list 的
-    <axis>_fb 量程/单位推断（降级路径）。scale_m_per_unit 按单位缺省规则导出。"""
-    axes = (device_model or {}).get("kinematics", {}).get("axes", [])
-    if not axes:
-        fb_by_axis = {}
-        for item in io_list:
-            m = _AXIS_RE.match(item.get("name", ""))
-            if m and m.group(2) == "fb":
-                fb_by_axis[m.group(1)] = item
-        axes = [{"axis": "%s_axis" % a, "type": "linear",
-                 "stroke": fb.get("range") or [0, 100],
-                 "unit": fb.get("unit") or "%"}
-                for a, fb in sorted(fb_by_axis.items())]
-    out = []
-    for a in axes:
-        name = a.get("axis") or a.get("device", "").rsplit("/", 1)[-1]
-        short = name.replace("_axis", "")
-        unit = a.get("unit") or "%"
-        out.append({
-            "id": "%s_axis" % short,
-            "type": "linear_axis",
-            "pose": {"position": [0.5, 0.5, 0.78], "rpy_deg": [0, 0, 0]},
-            "params": _clean_params({
-                "axis": short,
-                "axis_type": a.get("type", "linear"),
-                "stroke": a.get("stroke") or [0, 100],
-                "unit": unit,
-                "vmax": a.get("vmax"), "accel": a.get("accel"), "poswin": a.get("poswin"),
-                "scale_m_per_unit": _SCALE_BY_UNIT.get(unit, 0.01),
-            }),
-        })
-    return out
-
-
 def route_physical_channels(io_list, scene):
     """io_list → 契约 io_map 条目（确定性；同一函数供生成与自检复用）。
 
-    gantry_xyz 场景：<axis>_fb → gantry.<axis>_pos、<axis>_cmd → gantry.<axis>_cmd
-    （range=travel，SI 米）；io_list 缺位置指令变量时**合成** <axis>_cmd 三条驱动
-    通道（见 is_driver_channel——待 RFC 并入契约②后撤销）。
-    linear_axis 族（降级路径）：<axis>_fb → <axis>_axis.pos、<axis>_cmd → cmd，
-    range=stroke×scale。其余通道（按钮/灯/NC/状态字/速度指令）无契约 quantity 不路由。
+    <axis>_fb → gantry.<axis>_pos、<axis>_cmd → gantry.<axis>_cmd（range=travel，
+    SI 米）；io_list 缺位置指令变量时**合成** <axis>_cmd 三条驱动通道（见
+    is_driver_channel——待 RFC 并入契约②后撤销）。其余通道（按钮/灯/NC/状态字/
+    速度指令）无契约 quantity 不路由。
     """
     gantry = next((a for a in scene.get("assets", [])
                    if a.get("type") == "gantry_xyz"), None)
-    if gantry is not None:
-        return _route_gantry(io_list, gantry)
-    return _route_linear_axes(io_list, scene)
+    if gantry is None:
+        return []          # 非 gantry 资产无可绑通道（plotter 多资产模块已移除）
+    return _route_gantry(io_list, gantry)
 
 
 def _route_gantry(io_list, gantry):
@@ -270,78 +234,14 @@ def _route_gantry(io_list, gantry):
     return entries
 
 
-def _route_linear_axes(io_list, scene):
-    by_id = {a["id"]: a for a in scene.get("assets", [])}
-    entries = []
-    for item in io_list:
-        m = _AXIS_RE.match(item.get("name", ""))
-        if not m:
-            continue
-        axis, kind = m.groups()
-        asset = by_id.get("%s_axis" % axis)
-        if asset is None or asset.get("type") != "linear_axis":
-            continue
-        expect_dir = "input" if kind == "fb" else "output"
-        if item.get("dir") != expect_dir:
-            continue
-        etype = _ENTRY_TYPE.get(item.get("type"))
-        if etype != "float":
-            continue
-        p = asset.get("params", {})
-        stroke, scale = p.get("stroke") or [0, 100], p.get("scale_m_per_unit") or 0.01
-        entries.append({
-            "plc_var": item["name"],
-            "dir": expect_dir,
-            "type": "float",
-            "bind": {"asset": asset["id"],
-                     "quantity": "pos" if kind == "fb" else "cmd",
-                     "range": [round(stroke[0] * scale, 9), round(stroke[1] * scale, 9)]},
-        })
-    return entries
-
-
 class SceneSpecGenerator:
     """spec (+device_model) → scene.spec.json（内嵌 io_map），确定性。"""
 
     def generate(self, spec, device_model=None):
         io_list = spec.get("io_list", [])
-        if set(_axes_info(device_model, io_list)) >= {"x", "y", "z"}:
-            # gantry 路线：三轴设备走 csk 组装器原生单资产分支（完整机械结构 +
-            # 逐轴位置执行器）；work_table/hmi_panel 语义不进 spec（组装器按 travel
-            # 铺底板/纸面，按钮/灯由验收脚本侧承载）
-            assets = [_gantry_asset(device_model, io_list)]
-        else:
-            # 降级路径：非三轴设备保持 linear_axis 族装配（v0 形态）
-            assets = [{
-                "id": "ground", "type": "ground",
-                "pose": {"position": [0, 0, 0]},
-                "params": {"size": [1.5, 1.5], "friction": 0.8},
-            }, {
-                "id": "table", "type": "work_table",
-                "pose": {"position": [0.5, 0.5, 0.0]},
-                "params": {"size": [1.2, 1.2, 0.75], "paper_area": "20..80 x 20..80"},
-            }]
-            assets.extend(axis_assets := _axis_assets(device_model, io_list))
-            if axis_assets:  # 轴链按声明顺序，tool/pen 挂链尾（契约 README §5）
-                tail = axis_assets[-1]["id"]
-                assets.append({
-                    "id": "plot_head", "type": "tool_head", "parent": tail,
-                    "pose": {"position": [0.5, 0.5, 0.79]},
-                    "params": {"carries": "pen", "acceptance_asset": True},
-                })
-                assets.append({
-                    "id": "pen", "type": "pen", "parent": "plot_head",
-                    "pose": {"position": [0.5, 0.5, 0.785]},
-                    "params": {"tip_diameter_mm": 0.5, "stroke_mm": 10},
-                })
-            assets.append({
-                "id": "panel", "type": "hmi_panel",
-                "pose": {"position": [-0.35, 0.5, 0.0]},
-                "params": {"buttons": sorted(p["name"] for p in io_list if p["dir"] == "input"
-                                              and p["type"] == "BOOL"),
-                           "lamps": sorted(p["name"] for p in io_list if p["dir"] == "output"
-                                           and p["type"] == "BOOL")},
-            })
+        # gantry 唯一路线（plotter 多资产遗留模块已移除，2026-09-09）：
+        # 三轴信息缺项用库缺省行程补齐（_GANTRY_FALLBACK_TRAVEL）
+        assets = [_gantry_asset(device_model, io_list)]
 
         io_map = route_physical_channels(io_list, {"assets": assets})
         scene = {

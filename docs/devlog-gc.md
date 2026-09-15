@@ -826,3 +826,31 @@ iter_003 仅 0.32 弱命中且偏题——**该失败族此前无任何可复用
 
 诊断工具留 workspace/（probe_2b.py / probe_tl / iter003_* 补丁对照件，不入库）。
 运行时已重部署 plotter3axis 种子复位。**未提交未推送。**
+
+## 2026-09-10 领域知识库 v0 落地（看板待配合【负责人指令 lx 代登记】响应，未提交）
+
+按方案三段实施（P1 还账 → P2 打底 → P3 接线）：
+
+- **P1 v4.0 骨架同步**：plcgen_skill「基础 FB 骨架冻结」从 v3.0 升 v4.0——INTERP
+  换命令级动力学接口（vel/acc/dec_req 总线 + Aborted 中止；无 VMAX/MAXPOS 参数，
+  越程改 MC 层 ErrorID=1）+序列器连续跟踪分支标注；DRIVE402 常量修订（KP 8→25、
+  QS_DECEL 200→120，对齐 motion3axis v4.0）；MC 层补全（MC_POWER v4.0 全文补回、
+  MC_MOVEABSOLUTE 校验+ErrorID+中止沿检测全文、MC_HALT 全文、MOVERELATIVE/
+  READSTATUS/READACTUALPOSITION 签名与要点）+总线接线形态（手工 AXIS_REF：
+  tgt/vel/acc/dec 总线 + 触发线 OR）；**P23 联动核对：v4.0 骨架无 ELSE 复位兜底 ✓**。
+- **P1 防漂移护栏**：tests/test_skill_skeleton_sync.py——从已验收种子
+  （motion3axis.xml）提取 FB 接口指纹与 skill 内联骨架逐块比对（全内联块签名
+  相等 + 摘要块端口齐备 + v4.0 关键语义词在场 + P23 无兜底形态），master 骨架
+  演进而 skill 未跟随时变红。本次"落后一个版本"的根因（无同步校验）就此关闭。
+- **P2 四域知识文档 v0**：src/agent/knowledge/domain/{st,plcopen_xml,
+  automationml,motion_control}.md——38 条条目（ST-12/PX-07/AML-07/MC-12），
+  每条附可运行出处（已验收 XML/实现代码/坑库实证），契约内容只引 §节号不复写。
+- **P3 消费接线**：knowledge/domain/loader.py（按任务关键词选域 → 条目索引摘要，
+  token 预算内一行一条）；pipeline.build_messages 注入 system prompt（异常不阻塞
+  生成）；attribution 蒸馏 prompt 挂全量条目索引（diagnosis 可标注条目号溯源）。
+- 工具坑：Bash 工具 heredoc 会吞反斜杠（\n 变 \n），含转义序列的代码补丁必须
+  走 Edit 工具；pipeline/attribution 源文件为 CRLF 行尾。
+- 遗留：plotter3axis.xml（gc 种子）仍 v3 形态 INTERP（VMAX 参数+跟踪分支），
+  升 v4.0 总线形态属后续任务；skill 序列器模板已标注两种形态兼容。
+
+pytest 193→197 全绿。**未提交未推送。**

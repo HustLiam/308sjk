@@ -1,0 +1,57 @@
+{
+  "gate": "generate",
+  "ok": false,
+  "errors": [
+    "[consistency] R2: io_list 变量 'run' 在 XML 定位变量表中不存在（未生成或改名）",
+    "[consistency] R2: io_list 变量 'cmd_home' 在 XML 定位变量表中不存在（未生成或改名）",
+    "[consistency] R2: io_list 变量 'cmd_go' 在 XML 定位变量表中不存在（未生成或改名）",
+    "[consistency] R2: io_list 变量 'jog_fwd' 在 XML 定位变量表中不存在（未生成或改名）",
+    "[consistency] R2: io_list 变量 'jog_rev' 在 XML 定位变量表中不存在（未生成或改名）",
+    "[consistency] R2: io_list 变量 'quickstop' 在 XML 定位变量表中不存在（未生成或改名）",
+    "[consistency] R2: io_list 变量 'cmd_reset' 在 XML 定位变量表中不存在（未生成或改名）",
+    "[consistency] R2: io_list 变量 'cmd_draw' 在 XML 定位变量表中不存在（未生成或改名）",
+    "[consistency] R2: io_list 变量 'all_oe' 在 XML 定位变量表中不存在（未生成或改名）",
+    "[consistency] R2: io_list 变量 'move_done' 在 XML 定位变量表中不存在（未生成或改名）",
+    "[consistency] R2: io_list 变量 'any_moving' 在 XML 定位变量表中不存在（未生成或改名）",
+    "[consistency] R2: io_list 变量 'fault_any' 在 XML 定位变量表中不存在（未生成或改名）",
+    "[consistency] R2: io_list 变量 'pen_down' 在 XML 定位变量表中不存在（未生成或改名）",
+    "[consistency] R2: io_list 变量 'plot_done' 在 XML 定位变量表中不存在（未生成或改名）",
+    "[consistency] R2: io_list 变量 'x_fb' 在 XML 定位变量表中不存在（未生成或改名）",
+    "[consistency] R2: io_list 变量 'y_fb' 在 XML 定位变量表中不存在（未生成或改名）",
+    "[consistency] R2: io_list 变量 'z_fb' 在 XML 定位变量表中不存在（未生成或改名）",
+    "[consistency] R2: io_list 变量 'x_sp' 在 XML 定位变量表中不存在（未生成或改名）",
+    "[consistency] R2: io_list 变量 'y_sp' 在 XML 定位变量表中不存在（未生成或改名）",
+    "[consistency] R2: io_list 变量 'z_sp' 在 XML 定位变量表中不存在（未生成或改名）",
+    "[consistency] R2: io_list 变量 'x_sw' 在 XML 定位变量表中不存在（未生成或改名）",
+    "[consistency] R2: io_list 变量 'y_sw' 在 XML 定位变量表中不存在（未生成或改名）",
+    "[consistency] R2: io_list 变量 'z_sw' 在 XML 定位变量表中不存在（未生成或改名）",
+    "[consistency] R2: io_list 变量 'x_v' 在 XML 定位变量表中不存在（未生成或改名）",
+    "[consistency] R2: io_list 变量 'y_v' 在 XML 定位变量表中不存在（未生成或改名）",
+    "[consistency] R2: io_list 变量 'z_v' 在 XML 定位变量表中不存在（未生成或改名）"
+  ],
+  "attribution": {
+    "gate": "generate",
+    "errors": [
+      "[consistency] R2: io_list 变量 'run' 在 XML 定位变量表中不存在（未生成或改名）",
+      "[consistency] R2: io_list 变量 'cmd_home' 在 XML 定位变量表中不存在（未生成或改名）",
+      "[consistency] R2: io_list 变量 'cmd_go' 在 XML 定位变量表中不存在（未生成或改名）",
+      "[consistency] R2: io_list 变量 'jog_fwd' 在 XML 定位变量表中不存在（未生成或改名）",
+      "[consistency] R2: io_list 变量 'jog_rev' 在 XML 定位变量表中不存在（未生成或改名）",
+      "[consistency] R2: io_list 变量 'quickstop' 在 XML 定位变量表中不存在（未生成或改名）",
+      "[consistency] R2: io_list 变量 'cmd_reset' 在 XML 定位变量表中不存在（未生成或改名）",
+      "[consistency] R2: io_list 变量 'cmd_draw' 在 XML 定位变量表中不存在（未生成或改名）"
+    ],
+    "pitfalls": [
+      {
+        "id": "P10",
+        "title": "PLC_PRG 内单扫描选通赋值被吞",
+        "diagnosis": "主程序内单扫描选通/边沿记忆变量的赋值被优化器静默丢弃（症状：序列器步进空转、FB 状态不翻转、手动路径正常）",
+        "fix": "改连续跟踪模式：触发线全程电平保持，目标值变化自动起新轨迹（INTERP 增 fire AND NOT Busy AND 目标变化分支）；或经 %QX 线圈级信号驱动。PLC_PRG 内不写单扫描脉冲逻辑"
+      }
+    ],
+    "similar_fixes": [],
+    "repair_hints": [
+      "改连续跟踪模式：触发线全程电平保持，目标值变化自动起新轨迹（INTERP 增 fire AND NOT Busy AND 目标变化分支）；或经 %QX 线圈级信号驱动。PLC_PRG 内不写单扫描脉冲逻辑"
+    ]
+  }
+}
