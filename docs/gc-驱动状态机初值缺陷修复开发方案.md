@@ -27,7 +27,7 @@
 
 ### 1.2 适用范围
 
-本方案覆盖生成侧（PLC 生成器知识）、闸门侧（`xml2st` 静态契约校验）、验收证据侧（验收反馈留档、归因坑库）与迭代策略侧（repair 熔断）四类修复。不涉及五闸门结构调整与仿真侧（csk）组件。
+本方案覆盖生成侧（PLC 生成器知识）、闸门侧（`xml2st` 静态契约校验）、验收证据侧（验收反馈留档、归因故障库）与迭代策略侧（repair 熔断）四类修复。不涉及五闸门结构调整与仿真侧（csk）组件。
 
 ### 1.3 术语与缩略语
 
@@ -84,7 +84,7 @@ llm10 战役（8 轮预算，`--no-curated-patterns` 泛化口径，闸门 3/4 �
 | 编号 | 需求 | 验证方式 |
 |---|---|---|
 | OBJ-1 | "CASE 选择器无初值且无 ELSE 分支"类缺陷在闸门 1 被确定性拒绝（毫秒级、零运行时依赖） | TC-INT-1/2 |
-| OBJ-2 | 该缺陷漏网至在线验收时，归因引擎命中坑库并给出修法，repair 一轮收敛 | TC-INT-3 |
+| OBJ-2 | 该缺陷漏网至在线验收时，归因引擎命中故障库并给出修法，repair 一轮收敛 | TC-INT-3 |
 | OBJ-3 | repair 对零推进失败提前熔断：连续 2 轮失败签名同质即回退全新生成 | TC-UNIT-4/5 |
 | OBJ-4 | 验收证据全量留档（gate.json），LLM 反馈截断时显式注明 | TC-UNIT-3 |
 
@@ -103,7 +103,7 @@ llm10 战役（8 轮预算，`--no-curated-patterns` 泛化口径，闸门 3/4 �
 | V0 | 根因验证 | 战役产物临时操作（不入库） | 一次性验证 | — |
 | F1 | 静态校验规则 R7 | `src/pipeline/xml2st.py` | 根治（RFC 项） | D2 |
 | F2a | 验收反馈全量落盘 | `src/agent/orchestrator.py` | 证据系统 | D4 |
-| F2b | 坑库条目 P18 | `src/agent/knowledge/pitfalls.json` | 证据系统 | D3 |
+| F2b | 故障库条目 P18 | `src/agent/knowledge/pitfalls.json` | 证据系统 | D3 |
 | F2c | 生成侧硬规则 | `src/agent/prompts/plcgen_skill.md` | 生成侧防患 | D1 |
 | F3 | 零推进提前熔断 | `src/agent/orchestrator.py` | 迭代策略 | D5 |
 
@@ -146,7 +146,7 @@ llm10 战役（8 轮预算，`--no-curated-patterns` 泛化口径，闸门 3/4 �
 
 **F2a 验收反馈全量落盘**：`acceptance_gate`（`orchestrator.py:171-190`）返回全量输出；`_dump_gate` 写 `gate.json` 使用全量；仅 `_pack_feedback`（进 LLM 反馈包）保留尾部截断，并在反馈文本中注明 `"（验收输出已截断至尾部 40 行，全量见 gate.json）"`。LLM token 预算不变，证据不再丢失。
 
-**F2b 坑库条目 P18**（`src/agent/knowledge/pitfalls.json`，现有 P01–P17 之后）：
+**F2b 故障库条目 P18**（`src/agent/knowledge/pitfalls.json`，现有 P01–P17 之后）：
 
 ```json
 {
@@ -215,7 +215,7 @@ llm10 战役（8 轮预算，`--no-curated-patterns` 泛化口径，闸门 3/4 �
 | 任务 | 内容 | 前置条件 | 产出 | 工作量 | 负责侧 |
 |---|---|---|---|---|---|
 | W1 | V0 根因验证 | OpenPLC 在线 | 验证结论（附录 A） | 0.5h | gc |
-| W2 | F2b 坑库 P18 + F2c skill 规则 | 无 | pitfalls.json/plcgen_skill.md + TC-UNIT-6 | 1h | gc |
+| W2 | F2b 故障库 P18 + F2c skill 规则 | 无 | pitfalls.json/plcgen_skill.md + TC-UNIT-6 | 1h | gc |
 | W3 | F2a 反馈全量落盘 | 无 | orchestrator.py + TC-UNIT-3 | 0.5h | gc |
 | W4 | F1 静态校验 R7 | **RFC 评审通过（§9.1）** | xml2st.py + TC-UNIT-1/2 + TC-INT-1/2 | 1.5h | gc 实现 / lx 评审 |
 | W5 | F3 零推进熔断 | 无 | orchestrator.py + TC-UNIT-4/5 | 1.5h | gc |

@@ -8,7 +8,7 @@
 
 | 文件 | 域 | 权威交叉引用 |
 |---|---|---|
-| st.md | IEC 61131-3 ST 子集与边界行为 | lx 契约②（lx 文档 §3）；坑库 P01~P23 |
+| st.md | IEC 61131-3 ST 子集与边界行为 | lx 契约②（lx 文档 §3）；故障库 P01~P23 |
 | plcopen_xml.md | IEC 61131-10 交换格式 | src/pipeline/xml2st.py（R1 实现）；已验收 XML |
 | automationml.md | AutomationML / IEC 62714 | src/agent/aml_parser.py；examples/aml 双基准 |
 | motion_control.md | PLCopen Motion Control | 《运动控制代码生成方案》§2（v4.0）；motion3axis.xml |
