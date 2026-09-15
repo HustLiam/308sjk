@@ -91,8 +91,18 @@ class PlcLink:
             with open(spec, encoding="utf-8") as f:
                 plc_ranges = {v["name"]: v.get("range")
                               for v in json.load(f).get("io_list", [])}
-        self.channels = [c for c in (make_channel(e, plc_ranges) for e in io_map)
-                         if c is not None]
+        self.channels = []
+        for e in io_map:
+            c = make_channel(e, plc_ranges)
+            if c is None:
+                continue
+            # 通道名配对防护（2026-09-15 实测教训）：io_map 的 plc_var 在 PLC spec
+            # io_list 查不到 range 时按 1:1 回退——若程序量程非米会整机冲行程，
+            # 故显式告警而非静默吞掉
+            if plc_ranges and e["plc_var"] not in (plc_ranges or {}):
+                print(f"[plc_link] WARNING: 通道 {e['plc_var']} 未在 spec io_list 找到，"
+                      f"按 1:1（寄存器值=米）换算——请核对程序变量名与 io_map plc_var 一致")
+            self.channels.append(c)
         self.out_chs = [c for c in self.channels if c["dir"] == "output"]
         self.in_chs = [c for c in self.channels if c["dir"] == "input"]
         self.coil_bits = sum(1 for e in io_map if e.get("type") == "bool")
@@ -101,6 +111,16 @@ class PlcLink:
         self.client = ModbusTcpClient(host, port=port)
         self._stop = threading.Event()
         self._thread = None
+
+    def describe(self) -> str:
+        """换算表一览——启动打印，配对/量纲错误一眼可见。"""
+        lines = [f"plc_link 换算表（{len(self.channels)} 通道，{self.host}:{self.port}）："]
+        for c in self.channels:
+            arrow = "PLC→sim" if c["dir"] == "output" else "sim→PLC"
+            lines.append(f"  {c['plc_var']:<12} %QW{c['qw']} {arrow} "
+                         f"plc[{c['lo_plc']:g},{c['hi_plc']:g}] ↔ m[{c['lo_scene']:g},{c['hi_scene']:g}]"
+                         f"  scale={c['m_per_unit']:g} m/unit")
+        return "\n".join(lines)
 
     # ---------- 单周期（测试可直接调用；client 可注入桩） ----------
 

@@ -120,6 +120,7 @@ def main():
         plc_link.start()
         print(f"PLC 回环已启动：轮询 OpenPLC {args.plc_host}:{args.plc_port} 的 %Q 区"
               f"（通道 {len(plc_link.channels)}，换算归桥，周期 {plc_link.period_s * 1000:.0f}ms）")
+        print(plc_link.describe())
 
     model.opt.timestep = 1.0 / args.physics_hz
     last_cmd = {a: 0.0 for a in AXES}       # 跟踪起点 = 0（作者位姿），阶跃必成斜坡

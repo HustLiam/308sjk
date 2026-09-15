@@ -12,8 +12,13 @@ from pymodbus.client import ModbusTcpClient
 cli = ModbusTcpClient("127.0.0.1", port=502, timeout=2.0)
 assert cli.connect()
 
-# FC15 整组写线圈（完整字节跨度，SafeCoilIO 纪律）：bit0=run，bit16=cmd_draw
-GROUP = 24
+# FC15 整组写线圈（完整字节跨度，SafeCoilIO 纪律）。位地址与程序 %QX 声明一致，
+# 具名常量杜绝手算索引（2026-09-15 实测教训：位索引算错→静默不触发）
+RUN_BIT = 0        # %QX0.0 run
+CMD_DRAW_BIT = 16  # %QX2.0 cmd_draw
+PEN_DOWN_BIT = 17  # %QX2.1 pen_down（读）
+PLOT_DONE_BIT = 18 # %QX2.2 plot_done（读）
+GROUP = 24         # 3 个完整字节
 
 
 def write_bits(bits):
@@ -22,18 +27,19 @@ def write_bits(bits):
 
 def read_state():
     regs = cli.read_holding_registers(address=0, count=3, slave=1)   # x/y/z_fb @ %QW0-2
-    coils2 = cli.read_coils(address=16, count=3, slave=1)            # %QX2.0=cmd_draw, 2.1=pen_down, 2.2=plot_done
+    coils2 = cli.read_coils(address=16, count=3, slave=1)            # %QX2.0-2.2
     return {
         "x": regs.registers[0], "y": regs.registers[1], "z": regs.registers[2],
-        "cmd_draw": bool(coils2.bits[0]), "pen_down": bool(coils2.bits[1]),
-        "plot_done": bool(coils2.bits[2]),
+        "cmd_draw": bool(coils2.bits[CMD_DRAW_BIT - 16]),
+        "pen_down": bool(coils2.bits[PEN_DOWN_BIT - 16]),
+        "plot_done": bool(coils2.bits[PLOT_DONE_BIT - 16]),
     }
 
 
 # 触发：run=1 + cmd_draw=1（电平触发，状态机进序列后自动忽略）
 bits = [0] * GROUP
-bits[0] = 1     # %QX0.0 run
-bits[16] = 1    # %QX2.0 cmd_draw
+bits[RUN_BIT] = 1
+bits[CMD_DRAW_BIT] = 1
 write_bits(bits)
 print("triggered: run=1, cmd_draw=1")
 
