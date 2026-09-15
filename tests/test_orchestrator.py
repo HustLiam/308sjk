@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-闭环编排器单测（半环骨架，种子模式——不调 LLM、不依赖运行时）。
+编排器单测（半环骨架，种子模式——不调 LLM、不依赖运行时）。
 
 覆盖：final 冻结路径 / 一致性失败→best_effort / 部署闸门 skipped 语义 /
 spec 校验失败即拒绝（人工介入点 1）/ runs 产物布局（gc 文档 §4）。
@@ -159,7 +159,7 @@ class TestGeneratorSeedGate:
 
 
 class TestSceneGate:
-    """闸门2b：②b 场景描述生成（确定性，契约 v1.1）+ R5 腿一致性。"""
+    """闸门2b：②b 场景描述生成（确定性，契约 v1.1）+ R5 一致性检查。"""
 
     PLOTTER_SPEC = json.loads((REPO / "examples" / "specs" / "plotter3axis.spec.json")
                               .read_text(encoding="utf-8"))

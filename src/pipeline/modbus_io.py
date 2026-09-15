@@ -87,7 +87,7 @@ def zero_regs(client, *regs):
 
 def connect(host=None, port=None):
     """连接 Modbus 服务端。缺省从环境变量 MODBUS_HOST/MODBUS_PORT 读取，
-    再缺省 127.0.0.1:502（与 serve.py 的 env 约定对齐——运行时跑在
+    再缺省 127.0.0.1:502（与 serve.py 的 env 约定一致——运行时跑在
     VM/远程机时无需改任何调用方）。"""
     import os
     host = host or os.environ.get("MODBUS_HOST", "127.0.0.1")

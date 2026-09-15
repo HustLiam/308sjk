@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 ②b 场景描述生成器单测（scene_gen.py——契约 v1.1 驱动、gantry 路线、确定性、
-产物自检、R5 腿、legacy 降级路径）。
+产物自检、R5 检查、部分轴缺省行程降级）。
 
 契约权威：contract/components.v1.1.json（csk→gc 契约包）；参考形态
 contract/scene.spec.example.json（绘图工位范本）与 contract/example1.json（龙门反向导出）。
@@ -68,7 +68,7 @@ class TestGenerate:
         assert g["pose"]["position"] == [0.0, 0.0, 0.0]          # 笔尖行程原点（扫掠区中心 0.5,0.5）
         ok, problems = consistency_check(PLOTTER_XML, PLOTTER_SPEC["io_list"], out["io_map"])
         assert ok, problems
-        assert not any(p.startswith("SKIP") for p in problems)   # R5 腿激活，无 SKIP
+        assert not any(p.startswith("SKIP") for p in problems)  # R5 检查激活，无 SKIP
 
     def test_io_map_fb_and_synth_cmd_channels(self):
         """fb→gantry.<axis>_pos；io_list 无位置指令变量时合成 <axis>_cmd 驱动通道。"""

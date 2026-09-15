@@ -67,7 +67,7 @@ class PLCGenerator:
         # 经验库相似度借鉴，杜绝 few-shot 直接套用）
         self.no_cards = no_cards
         # ⓪ 侧地址分配表（AML 通道 → %Q 地址）：设备契约，前置注入 prompt，
-        # 让首次生成即按站约定表分配（R6 仍是闸门兜底）
+        # 让首次生成即按站约定表分配（错配仍由 R6 检查拦截）
         self.address_table = address_table or {}
         # 进度播报回调 report(msg: str)——生成期间实时向控制台回报（对话风格）
         self.report = report or (lambda msg: None)

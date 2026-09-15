@@ -1,6 +1,6 @@
 """scenegen 回归测试：python scenegen/tests/test_scenegen.py（无 pytest 依赖）。
 
-场景对齐（2026-09-07 负责人指令）：现役场景 = 运动控制 motion3axis（PLC 侧，双链路联调基准）
+场景统一（2026-09-07 负责人指令）：现役场景 = 运动控制 motion3axis（PLC 侧，双链路联调基准）
 + 三轴绘图仪（gantry_xyz，本侧仿真场景）。滚筒/传送带分拣线等示例已删除；
 ②b LLM 生成本体归 gc，本侧不带 agent。
 

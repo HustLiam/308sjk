@@ -51,7 +51,7 @@ class StageLink:
                     a = q[0].upper()
                     self._cmd_attr[a] = (e["usd_prim"],
                                          f"drive:trans{a}:physics:targetPosition")
-        for a in AXES:                                   # 兜底： joint_<x> 命名约定
+        for a in AXES:                                   # 缺省回退： joint_<x> 命名约定
             self._cmd_attr.setdefault(
                 a, (f"{root_path}/joint_{a.lower()}",
                     f"drive:trans{a}:physics:targetPosition"))

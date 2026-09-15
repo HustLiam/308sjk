@@ -12,7 +12,7 @@
     name/dir/type/range，工艺语义只在 device 描述层润色），校验失败回灌修复，
     直到通过或达轮数上限；
   · 模板模式（无 client，离线回归）：io_list 预填 + task_goal=用户原文 + 最小
-    acceptance（sim_health 兜底）——结构合法但工艺空白，供 CI 冒烟；
+    acceptance（仅 sim_health 一条）——结构合法但工艺空白，供 CI 冒烟；
   · 澄清问题：build_io_list 的 pending（如 INT 缺量程）随报告返回（人工介入点 1
     的机器侧形态，LLM 多轮澄清后续接入）。
 
@@ -71,7 +71,7 @@ def extract_json(text):
 
 
 def _derive_task_id(device_model, fallback="task"):
-    """station 名派生 task_id（Plotter3AxisStation → plotter3axis）；不合法则用兜底。"""
+    """station 名派生 task_id（Plotter3AxisStation → plotter3axis）；不合法则用 fallback 默认值。"""
     station = (device_model or {}).get("station") or ""
     stem = re.sub(r"(?i)station$", "", station)
     candidate = re.sub(r"(?<!^)(?=[A-Z])", "_", stem).lower()

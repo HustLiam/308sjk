@@ -9,7 +9,7 @@
 # 使用步骤（编辑器工作流）：
 #   1. 打开（重生成后的）gantry scene.usda，按 Play（物理运行中关节驱动才生效）
 #   2. Script Editor 粘贴运行本脚本；Console 出现 "Modbus server ready" 与寄存器表
-#      （首次运行自动 pipapi 安装 pymodbus<3.9；粘贴运行前把下方 HERE 兜底路径
+#      （首次运行自动 pipapi 安装 pymodbus<3.9；粘贴运行前把下方 HERE 备用路径
 #        改成 runtime 目录——目录里须有 gantry_bridge.py / stage_link.py）
 #   3. 运行 gantry_jog_gui.py（同机或局域网均可，--host 填本机 IP），拖动画笔
 # 停止：运行 modbus_stop()；或重启 Script Editor。

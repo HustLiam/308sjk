@@ -31,7 +31,7 @@ python src/pipeline/run_deploy.py                  # 部署+编译+启动
 python src/pipeline/scenario_motion3axis.py         # 三轴定位闭环验收
 ```
 
-HTTP API 方式（agent 闭环的部署端点）：
+HTTP API 方式（agent 循环的部署端点）：
 
 ```bash
 python src/pipeline/serve.py &            # 起服务
@@ -52,7 +52,7 @@ curl -X POST http://127.0.0.1:8600/deploy --data-binary @src/plc/motion3axis.xml
 │   │   ├── patternlib.py              # 已验收 PLC 模式卡检索与策展
 │   │   ├── scene_gen.py               # SceneSpec 与 IO 映射确定性生成
 │   │   ├── consistency_check.py       # XML、io_list、IO 映射一致性检查
-│   │   ├── attribution.py             # 失败归因：知识库优先、LLM 兜底
+│   │   ├── attribution.py             # 失败归因：知识库优先、未命中由 LLM 补充
 │   │   ├── memory.py                  # 修复记忆与自动学习经验库
 │   │   ├── orchestrator.py            # 多闸门生成—验证—反馈循环
 │   │   ├── chat.py                    # 对话式 Agent CLI

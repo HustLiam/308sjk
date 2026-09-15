@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-归因引擎（gc 文档 §3.2 的落地 v0：确定性 KB 优先、LLM 兜底）。
+归因引擎（gc 文档 §3.2 的落地 v0：确定性 KB 优先，KB 未命中时 LLM 诊断）。
 
 红线（主方案 §3.5）：归因**不改变 PASS/FAIL 裁定**——闸门结论永远确定性；
 归因输出只进反馈包，为下一轮生成提供修复方向。
@@ -9,7 +9,7 @@
 分层策略：
   1. 确定性：错误文本 → memory.match_pitfalls（避坑知识库签名匹配，毫秒级）
      + memory.match_fixes（跨会话修复对）——绝大多数失败是已知模式；
-  2. LLM 兜底：KB 未命中且配置了 client 时，小上下文诊断一次（结构化输出
+  2. LLM 诊断：KB 未命中且配置了 client 时，小上下文诊断一次（结构化输出
      root_cause/repair_hints），仍标注 advisory。
 """
 
@@ -77,7 +77,7 @@ class AttributionEngine:
                 result["repair_hints"] += llm.get("repair_hints", [])
         return result
 
-    # ---------------- LLM 兜底 ----------------
+    # ---------------- LLM 补充归因（KB 未命中时） ----------------
     def distill_lesson(self, gate, errors, resolution=None, diff_hunks=None):
         """战役级经验提炼（自动化学习 B 机制）：失败证据 → 泛化经验。
 

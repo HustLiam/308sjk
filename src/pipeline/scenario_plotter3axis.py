@@ -4,7 +4,7 @@
 三轴绘图仪场景验收（plotter3axis.xml：CSP 栈 + 笔轴 INTERP_Z + 9 步绘图序列器）。
 
 【gc 代拟 @lx 复核】本脚本按 lx《PLC 代码生成与执行引擎详细设计》§5.3 场景脚本
-模式编写（require_program 身份兜底 + check 断言 + 全程不变量），结构与
+模式编写（require_program 身份校验 + check 断言 + 全程不变量），结构与
 scenario_motion3axis.py 一致；接线地址表来自 examples/aml/plotter3axis_station.aml
 的 PLC 通道（⓪ 侧地址源头）。请 lx 评审后纳入场景库。
 

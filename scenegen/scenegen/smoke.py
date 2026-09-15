@@ -67,7 +67,7 @@ def structural_check(usd_path: str, io_map: List[Dict[str, Any]]) -> List[str]:
 
 
 def isaac_headless(usd_path: str, seconds: float = 2.0) -> Dict[str, Any]:
-    """需安装 isaacsim；在闭环环境中由编排器调用。未安装时返回 skipped。"""
+    """需安装 isaacsim；在编排器全流程中调用。未安装时返回 skipped。"""
     try:
         os.environ.setdefault("OMNI_KIT_ACCEPT_EULA", "YES")
         from isaacsim.simulation_app import SimulationApp  # noqa: WPS433
