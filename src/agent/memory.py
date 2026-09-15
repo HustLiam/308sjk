@@ -74,7 +74,7 @@ class MemoryStore:
         self._load_kb()
 
     def _load_kb(self):
-        """读坑库；文件 mtime 变化时热重载——知识更新对在跑的闭环即时生效。"""
+        """读坑库；文件 mtime 变化时热重载——知识更新对在跑的 solve 循环即时生效。"""
         try:
             mtime = self.kb_path.stat().st_mtime
         except OSError:

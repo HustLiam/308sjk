@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-②b 场景描述生成器单测（scene_gen.py——契约 v1.1 驱动、确定性、产物自检、R5 腿、降级路径）。
+②b 场景描述生成器单测（scene_gen.py——契约 v1.1 驱动、确定性、产物自检、R5 检查、降级路径）。
 
 契约权威：contract/components.v1.1.json（csk→gc 契约包）；参考形态
 contract/scene.spec.example.json（绘图工位范本）与 contract/example1.json（龙门反向导出）。
@@ -63,7 +63,7 @@ class TestGenerate:
         assert None not in z["params"].values()           # null 参数会被契约闸门拒绝
         ok, problems = consistency_check(PLOTTER_XML, PLOTTER_SPEC["io_list"], out["io_map"])
         assert ok, problems
-        assert not any(p.startswith("SKIP") for p in problems)  # R5 腿激活，无 SKIP
+        assert not any(p.startswith("SKIP") for p in problems)  # R5 检查激活，无 SKIP
 
     def test_io_map_physical_channels_only(self):
         """io_map 只含可绑物理通道：fb→pos（SI range）；按钮/灯/NC/sp/sw/v 不进。"""

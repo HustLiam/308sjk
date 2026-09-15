@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-部署服务：把「XML → OpenPLC 运行」暴露成 HTTP API（agent 闭环的部署端点）。
+部署服务：把「XML → OpenPLC 运行」暴露成 HTTP API（agent 自动循环——生成→部署→验收→失败回喂——的部署端点）。
 
 用法:
     python src/pipeline/serve.py [--port 8600]
@@ -49,7 +49,7 @@ class DeployHandler(BaseHTTPRequestHandler):
 
     @staticmethod
     def _collect_status():
-        """汇总运行时状态与当前程序身份；任何一腿失败都不 500，如实报字段。"""
+        """汇总运行时状态与当前程序身份；任何一项查询失败都不 500，如实报字段。"""
         info = {"serve": "ok",
                 "runtime": {"url": os.environ.get("OPENPLC_URL", "http://127.0.0.1:8080"),
                             "status": "UNREACHABLE"},

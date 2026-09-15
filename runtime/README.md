@@ -42,7 +42,7 @@ python gantry_jog_gui.py --host <Isaac主机IP>                                 
 
 1. Isaac Sim 6.0 打开 `scene.usda`，按 **Play**；
 2. Script Editor 粘贴运行 `isaac_modbus_server.py`（首次自动 pipapi 安装
-   `pymodbus<3.9`；粘贴运行前把脚本内 `HERE` 兜底路径改成 runtime 目录）；
+   `pymodbus<3.9`；粘贴运行前把脚本内 `HERE` 备用路径改成 runtime 目录）；
 3. 同机或局域网运行 `python gantry_jog_gui.py --host <Isaac主机IP>`。
 
 ## 寄存器表（out/gantry 场景，float32 大端，2 寄存器/值）

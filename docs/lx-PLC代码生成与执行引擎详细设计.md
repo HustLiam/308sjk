@@ -34,7 +34,7 @@ workspace/program.st       Modbus TCP :502
                     SafeCoilIO / scenario_motion3axis（行为验收）
 ```
 
-两链路分工（总体方案 §3.4）：**A 做开发/CI 闭环**（lockstep、无通信抖动、归因可排除通信因素），**B 做工业代表性验收**（真实软 PLC 运行时）。本侧的 xml2st 契约即"matiec 可编译子集"，保证同一份 XML 两条链路都能编译。
+两链路分工（总体方案 §3.4）：**A 做开发/CI 迭代循环**（lockstep、无通信抖动、归因可排除通信因素），**B 做工业代表性验收**（真实软 PLC 运行时）。本侧的 xml2st 契约即"matiec 可编译子集"，保证同一份 XML 两条链路都能编译。
 
 ## 2. 设计原则（agent 生成契约的四条红线）
 
@@ -47,7 +47,7 @@ workspace/program.st       Modbus TCP :502
 
 ## 3. PLCopen XML 校验与转换（xml2st.py）
 
-纯标准库实现（`re` + `xml.etree`），无需运行时即可跑，是部署流水线的第一道闸门。
+纯标准库实现（`re` + `xml.etree`），无需运行时即可跑，是部署流水线的第一道静态检查（闸门 1）。
 
 ### 3.1 生成契约（agent 必须遵守，超出即拒）
 
@@ -126,7 +126,7 @@ python src/pipeline/xml2st.py <file.xml> --out workspace/program.st
 | 状态 | GET /dashboard | RUNNING / STOPPED / COMPILING |
 | 日志 | GET /runtime-logs | 归因素材 |
 
-### 4.3 serve.py：部署服务化（agent 闭环对接点）
+### 4.3 serve.py：部署服务化（agent 循环对接点）
 
 ```
 POST /deploy    body 为 PLCopen XML 内容（应以 <?xml 开头，否则 400 REJECTED）
@@ -142,7 +142,7 @@ curl http://127.0.0.1:8600/status
 
 成功返回 200 + deploy_result 同构 JSON；校验/编译失败返回 500 + errors——上层编排器据此走"回喂重生成"分支，不进仿真。
 
-`/status` 返回 `{runtime: {url, status}, prog_id, program}`：Web 状态腿走 OpenPLC dashboard（RUNNING/STOPPED/COMPILING，自动重登录），程序身份腿经 Modbus 读 %QW20（契约② v1.1 prog_id 约定；STOPPED 下 %Q 缓冲保持仍可读）；任一腿失败不 500，如实报字段（UNREACHABLE / null + error）。prog_id→场景名映射表在 serve.py 顶部 `PROG_NAMES`（新场景在此顺延登记）。
+`/status` 返回 `{runtime: {url, status}, prog_id, program}`：Web 状态来源走 OpenPLC dashboard（RUNNING/STOPPED/COMPILING，自动重登录），程序身份来源经 Modbus 读 %QW20（契约② v1.1 prog_id 约定；STOPPED 下 %Q 缓冲保持仍可读）；任一来源失败不 500，如实报字段（UNREACHABLE / null + error）。prog_id→场景名映射表在 serve.py 顶部 `PROG_NAMES`（新场景在此顺延登记）。
 
 ### 4.4 运行时形态
 
@@ -152,7 +152,7 @@ docker run -d --name openplc -p 8080:8080 -p 502:502 fdamador/openplc
 
 Web API :8080、Modbus TCP :502；URL 与账号可经环境变量 `OPENPLC_URL / OPENPLC_USER / OPENPLC_PASS` 覆盖。
 
-### 4.5 一键回归（run_regression.py，主方案 §8.4 CI 门禁实体）
+### 4.5 一键回归（run_regression.py，主方案 §8.4 CI 校验实体）
 
 三层按序执行，前置层失败即止（便宜层拦截原则，见协作指南 §3.2）：
 
@@ -163,7 +163,7 @@ L3 在线验收   逐场景 run_deploy 部署 + scenario_<场景>.py 验收（�
 ```
 
 - 场景自动发现：`src/plc/<name>.xml` × `src/pipeline/scenario_<name>.py` 配对，缺验收脚本记 SKIP 并提示；
-- 运行时不可达时 L3 整层 SKIP（exit 0）；`--require-online` 把 SKIP 视为失败（exit 1，完整合入门禁用）；`--skip-online` 只跑本地两层；
+- 运行时不可达时 L3 整层 SKIP（exit 0）；`--require-online` 把 SKIP 视为失败（exit 1，供合入检查用）；`--skip-online` 只跑本地两层；
 - 结果写 `workspace/regression_result.json`（`{status, layers{static,pytest,online}, errors, duration_sec}`）供 CI 消费；
 - 基准：motion3axis 三层全绿约 25~30s。
 
@@ -189,7 +189,7 @@ L3 在线验收   逐场景 run_deploy 部署 + scenario_<场景>.py 验收（�
 - 场景脚本模式：`run_deploy --xml 场景.xml` 部署 → 脚本先过**程序身份校验**（`require_program`，读 %QW20 的 prog_id，不匹配立即终止并提示部署哪个场景）→ 注入激励 → `check()` 逐条断言，PASS/FAIL 打印、退出码汇总；
 - **身份约定（生成契约 v1.1 增补，向后兼容）**：每个场景程序声明 `prog_id AT %QW20 : INT` 常量并在 ST 本体每周期写入自己的编号（motion3axis=1，新场景从 2 顺延）——验收脚本与未来 gc 编排器据此确认运行时当前加载的程序；
 - **幂等性**：motion3axis 失能即安全态（伺服环零输出、状态机回 SOD/RTSO），脚本伺服从编码器寄存器重建，**同一程序可重复运行验收**；主站时序注意：目标寄存器先于指令上升沿建立（≥1 扫描周期），否则驱动锁存旧值；
-- 停止扫描：`python src/pipeline/stop_plc.py`（逻辑停跑、定时器冻结；Modbus/Web 服务与 %Q 缓冲保持，仍可读）。
+- 停止扫描：`python src/pipeline/stop_plc.py`（逻辑停跑、定时器停在当前值；Modbus/Web 服务与 %Q 缓冲保持，仍可读）。
 
 **已验收场景清单**（经链路 B 实测通过；2026-09-03 按负责人指令精简为 motion3axis 单场景，被删场景与历史验收记录见 git）：
 
@@ -258,5 +258,5 @@ pip install -r requirements.txt
 python -m pytest tests/ -v                                            # ① 转换器单测
 python src/pipeline/run_deploy.py                                     # ② 部署（需运行时，默认 motion3axis）
 python src/pipeline/scenario_motion3axis.py                           # ③ 场景验收
-python src/pipeline/run_regression.py                                 # ④ 一键回归（①~③ 全含，CI 门禁）
+python src/pipeline/run_regression.py                                 # ④ 一键回归（①~③ 全含，CI 检查）
 ```

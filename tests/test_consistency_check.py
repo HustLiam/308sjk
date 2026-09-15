@@ -135,7 +135,7 @@ class TestIoMapLeg:
 
 
 class TestR6DeviceAddresses:
-    """R6：⓪ 侧地址腿——AML 通道地址 ≡ XML 定位变量地址（画圆场景实证）。"""
+    """R6：⓪ 侧地址检查——AML 通道地址 ≡ XML 定位变量地址（画圆场景实证）。"""
 
     MODEL_AML = REPO / "examples" / "aml" / "plotter3axis_station.aml"
     SPEC = json.loads((REPO / "examples" / "specs" / "plotter3axis.spec.json")

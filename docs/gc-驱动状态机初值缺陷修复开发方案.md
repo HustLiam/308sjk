@@ -27,7 +27,7 @@
 
 ### 1.2 适用范围
 
-本方案覆盖生成侧（PLC 生成器知识）、闸门侧（`xml2st` 静态契约校验）、闭环证据侧（验收反馈留档、归因坑库）与迭代策略侧（repair 熔断）四类修复。不涉及五闸门结构调整与仿真侧（csk）组件。
+本方案覆盖生成侧（PLC 生成器知识）、闸门侧（`xml2st` 静态契约校验）、验收证据侧（验收反馈留档、归因坑库）与迭代策略侧（repair 熔断）四类修复。不涉及五闸门结构调整与仿真侧（csk）组件。
 
 ### 1.3 术语与缩略语
 
@@ -51,7 +51,7 @@
 
 ### 2.1 问题描述
 
-llm10 战役（8 轮预算，`--no-curated-patterns` 泛化口径，闸门 3/4 真执行）中，第 5–7 轮（repair 模式）在线验收全败且错误完全同质：序列器冻结于步 1，诊断口签名 `pl_step=1 go_x_exe=1 go_y_exe=1 go_z_exe=1` 恒定不变，验收 trace 全程 `pos=(0,0,0) v=(0,0,0)`。repair 三轮零推进后熔断；第 8 轮全新生成行为突变，推进至差 4 项。
+llm10 战役（8 轮预算，`--no-curated-patterns` 泛化口径，闸门 3/4 真执行）中，第 5–7 轮（repair 模式）在线验收全败且错误完全同质：序列器卡在步 1 不动，诊断口签名 `pl_step=1 go_x_exe=1 go_y_exe=1 go_z_exe=1` 恒定不变，验收 trace 全程 `pos=(0,0,0) v=(0,0,0)`。repair 三轮零推进后熔断；第 8 轮全新生成行为突变，推进至差 4 项。
 
 ### 2.2 根因分析（已实证）
 
@@ -83,7 +83,7 @@ llm10 战役（8 轮预算，`--no-curated-patterns` 泛化口径，闸门 3/4 �
 
 | 编号 | 需求 | 验证方式 |
 |---|---|---|
-| OBJ-1 | "CASE 选择器无初值且无 ELSE 兜底"类缺陷在闸门 1 被确定性拒绝（毫秒级、零运行时依赖） | TC-INT-1/2 |
+| OBJ-1 | "CASE 选择器无初值且无 ELSE 分支"类缺陷在闸门 1 被确定性拒绝（毫秒级、零运行时依赖） | TC-INT-1/2 |
 | OBJ-2 | 该缺陷漏网至在线验收时，归因引擎命中坑库并给出修法，repair 一轮收敛 | TC-INT-3 |
 | OBJ-3 | repair 对零推进失败提前熔断：连续 2 轮失败签名同质即回退全新生成 | TC-UNIT-4/5 |
 | OBJ-4 | 验收证据全量留档（gate.json），LLM 反馈截断时显式注明 | TC-UNIT-3 |
@@ -115,7 +115,7 @@ llm10 战役（8 轮预算，`--no-curated-patterns` 泛化口径，闸门 3/4 �
 
 **内容**：对 `runs/plotter_circle_llm10/iter_005/plcopen.xml` 的 DRIVE402 接口声明 `state` 补 `:= 1` 初值（FB 类型定义一处，三实例共享），经 POST /deploy 重部署后执行 `python src/pipeline/scenario_plotter_circle.py`。
 
-**通过判据**：步 1 冻结消失、序列器前进（预期终态接近 iter_008 水平；其后包围盒/急停语义等独立缺陷不在本项范围）。
+**通过判据**：步 1 卡住现象消失、序列器前进（预期终态接近 iter_008 水平；其后包围盒/急停语义等独立缺陷不在本项范围）。
 
 **约束**：操作对象为 run 历史产物，验证完成后恢复运行时为 `src/plc/plotter3axis.xml`；产物补丁不提交（保持战役记录原貌），验证结论记入本档附录 A。
 
@@ -124,7 +124,7 @@ llm10 战役（8 轮预算，`--no-curated-patterns` 泛化口径，闸门 3/4 �
 **规则定义**：
 
 > 若 POU body ST 中存在 `CASE <选择器> OF`，且该 CASE 块无 `ELSE` 分支，且选择器变量在本 POU 接口/局部声明中无 `:= 初值`，则拒绝，追加 problem：
-> `"R7: 状态机选择器 %r 无初值且 CASE 无 ELSE 兜底——上电落入未定义状态（如 0），状态机不可达。修法：声明补 ':= 1' 类初值，或增加 ELSE 分支。"`
+> `"R7: 状态机选择器 %r 无初值且 CASE 无 ELSE 分支——上电落入未定义状态（如 0），状态机不可达。修法：声明补 ':= 1' 类初值，或增加 ELSE 分支。"`
 
 **实现设计**（`src/pipeline/xml2st.py`，不引入完整语法分析）：
 
@@ -160,7 +160,7 @@ llm10 战役（8 轮预算，`--no-curated-patterns` 泛化口径，闸门 3/4 �
 }
 ```
 
-归因引擎走既有 KB 优先匹配机制（`attribution.py`），无代码改动。
+归因引擎走既有 KB 优先匹配逻辑（`attribution.py`），无代码改动。
 
 **F2c 生成侧硬规则**（`src/agent/prompts/plcgen_skill.md` 新增条目，与既有"CiA402 空闲态约定"同族）：
 
@@ -177,7 +177,7 @@ llm10 战役（8 轮预算，`--no-curated-patterns` 泛化口径，闸门 3/4 �
 3. 叙述器播报同步："连续两轮失败证据同质，切换全新生成策略"；
 4. 归一化规则记入 devlog。
 
-**误判分析**：归一化过粗可能将有微小推进的轮次判为同质；其后果为提前进入既有熔断路径（fresh 生成本就是兜底策略），误伤面可控。
+**误判分析**：归一化过粗可能将有微小推进的轮次判为同质；其后果为提前进入既有熔断路径（fresh 生成本就是回退策略），误伤面可控。
 
 ## 6. 测试计划
 
@@ -202,7 +202,7 @@ llm10 战役（8 轮预算，`--no-curated-patterns` 泛化口径，闸门 3/4 �
 
 ### 6.3 战役级验证（可选，需 OpenPLC 在线）
 
-同口径（`--no-curated-patterns --deploy --acceptance --scenario plotter_circle --max-iters 8`）重跑画圆：编译级收敛轮次不劣化；§2.1 型冻结不再出现，或生成侧漏初值时在 1–2 轮内被 R7/P18 回路修复。
+同口径（`--no-curated-patterns --deploy --acceptance --scenario plotter_circle --max-iters 8`）重跑画圆：编译级收敛轮次不劣化；§2.1 型卡死不再出现，或生成侧漏初值时在 1–2 轮内被 R7/P18 回路修复。
 
 ### 6.4 回归基线
 
@@ -235,7 +235,7 @@ W2/W3/W5 与 RFC 评审并行推进，互不阻塞；W4 严格以 RFC 通过为�
 | 风险 | 等级 | 对策 |
 |---|---|---|
 | R7 误报（非常规 CASE 用法） | 中 | 双条件豁免（有初值或有 ELSE 即通过）；三个已验证程序作回归（TC-INT-2）；必要时类型域收敛至 INT 并记修订 |
-| RFC 评审周期延长，F1 滞后 | 中 | F2b/P18 先行兜住归因路径；F1 不设旁路，等待契约正式变更 |
+| RFC 评审周期延长，F1 滞后 | 中 | F2b/P18 先行保障归因路径；F1 不设旁路，等待契约正式变更 |
 | gate.json 因全量输出膨胀 | 低 | 验收输出量级实测为数百行内，JSON 落盘无碍；LLM 反馈仍截断 |
 | F3 签名归一化误判 | 低 | 剥离易变前缀后哈希；误判后果为提前走既有熔断路径；规则记 devlog |
 | 验证/重放期间运行时占用冲突 | 低 | 操作后即恢复 plotter3axis（prog_id=2）；与看板同步占用窗口 |
@@ -261,7 +261,7 @@ W2/W3/W5 与 RFC 评审并行推进，互不阻塞；W4 严格以 RFC 通过为�
 
 - 战役记录：`runs/plotter_circle_llm10/`（commit `01901a4`）；iter5–7 `gate.json` 诊断口时间线（pl_step=1、go_*_exe=1 恒定）；iter8 全量 FAIL 明细（差 4 项：AC7 包围盒越界 3 次、急停静止 3.05s>3s、急停复跑超时、失能 all_oe）。
 - 现场复现（2026-09-08，V0 前置证据）：iter_005 诊断注入版部署于 OpenPLC VM 192.168.12.131；run=1 三秒后 sw 全 0；cmd_draw 后设定值 1 秒内 ramp 至 50/25/10 而 v/sw 持续 12 秒恒 0。复现后运行时恢复 plotter3axis（prog_id=2，RUNNING）。
-- V0 验证结论（2026-09-08 实施，W1）：**通过判据达成**。对 iter_005 副本（workspace/v0_iter005_state_init.xml，不入库）的 DRIVE402 接口 `state` 补 `<initialValue><simpleValue value="1"/></initialValue>`（FB 类型定义一处），xml2st 静态校验通过（转换产物含 `state : INT := 1`）→ POST /deploy 编译 OK → `scenario_plotter_circle.py` 在线验收：**步 1 冻结消失**（z 反馈到达 10，`z_fb>=9` 出口通过）、**序列器前进至步 3**（XY 定位 (51,26)——步 2 容差内通过；落笔 z=0 到达；[5] 段"第二次画圆已启动""释放后重新使能" PASS——驱动器使能链路复活），与 iter_008（`state : INT := 1`）行为同型。残留失败（步 3 出口 z 目标 0↔10 振荡致 ix_z.Done 不翻转、急停静止 3.04s>3s、复跑超时、失能 all_oe）为该程序其他独立缺陷，属 §3.2 非目标范围。验证后运行时已恢复 plotter3axis（prog_id=2，RUNNING）。
+- V0 验证结论（2026-09-08 实施，W1）：**通过判据达成**。对 iter_005 副本（workspace/v0_iter005_state_init.xml，不入库）的 DRIVE402 接口 `state` 补 `<initialValue><simpleValue value="1"/></initialValue>`（FB 类型定义一处），xml2st 静态校验通过（转换产物含 `state : INT := 1`）→ POST /deploy 编译 OK → `scenario_plotter_circle.py` 在线验收：**步 1 卡住现象消失**（z 反馈到达 10，`z_fb>=9` 出口通过）、**序列器前进至步 3**（XY 定位 (51,26)——步 2 容差内通过；落笔 z=0 到达；[5] 段"第二次画圆已启动""释放后重新使能" PASS——驱动器使能链路复活），与 iter_008（`state : INT := 1`）行为同型。残留失败（步 3 出口 z 目标 0↔10 振荡致 ix_z.Done 不翻转、急停静止 3.04s>3s、复跑超时、失能 all_oe）为该程序其他独立缺陷，属 §3.2 非目标范围。验证后运行时已恢复 plotter3axis（prog_id=2，RUNNING）。
 
 ## 附录 B：关键代码位置
 

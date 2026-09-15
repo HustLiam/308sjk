@@ -14,7 +14,7 @@
      （XML 中不允许出现 io_list 未声明的对外变量——单一源头）；
   R3 类型匹配：BOOL↔BOOL；INT↔INT/UINT/WORD（lx 位宽表的字宽兼容集）；
   R4 地址不冲突：定位变量表内地址不得重复；
-  R5 io_map 腿（提供了 io_map 才检查）：每条 ioEntry 的 plc_var ∈ io_list 且
+  R5 io_map 一致性检查（提供了 io_map 才检查）：每条 ioEntry 的 plc_var ∈ io_list 且
      dir/type 兼容（bool↔BOOL、float/analog/word↔INT）、bind 为 {asset, quantity}。
      覆盖为单向（io_map ⊆ io_list）——契约 v1.1 的 io_map 只含可绑物理通道，
      按钮/灯与 NC/诊断通道不进 io_map（见 contract/README 字段语义）。
@@ -130,7 +130,7 @@ def _check_addresses(problems, located):
 
 
 def _check_io_map(problems, io_map, io_list):
-    """R5：io_map 腿对账（契约 v1.1 ioEntry：plc_var/dir/type{bool,float}/bind{asset,quantity}）。
+    """R5：io_map 对账（契约 v1.1 ioEntry：plc_var/dir/type{bool,float}/bind{asset,quantity}）。
 
     io_map 只覆盖**可绑物理通道**（契约 v1.1：hmi_panel 无注册 quantity，按钮/灯
     及 NC 设定值/状态字/速度指令通道不在其列），故覆盖检查为单向 io_map ⊆ io_list；
@@ -172,7 +172,7 @@ def _err_io_map_shape(problems, io_map):
 
 
 def _check_device_addresses(problems, located, device_model):
-    """R6：⓪ 侧地址腿——AML 通道地址是 io_map/验收脚本的共同语言，
+    """R6：⓪ 侧地址检查——AML 通道地址是 io_map/验收脚本的共同语言，
     生成代码必须逐字遵循（名字↔地址双向对账）。画圆场景实证：名字/类型
     全对但地址自编一套，静态层全绿、Modbus 层才露馅。"""
     points = {p["name"]: p.get("address") for p in device_model.get("io_points", [])
@@ -200,8 +200,8 @@ def consistency_check(xml_source, io_list, io_map=None, device_model=None):
 
     xml_source:   PLCopen XML 路径或文本；
     io_list:      requirement_spec.io_list；
-    io_map:       dict / list / 文件路径；None = 仿真侧尚未产出，跳过该腿。
-    device_model: ⓪ 的设备模型；提供时启用 R6 地址腿（名字↔地址对账）。
+    io_map:       dict / list / 文件路径；None = 仿真侧尚未产出，跳过 R5。
+    device_model: ⓪ 的设备模型；提供时启用 R6 地址检查（名字↔地址对账）。
     """
     problems = []
 

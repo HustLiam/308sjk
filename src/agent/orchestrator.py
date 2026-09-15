@@ -8,10 +8,10 @@
   ② PLC 代码生成（PLCGenerator，LLM 或种子模式）
   ②b 场景描述生成（SceneSpecGenerator，确定性：scene.spec.json 内嵌 io_map——契约 v1.1）
   闸门1 xml2st 本地契约校验（毫秒级，失败即短路不进下一环）
-  闸门2 三方一致性（XML 定位变量 ≡ io_list；提供 io_map 后 R5 腿激活）
-  闸门2b scene 闸门（②b 产物自检 + R5 腿复跑：XML ≡ io_list ≡ scene.io_map ⊆ io_list）
+  闸门2 三方一致性（XML 定位变量 ≡ io_list；提供 io_map 后 R5 检查激活）
+  闸门2b scene 闸门（②b 产物自检 + R5 检查复跑：XML ≡ io_list ≡ scene.io_map ⊆ io_list）
   闸门3 部署（可选，POST /deploy :8600 真编译；服务不在线记为 skipped，不阻塞；
-       成功后 GET /status 做运行时观测——仅记录不参与裁定，程序身份兜底仍在
+       成功后 GET /status 做运行时观测——仅记录不参与裁定，程序身份校验仍在
        验收脚本 require_program 内，闸门4 消费语义 lx 已确认，编排器不重复校验）
   闸门4 链路 B 验收（可选，scenario_<场景>.py 在线验收；OpenPLC 不在线记 skipped）
   通过 → final/ 冻结；MAX_ITERS(6) 未过 → best_effort（通过准则数最多一轮 + 失败报告）
@@ -109,7 +109,7 @@ class Orchestrator:
         self.max_iters = max_iters
         self.project_root = Path(project_root)
         self.acceptance_timeout = acceptance_timeout
-        # 归因引擎（确定性坑库优先 / LLM 兜底）——只进反馈包，不参与闸门裁定
+        # 归因引擎（确定性坑库优先，无命中时转 LLM 归因）——只进反馈包，不参与闸门裁定
         self.attribution = attribution_engine or AttributionEngine()
         self._addr_table = None
 
@@ -182,10 +182,10 @@ class Orchestrator:
                      " 状态机显式初值；越界修改会被闸门拒绝。）")
         return "\n".join(lines)
 
-    # ---------------- 自动化学习沉淀（战役结束：A 确定性翻转记录 + B LLM 提炼） ----------------
+    # ---------------- 自动化学习记录（战役结束：A 确定性翻转记录 + B LLM 提炼） ----------------
     def _learn_from_outcome(self, spec, history, base_xml, final_xml,
                             final_mode, ok, shape=None):
-        """final / best_effort 后的知识沉淀。
+        """final / best_effort 后的知识记录。
 
         A（确定性）：成功且经 repair 修复 → 记录"失败→修复骨架"经验对
         （history 末位失败即被修复对象，diff 取修复基底→final 产物）。
@@ -332,7 +332,7 @@ class Orchestrator:
     def status_probe(self):
         """GET /status（lx serve.py）：运行时状态 + 程序身份观测。
 
-        仅记录、不参与闸门裁定——require_program 已内置于验收脚本做身份兜底
+        仅记录、不参与闸门裁定——require_program 已内置于验收脚本做身份校验
         （闸门4 消费语义 lx 2026-09-03 确认，编排器不重复校验）。服务不在线
         返回 None。
         """
@@ -518,13 +518,13 @@ class Orchestrator:
     def solve(self, spec, generator, deploy=False, acceptance=None, echo=None,
               scene_generator=None, device_model=None, address_table=None,
               trajectory=None):
-        """执行闭环。返回 {status: final|best, iter, run_dir}。
+        """执行完整循环（生成→检查→部署→验收，失败回喂重试）。返回 {status: final|best, iter, run_dir}。
 
         acceptance: 场景名（None=不跑闸门4）——用于定位 src/pipeline/scenario_<名>.py；
         deploy: 是否先过闸门3（真编译）。两闸门独立可选，验收脚本内 require_program
         自带程序身份校验，直接跑旧部署程序不会误判。
         scene_generator: ②b 场景描述生成器（None=跳过 ②b；默认建议
-        SceneSpecGenerator()，确定性产物激活一致性 R5 全腿）。
+        SceneSpecGenerator()，确定性产物激活一致性 R5 全部检查项）。
         device_model: ⓪ 的设备模型（供 ②b 取 IO 地址与轴参数；None=降级分配）。
         echo: 可选回调 fn(event, payload)，供 CLI/测试观察循环过程。
         trajectory: 轨迹规划参数（trajectory.plan_* 产物；None=常规生成）。
@@ -641,7 +641,7 @@ class Orchestrator:
 
             gates = {"xml2st": True, "consistency": [p for p in problems2 if p.startswith("SKIP")] or True}
 
-            # ---- ②b 场景描述生成（确定性，契约 v1.1）+ 闸门2b：R5 腿（XML ≡ io_list ≡ scene.io_map）----
+            # ---- ②b 场景描述生成（确定性，契约 v1.1）+ 闸门2b：R5 检查（XML ≡ io_list ≡ scene.io_map）----
             if scene_generator is not None:
                 try:
                     scene_out = scene_generator.generate(spec, device_model)
@@ -728,7 +728,7 @@ class Orchestrator:
     # ---------------- 产物 ----------------
     @staticmethod
     def _pack_feedback(errors, history, attribution=None):
-        """反馈包：失败证据原文 + 归因（坑库/历史修复/LLM 兜底）+ 迭代记忆。
+        """反馈包：失败证据原文 + 归因（坑库/历史修复/无命中时 LLM 归因）+ 迭代记忆。
 
         失败证据超 FEEDBACK_TAIL_LINES 行时截尾并注明（LLM token 预算不变，
         全量证据落该轮 gate.json——证据不再丢失）。
@@ -764,9 +764,9 @@ class Orchestrator:
         (iter_dir / "gate.json").write_text(
             json.dumps(payload, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
 
-    # ---------------- 知识沉淀（final 后） ----------------
+    # ---------------- 知识记录（final 后） ----------------
     def _consolidate(self, generator, spec, gates, history):
-        """final 后的知识沉淀：情景记忆（修复对）+ 模式卡自动策展。
+        """final 后的知识记录：情景记忆（修复对）+ 模式卡自动策展。
 
         策展条件从严：种子模式 + 在线验收 ok（skipped 不入模式库——未在线
         验证的场景不构成"已验收模式"）。

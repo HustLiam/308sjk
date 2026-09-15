@@ -8,7 +8,7 @@
     2. 输入自然语言需求（多行，空行结束；可粗粒度）
     3. ① 需求理解（LLM，io_list 锚定设备模型）→ **规格回显**
     4. 用户：回车确认 / 直接输入修正文本（定向最小修改，再次回显）/ q 放弃
-    5. 确认后自主执行 solve 闭环（②a 生成→闸门→②b→部署→验收→final）
+    5. 确认后自主执行 solve 循环（②a 生成→闸门→②b→部署→验收→final）
     6. 展示交付物（IEC 61131-10 XML + 场景 JSON）；可改需求重跑或退出
 
 闸门环境（serve :8600 / OpenPLC Modbus）自动探测：可达则启用对应闸门，
@@ -249,7 +249,7 @@ def main():
           % ("在线" if serve_ok else "离线", "在线" if modbus_ok else "离线",
              ("做真实编译" if deploy else "跳过") + (" + 在线验收" if acceptance else "")))
 
-    # ---- solve 闭环（自主迭代，全程播报） ----
+    # ---- solve 循环（自主迭代，全程播报） ----
     from .orchestrator import narrate
 
     orch = Orchestrator(max_iters=args.max_iters,
