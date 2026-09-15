@@ -231,6 +231,38 @@ docker run --rm \
 
 坑三条（均已踩过）：`fdamador/openplc` 的 entrypoint 直接起 webserver（**必须 `--entrypoint bash`** 否则命令被吞、容器悬挂）；镜像是 Debian 9（EOL，apt 源失效，别指望在里面装包）；Windows 挂载源路径**正斜杠**才可靠（反斜杠第二块挂载会静默变空目录）。该 matiec 的关键版本特性（shim_gen 已适配）：定位变量外部引用为 `type*` 指针语义（shim 充当 glue）；`POUS.c` 被资源 `.c` 文本包含（unity build，勿单独编译）；头文件在 `lib/C/`；`iec2c -I <root>/lib` 指定标准库目录；入口符号恒为 `config_init__/config_run__`（配置头文件名随 CONFIGURATION 名变）。
 
+### 6.2 OpenPLC↔仿真桥接线 recipe（2026-09-15 定稿版，负责人授权 lx 拍板）
+
+**裁决**（对应看板共同议题"float32/INT16 换算归属"与"%IW 地址区冲突"）：
+
+1. **换算归桥**：桥按 io_map 的 scale 做 float32 工程量 ↔ INT16 定点换算（主方案 §3.3 原文语义），PLC 侧保持 16 位整数域、不引入 REAL 位重组；
+2. **传感注入统一 %QW**：桥不使用 %IW（契约②"%I 区禁用"）；契约③ `modbus.plc_addr` pattern 收紧为 `^%Q[XW]`（2026-09-09 lx 评审意见落地）；csk build-mjcf 的地址分配同步修改。
+
+**接线拓扑（定稿）**：仿真侧为 **Modbus 客户端**轮询 OpenPLC（:502）——复用 §5.1 已实测的"外部直接写 %Q"通道，与验收脚本同一机制；**不动 OpenPLC 的 modbus_client 轮询配置**（其 FC03 读固定落 %IW，与契约②冲突，不采用）：
+
+```
+OpenPLC 容器（:502，Modbus 服务端，%Q 区即 io_map 地址表）
+   ▲ FC03 读 %QW 指令变量（桥按 scale 换算→工程量→sim 关节驱动目标）
+   │ FC16 写 %QW 反馈变量（sim 关节位置按 scale 量化←桥）
+   │ %QX 命令位：fc15 整组读-改-写（SafeCoilIO 纪律，§5.2 红线）
+桥（runtime，Modbus 客户端，轮询周期建议 10~20ms，与 PLC 扫描 8.3ms 错峰）
+   ▼
+仿真运行时（mujoco_jog_runtime / MuJoCo，物理步 1/120s）
+```
+
+**配置一页**（桥定型即抄）：
+
+| 项 | 值 | 依据 |
+|---|---|---|
+| 对端 | `tcp://127.0.0.1:502`（OpenPLC Modbus 服务端） | 运行时形态 §4.4 |
+| 读指令 | FC03 保持寄存器，地址 = io_map `modbus.plc_addr` 换算（%QW0→40001 起），长度 = 指令通道数 | io_map 地址表 |
+| 写反馈 | FC16 保持寄存器，同上（反馈变量地址），值 = sim 工程量 ÷ scale 量化 INT16 | 裁决 1 |
+| 命令位 | %QX 一律 fc15 整组写（覆盖完整 16 位跨度），禁止 fc05 单线圈 | §5.2 实测红线 |
+| 轮询周期 | 10~20ms（≥2× PLC 扫描周期），时间阈值类验收 ≥100ms 不受影响 | 主方案 §3.4.2 |
+| 验证 | 桥起后 `curl :8600/status` 看 prog_id；示教器/JogGUI 断连不影响桥 | §4.3 |
+
+csk 落地路径（已表态）：随 RFC 同步改 `iomap.py`（地址区全 %Q）+ `gantry_bridge.py`（换算归桥），桥布局合入后本表寄存器清单按最终 io_map 对表即可。
+
 ## 7. 待办（按优先级）
 
 1. **双链路联调**：同一场景 A/B 双跑、trace 比对行为一致性（总体方案风险表"双链路行为不一致"的应对）。**链路 A L3 回环已于 2026-09-09 lx 实测通过**（Docker recipe 见 §6.1；含 csk 侧 toolchain 四处版本适配修正，待 csk 复核）——下一步 motion3axis A/B trace 比对，等 csk 判定引擎/trace 口径；
