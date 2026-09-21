@@ -16,6 +16,7 @@
    "bounds":[10,90]}
   {"id","desc","type":"invariant","signal":"x_fb","bounds":[0,100]}
 """
+import os
 import time
 
 from pymodbus.client import ModbusTcpClient
@@ -29,7 +30,10 @@ COIL_GROUP = 24          # 3 个完整字节（SafeCoilIO 纪律）
 class Collector:
     """按通道表采样 OpenPLC %Q 区。channels: [{name, addr(%QWn), type}]。"""
 
-    def __init__(self, host="127.0.0.1", port=502, poll_s=0.05):
+    def __init__(self, host=None, port=None, poll_s=0.05):
+        # 缺省从环境变量取（远程 VM 跑 OpenPLC 的场景，如 gc 的 VMware VM）
+        host = host or os.environ.get("MODBUS_HOST", "127.0.0.1")
+        port = port or int(os.environ.get("MODBUS_PORT", "502"))
         self.cli = ModbusTcpClient(host, port=port, timeout=2.0)
         assert self.cli.connect(), f"OpenPLC {host}:{port} 不可达"
         self.poll_s = poll_s

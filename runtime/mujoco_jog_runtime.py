@@ -48,7 +48,8 @@ def parse_args():
     p.add_argument("--plc", action="store_true",
                    help="启用 PLC 回环（lx 文档 §6.2：桥作客户端轮询 OpenPLC 的 %Q 区，"
                         "换算归桥——int16 工程量 ↔ SI 米）")
-    p.add_argument("--plc-host", default="127.0.0.1", help="OpenPLC Modbus 地址")
+    p.add_argument("--plc-host", default=os.environ.get("MODBUS_HOST", "127.0.0.1"),
+                   help="OpenPLC Modbus 地址（缺省取环境变量 MODBUS_HOST）")
     p.add_argument("--plc-port", type=int, default=502, help="OpenPLC Modbus 端口")
     p.add_argument("--plc-spec", default=None,
                    help="PLC requirement_spec.json（取 io_list range 推导换算；缺省 1:1）")
