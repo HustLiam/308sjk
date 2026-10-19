@@ -2,11 +2,24 @@
   "plc_output_coils": 0,
   "plc_output_registers": 6,
   "sensor_block_registers": 6,
-  "openplc_polling": {
-    "request": "FC03 read holding registers",
-    "server": "127.0.0.1:5020",
-    "start": 0,
-    "length": 6,
-    "target": "%IW0"
+  "plc_loop": {
+    "peer": "tcp://127.0.0.1:502",
+    "transport": "仿真侧桥作 Modbus 客户端轮询 OpenPLC %Q 区（lx 文档 §6.2）",
+    "read_commands": {
+      "request": "FC03 read holding registers",
+      "start": 0,
+      "length": 3,
+      "encoding": "int16_scaled（工程量定点，换算归桥）"
+    },
+    "write_feedback": {
+      "request": "FC16 write holding registers",
+      "start": 3,
+      "length": 3,
+      "encoding": "int16_scaled（工程量定点，换算归桥）"
+    },
+    "coils": {
+      "request": "FC01 读 / FC15 整组写（完整 16 位跨度，SafeCoilIO 纪律）",
+      "bits": 0
+    }
   }
 }
