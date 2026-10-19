@@ -1,5 +1,5 @@
 {
-  "scene_id": "motion3axis_demo",
+  "scene_id": "plotter_square_csp",
   "spec_version": "1.1",
   "units": "m",
   "physics": {
@@ -38,51 +38,12 @@
       "params": {
         "travel_x": 1.0,
         "travel_y": 1.0,
-        "travel_z": 1.0,
+        "travel_z": 0.1,
         "speed": 0.5
       }
     }
   ],
   "io_map": [
-    {
-      "plc_var": "x_fb",
-      "dir": "input",
-      "type": "float",
-      "bind": {
-        "asset": "gantry",
-        "quantity": "x_pos",
-        "range": [
-          0.0,
-          1.0
-        ]
-      }
-    },
-    {
-      "plc_var": "y_fb",
-      "dir": "input",
-      "type": "float",
-      "bind": {
-        "asset": "gantry",
-        "quantity": "y_pos",
-        "range": [
-          0.0,
-          1.0
-        ]
-      }
-    },
-    {
-      "plc_var": "z_fb",
-      "dir": "input",
-      "type": "float",
-      "bind": {
-        "asset": "gantry",
-        "quantity": "z_pos",
-        "range": [
-          0.0,
-          1.0
-        ]
-      }
-    },
     {
       "plc_var": "x_cmd",
       "dir": "output",
@@ -118,7 +79,46 @@
         "quantity": "z_cmd",
         "range": [
           0.0,
+          0.1
+        ]
+      }
+    },
+    {
+      "plc_var": "x_fb",
+      "dir": "input",
+      "type": "float",
+      "bind": {
+        "asset": "gantry",
+        "quantity": "x_pos",
+        "range": [
+          0.0,
           1.0
+        ]
+      }
+    },
+    {
+      "plc_var": "y_fb",
+      "dir": "input",
+      "type": "float",
+      "bind": {
+        "asset": "gantry",
+        "quantity": "y_pos",
+        "range": [
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "plc_var": "z_fb",
+      "dir": "input",
+      "type": "float",
+      "bind": {
+        "asset": "gantry",
+        "quantity": "z_pos",
+        "range": [
+          0.0,
+          0.1
         ]
       }
     }
