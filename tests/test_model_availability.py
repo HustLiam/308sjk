@@ -78,6 +78,30 @@ def test_requirement_failure_writes_unavailable_manifest(tmp_path):
     assert manifest['seed_used'] is False
 
 
+def test_exhausted_planning_writes_explicit_failure_without_generating_plc(tmp_path, monkeypatch):
+    from agent import closed_loop
+    from agent.test_plan import TestPlanError
+    monkeypatch.setattr(closed_loop.sys.stdout, 'reconfigure', lambda **kwargs: None, raising=False)
+    monkeypatch.setattr(closed_loop, 'PROJECT_ROOT', tmp_path)
+    monkeypatch.setattr(closed_loop, 'get_api_key', lambda: 'unit-test')
+    monkeypatch.setattr(closed_loop, 'parse_aml', lambda _: ({}, []))
+    monkeypatch.setattr(closed_loop, 'RequirementUnderstander', lambda **kwargs: SimpleNamespace(
+        understand=lambda *a, **kw: {'report': {}, 'spec': spec()}))
+    class Planner:
+        def __init__(self, client):
+            pass
+        def generate(self, *args):
+            raise TestPlanError('invalid generated plan')
+    monkeypatch.setattr(closed_loop, 'TestPlanGenerator', Planner)
+    def forbidden_generator(**kwargs):
+        pytest.fail('PLC generation must not start after planning failure')
+    monkeypatch.setattr(closed_loop, 'PLCGenerator', forbidden_generator)
+    monkeypatch.setattr(sys, 'argv', ['closed_loop', '--task-id', 'planning_failure'])
+    assert closed_loop.main() == 2
+    manifest = json.loads((tmp_path / 'runs/planning_failure/manifest.json').read_text(encoding='utf-8'))
+    assert manifest['status'] == 'planning_failed' and manifest['stage'] == 'test_plan'
+
+
 def test_generation_unavailability_keeps_best_and_stops_repair(tmp_path, monkeypatch):
     class Generator:
         client = SimpleNamespace(blocked_error=None, blocked_status=None)

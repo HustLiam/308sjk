@@ -13,6 +13,25 @@ class PlanFeasibilityError(TestPlanError):
     """位置与设备误差余量冲突；先修正规格/计划，不通过改PLC绕过。"""
 
 
+def _plan_error_feedback(plan, spec, first_error):
+    """Report all structural errors together; retain semantic validation evidence."""
+    errors = [str(first_error)]
+    if isinstance(plan, dict):
+        checks = plan.get('path_checks')
+        if spec.get('axes') and (not isinstance(checks, list) or not any(
+                isinstance(c, dict) and c.get('terminal') is True for c in checks)):
+            errors.append('path_checks[]须有terminal:true，与id/desc/points同级；不能放在points[]内部')
+        try:
+            from jsonschema import Draft202012Validator
+        except ImportError:
+            pass  # The authoritative semantic validator still rejects the plan.
+        else:
+            schema = json.loads((Path(__file__).resolve().parents[2] / 'schemas/test_plan.schema.json').read_text(encoding='utf-8'))
+            for error in Draft202012Validator(schema).iter_errors(plan):
+                errors.append('Schema %s: %s' % ('/'.join(map(str, error.absolute_path)), error.message))
+    return '\n'.join(dict.fromkeys(errors))
+
+
 def _number(value, lo, hi, name):
     if (isinstance(value, bool) or not isinstance(value, (int, float))
             or not math.isfinite(value) or not lo <= value <= hi):
@@ -219,18 +238,20 @@ class TestPlanGenerator:
             (evidence / ("round_%03d.response.json" % round_no)).write_text(
                 json.dumps(response, ensure_ascii=False, indent=2), encoding="utf-8")
             reply = response["choices"][0]["message"].get("content") or ""
+            plan = None
             try:
                 plan = json.loads(extract_json(reply) or "null")
                 validate_test_plan(plan, spec)
                 if spec.get("axes") and not any(c.get("terminal") is True for c in plan["path_checks"]):
                     raise TestPlanError("新生成的运动任务计划必须至少有一条 terminal:true 完整路径，明确结束时保持的位置和工艺状态")
             except (ValueError, TypeError, KeyError) as exc:
-                error = str(exc)
+                error = _plan_error_feedback(plan, spec, exc)
                 (evidence / ("round_%03d.error.txt" % round_no)).write_text(error, encoding="utf-8")
                 if isinstance(exc, PlanFeasibilityError):
                     raise
+                shown = error if len(error) <= 12000 else error[:12000] + '\n其余错误已保留在本轮error.txt，先修复上述字段。'
                 messages += [{"role": "assistant", "content": reply}, {"role": "user", "content":
-                    "计划未通过校验：%s。只修复计划结构/引用，保留原始工艺目标；重新输出完整JSON。" % error}]
+                    "计划未通过校验：%s。只修复计划结构/引用，保留原始工艺目标；重新输出完整JSON。" % shown}]
             else:
                 self.report("[test-plan] 计划校验通过：%d个动作，%d条路径检查，采样%sms。" %
                             (len(plan["actions"]), len(plan["path_checks"]), plan["sampling"]["period_ms"]))

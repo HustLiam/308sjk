@@ -116,6 +116,8 @@ def narrate(event, payload, out=print):
         out("  ✗ 模型接口余额或鉴权阻断，停止调用；最佳版本和过程证据已保存。")
     elif event == "api_unavailable":
         out("  ✗ 模型服务网络、限流或服务器故障，停止调用并保留最佳版；恢复连接后再启动新任务。")
+    elif event == "planning_failed":
+        out("  ✗ 测试计划多次校验仍未通过，已保留原始回复和错误；未进入PLC生成或部署。")
 
 
 class Orchestrator:

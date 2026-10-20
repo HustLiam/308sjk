@@ -103,6 +103,33 @@ def test_new_motion_plan_without_terminal_declaration_is_repaired(tmp_path):
     assert client.calls == 2
 
 
+def test_canonical_planning_prompt_example_matches_schema_and_terminal_contract():
+    prompt = (ROOT / 'src/agent/prompts/testplan_skill.md').read_text(encoding='utf-8')
+    start = prompt.index('{')
+    example = json.loads(prompt[start:prompt.index('\n}\n', start) + 2])
+    example['task_id'] = 'example_task'
+    js = pytest.importorskip('jsonschema')
+    js.validate(example, json.loads((ROOT / 'schemas/test_plan.schema.json').read_text(encoding='utf-8')))
+    assert any(check.get('terminal') is True for check in example['path_checks'])
+
+
+def test_plan_repair_receives_simultaneous_structure_errors(tmp_path):
+    bad, good = plan(), plan()
+    good['path_checks'][0]['terminal'] = True
+    bad['actions'][2]['value'] = False
+    bad['path_checks'][0]['points'][0]['terminal'] = True
+    class Client:
+        calls = []
+        def chat_completions(self, payload, **kwargs):
+            self.calls.append(copy.deepcopy(payload))
+            return {'choices': [{'message': {'content': json.dumps(bad if len(self.calls) == 1 else good)}}]}
+    client = Client()
+    TestPlanGenerator(client, report=lambda _: None).generate('task', spec(), tmp_path)
+    feedback = client.calls[1]['messages'][-1]['content']
+    assert 'pulse' in feedback and 'terminal' in feedback and 'points' in feedback
+    assert 'Schema' in feedback
+
+
 @pytest.mark.parametrize("fault", ["output_write", "feedback_write", "unknown_signal", "short_pulse", "slow_sampling",
     "infinite_timeout", "wrong_task", "missing_cleanup", "script", "second_start", "missing_completion",
     "command_as_feedback", "loose_tolerance", "missing_axis", "unknown_property", "bad_initial", "bad_state"])

@@ -17,7 +17,7 @@ from .orchestrator import Orchestrator, narrate
 from .pipeline import PLCGenerator
 from .requirement import RequirementUnderstander
 from .scene_gen import SceneSpecGenerator
-from .test_plan import TestPlanGenerator, PlanFeasibilityError
+from .test_plan import TestPlanGenerator, TestPlanError, PlanFeasibilityError
 from .memory import MemoryStore
 
 
@@ -158,6 +158,14 @@ def main():
         if record_api_blocked(exc, run, client, "test_plan"):
             return 2
         raise
+    except TestPlanError as exc:
+        data = {"status": "planning_failed", "stage": "test_plan", "error": str(exc),
+                "model": MODEL, "model_calls": client.calls, "seed_used": False, "generation_mode": "full_xml"}
+        for name in ("planning_error.json", "manifest.json"):
+            (run / name).write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        narrate("planning_failed", data)
+        print("RESULT: planning_failed -> %s" % run, flush=True)
+        return 2
     print("[preflight] LLM 测试计划已校验；将按计划启动仿真并执行激励。", flush=True)
     generator = PLCGenerator(client=client, no_cards=True, generation_mode="full_xml", report=lambda s: print(s, flush=True))
     client.stage = "plc_generation_and_diagnosis"
