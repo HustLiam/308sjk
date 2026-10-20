@@ -43,10 +43,6 @@
         <Attribute Name="address"><Value>%QX0.5</Value></Attribute>
         <Attribute Name="description"><Value>MC_Stop 快停（电平，QSA 受控减速）</Value></Attribute>
       </ExternalInterface>
-      <ExternalInterface Name="inject_fault" ID="if_inject_fault" RefBaseClassPath="308sjkInterfaceClassLib/Signal/DigitalInput">
-        <Attribute Name="address"><Value>%QX0.6</Value></Attribute>
-        <Attribute Name="description"><Value>故障注入（目标越程 150 → FRA/FA）</Value></Attribute>
-      </ExternalInterface>
       <ExternalInterface Name="cmd_reset" ID="if_cmd_reset" RefBaseClassPath="308sjkInterfaceClassLib/Signal/DigitalInput">
         <Attribute Name="address"><Value>%QX0.7</Value></Attribute>
         <Attribute Name="description"><Value>MC_Reset 故障复位（上升沿）</Value></Attribute>

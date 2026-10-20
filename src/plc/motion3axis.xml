@@ -34,6 +34,9 @@
             <variable name="dec_req">
               <type><REAL /></type>
             </variable>
+            <variable name="POSWIN">
+              <type><REAL /></type>
+            </variable>
           </inputVars>
           <outputVars>
             <variable name="Setpoint">
@@ -71,10 +74,6 @@
             <variable name="SCAN_T">
               <type><REAL /></type>
               <initialValue><simpleValue value="0.02" /></initialValue>
-            </variable>
-            <variable name="POSWIN">
-              <type><REAL /></type>
-              <initialValue><simpleValue value="2.0" /></initialValue>
             </variable>
           </localVars>
         </interface>
@@ -890,9 +889,6 @@ Position := ActualPosition;</xhtml>
             <variable name="quickstop" address="%QX0.5">
               <type><BOOL /></type>
             </variable>
-            <variable name="inject_fault" address="%QX0.6">
-              <type><BOOL /></type>
-            </variable>
             <variable name="cmd_reset" address="%QX0.7">
               <type><BOOL /></type>
             </variable>
@@ -1233,11 +1229,11 @@ hlt_z(fire := cmd_halt, ax_busy := ix_z.Busy);
 
 (* ---- 插补引擎：每扫描输出插补点（回零时目标=当前定位字, 场景约定 sp=0） ---- *)
 ix_x(fire := go_x_exe OR hm_x_exe OR rel_x_exe, pos_target := x_tgt,
-     hold_req := hlt_x.Stopping, vel_req := x_vel_bus, acc_req := x_acc_bus, dec_req := x_dec_bus);
+     hold_req := hlt_x.Stopping, vel_req := x_vel_bus, acc_req := x_acc_bus, dec_req := x_dec_bus, POSWIN := 2.0);
 ix_y(fire := go_y_exe OR hm_y_exe OR rel_y_exe, pos_target := y_tgt,
-     hold_req := hlt_y.Stopping, vel_req := y_vel_bus, acc_req := y_acc_bus, dec_req := y_dec_bus);
+     hold_req := hlt_y.Stopping, vel_req := y_vel_bus, acc_req := y_acc_bus, dec_req := y_dec_bus, POSWIN := 2.0);
 ix_z(fire := go_z_exe OR hm_z_exe OR rel_z_exe, pos_target := z_tgt,
-     hold_req := hlt_z.Stopping, vel_req := z_vel_bus, acc_req := z_acc_bus, dec_req := z_dec_bus);
+     hold_req := hlt_z.Stopping, vel_req := z_vel_bus, acc_req := z_acc_bus, dec_req := z_dec_bus, POSWIN := 2.0);
 
 (* ---- INTERP 结束（完成或中止）后清触发线 ---- *)
 IF ix_x.Done OR ix_x.Aborted THEN go_x_exe := FALSE; hm_x_exe := FALSE; rel_x_exe := FALSE; END_IF;

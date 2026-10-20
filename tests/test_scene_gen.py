@@ -64,7 +64,7 @@ class TestGenerate:
         assert [(a["id"], a["type"]) for a in scene["assets"]] == [("gantry", "gantry_xyz")]
         g = scene["assets"][0]
         assert g["params"] == {"travel_x": 1.0, "travel_y": 1.0,
-                               "travel_z": 0.011, "speed": 0.4}  # travel=stroke×scale；z 契约下界钳位
+                               "travel_z": 0.01, "speed": 0.4}   # travel=stroke×scale（z 下界已对齐 0.005，不再钳位）
         assert g["pose"]["position"] == [0.0, 0.0, 0.0]          # 笔尖行程原点（扫掠区中心 0.5,0.5）
         ok, problems = consistency_check(PLOTTER_XML, PLOTTER_SPEC["io_list"], out["io_map"])
         assert ok, problems
@@ -77,7 +77,7 @@ class TestGenerate:
         assert set(entries) == {"x_fb", "y_fb", "z_fb", "x_cmd", "y_cmd", "z_cmd"}
         assert entries["x_fb"]["bind"] == {"asset": "gantry", "quantity": "x_pos",
                                            "range": [0.0, 1.0]}
-        assert entries["z_fb"]["bind"]["range"] == [0.0, 0.011]
+        assert entries["z_fb"]["bind"]["range"] == [0.0, 0.01]
         for axis in ("x", "y", "z"):
             cmd = entries["%s_cmd" % axis]
             assert cmd["dir"] == "output" and cmd["type"] == "float"
@@ -106,10 +106,13 @@ class TestGenerate:
         assert json.dumps(a, sort_keys=True) == json.dumps(b, sort_keys=True)
 
     def test_degraded_path_without_device_model(self):
-        """无 device_model：travel 从 io_list 的 <axis>_fb 量程推断；speed 取库缺省。"""
-        out = SceneSpecGenerator().generate(PLOTTER_SPEC, None)
+        """无 device_model 且 spec 无 axes（老形态）：travel 从 io_list 量程推断、
+        speed 取库缺省——spec 带 axes 时速度直接从表算（0.4），不再走此降级。"""
+        spec = json.loads(json.dumps(PLOTTER_SPEC))
+        spec.pop("axes")
+        out = SceneSpecGenerator().generate(spec, None)
         g = out["scene"]["assets"][0]
-        assert g["params"]["travel_x"] == 1.0 and g["params"]["travel_z"] == 0.011
+        assert g["params"]["travel_x"] == 1.0 and g["params"]["travel_z"] == 0.01
         assert g["params"]["speed"] == 0.5
 
     def test_partial_axes_fall_back_to_default_travel(self):
@@ -120,7 +123,7 @@ class TestGenerate:
         g = out["scene"]["assets"][0]
         assert g["type"] == "gantry_xyz"
         assert g["params"]["travel_x"] == 1.0            # x 从 io_list 推断
-        assert g["params"]["travel_y"] == 1.0 and g["params"]["travel_z"] == 0.011  # 缺省+钳位
+        assert g["params"]["travel_y"] == 1.0 and g["params"]["travel_z"] == 0.01   # 缺省（不再钳位）
         assert [e["plc_var"] for e in out["io_map"]] == ["x_fb", "x_cmd", "y_cmd", "z_cmd"]
 
 
@@ -191,3 +194,24 @@ class TestValidateSceneOutputs:
                         "type": {"float": "INT", "bool": "BOOL"}[e["type"]]}
                        for e in spec.get("io_map", [])]
             assert validate_scene_outputs(spec, io_list) == [], name
+
+
+class TestAxesFromSpec:
+    def test_spec_axes_preferred_over_device_model(self):
+        # 分层（2026-09-22 负责人指令）：场景轴参数优先取 spec["axes"]——
+        # spec 自足，②b 不直接依赖 AML/设备模型（设备模型值不同时以 spec 为准）
+        dm = plotter_model()
+        for a in dm["kinematics"]["axes"]:
+            a["stroke"] = [0.0, 50.0]        # 假想设备模型与 spec 不一致
+        out = SceneSpecGenerator().generate(PLOTTER_SPEC, dm)
+        g = out["scene"]["assets"][0]
+        assert g["params"]["travel_x"] == 1.0        # spec.axes 的 [0,100]×0.01
+        assert g["params"]["travel_z"] == 0.01       # 非 50×0.01=0.5 / 5×0.001
+
+    def test_no_spec_axes_falls_back_to_device_model(self):
+        # 老 spec 无 axes 段 → 回退设备模型（向后兼容）
+        spec = json.loads(json.dumps(PLOTTER_SPEC))
+        spec.pop("axes")
+        out = SceneSpecGenerator().generate(spec, plotter_model())
+        g = out["scene"]["assets"][0]
+        assert g["params"]["travel_x"] == 1.0 and g["params"]["travel_z"] == 0.01

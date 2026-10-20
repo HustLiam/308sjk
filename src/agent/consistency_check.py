@@ -195,11 +195,22 @@ def _iter_local(root, tag):
 
 
 def _pou_st_text(root, pou_name):
-    """取 POU 的 ST 体文本（xhtml 叶子）；POU 或 body 不存在返回 None。"""
+    """取 POU 的 ST 体文本；支持 xhtml、html:p 和直接文本/CDATA。
+    兼容两种 PLCopen 序列化：默认命名空间下的 <xhtml> 包裹元素（种子/模板
+    形态）与 xhtml 前缀的 <html:p> 段落（LLM 生成器常见形态——逐段拼接，
+    2026-09-22 实测教训：只认前者会把合法产物的 ST 读成空，R8 全线误报）。"""
     for pou in _iter_local(root, "pou"):
         if pou.get("name") == pou_name:
             xh = pou.find(".//{*}xhtml")
-            return xh.text if xh is not None else None
+            if xh is not None:
+                return "".join(xh.itertext())
+            st = pou.find(".//{*}ST")
+            if st is None:
+                return None
+            lines = ["".join(p.itertext())
+                     for p in st.iter()
+                     if isinstance(p.tag, str) and p.tag.rsplit("}", 1)[-1] == "p"]
+            return "\n".join(lines) if lines else ("".join(st.itertext()).strip() or None)
     return None
 
 
@@ -261,16 +272,25 @@ def _check_axis_params(problems, root, device_model, scene):
 
     prg = _pou_st_text(root, "PLC_PRG") or ""
 
-    # POSWIN：INTERP 为共享 FB，类型级初值须与每根轴的 AML poswin 一致
+    # POSWIN：逐轴实例入参优先（ix_<轴>(POSWIN:=) 参数化形态，各轴可不等——
+    # 如绘图站 x/y=2.0、z=1.0）；无调用点入参的轴回退共享 FB 类型级初值
+    # （v4.0 过渡形态，全轴一致）
     poswin = _pou_var_init(root, "INTERP", "POSWIN")
-    if poswin is None:
-        problems.append("SKIP: R8 POSWIN 比对——INTERP 无 POSWIN 初值（模板形态未预期）")
-    else:
-        for a in axes:
-            if a.get("poswin") is not None and abs(poswin - a["poswin"]) > 1e-9:
-                problems.append("R8: 轴 %r POSWIN 不一致——XML INTERP=%s，AML=%s"
-                                "（poswin 是 PLC 与判定引擎共用容差源，生成方案 §6.1）"
-                                % (a["axis"], poswin, a["poswin"]))
+    for a in axes:
+        want = a.get("poswin")
+        if want is None:
+            continue
+        args = _call_args(prg, "ix_%s" % short_of(a))
+        got = _arg_number(args, "POSWIN") if args is not None else None
+        if got is None:
+            got = poswin
+        if got is None:
+            problems.append("SKIP: R8 POSWIN 比对——轴 %r 无 ix 实例入参且 INTERP "
+                            "无类型初值（模板形态未预期）" % a["axis"])
+        elif abs(got - want) > 1e-9:
+            problems.append("R8: 轴 %r POSWIN 不一致——XML=%s，AML=%s"
+                            "（poswin 是 PLC 与判定引擎共用容差源，生成方案 §6.1）"
+                            % (a["axis"], got, want))
 
     # MC 调用动力学：go/rel 实例字面量 ≡ defaults
     for a in axes:
@@ -410,5 +430,41 @@ def consistency_check(xml_source, io_list, io_map=None, device_model=None, scene
                 return False, ["R5: io_map 无法读取/解析: %s" % exc]
         _check_io_map(problems, io_map, io_list)
 
-    hard = [p for p in problems if not p.startswith("SKIP")]
-    return not hard, problems
+    # R9：输入命令消费检查（2026-09-23 训练循环新增，通用规则）：io_list 的
+    # 每个 input BOOL 命令必须在 PLC_PRG 逻辑中出现——未被引用 = 功能缺失
+    # （实测：cmd_home 完全未实现，四轮验收同错无回喂抓手）
+    try:
+        import xml.etree.ElementTree as _ET
+        root = _ET.parse(xml_source).getroot() if not _is_xml_text(xml_source)             else _ET.fromstring(xml_source)
+        prg_all = _pou_st_text(root, "PLC_PRG") or ""
+        for item in io_list or []:
+            if item.get("dir") == "input" and item.get("type") == "BOOL":
+                if item["name"] not in prg_all:
+                    problems.append(
+                        "R9: 输入命令 %r 未在程序逻辑中出现——spec 声明的每个"
+                        "输入命令都必须有处理逻辑（功能缺失）" % item["name"])
+    except Exception:
+        pass
+    # R9b：回零接线检查（2026-09-23 训练循环，Z 回零六场连庄的 decisive 检查）：
+    # cmd_home 声明时，每轴须有 hm_<轴> MC_HOME 调用，且其触发（hm_<轴>_exe
+    # 或 hm_<轴>.Busy）汇入 ix_<轴> 的 fire 表达式——只调用不接线=脉冲后停摆
+    try:
+        if any(item.get("name") == "cmd_home" for item in (io_list or [])):
+            shorts = sorted({m.group(1) for item in (io_list or [])
+                             for m in [re.match(r"^(\w+)_fb$", item.get("name") or "")]
+                             if m and len(m.group(1)) <= 2})
+            import re as _re
+            for s in shorts:
+                args_hm = _call_args(prg_all, "hm_%s" % s)
+                if args_hm is None:
+                    problems.append(
+                        "R9: 缺 hm_%s 调用——cmd_home 存在时每轴须有 MC_HOME 实例" % s)
+                    continue
+                fire_ix = _call_args(prg_all, "ix_%s" % s) or ""
+                if ("hm_%s_exe" % s) not in fire_ix and ("hm_%s." % s) not in fire_ix:
+                    problems.append(
+                        "R9: hm_%s 的触发未汇入 ix_%s 的 fire（回零触发线断——"
+                        "脉冲结束后轴不动）" % (s, s))
+    except Exception:
+        pass
+    return not any(not p.startswith("SKIP") for p in problems), problems

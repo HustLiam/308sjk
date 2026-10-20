@@ -20,8 +20,9 @@
 接口就绪后接入（csk 文档 §7.4 表），本骨架已预留挂点。
 
 产物落盘（gc 文档 §4，全量入 git）：
-  runs/<task_id>/request.json + iter_NNN/{plcopen.xml, plc.st, scene.spec.json
-  （内嵌 io_map）, gate.json} + final/ + summary.md
+  runs/<task_id>/requirements/{requirement_spec.json, <起点 AML 拷贝>} +
+  iter_NNN/{plcopen.xml, plc.st, scene.spec.json（内嵌 io_map）, gate.json} +
+  final/ + summary.md
 
 用法:
     python -m src.agent.orchestrator examples/specs/motion3axis.spec.json        # LLM 生成
@@ -37,6 +38,7 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
 import requests
@@ -52,10 +54,14 @@ _LOCAL.trust_env = False
 from .attribution import AttributionEngine  # noqa: E402
 from .config import PROJECT_ROOT, RUNS_DIR, get_api_key  # noqa: E402
 from .consistency_check import consistency_check  # noqa: E402
+from .hmi_gen import build_hmi  # noqa: E402
 from .memory import normalize_errors  # noqa: E402
 from .pipeline import PLCGenerator  # noqa: E402
+from .progress import ProgressTracker  # noqa: E402
 from .scene_gen import SceneSpecGenerator  # noqa: E402
 from .spec_validator import validate_requirement_spec  # noqa: E402
+from .program_review import scan_order_review  # noqa: E402
+from .run_metrics import record_solve  # noqa: E402
 
 MAX_ITERS = 6
 DEPLOY_URL = "http://127.0.0.1:8600/deploy"
@@ -97,7 +103,17 @@ def narrate(event, payload, out=print):
     elif event == "final":
         out("  ✓ 全部闸门通过！正在冻结交付物…")
     elif event == "best_effort":
-        out("  △ 达到迭代上限，未完全收敛——已保留推进最远的一轮和失败分析。")
+        out("  △ 本次尚未完全收敛——已保留当前最佳版和失败分析。")
+    elif event == "configuration_error":
+        out("  ✗ 运行或验收配置错误，任务已中止；不会让模型重写 PLC 来修复环境配置。")
+    elif event == "candidate_selected":
+        out("  · 当前最佳版：第%s轮；%s" % (payload.get("best_iter"), "；".join(payload.get("reasons", []))))
+    elif event == "candidate_rejected":
+        out("  · 候选未替换最佳版，下一轮仍基于第%s轮：%s" % (payload.get("best_iter"), "；".join(payload.get("reasons", []))))
+    elif event == "no_progress":
+        out("  △ 连续候选没有可靠推进，停止自动重写，保留最佳版与待处理问题。")
+    elif event == "api_blocked":
+        out("  ✗ 模型接口余额或鉴权阻断，停止调用；最佳版本和过程证据已保存。")
 
 
 class Orchestrator:
@@ -156,7 +172,37 @@ class Orchestrator:
     def _fail(self, iter_dir, i, gate, errors, history):
         """统一闸门失败处理：归因 → 增强反馈包 → 留档。返回 feedback。"""
         errors = [str(e) for e in (errors or ["（闸门失败但未携带错误详情）"])]
-        attribution = self.attribution.attribute(gate, errors)
+        context = {}
+        st_path = Path(iter_dir) / "plc.st"
+        if st_path.is_file():
+            source = st_path.read_text(encoding="utf-8")
+            context["program_st"] = source[:48000]
+            context["scan_order_review"] = scan_order_review(source)
+            context["program_truncated"] = len(source) > 48000
+        for name, path in (("requirement_spec", Path(iter_dir).parent / "requirements/requirement_spec.json"),
+                           ("test_plan", Path(iter_dir) / "test_plan.json")):
+            if path.is_file():
+                context[name] = json.loads(path.read_text(encoding="utf-8"))
+        verdict_path = Path(iter_dir) / "verdict.json"
+        if verdict_path.is_file():
+            verdict = json.loads(verdict_path.read_text(encoding="utf-8"))
+            context["failed_checks"] = [r for r in verdict.get("details", []) if r.get("pass") is not True]
+            context["unobserved_checks"] = [r for r in verdict.get("details", []) if r.get("observed") is False]
+        trace_path = Path(iter_dir) / "trace.json"
+        if trace_path.is_file():
+            trace = json.loads(trace_path.read_text(encoding="utf-8"))
+            if trace:
+                context["trace_summary"] = {
+                    name: {"first": trace[0].get(name), "last": trace[-1].get(name),
+                           "changes": sum(a.get(name) != b.get(name) for a, b in zip(trace, trace[1:]))}
+                    for name in trace[0] if name != "t"}
+                for name, summary in context["trace_summary"].items():
+                    values = [s[name] for s in trace if isinstance(s.get(name), (int, float)) and not isinstance(s.get(name), bool)]
+                    if values:
+                        summary.update(min=min(values), max=max(values))
+        attribution = self.attribution.attribute(gate, errors, context=context or None)
+        (Path(iter_dir) / "diagnostic_context.json").write_text(
+            json.dumps(context, ensure_ascii=False, indent=2), encoding="utf-8")
         feedback = self._pack_feedback(errors, history, attribution)
         lessons = self.attribution.memory.match_lessons(errors, gate=gate)
         if lessons:
@@ -262,7 +308,8 @@ class Orchestrator:
         kill 子进程——后续段不再执行，等修复重跑（脚本幂等，lx 已验证）。
         """
         live = getattr(self, "_acceptance_live", None)
-        env = dict(os.environ, PYTHONUNBUFFERED="1")   # 子进程 print 实时到达
+        env = dict(os.environ, PYTHONUNBUFFERED="1", PYTHONIOENCODING="utf-8")
+        env.update(getattr(self, "_acceptance_context", {}))
         proc = subprocess.Popen(
             [sys.executable, str(script)], cwd=str(self.project_root),
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
@@ -271,6 +318,14 @@ class Orchestrator:
         sec_re = re.compile(r"^\[(\d+)\]")
         cur_sec, failed_sec, passed_secs = None, None, []
         killed = False
+        expired = threading.Event()
+        def timeout():
+            expired.set()
+            if proc.poll() is None:
+                proc.kill()
+        timer = threading.Timer(self.acceptance_timeout, timeout)
+        timer.daemon = True
+        timer.start()
         try:
             for line in proc.stdout:
                 line = line.rstrip("\n")
@@ -303,15 +358,23 @@ class Orchestrator:
             proc.kill()
             proc.wait()
             raise
+        finally:
+            timer.cancel()
+        if expired.is_set():
+            proc.wait()
+            raise subprocess.TimeoutExpired(proc.args, self.acceptance_timeout)
         return subprocess.CompletedProcess(proc.args, proc.returncode,
                                            stdout="\n".join(lines), stderr="")
 
-    def acceptance_gate(self, scenario):
+    def acceptance_gate(self, scenario, runtime_expected=False):
         """闸门4：链路 B 在线验收——跑 lx 的 src/pipeline/scenario_<场景>.py。
 
         脚本一身两角（主站 + 被控对象仿真），自身经 require_program 校验 %QW20 程序
-        身份。返回 (state, detail)：state ∈ ok / failed / skipped——OpenPLC/Modbus
-        不在线记 skipped（与闸门3 同一半环语义：环境缺失不阻塞 final，真失败才回喂）。
+        身份。返回 (state, detail)：state ∈ ok / failed / skipped / env_down——
+        OpenPLC/Modbus 不在线记 skipped（半环语义：环境缺失不阻塞 final）；
+        **runtime_expected=True（本轮部署刚通过，运行时中途掉线）时记 env_down**
+        ——环境故障判失败并中止战役，杜绝"skipped 照发 final"的假阳性
+        （2026-09-22 两次实测教训，看板问题 #4）。
         """
         script = self.project_root / "src" / "pipeline" / ("scenario_%s.py" % scenario)
         if not script.is_file():
@@ -321,7 +384,12 @@ class Orchestrator:
         except subprocess.TimeoutExpired:
             return "failed", ["验收脚本超时（>%ss）" % self.acceptance_timeout]
         out = "\n".join(t for t in ((proc.stdout or "").strip(), (proc.stderr or "").strip()) if t)
+        if proc.returncode != 0 and "AcceptanceConfigurationError" in out:
+            return "configuration_error", out.splitlines()
         if "无法连接" in out or "ConnectionError" in out:
+            if runtime_expected:
+                return "env_down", ["OpenPLC/Modbus 中途掉线（本轮部署刚通过、验收连接失败）——"
+                                    "环境故障：中止战役判失败，不再按半环 skipped 处理"]
             return "skipped", "OpenPLC/Modbus 不在线——半环跳过在线验收"
         if proc.returncode == 0:
             return "ok", (out.splitlines() or ["验收通过"])[-1]
@@ -515,9 +583,10 @@ class Orchestrator:
         return lines
 
     # ---------------- 主循环 ----------------
+    @record_solve
     def solve(self, spec, generator, deploy=False, acceptance=None, echo=None,
               scene_generator=None, device_model=None, address_table=None,
-              trajectory=None):
+              trajectory=None, aml_path=None, require_online=False, frame_output=None, test_plan=None):
         """执行完整循环（生成→检查→部署→验收，失败回喂重试）。返回 {status: final|best, iter, run_dir}。
 
         acceptance: 场景名（None=不跑闸门4）——用于定位 src/pipeline/scenario_<名>.py；
@@ -529,38 +598,89 @@ class Orchestrator:
         echo: 可选回调 fn(event, payload)，供 CLI/测试观察循环过程。
         trajectory: 轨迹规划参数（trajectory.plan_* 产物；None=常规生成）。
         注入生成 prompt 作权威步表并落盘 run_dir/trajectory.json。
+        aml_path: 任务起点的 AML 设备描述路径（--aml 模式）——原样拷入
+        requirements/ 留档（None=种子/无 AML 模式，不拷）。
         """
+        if require_online:
+            if not deploy or not acceptance or scene_generator is None:
+                raise ValueError("完整闭环必须启用场景生成、真实部署和在线验收")
+            if getattr(generator, "seed_xml", None) is not None:
+                raise ValueError("完整 Agent 闭环不能使用种子替代模型生成")
+            if getattr(generator, "generation_mode", "full_xml") != "full_xml":
+                raise ValueError("完整 Agent 闭环要求 LLM 生成完整 XML")
+        tracker = None
         def notify(event, payload):
             if echo:
                 echo(event, payload)
 
+        def stop_for_api(error, attempted_iter):
+            record = {"status": "api_blocked", "attempted_iter": attempted_iter, "error": str(error),
+                      "best_iter": (tracker.best or {}).get("iter") if tracker else None}
+            (run_dir / "api_error.json").write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
+            self._write_summary(run_dir, history, tracker.best if tracker else None)
+            notify("api_blocked", record)
+            return {"status": "api_blocked", "iter": record["best_iter"], "attempted_iter": attempted_iter, "run_dir": run_dir}
+
         def fail(iter_dir, i, gate, errs, mode):
-            nonlocal repair_fails, last_fail_sig, force_fresh
+            nonlocal repair_fails, last_fail_sig, force_fresh, repair_base
             sig = (gate, self._fail_signature(errs))
-            if sig == last_fail_sig:
+            if sig == last_fail_sig and tracker is None:
                 # 连续两轮同闸门同证据（归一化后）＝零推进：下一轮强制全新生成
                 force_fresh = True
             last_fail_sig = sig
             if mode == "repair":
                 repair_fails += 1   # 修复模式失败计数（≥3 回退全新生成）
-            return self._fail(iter_dir, i, gate, errs, history)
+            feedback = self._fail(iter_dir, i, gate, errs, history)
+            if tracker is not None:
+                decision = tracker.consider(iter_dir, i, gate)
+                if tracker.best is not None:
+                    repair_base = (run_dir / tracker.best["checkpoint"] / "plcopen.xml").read_text(encoding="utf-8")
+                if decision["decision"] == "promote":
+                    repair_fails = 0
+                notify("candidate_selected" if decision["decision"] == "promote" else "candidate_rejected",
+                       {"best_iter": (tracker.best or {}).get("iter"), "reasons": decision["reasons"]})
+                feedback = tracker.feedback(feedback)
+                if getattr(getattr(generator, "client", None), "blocked_error", None):
+                    tracker.stop_reason = "api_blocked"
+            return feedback
 
         problems = validate_requirement_spec(spec)
         if problems:
             raise ValueError("requirement_spec 校验失败（人工介入点 1）: %s" % problems)
+        if require_online and any(not p.get("address") for p in spec["io_list"]):
+            raise ValueError("严格闭环要求每条 spec IO 明确 PLC 地址")
+        if test_plan is not None:
+            from .test_plan import validate_test_plan
+            validate_test_plan(test_plan, spec)
+        elif require_online and acceptance == "mujoco":
+            from mujoco_verdict import validate_collection_spec
+            validate_collection_spec(spec)
+        check_model = device_model
+        if require_online and check_model is None:
+            check_model = {"io_points": spec["io_list"], "kinematics": {"axes": []}}
+        # 分层（2026-09-22 负责人指令）：地址优先取自 spec（① 注入，spec 自足）；
+        # 老 spec 无地址时回退设备模型——阅卷侧（R6/R8）仍可拿 AML 当标准答案
         self._addr_table = address_table or (
-            {p["name"]: p["address"] for p in (device_model or {}).get("io_points", [])
-             if p.get("address")} or None)
+            {p["name"]: p.get("address") for p in spec.get("io_list", []) if p.get("address")}
+            or {p["name"]: p["address"] for p in (device_model or {}).get("io_points", [])
+               if p.get("address")} or None)
 
         task_id = spec["task_id"]
         run_dir = self.runs_root / task_id
-        run_dir.mkdir(parents=True, exist_ok=True)
-        (run_dir / "request.json").write_text(
+        req_dir = run_dir / "requirements"   # 需求侧产物：spec 留档 + 起点 AML 拷贝
+        req_dir.mkdir(parents=True, exist_ok=True)
+        (req_dir / "requirement_spec.json").write_text(
             json.dumps(spec, ensure_ascii=False, indent=2), encoding="utf-8")
+        if aml_path and os.path.isfile(str(aml_path)):
+            shutil.copy(str(aml_path), req_dir / Path(str(aml_path)).name)
         if trajectory is not None:   # 轨迹参数是任务级权威产物，留档供复现
             (run_dir / "trajectory.json").write_text(
                 json.dumps(trajectory, ensure_ascii=False, indent=2),
                 encoding="utf-8")
+        if test_plan is not None:
+            (run_dir / "test_plan.json").write_text(
+                json.dumps(test_plan, ensure_ascii=False, indent=2), encoding="utf-8")
+            tracker = ProgressTracker(run_dir, spec, test_plan, self.project_root, strict=require_online)
 
         history = []          # 迭代记忆：改了什么 → 哪条闸门翻转
         feedback = None       # 上轮反馈包（程序拼装，不靠 LLM 现场发挥）
@@ -571,10 +691,34 @@ class Orchestrator:
         force_fresh = False   # 零推进提前熔断：连续 2 轮失败证据同质 → 下轮强制 fresh
 
         for i in range(1, self.max_iters + 1):
+            if tracker is not None and tracker.stop_reason:
+                if tracker.stop_reason != "api_blocked":
+                    notify("no_progress", {"reason": tracker.stop_reason})
+                break
             iter_dir = run_dir / ("iter_%03d" % i)
             iter_dir.mkdir(exist_ok=True)
-            notify("iter_start", {"iter": i})
+            if test_plan is not None:
+                shutil.copy2(run_dir / "test_plan.json", iter_dir / "test_plan.json")
+            if hasattr(generator, "evidence_dir"):
+                generator.evidence_dir = iter_dir / "generation"
+            # HMI 产物：① 设计的 spec.hmi 优先（信号→地址确定性补全），
+            # 无 hmi 段的老 spec 由 build_hmi 规则兜底（2026-09-23 HMI v2）
+            hmi_doc = build_hmi(spec)
+            if spec.get("hmi"):
+                addr = {p.get("name"): p.get("address")
+                        for p in spec.get("io_list", []) if p.get("address")}
+                for el in spec["hmi"].get("elements", []):
+                    el.setdefault("address", addr.get(el.get("signal")))
+                hmi_doc = {"hmi_version": "2", "task_id": spec.get("task_id"),
+                           "elements": spec["hmi"]["elements"]}
+            (iter_dir / "hmi.json").write_text(
+                json.dumps(hmi_doc, ensure_ascii=False, indent=2),
+                encoding="utf-8")   # 任务级产物每轮随盘（final/ 随目录拷贝）
+            notify("iter_start", {"iter": i, "hmi": True})
             entry_base = repair_base   # 进循环时的修复基底（= 上轮产物，学习 diff 用）
+            if tracker is not None and tracker.contract() is not None:
+                (iter_dir / "repair_contract.json").write_text(
+                    json.dumps(tracker.contract(), ensure_ascii=False, indent=2), encoding="utf-8")
 
             # ---- 生成策略：LLM 可用且有修复基础（上轮过静态闸门、后续闸门失败）
             #    → 定向修复（最小修改，三次实证远稳于从头重生成）；否则全新生成。
@@ -583,6 +727,8 @@ class Orchestrator:
                             and getattr(generator, "client", None) is not None
                             and repair_fails < 3)
             traj_kw = {"trajectory": trajectory} if trajectory is not None else {}
+            if test_plan is not None:
+                traj_kw["test_plan"] = test_plan
             # 经验预注入（自动化学习）：首轮 fresh 生成前，把同形状任务的
             # 历史 resolved 教训注入 system prompt——借鉴前置到生成时，
             # 直指首轮质量（数据实证：10 役 9 役首轮烧在 generate/deploy）
@@ -596,15 +742,20 @@ class Orchestrator:
                             "｜诊断：" + h["diagnosis"] if h.get("diagnosis") else "",
                             h.get("fix_summary", ""),
                             "") for h in hints)
-            if would_repair and not force_fresh:
-                gen = generator.repair(repair_base, spec, feedback, **traj_kw)
-                mode = "repair"
-            else:
-                if would_repair:
-                    notify("switch_fresh", {"iter": i})
-                gen = generator.generate(spec, feedback=feedback, **traj_kw)
-                mode = "fresh"
-                force_fresh = False
+            try:
+                if would_repair and not force_fresh:
+                    gen = generator.repair(repair_base, spec, feedback, **traj_kw)
+                    mode = "repair"
+                else:
+                    if would_repair:
+                        notify("switch_fresh", {"iter": i})
+                    gen = generator.generate(spec, feedback=feedback, **traj_kw)
+                    mode = "fresh"
+                    force_fresh = False
+            except RuntimeError as exc:
+                if not re.search(r"HTTP\s+(?:401|402)\b", str(exc)):
+                    raise
+                return stop_for_api(exc, i)
             xml_text = gen.get("xml")
             if not xml_text:
                 feedback = fail(iter_dir, i, "generate", gen.get("errors", []), mode)
@@ -613,8 +764,8 @@ class Orchestrator:
             (iter_dir / "plcopen.xml").write_text(xml_text, encoding="utf-8")
 
             # 地址自动纠偏：按 ⓪ 表机械对齐（契约执行，非 LLM 工作）
-            addr_fixed = self.fix_addresses(iter_dir / "plcopen.xml",
-                                            getattr(self, "_addr_table", None))
+            addr_fixed = (0 if require_online else self.fix_addresses(
+                iter_dir / "plcopen.xml", getattr(self, "_addr_table", None)))
             if addr_fixed:
                 xml_text = (iter_dir / "plcopen.xml").read_text(encoding="utf-8")
                 notify("addr_fixed", {"iter": i, "count": addr_fixed})
@@ -628,7 +779,7 @@ class Orchestrator:
             (iter_dir / "plc.st").write_text(st_text, encoding="utf-8")
 
             ok2, problems2 = consistency_check(iter_dir / "plcopen.xml", spec["io_list"],
-                                      device_model=device_model)
+                                      device_model=check_model)
             hard2 = [p for p in problems2 if not p.startswith("SKIP")]
             if not ok2 or hard2:
                 feedback = fail(iter_dir, i, "consistency", hard2, mode)
@@ -636,10 +787,14 @@ class Orchestrator:
                 continue
 
             # 静态闸门全过 → 本产物成为后续定向修复的基础（后续闸门失败也不丢）
-            repair_base = xml_text
-            repair_fails = 0
+            if tracker is None:
+                repair_base = xml_text
+                repair_fails = 0
 
-            gates = {"xml2st": True, "consistency": [p for p in problems2 if p.startswith("SKIP")] or True}
+            gates = {"xml2st": True, "consistency": [p for p in problems2 if p.startswith("SKIP")] or True,
+                     "generation": {"mode": "seed" if getattr(generator, "seed_xml", None)
+                                    else getattr(generator, "generation_mode", "full_xml"),
+                                    "rounds": gen.get("rounds"), "history": gen.get("history", [])}}
 
             # ---- ②b 场景描述生成（确定性，契约 v1.1）+ 闸门2b：R5 检查（XML ≡ io_list ≡ scene.io_map）----
             if scene_generator is not None:
@@ -653,7 +808,7 @@ class Orchestrator:
                     json.dumps(scene_out["scene"], ensure_ascii=False, indent=2), encoding="utf-8")
                 ok5, problems5 = consistency_check(iter_dir / "plcopen.xml",
                                                    spec["io_list"], scene_out["io_map"],
-                                                   device_model=device_model,
+                                                   device_model=check_model,
                                                    scene=scene_out["scene"])
                 hard5 = [p for p in problems5 if not p.startswith("SKIP")]
                 if not ok5 or hard5:
@@ -664,6 +819,14 @@ class Orchestrator:
                                   "assets": len(scene_out["scene"]["assets"]),
                                   "io_map_vars": len(scene_out["io_map"]),
                                   "r5": "active"}
+                if require_online or acceptance == "mujoco":
+                    try:
+                        from .scene_gen import build_scene_artifacts
+                        build_scene_artifacts(scene_out["scene"], spec, iter_dir)
+                    except (ValueError, RuntimeError) as exc:
+                        feedback = fail(iter_dir, i, "scene", [str(exc)], mode)
+                        notify("gate_failed", {"iter": i, "gate": "scene"})
+                        continue
 
             if deploy:
                 notify("deploy_start", {"iter": i})
@@ -673,7 +836,16 @@ class Orchestrator:
                     detail = dict(detail) if isinstance(detail, dict) else {"result": detail}
                     detail["runtime_status"] = probe
                 gates["deploy"] = {"state": state, "detail": detail}
+                if isinstance(detail, dict) and detail.get("compiler"):
+                    (iter_dir / "compiler.json").write_text(
+                        json.dumps(detail["compiler"], ensure_ascii=False, indent=2), encoding="utf-8")
                 if state == "failed":
+                    if isinstance(detail, dict) and detail.get("status") == "CONFIGURATION_ERROR":
+                        errors = detail.get("errors", [])
+                        self._dump_gate(iter_dir, "deploy", ok=False, gates=gates, errors=errors)
+                        notify("configuration_error", {"iter": i, "errors": errors})
+                        self._write_summary(run_dir, history, {"iter": i, "gate": "deploy", "errors": errors})
+                        return {"status": "configuration_error", "iter": i, "run_dir": run_dir}
                     errs = detail.get("errors") if isinstance(detail, dict) else [str(detail)]
                     if isinstance(errs, dict):
                         errs = [str(errs)]
@@ -681,29 +853,81 @@ class Orchestrator:
                     notify("gate_failed", {"iter": i, "gate": "deploy"})
                     continue
                 notify("deploy_done", {"iter": i, "state": state})
+                if require_online and state != "ok":
+                    fail(iter_dir, i, "deploy", ["严格闭环：真实部署未执行，禁止交付 final"], mode)
+                    break
 
             if acceptance:
+                self._acceptance_context = {
+                    "AGENT_REQUIREMENT_SPEC": str((req_dir / "requirement_spec.json").resolve()),
+                    "AGENT_SCENE": str((iter_dir / "scene.spec.json").resolve()),
+                    "AGENT_IO_MAP": str((iter_dir / "io_map.json").resolve()),
+                    "AGENT_EVIDENCE_DIR": str(iter_dir.resolve()),
+                    "AGENT_PROG_ID": str(spec.get("prog_id", 4)),
+                    "AGENT_TEST_PLAN": str((iter_dir / "test_plan.json").resolve()) if test_plan is not None else "",
+                    "AGENT_TRAJECTORY": str((run_dir / "trajectory.json").resolve())
+                                        if trajectory is not None else ""}
+                if frame_output:
+                    self._acceptance_context["AGENT_FRAME_OUTPUT"] = str(Path(frame_output).resolve())
                 notify("acceptance_start", {"iter": i, "scenario": acceptance})
-                self._acceptance_live = (
-                    lambda ln: notify("acceptance_line", ln)) if echo else None
-                state, detail = self.acceptance_gate(acceptance)
-                self._acceptance_live = None
-                gates["acceptance"] = {"state": state, "detail": detail}
-                if state == "failed":
-                    errs = detail if isinstance(detail, list) else [str(detail)]
-                    # 运行时透视：验收行为失败时自动注入诊断口采集序列器内部状态，
-                    # 把"卡在 (51,26,9)"变成"pl_step 停在 2 / exe=1 / Busy=1"级证据
-                    try:
-                        diag = self._runtime_probe(iter_dir, xml_text)
-                        if diag:
-                            errs = errs + ["运行时内部状态时间线（诊断口自动采集）："] + diag
-                    except Exception:
-                        pass
-                    feedback = fail(iter_dir, i, "acceptance", errs, mode)
-                    notify("gate_failed", {"iter": i, "gate": "acceptance"})
-                    continue
+                if deploy and (gates.get("deploy") or {}).get("state") == "skipped":
+                    # 部署被跳过（deploy 服务不在线）时运行时里是残留旧程序——
+                    # 验收对象非本轮产物，跳过以防"测鬼影"（2026-09-22 实测教训：
+                    # 四场战役十几轮验收全在测旧程序，回喂追不存在的缺陷）
+                    gates["acceptance"] = {
+                        "state": "skipped",
+                        "detail": "部署未执行（deploy 服务不在线）——运行时为残留"
+                                  "旧程序，验收对象非本轮产物，跳过"}
+                    self._dump_gate(iter_dir, "acceptance", ok=False, gates=gates,
+                                    errors=[gates["acceptance"]["detail"]])
+                else:
+                    self._acceptance_live = (
+                        lambda ln: notify("acceptance_line", ln)) if echo else None
+                    state, detail = self.acceptance_gate(
+                        acceptance,
+                        runtime_expected=bool(deploy)
+                        and gates.get("deploy", {}).get("state") == "ok")
+                    self._acceptance_live = None
+                    gates["acceptance"] = {"state": state, "detail": detail}
+                    if state == "configuration_error":
+                        errors = detail if isinstance(detail, list) else [str(detail)]
+                        history.append({"iter": i, "gate": "acceptance", "ok": False,
+                                        "configuration_error": True, "errors": errors})
+                        self._dump_gate(iter_dir, "acceptance", ok=False, gates=gates, errors=errors)
+                        self._write_summary(run_dir, history, history[-1])
+                        notify("configuration_error", {"iter": i, "errors": errors})
+                        return {"status": "configuration_error", "iter": i, "run_dir": run_dir}
+                    if state == "env_down":
+                        fail(iter_dir, i, "acceptance",
+                             detail if isinstance(detail, list) else [str(detail)], mode)
+                        notify("gate_failed", {"iter": i, "gate": "acceptance(env_down)"})
+                        history.append({"iter": i, "gate": "acceptance", "ok": False,
+                                        "env_down": True})
+                        break        # 环境故障：重试无意义，中止战役（结果 best_effort）
+                    if state == "failed":
+                        errs = detail if isinstance(detail, list) else [str(detail)]
+                        # 运行时透视：验收行为失败时自动注入诊断口采集序列器内部状态，
+                        # 把"卡在 (51,26,9)"变成"pl_step 停在 2 / exe=1 / Busy=1"级证据
+                        try:
+                            diag = [] if acceptance == "mujoco" else self._runtime_probe(iter_dir, xml_text)
+                            if diag:
+                                errs = errs + ["运行时内部状态时间线（诊断口自动采集）："] + diag
+                        except Exception:
+                            pass
+                        feedback = fail(iter_dir, i, "acceptance", errs, mode)
+                        notify("gate_failed", {"iter": i, "gate": "acceptance"})
+                        continue
+                if require_online and gates["acceptance"]["state"] != "ok":
+                    fail(iter_dir, i, "acceptance", ["严格闭环：在线验收未执行，禁止交付 final"], mode)
+                    break
 
             self._dump_gate(iter_dir, "all", ok=True, gates=gates)
+            if tracker is not None:
+                decision = tracker.consider(iter_dir, i, "all")
+                if decision["decision"] != "promote":
+                    feedback = tracker.feedback(self._fail(iter_dir, i, "acceptance", decision["reasons"], history))
+                    notify("candidate_rejected", {"best_iter": (tracker.best or {}).get("iter"), "reasons": decision["reasons"]})
+                    continue
             history.append({"iter": i, "gate": "all", "ok": True})
             self._learn_from_outcome(spec, history, entry_base, xml_text, mode, ok=True,
                                       shape=(trajectory or {}).get("shape"))
@@ -713,18 +937,24 @@ class Orchestrator:
             return {"status": "final", "iter": i, "run_dir": run_dir}
 
         # ---- best-effort：闸门推进最远的一轮 + 失败报告（人工介入点 2）----
+        if tracker is not None and tracker.stop_reason == "api_blocked":
+            return stop_for_api(generator.client.blocked_error, history[-1]["iter"])
         order = {"generate": 0, "xml2st": 1, "consistency": 2, "scene": 3, "deploy": 4,
                  "acceptance": 5, "all": 6}
-        best = max(history, key=lambda h: order.get(h.get("gate"), -1)) if history else None
+        best = (next((h for h in history if h.get("iter") == tracker.best["iter"]), None)
+                if tracker is not None and tracker.best else
+                max(history, key=lambda h: order.get(h.get("gate"), -1)) if history else None)
         if best and not best.get("ok"):
             self.attribution.memory.record_fix(
                 best.get("gate"), best.get("errors", []),
                 "迭代上限未收敛（人工介入点 2），best=%s" % best.get("gate"), "abandoned")
         self._write_summary(run_dir, history, best)
-        self._learn_from_outcome(spec, history, None, None, "fresh", ok=False,
-                                  shape=(trajectory or {}).get("shape"))
+        if tracker is None:
+            self._learn_from_outcome(spec, history, None, None, "fresh", ok=False,
+                                      shape=(trajectory or {}).get("shape"))
         notify("best_effort", {"run_dir": str(run_dir)})
-        return {"status": "best_effort", "iter": (best or {}).get("iter"), "run_dir": run_dir}
+        return {"status": "best_effort", "iter": (best or {}).get("iter"), "run_dir": run_dir,
+                "stop_reason": tracker.stop_reason if tracker and tracker.stop_reason else "iteration_limit"}
 
     # ---------------- 产物 ----------------
     @staticmethod
@@ -802,7 +1032,7 @@ class Orchestrator:
         # （战役全量证据仍在各自 runs/<task_id>/final/，此目录是"最新一份"快捷取用处）
         latest_dir = self.runs_root / "latest"
         latest_dir.mkdir(parents=True, exist_ok=True)
-        for name in ("plcopen.xml", "scene.spec.json"):
+        for name in ("plcopen.xml", "scene.spec.json", "hmi.json", "io_map.json", "scene.xml", "test_plan.json"):
             src = final_dir / name
             if src.exists():
                 shutil.copy2(src, latest_dir / name)
@@ -817,6 +1047,14 @@ class Orchestrator:
             for e in h.get("errors", [])[:8]:
                 lines.append("  - %s" % e)
         lines += ["", "## 结论", "", "best = %s" % json.dumps(best, ensure_ascii=False, default=str)]
+        selection = run_dir / "progress_history.json"
+        if selection.is_file():
+            lines += ["", "## 候选与最佳版比较", "", "| 轮次 | 选择 | 最佳轮次 | 原因 |", "|---|---|---|---|"]
+            for record in json.loads(selection.read_text(encoding="utf-8")):
+                selected = record["iter"] if record["decision"] == "promote" else record.get("baseline_iter")
+                lines.append("| %s | %s | %s | %s |" % (record["iter"], record["decision"], selected,
+                    "；".join(record["reasons"]).replace("|", "/").replace("\n", " ")))
+            lines += ["", "best.json指向完整检查点；best/是便于浏览的副本。未全部通过的版本不是final。"]
         (run_dir / "summary.md").write_text("\n".join(lines), encoding="utf-8")
 
 
@@ -983,7 +1221,8 @@ def main():
     result = orch.solve(spec, generator, deploy=args.deploy,
                         acceptance=scenario if args.acceptance else None,
                         echo=narrate, trajectory=trajectory,
-                        scene_generator=scene_gen, device_model=device_model)
+                        scene_generator=scene_gen, device_model=device_model,
+                        aml_path=args.aml)
     print("\nRESULT: %s (iter=%s) -> %s" % (result["status"], result["iter"], result["run_dir"]))
     return 0 if result["status"] == "final" else 1
 

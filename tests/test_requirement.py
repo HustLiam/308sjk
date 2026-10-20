@@ -202,3 +202,79 @@ class TestRenderSpec:
         for key in ("task_id", "工艺目标", "io_list: 26 点", "AC1", "AC2",
                     "使能时序", "待澄清"):
             assert key in text
+
+
+class TestLayeredSpec:
+    """分层（2026-09-22 负责人指令）：spec 自足——地址与轴参数由 ① 确定性注入。"""
+
+    def _spec(self):
+        model = parse_aml(REPO / "examples" / "aml" / "plotter3axis_station.aml")[0]
+        out = RequirementUnderstander(client=None).understand("t", device_model=model)
+        return out["spec"], model
+
+    def test_injects_axes_and_addresses(self):
+        from agent.aml_parser import build_axes
+        spec, model = self._spec()
+        assert spec["axes"] == build_axes(model)
+        fb = next(e for e in spec["io_list"] if e["name"] == "x_fb")
+        assert fb.get("address") == "%QW0"
+        z = next(a for a in spec["axes"] if a["axis"] == "z_axis")
+        assert z["poswin"] == 1.0 and z["defaults"]["acceleration"] == 60.0
+
+    def test_int_address_must_be_qw(self):
+        spec, _ = self._spec()
+        for e in spec["io_list"]:
+            if e["name"] == "x_fb":
+                e["address"] = "%QX1.0"
+        assert any("INT 的 address" in p for p in validate_requirement_spec(spec))
+
+    def test_axes_io_channel_must_be_in_io_list(self):
+        spec, _ = self._spec()
+        spec["axes"][0]["io"]["fb"] = "ghost_chan"
+        assert any("不在 io_list" in p for p in validate_requirement_spec(spec))
+
+
+class TestHmiValidation:
+    """S7：hmi 顶层段（① 设计，形式校验——信号绑定/类型匹配/网格合法）。"""
+
+    def _spec_with_hmi(self, hmi):
+        model = parse_aml(REPO / "examples" / "aml" / "plotter3axis_station.aml")[0]
+        spec = RequirementUnderstander(client=None).understand("t", device_model=model)["spec"]
+        if hmi is not None:
+            spec["hmi"] = hmi
+        return spec
+
+    def test_valid_hmi_passes(self):
+        hmi = {"elements": [
+            {"kind": "BUTTON", "type": "trigger", "signal": "cmd_draw",
+             "label": "画方", "pos": [0, 1]},
+            {"kind": "BUTTON", "type": "toggle", "signal": "run",
+             "label": "使能", "pos": [0, 0]},
+            {"kind": "LAMP", "signal": "plot_done", "label": "完成", "pos": [1, 0]},
+            {"kind": "GAUGE", "signal": "x_fb", "label": "X 位置", "pos": [2, 0]}]}
+        assert validate_requirement_spec(self._spec_with_hmi(hmi)) == []
+
+    def test_signal_not_in_io_list_rejected(self):
+        hmi = {"elements": [{"kind": "LAMP", "signal": "ghost",
+                             "label": "x", "pos": [0, 0]}]}
+        assert any("不在 io_list" in p for p in validate_requirement_spec(
+            self._spec_with_hmi(hmi)))
+
+    def test_kind_dir_type_mismatch_rejected(self):
+        hmi = {"elements": [{"kind": "LAMP", "signal": "run",       # input→LAMP ✗
+                             "label": "x", "pos": [0, 0]}]}
+        assert any("要求 dir=output" in p for p in validate_requirement_spec(
+            self._spec_with_hmi(hmi)))
+
+    def test_pos_overlap_rejected(self):
+        hmi = {"elements": [
+            {"kind": "LAMP", "signal": "plot_done", "label": "a", "pos": [0, 0]},
+            {"kind": "LAMP", "signal": "pen_down", "label": "b", "pos": [0, 0]}]}
+        assert any("重叠" in p for p in validate_requirement_spec(
+            self._spec_with_hmi(hmi)))
+
+    def test_button_type_closed_set(self):
+        hmi = {"elements": [{"kind": "BUTTON", "type": "momentary",
+                             "signal": "run", "label": "x", "pos": [0, 0]}]}
+        assert any("trigger|toggle" in p for p in validate_requirement_spec(
+            self._spec_with_hmi(hmi)))

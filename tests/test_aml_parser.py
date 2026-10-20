@@ -29,7 +29,7 @@ class TestBaseline:
         assert problems == []
         assert model["station"] == "Motion3AxisStation"
         assert len(model["devices"]) == 4          # gantry + 三轴
-        assert len(model["io_points"]) == 32   # 2026-09-09 PLCopen MC 对齐 +8
+        assert len(model["io_points"]) == 31   # 2026-09-23 删测试残留 inject_fault（-1）
         assert [a["axis"] for a in model["kinematics"]["axes"]] == ["x_axis", "y_axis", "z_axis"]
 
     def test_io_dir_type_counts_match_spec(self):
@@ -103,7 +103,7 @@ class TestIOListPrefill:
         io_items, pending = build_io_list(model)
         assert pending == []
         by_name = {i["name"]: i for i in io_items}
-        assert len(by_name) == len(SPEC["io_list"]) == 32
+        assert len(by_name) == len(SPEC["io_list"]) == 31
         for item in SPEC["io_list"]:
             got = by_name[item["name"]]
             assert got["dir"] == item["dir"] and got["type"] == item["type"]
@@ -231,7 +231,7 @@ class TestCLI:
             capture_output=True, text=True, encoding="utf-8", errors="replace")
         assert proc.returncode == 0, proc.stderr
         items = json.loads(proc.stdout)
-        assert len(items) == 32 and items[0]["name"] == "run"
+        assert len(items) == 31 and items[0]["name"] == "run"
 
 
 # ---------------- 三轴绘图仪示例（IEC 62714/CAEX 3.0 全结构） ----------------

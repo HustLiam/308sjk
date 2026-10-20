@@ -13,3 +13,13 @@ def _isolate_memory_defaults(tmp_path, monkeypatch):
     import agent.memory as mem
     monkeypatch.setattr(mem, "_LESSONS_PATH", tmp_path / "lessons.json")
     monkeypatch.setattr(mem, "_EPISODIC_PATH", tmp_path / "fixes.json")
+
+
+@pytest.fixture(autouse=True)
+def _isolate_deployment_http(monkeypatch):
+    """Unit tests must not invoke live diagnostic deployments on the shared PLC."""
+    import requests
+    import agent.orchestrator as orch
+    def offline(*args, **kwargs):
+        raise requests.ConnectionError("unit tests have no live deployment HTTP access")
+    monkeypatch.setattr(orch._LOCAL, 'request', offline)

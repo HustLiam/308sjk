@@ -83,8 +83,9 @@ Done/Busy/Aborted 置位条件；改造 402 状态机转移表；把动力学写
 自创内部结构是序列器步进卡死（定位正常、落笔后 XY 死）的头号根因。
 骨架与 master 演进同步由单测锁定（test_skill_skeleton_sync）。
 
-INTERP v4.0 权威骨架（接口：fire/pos_target/hold_req/vel_req/acc_req/dec_req 入，
-Setpoint/Busy/Done/**Aborted** 出；内部 SCAN_T 0.02、POSWIN 按轴覆写、
+INTERP v4.0 权威骨架（接口：fire/pos_target/hold_req/vel_req/acc_req/dec_req/**POSWIN** 入，
+Setpoint/Busy/Done/**Aborted** 出；内部 SCAN_T 0.02、POSWIN 为实例入参
+（每轴调用传 AML 该轴 poswin 字面量——各轴可不等，如绘图站 x/y=2.0、z=1.0）、
 pos/vel/tgt/dist/stop_d/edge_ir——**无 VMAX/MAXPOS 参数**，越程由 MC 层拦）：
 
 ```st
@@ -92,13 +93,14 @@ FUNCTION_BLOCK INTERP
   VAR_INPUT
     fire : BOOL; pos_target : INT; hold_req : BOOL;
     vel_req : REAL; acc_req : REAL; dec_req : REAL;
+    POSWIN : REAL;   (* 到位容差——每轴实例调用传 AML 该轴 poswin 字面量（R8 逐轴对账） *)
   END_VAR
   VAR_OUTPUT
     Setpoint : INT; Busy : BOOL; Done : BOOL; Aborted : BOOL;
   END_VAR
   VAR
     edge_ir : BOOL; pos, vel, tgt, dist, stop_d : REAL;
-    SCAN_T : REAL := 0.02; POSWIN : REAL := 2.0;
+    SCAN_T : REAL := 0.02;
   END_VAR
 IF fire AND NOT edge_ir THEN
     IF pos_target > 100 OR pos_target < 0 THEN
@@ -152,6 +154,12 @@ ELSIF fire AND NOT Busy AND (ABS(INT_TO_REAL(pos_target) - tgt) > 0.499) THEN
 
 DRIVE402 权威骨架（接口：cw/Setpoint/pos_fb 入，sw/v_cmd 出；内部
 state : INT := 1——SOD 起步、**KP 25.0、QS_DECEL 120.0**、SCAN_T 0.02）：
+
+**上电铁律（CiA402 通则）**：未使能（使能主令为 FALSE）时驱动必须停在
+Ready To Switch On——sw 形态 16#0031（bit0/4/5，**绝无 bit2/OE**）；OE(bit2)
+只在使能链（主令=1 → MC_Power → SOD→RTSO→SO→OE）完成后置位，"全部使能"
+汇总信号才点亮。state 初值必须 := 1（SOD）——上电即处于使能态（sw 带 OE）
+是状态机初值/转移表偏离骨架的标志。
 
 ```st
 cmd := cw AND 16#000F;
@@ -320,6 +328,74 @@ Error := FALSE;
 END_FUNCTION_BLOCK
 ```
 
+MC_POWER 完整骨架（**使能爬升必须整体门控在 Enable 下**：Enable=FALSE 时
+无条件 cw := shutdown（16#0006），驱动停 RTSO、"全部使能"汇总为 FALSE——
+漏掉外层 IF Enable，爬升序列会在未使能时就走到 16#000F，驱动上电即处于
+使能态）：
+
+```st
+FUNCTION_BLOCK MC_POWER
+  VAR_INPUT
+    Enable : BOOL; EnablePositive : BOOL; EnableNegative : BOOL;
+  END_VAR
+  VAR_IN_OUT
+    cw : WORD; sw : WORD;
+  END_VAR
+  VAR_OUTPUT
+    Status : BOOL; Busy : BOOL; Error : BOOL;
+  END_VAR
+  VAR
+    pstep : INT := 0;
+  END_VAR
+IF Enable AND (EnablePositive OR EnableNegative) AND pstep = 4 AND (sw AND 16#0004) = 0 AND (sw AND 16#0008) = 0 THEN
+    pstep := 0;
+END_IF;
+IF Enable AND (EnablePositive OR EnableNegative) THEN
+    CASE pstep OF
+        0: cw := (cw AND 16#00F0) OR 16#0006;  pstep := 1;
+        1: IF (sw AND 16#0001) <> 0 THEN cw := (cw AND 16#00F0) OR 16#0007; pstep := 2; END_IF;
+        2: IF (sw AND 16#0002) <> 0 THEN cw := (cw AND 16#00F0) OR 16#000F; pstep := 3; END_IF;
+        3: IF (sw AND 16#0004) <> 0 THEN pstep := 4; END_IF;
+    END_CASE;
+ELSE
+    cw := (cw AND 16#00F0) OR 16#0006;   (* 未使能：无条件 shutdown，停 RTSO *)
+    pstep := 0;
+END_IF;
+Status := (sw AND 16#0004) <> 0;
+Busy := Enable AND pstep < 4;
+Error := (sw AND 16#0008) <> 0;
+END_FUNCTION_BLOCK
+```
+
+**命令脉冲锁存通则**：面板按钮是短脉冲（约 0.15s）——所有命令触发
+（cmd_* 类）必须**边沿锁存**：边沿记忆 + exe 保持线，保持到运动完成/中止才清
+（如 MC_HOME 骨架的 `IF fire AND NOT edge_hm THEN home_exe := TRUE`）。
+直接用电平条件（cmd_home=TRUE 才运动）门控的命令，脉冲结束后立即停摆——
+目标一步都走不了。
+
+MC_HOME 完整骨架（**回零期间必须把目标总线改写为参考位**——{axis}_tgt 每扫描
+默认抄 {axis}_sp（外部设定，回零时通常是 0），不改写则轴永远原地不动；
+hm_exe 保持到 fb 进入该轴 poswin 到位窗才清）：
+
+```st
+FUNCTION_BLOCK MC_HOME
+  VAR_INPUT fire : BOOL; sw : WORD; END_VAR
+  VAR_OUTPUT Done : BOOL; Busy : BOOL; Error : BOOL; END_VAR
+  VAR edge_hm : BOOL; home_exe : BOOL; END_VAR
+IF fire AND NOT edge_hm THEN
+    home_exe := TRUE;
+END_IF;
+edge_hm := fire;
+Busy := home_exe;
+Done := NOT home_exe;
+Error := (sw AND 16#0008) <> 0;
+END_FUNCTION_BLOCK
+```
+
+调用侧（每轴）：`hm_z(fire := cmd_home, sw := z_sw);` 且回零持有期间
+`IF hm_z.Busy THEN z_tgt := 10; hm_z_exe := TRUE; END_IF;`（10 = Z 抬笔
+安全参考位，取该轴参考值；到位后清 hm_z_exe）。
+
 其余 MC 块签名（完整骨架逐字取 motion3axis.xml）：
 - `MC_MOVERELATIVE(fire, Distance, ActualPosition, Velocity/Acceleration/Deceleration,
   sw, abort_bus → interp_exe/dyn_* 总线)`：绝对目标 = **触发时** ActualPosition
@@ -374,6 +450,34 @@ END_IF;
    THEN tgt := INT_TO_REAL(pos_target); Busy := TRUE; Done := FALSE; Aborted := FALSE; *)
 ```
 
+**轴实例组（v4.0 模板 §2.2，三方一致性 R8 硬对账项，缺一即挂闸门）**：PLC_PRG
+里每根轴必须有**固定命名**的 MC_MoveAbsolute 调用实例 `go_x`/`go_y`/`go_z`
+（设备有 rel_d 角色时再加 `rel_<轴>` MC_MoveRelative），调用参数
+Velocity/Acceleration/Deceleration 用**字面量**且逐字等于 AML defaults
+（motion3axis 站 = 40/80/80），fire 接序列器对应 `go_<轴>_exe` 电平：
+
+```st
+go_x(fire := go_x_exe, Position := pl_tx, Velocity := 40.0, Acceleration := 80.0,
+     Deceleration := 80.0, sw := x_sw, abort_bus := ix_x.Aborted,
+     Done => x_go_done, Busy => x_go_busy, Error => x_go_err, ErrorID => x_go_eid);
+go_y(fire := go_y_exe, Position := pl_ty, ...同构...);
+go_z(fire := go_z_exe, Position := pl_tz, ...同构...);
+```
+
+序列步里只改 `pl_tx/pl_ty/pl_tz` 目标值（连续跟踪自动起新轨迹），实例名与
+动力学字面量**不得改名/改值**——R8 按名取调用、按字面对账 AML。
+
+**INTERP 实例调用（ix_x/ix_y/ix_z）必须显式带 `POSWIN := <该轴 AML poswin 字面量>`
+入参**（如绘图站 x/y=2.0、z=1.0；三轴不等时**禁止**用共享类型初值兜底——R8 逐轴
+对账 ix_<轴> 调用点）：
+
+```st
+ix_x(fire := go_x_exe OR rel_x_exe OR hm_x_exe, pos_target := x_tgt,
+     vel_req := x_vel_bus, acc_req := x_acc_bus, dec_req := x_dec_bus,
+     POSWIN := 2.0, Setpoint => x_v, Busy => x_busy, Done => x_done, Aborted => x_abort);
+ix_z 同构，但 POSWIN := 1.0（按 AML 实值）
+```
+
 要点：触发线**全程电平保持**（触发扫描置位、终止/完成才清零）；步进只改目标值；
 急停/故障 → pl_step := 0 并清 exe（释放后不自动续跑）。**急停语义=电平中止，
 不得引入需要额外复位命令才能清的锁存**——验收剧本是急停释放（quickstop=0）
@@ -385,9 +489,24 @@ z_fb <= 2，与 run/使能/急停/序列无关——未使能时笔在纸上也�
 ## 工艺逻辑写法（模式库要点，完整种子见随 prompt 附的模式卡）
 
 - 启停自锁：`motor := (start OR motor) AND NOT stop AND NOT e_stop;`
-- 互锁/安全：约束里的 interlock 直接写成条件与项，急停最高优先；
+- **互锁实现通则（含 Z 轴通则）**：spec.constraints 里每条形如 "A 期间禁止 B 类运动" 的
+  interlock，一律实现为**运动命令触发的条件与项**——把 A 写进 B 类命令的
+  fire 条件（`fire := cmd AND NOT A`），**拦运动本身而不是只置报警状态**；
+  只拦约束涉及的轴/分量，未涉及的放行（如"落笔期间禁 X/Y"则 Z 照常可动、
+  "手动落笔"类的 Z 请求必须放行使其生效）。验收判 forbidden_state 的约束
+  都按此模式落地；
+- **Z/工具轴语义通则**：笔/工具轴（Z）是**落笔的执行者不是被禁对象**——
+  "落笔期间禁 X/Y"约束中 Z 恰恰是唯一被允许动的轴（要靠它抬笔解锁）；且
+  **手动定位必须含 Z**（z_sp 给了目标就得走）——把手动模式 Z 关掉
+  （go_z_exe := FALSE）或手动前置加 NOT pen_down，会把"落笔"变成
+  不可达状态（先有鸡还是先有蛋：要抬笔才能手动，要手动才能抬笔）；
 - 延时动作用 TON（PT 用 T#300MS 形式）；计数用上升沿 FB + INT 累加；
 - 多步顺序动作用 CASE 步进链（步号 INT），原位/启动条件联锁；
 - 连续调节用位置式 PI + 条件积分抗饱和（内部 REAL，对外 INT 定点）；
 - constraints 中的每条约束都必须体现在逻辑里；acceptance 中的 event_delay/
   forbidden_state 时序必须在逻辑上可达（否则仿真判定必挂）。
+
+**速度限幅铁律**：各轴速度指令 v 的物理上限是该轴 vmax（axes 表），v 通道的 int16 量程（如 ±120）只是编码边界不是物理限速——INTERP 必须按 vel_req（=该轴 defaults.velocity）生成梯形规划，不得按通道量程满幅输出（实测：z 轴 vmax=20 被按 120 满幅输出，开环早停、实际只走 1/10 行程）。
+
+**输出纪律**：交付前自检——XML 良构（所有标签闭合、属性带引号）、ST 每条
+语句以分号结尾、实例调用的必填实参齐全（对照上方骨架签名）。

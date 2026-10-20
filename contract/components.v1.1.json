@@ -186,7 +186,7 @@
           "kind": "float",
           "required": true,
           "default": null,
-          "minimum": 0.01,
+          "minimum": 0.005,
           "maximum": 1.0,
           "exclusive_min": true
         },

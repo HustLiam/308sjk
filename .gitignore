@@ -17,4 +17,13 @@ Thumbs.db
 #环境变量
 .env
 
+# Local environments, editor history and duplicate checkout
+.venv/
+.history/
+/新建文件夹/
+
+# Personal branch notes and runtime crash output
+docs/devlog-lx.md
+runtime/studio_crash.log
+
 MUJOCO_LOG.TXT

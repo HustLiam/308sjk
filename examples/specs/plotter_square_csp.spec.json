@@ -1,41 +1,49 @@
 {
   "task_id": "plotter_square_csp",
-  "task_goal": "三轴绘图机在 XY 平面绘制边长 60（坐标区间 20..80）的正方形并闭合：抬笔定位起点 → 落笔沿四边 → 抬笔回中心。CSP 形态：PLC 输出插补位置目标（%QW0-2），驱动器（仿真侧/真机 CSP 模式）闭位置环；Z 0=落笔接触、10=抬笔安全高度。本版按 runs/latest 龙门场景接线（x_cmd/y_cmd/z_cmd %QW3-5，反馈 %QW0-2）",
+  "task_goal": "三轴 CSP 绘图仪在使能后收到画图请求：先抬笔并定位到 (20,20)，落笔后依次经过 (80,20)、(80,80)、(20,80)、(20,20) 闭合为边长60的正方形，随后抬笔至10mm并返回中心(50,50)，最后保持完成灯。",
   "io_list": [
     {
       "name": "run",
       "dir": "input",
       "type": "BOOL",
+      "address": "%QX0.0",
+      "trigger": true,
       "device": "OperatorPanel run 使能"
     },
     {
       "name": "cmd_reset",
       "dir": "input",
       "type": "BOOL",
+      "address": "%QX0.7",
       "device": "OperatorPanel 复位"
     },
     {
       "name": "cmd_draw",
       "dir": "input",
       "type": "BOOL",
+      "address": "%QX2.0",
+      "trigger": true,
       "device": "OperatorPanel 启动画方"
     },
     {
       "name": "any_moving",
       "dir": "output",
       "type": "BOOL",
+      "address": "%QX1.2",
       "device": "任一轴未到位"
     },
     {
       "name": "pen_down",
       "dir": "output",
       "type": "BOOL",
+      "address": "%QX2.1",
       "device": "笔接触状态（z<=1）"
     },
     {
       "name": "plot_done",
       "dir": "output",
       "type": "BOOL",
+      "address": "%QX2.2",
       "device": "绘图完成"
     },
     {
@@ -46,7 +54,8 @@
         0,
         100
       ],
-      "device": "X 轴插补位置目标（CSP 上总线）"
+      "device": "X 轴插补位置目标（CSP 上总线）",
+      "address": "%QW3"
     },
     {
       "name": "y_cmd",
@@ -56,7 +65,8 @@
         0,
         100
       ],
-      "device": "Y 轴插补位置目标"
+      "device": "Y 轴插补位置目标",
+      "address": "%QW4"
     },
     {
       "name": "z_cmd",
@@ -66,7 +76,8 @@
         0,
         10
       ],
-      "device": "Z 轴位置目标（0 落笔/1 抬笔，龙门场景 z 行程 1m 量程 0..10）"
+      "device": "Z 轴位置目标（0 落笔/1 抬笔，龙门场景 z 行程 1m 量程 0..10）",
+      "address": "%QW5"
     },
     {
       "name": "x_fb",
@@ -76,7 +87,8 @@
         0,
         100
       ],
-      "device": "X 位置反馈"
+      "device": "X 位置反馈",
+      "address": "%QW0"
     },
     {
       "name": "y_fb",
@@ -86,7 +98,8 @@
         0,
         100
       ],
-      "device": "Y 位置反馈"
+      "device": "Y 位置反馈",
+      "address": "%QW1"
     },
     {
       "name": "z_fb",
@@ -96,7 +109,8 @@
         0,
         10
       ],
-      "device": "Z 位置反馈"
+      "device": "Z 位置反馈",
+      "address": "%QW2"
     }
   ],
   "constraints": [
@@ -125,13 +139,13 @@
     },
     {
       "id": "AC2",
-      "desc": "序列终点：笔回中心 (50,50) 并抬笔（z_fb>=1）",
+      "desc": "序列终点：笔回中心 (50,50)，Z 抬笔到10mm",
       "type": "region_containment",
       "asset": "gantry",
       "region_center": [
         50,
         50,
-        1
+        10
       ],
       "tolerance": 2,
       "check_at": "end"
@@ -155,5 +169,77 @@
       "type": "sim_health"
     }
   ],
-  "schema_version": "1.0.0-draft.3"
+  "schema_version": "1.0.0-draft.3",
+  "prog_id": 4,
+  "axes": [
+    {
+      "axis": "x_axis",
+      "type": "linear",
+      "stroke": [
+        0,
+        100
+      ],
+      "unit": "%",
+      "limits": {
+        "vmax": 40.0,
+        "accel": 80.0
+      },
+      "defaults": {
+        "velocity": 40.0,
+        "acceleration": 80.0,
+        "deceleration": 80.0
+      },
+      "poswin": 2.0,
+      "io": {
+        "fb": "x_fb",
+        "cmd": "x_cmd"
+      }
+    },
+    {
+      "axis": "y_axis",
+      "type": "linear",
+      "stroke": [
+        0,
+        100
+      ],
+      "unit": "%",
+      "limits": {
+        "vmax": 40.0,
+        "accel": 80.0
+      },
+      "defaults": {
+        "velocity": 40.0,
+        "acceleration": 80.0,
+        "deceleration": 80.0
+      },
+      "poswin": 2.0,
+      "io": {
+        "fb": "y_fb",
+        "cmd": "y_cmd"
+      }
+    },
+    {
+      "axis": "z_axis",
+      "type": "linear",
+      "stroke": [
+        0,
+        10
+      ],
+      "unit": "mm",
+      "limits": {
+        "vmax": 20.0,
+        "accel": 60.0
+      },
+      "defaults": {
+        "velocity": 20.0,
+        "acceleration": 60.0,
+        "deceleration": 60.0
+      },
+      "poswin": 1.0,
+      "io": {
+        "fb": "z_fb",
+        "cmd": "z_cmd"
+      }
+    }
+  ]
 }

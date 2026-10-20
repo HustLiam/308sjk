@@ -38,9 +38,9 @@ def io_entries_from(io_list, **overrides):
 
 
 class TestExtractLocatedVars:
-    def test_motion3axis_has_32_external_vars(self):
+    def test_motion3axis_has_31_external_vars(self):
         located = extract_located_vars(MOTION_XML)
-        assert len(located) == 32  # 33 个定位变量 - prog_id（契约 v1.1 元信息豁免）；2026-09-09 PLCopen MC 对齐 +8
+        assert len(located) == 31  # 33 个定位变量 - prog_id（契约 v1.1 元信息豁免）；2026-09-09 PLCopen MC 对齐 +8
         by_name = {v["name"]: v for v in located}
         assert by_name["run"] == {"name": "run", "addr": "%QX0.0", "type": "BOOL"}
         assert by_name["x_fb"] == {"name": "x_fb", "addr": "%QW0", "type": "INT"}
@@ -177,6 +177,47 @@ class TestR6DeviceAddresses:
 
 # ---------------- R8：轴参数三方比对（device_model v1.1，生成方案 §6.2） ----------------
 
+def test_pou_st_text_html_p_form(tmp_path):
+    # LLM 生成器常见序列化：<html:p> 段落（xhtml 前缀）——ST 提取须兼容
+    # （2026-09-22 实测教训：只认 <xhtml> 包裹形态会把合法产物读成空，R8 全线误报）
+    import xml.etree.ElementTree as ET
+    from agent.consistency_check import _arg_number, _call_args, _pou_st_text
+    xml = ('<?xml version="1.0"?><project xmlns="http://www.plcopen.org/xml/tc6_0201" '
+           'xmlns:html="http://www.w3.org/1999/xhtml"><types><pous>'
+           '<pou name="PLC_PRG" pouType="program"><body><ST>'
+           '<html:p>go_x(fire := go_x_exe, Velocity := 40.0);</html:p>'
+           '<html:p>ix_z(POSWIN := 1.0);</html:p>'
+           '</ST></body></pou></pous></types></project>')
+    p = tmp_path / "html_p.xml"
+    p.write_text(xml, encoding="utf-8")
+    st = _pou_st_text(ET.parse(p).getroot(), "PLC_PRG")
+    assert st and "go_x(fire" in st and "ix_z(POSWIN" in st
+    assert _arg_number(_call_args(st, "go_x"), "Velocity") == 40.0
+    assert _arg_number(_call_args(st, "ix_z"), "POSWIN") == 1.0
+
+def test_cdata_commands_are_read_and_missing_command_is_rejected():
+    import re
+    import xml.etree.ElementTree as ET
+    from agent.consistency_check import _pou_st_text
+
+    root = ET.parse(MOTION_XML).getroot()
+    body = _pou_st_text(root, "PLC_PRG")
+    st = next(p for p in root.iter() if p.tag.rsplit("}", 1)[-1] == "pou"
+              and p.get("name") == "PLC_PRG").find(".//{*}ST")
+    for child in list(st):
+        st.remove(child)
+    st.text = "CDATA_BODY_PLACEHOLDER"
+    template = ET.tostring(root, encoding="unicode")
+    xml = template.replace("CDATA_BODY_PLACEHOLDER", "<![CDATA[" + body + "]]>")
+    ok, problems = consistency_check(xml, IO_LIST)
+    assert ok, problems
+    missing = template.replace("CDATA_BODY_PLACEHOLDER", "<![CDATA[" +
+                               re.sub(r"\brun\b", "unused_enable", body) + "]]>")
+    ok, problems = consistency_check(missing, IO_LIST)
+    assert not ok
+    assert any("R9:" in p and "'run'" in p for p in problems)
+
+
 DEVICE_MODEL, _ = parse_aml(REPO / "examples" / "aml" / "motion3axis_station.aml")
 
 
@@ -198,7 +239,25 @@ class TestR8AxisParams:
         dm["kinematics"]["axes"][0]["poswin"] = 3.0
         ok, problems = consistency_check(MOTION_XML, IO_LIST, device_model=dm)
         assert not ok
-        assert any("POSWIN 不一致" in p and "XML INTERP=2.0" in p for p in problems)
+        assert any("POSWIN 不一致" in p and "XML=2.0" in p for p in problems)
+
+    def test_poswin_per_axis_call_site(self, tmp_path):
+        # 参数化形态：各轴 poswin 不等（绘图站 2/2/1）时，PLC_PRG 里
+        # ix_<轴>(POSWIN := 值) 逐轴对账——不再要求共享类型初值
+        text = MOTION_XML.read_text(encoding="utf-8")
+        patched = text.replace("POSWIN : REAL := 2.0;", "POSWIN : REAL;")
+        # 在 PLC_PRG 的 ST 里给三根轴的 INTERP 实例调用补 POSWIN 入参
+        patched = patched.replace(
+            "ix_x(fire", "ix_x(POSWIN := 2.0, fire").replace(
+            "ix_y(fire", "ix_y(POSWIN := 2.0, fire").replace(
+            "ix_z(fire", "ix_z(POSWIN := 1.0, fire")
+        assert patched != text
+        dm = json.loads(json.dumps(DEVICE_MODEL))
+        dm["kinematics"]["axes"][2]["poswin"] = 1.0     # z 轴 1.0（绘图站形态）
+        tmp = tmp_path / "r8_poswin_per_axis.xml"
+        tmp.write_text(patched, encoding="utf-8")
+        ok, problems = consistency_check(tmp, IO_LIST, device_model=dm)
+        assert not [p for p in problems if "POSWIN" in p and not p.startswith("SKIP")]
 
     def test_defaults_mismatch_detected(self):
         dm = json.loads(json.dumps(DEVICE_MODEL))

@@ -30,7 +30,7 @@ import json
 import re
 from pathlib import Path
 
-from .aml_parser import build_io_list
+from .aml_parser import build_axes, build_io_list
 from .spec_validator import TASK_ID_RE, validate_requirement_spec
 
 SKILL_PATH = Path(__file__).resolve().parent / "prompts" / "specgen_skill.md"
@@ -123,12 +123,25 @@ def _anchor_problems(spec, io_items):
     return problems
 
 
+def _inject_anchored(spec, io_items, axes):
+    """锚定事实确定性注入（分层，2026-09-22 负责人指令）：io_list 的 PLC 侧地址
+    与顶层 axes 段来自设备模型预填——① 产出后统一灌入，不依赖 LLM 抄写；
+    至此 spec 自足（信号/地址/轴参数齐备），②a 生成不回读 AML。"""
+    addr = {p["name"]: p.get("address") for p in io_items if p.get("address")}
+    for item in spec.get("io_list") or []:
+        if item.get("name") in addr:
+            item["address"] = addr[item["name"]]
+    if axes:
+        spec["axes"] = axes
+
+
 class RequirementUnderstander:
     """① 需求理解：自然语言 + 设备模型 → requirement_spec。"""
 
-    def __init__(self, client=None, model="glm-5.3", max_rounds=3):
+    def __init__(self, client=None, model=None, max_rounds=3):
+        from .config import MODEL
         self.client = client
-        self.model = model
+        self.model = model or MODEL
         self.max_rounds = max_rounds
         self.skill_prompt = SKILL_PATH.read_text(encoding="utf-8")
 
@@ -136,6 +149,8 @@ class RequirementUnderstander:
     def _call(self, messages):
         payload = {"model": self.model, "messages": messages, "max_tokens": 8192,
                    "temperature": 0.2, "thinking": {"type": "disabled"}}
+        from .config import generation_options
+        payload.update(generation_options(8192))
         try:
             data = self.client.chat_completions(payload)
         except RuntimeError as exc:
@@ -149,6 +164,10 @@ class RequirementUnderstander:
     def _build_messages(self, request_text, io_items, device_summary, task_id, feedback=None):
         user = [
             "用户需求（自然语言）：", request_text, "",
+            "执行范围：保持原始工艺和几何形状。未给顶点/尺寸时，在设备行程内选择明确且一致的几何，写入task_goal与constraints；"
+            "绘图应先抬笔定位、落笔描边、闭合、抬笔返回。验收描述本轮从启动到完成的可观测条件；"
+            "未要求演示的复位/失能异常放constraints，不增加本轮没有激励的事件判据。"
+            "CSP轴目标由PLC输出，位置反馈由物理仿真写入；IO与轴参数逐字保留设备模型。", "",
             "设备模型摘要（⓪ 确定性解析）：", device_summary, "",
             "io_list 预填（设备模型点位，逐字锚定）：",
             json.dumps(io_items, ensure_ascii=False, indent=2), "",
@@ -213,6 +232,7 @@ class RequirementUnderstander:
 
         if self.client is None:  # 模板模式
             spec = self._template_spec(request_text, io_items, device_model, task_id)
+            _inject_anchored(spec, io_items, build_axes(device_model))
             problems = validate_requirement_spec(spec)
             return {"spec": spec if not problems else None,
                     "report": {"mode": "template", "problems": problems, "pending": pending}}
@@ -235,6 +255,7 @@ class RequirementUnderstander:
                     if io_items:
                         problems += ["[anchor] %s" % p for p in _anchor_problems(spec, io_items)]
                     if not problems:
+                        _inject_anchored(spec, io_items, build_axes(device_model))
                         history.append({"round": rnd, "ok": True})
                         return {"spec": spec, "report": {
                             "mode": "llm", "rounds": rnd, "history": history,
@@ -290,6 +311,7 @@ class RequirementUnderstander:
                     if io_items:
                         problems += ["[anchor] %s" % p for p in _anchor_problems(new_spec, io_items)]
                     if not problems:
+                        _inject_anchored(new_spec, io_items, build_axes(device_model))
                         history.append({"round": rnd, "ok": True})
                         return {"spec": new_spec, "report": {
                             "mode": "llm-refine", "rounds": rnd, "history": history,

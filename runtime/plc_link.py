@@ -86,7 +86,7 @@ class PlcLink:
     """桥 ↔ OpenPLC 的 %Q 区轮询回环（数据面挂到 GantryBridge）。"""
 
     def __init__(self, bridge, io_map, spec=None, plc_ranges=None, host="127.0.0.1",
-                 port=502, period_s=0.015):
+                 port=502, period_s=0.015, on_status=None):
         if plc_ranges is None and spec:
             with open(spec, encoding="utf-8") as f:
                 plc_ranges = {v["name"]: v.get("range")
@@ -108,9 +108,13 @@ class PlcLink:
         self.coil_bits = sum(1 for e in io_map if e.get("type") == "bool")
         self.bridge = bridge
         self.host, self.port, self.period_s = host, port, period_s
-        self.client = ModbusTcpClient(host, port=port)
+        self.client = ModbusTcpClient(host, port=port, timeout=1, retries=0)
         self._stop = threading.Event()
         self._thread = None
+        self.online = False
+        self.last_error = None
+        self.last_success_at = None
+        self.on_status = on_status or (lambda online, message: None)
 
     def describe(self) -> str:
         """换算表一览——启动打印，配对/量纲错误一眼可见。"""
@@ -177,10 +181,26 @@ class PlcLink:
         def _loop():
             while not self._stop.is_set():
                 try:
-                    self.pump_once()
-                except Exception:
-                    pass                     # 单周期失败不终止回环（下周期重试）
-                time.sleep(self.period_s)
+                    if not self.client.connect():
+                        raise ConnectionError("OpenPLC 暂不可达")
+                    if not self.pump_once():
+                        raise ConnectionError("Modbus 返回读写错误")
+                    self.last_success_at = time.monotonic()
+                    self.last_error = None
+                    if not self.online:
+                        self.online = True
+                        self.on_status(True, "PLC 反馈连接已就绪")
+                    self._stop.wait(self.period_s)
+                except Exception as exc:
+                    # Windows 的 10053 不会自动清掉 pymodbus 失效 socket；
+                    # 必须先 close，下一轮 connect 才会真正建立新连接。
+                    notify = self.online or self.last_error is None
+                    self.online = False
+                    self.last_error = str(exc)
+                    self.client.close()
+                    if notify:
+                        self.on_status(False, "PLC 连接中断，正在重连：%s" % exc)
+                    self._stop.wait(0.25)
 
         self._thread = threading.Thread(target=_loop, daemon=True)
         self._thread.start()
