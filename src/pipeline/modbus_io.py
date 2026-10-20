@@ -34,7 +34,9 @@ class SafeCoilIO:
         base = (bit // self.span) * self.span
         cur = [bool(b) for b in self._read(base, self.span).bits[:self.span]]
         cur[bit - base] = bool(value)
-        self.c.write_coils(address=base, values=cur)
+        response = self.c.write_coils(address=base, values=cur)
+        if response is None or response.isError():
+            raise RuntimeError("Modbus 线圈写入失败：%s" % response)
 
     def pulse(self, bit, seconds=0.15):
         """打一个脉冲：置位 -> 保持 -> 复位（用于模拟按钮/光电信号）。"""
@@ -46,9 +48,12 @@ class SafeCoilIO:
 
     def _read(self, address, count=1):
         try:
-            return self.c.read_coils(address=address, count=count)
+            response = self.c.read_coils(address=address, count=count)
         except TypeError:  # pymodbus 2.x
-            return self.c.read_coils(address, count)
+            response = self.c.read_coils(address, count)
+        if response is None or response.isError():
+            raise RuntimeError("Modbus 线圈读取失败：%s" % response)
+        return response
 
 
 def read_reg(client, reg):

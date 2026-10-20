@@ -33,6 +33,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from xml2st import convert                      # noqa: E402
 from openplc_client import OpenPLCClient, OpenPLCError  # noqa: E402
+from compiler_guard import ensure_local_compiler, CompilerConfigurationError
 
 WORKSPACE = REPO_ROOT / "workspace"
 RESULT_JSON = WORKSPACE / "deploy_result.json"
@@ -51,6 +52,7 @@ def main():
         pass
 
     steps, errors = [], []
+    compiler = {}
 
     def step(name, ok, detail=""):
         steps.append({"step": name, "ok": bool(ok), "detail": str(detail)})
@@ -60,7 +62,8 @@ def main():
     def finish(status, code):
         WORKSPACE.mkdir(exist_ok=True)
         RESULT_JSON.write_text(
-            json.dumps({"status": status, "steps": steps, "errors": errors},
+            json.dumps({"status": status, "steps": steps, "errors": errors,
+                        "compiler": compiler},
                        ensure_ascii=False, indent=2), encoding="utf-8")
         print("\n[deploy] RESULT: %s" % status)
         return code
@@ -83,6 +86,16 @@ def main():
     step("write program.st", True, str(st_path))
 
     # ② 上传 + 编译 + 启动
+    try:
+        compiler = ensure_local_compiler(args.url)
+    except CompilerConfigurationError as exc:
+        errors.append(str(exc))
+        step("compiler configuration", False, str(exc))
+        return finish("CONFIGURATION_ERROR", 1)
+    if compiler.get("optimizer") == "bypassed":
+        step("compiler configuration", True, "ST optimizer bypassed; matiec compiles original ST")
+    else:
+        print("  [INFO] compiler configuration not verified: " + compiler["status"])
     try:
         client = OpenPLCClient(base_url=args.url)
         client.login()

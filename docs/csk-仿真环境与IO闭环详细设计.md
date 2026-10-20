@@ -498,6 +498,8 @@ class SoftPLC:
 
 ### 7.1 判定引擎：验收准则的机器可读表示
 
+> 2026-10-19 实现增补（lx 按负责人指令联调）：`src/pipeline/scenario_mujoco.py` 绑定本轮 spec/SceneSpec/io_map，保存 trace/verdict/runtime.log。新版读取已校验的 LLM `test_plan.json`，由固定解释器按计划启动 MuJoCo、写控制输入、等待、采集全部映射信号并清理；保存 `execution.json`。按计划验证真实反馈路点、工艺状态及落笔线段偏差，不再固定八路点。计划不能写轴反馈或 PLC 输出；空 trace/缺信号/未知准则不得 PASS，事件判定区分升降沿。既有 canonical 四类结构不变；旧无计划调用保留兼容。运行与证据见《lx-完整XML生成闭环运行指南》。
+
 需求理解模块输出的验收准则落成如下结构（与 SceneSpec 同一需求规格的两个视图）：
 
 ```json

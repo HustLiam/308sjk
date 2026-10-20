@@ -32,12 +32,13 @@ INPUT_RE = re.compile(r"<input[^>]*name=[\"']([^\"']+)[\"'][^>]*value=[\"']([^\"
 
 class OpenPLCClient:
     def __init__(self, base_url="http://127.0.0.1:8080",
-                 username="openplc", password="openplc", timeout=30):
+                 username="openplc", password="openplc", timeout=30, trust_env=False):
         self.base = base_url.rstrip("/")
         self.username = username
         self.password = password
         self.timeout = timeout
         self.session = requests.Session()
+        self.session.trust_env = trust_env
 
     # ------------------------------------------------------------------ 内部
     def _request(self, method, path, **kwargs):

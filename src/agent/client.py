@@ -14,6 +14,8 @@ class BigModelClient:
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+        self.blocked_error = None
+        self.output_limited = False
         # Windows 系统代理（注册表）会掐断长生成连接（ProxyError/RemoteDisconnected）；
         # 默认直连。确需代理的环境显式传 trust_env=True。
         self.session = requests.Session()
@@ -31,21 +33,48 @@ class BigModelClient:
         （供上层实时播报生成进度）；prefer_stream=True 直接走流式（预期长
         输出的调用省去先超时再降级的两分钟）。
         """
+        if self.blocked_error is not None:
+            raise RuntimeError(self.blocked_error)
+        payload = self.prepare_payload(payload)
         if prefer_stream:
-            return self._post_stream(payload, on_chunk=on_chunk)
-        try:
-            return self._post_json(payload)
-        except RuntimeError as exc:
-            text = str(exc)
-            if any(sig in text for sig in ("Read timed out", "SSLEOFError",
-                                           "UNEXPECTED_EOF", "Connection reset")):
-                return self._post_stream(payload, on_chunk=on_chunk)
-            raise
+            result = self._post_stream(payload, on_chunk=on_chunk)
+        else:
+            try:
+                result = self._post_json(payload)
+            except RuntimeError as exc:
+                text = str(exc)
+                if any(sig in text for sig in ("Read timed out", "SSLEOFError",
+                                               "UNEXPECTED_EOF", "Connection reset")):
+                    result = self._post_stream(payload, on_chunk=on_chunk)
+                else:
+                    raise
+        if (result.get("choices") or [{}])[0].get("finish_reason") == "length":
+            self.output_limited = True
+        return result
+
+    def prepare_payload(self, payload):
+        """On subsequent allowed retries reserve the output budget for the artifact.
+
+        No extra call, token-budget increase, or source/acceptance change is made.
+        The DeepSeek reasoning profile is only adjusted after a recorded length limit.
+        """
+        prepared = dict(payload)
+        if (self.output_limited and "deepseek" in str(payload.get("model", "")).lower()
+                and payload.get("thinking", {}).get("type") == "enabled"):
+            prepared["reasoning_effort"] = "low"
+        return prepared
 
     # ---------------- 内部：请求形态 ----------------
     def _headers(self):
         return {"Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json"}
+
+    def _check_status(self, response):
+        if response.status_code != 200:
+            error = "接口返回 HTTP %s：%s" % (response.status_code, response.text)
+            if response.status_code in (401, 402):
+                self.blocked_error = error
+            raise RuntimeError(error)
 
     def _post_json(self, payload: dict) -> dict:
         url = f"{self.base_url}/chat/completions"
@@ -54,8 +83,7 @@ class BigModelClient:
                                      timeout=self.timeout)
         except requests.RequestException as exc:
             raise RuntimeError(f"网络请求失败：{exc}") from exc
-        if resp.status_code != 200:
-            raise RuntimeError(f"接口返回 HTTP {resp.status_code}：{resp.text}")
+        self._check_status(resp)
         return resp.json()
 
     def _post_stream(self, payload: dict, on_chunk=None) -> dict:
@@ -71,9 +99,9 @@ class BigModelClient:
                                      timeout=(10, 90), stream=True)
         except requests.RequestException as exc:
             raise RuntimeError(f"网络请求失败（stream）：{exc}") from exc
-        if resp.status_code != 200:
-            raise RuntimeError(f"接口返回 HTTP {resp.status_code}：{resp.text}")
+        self._check_status(resp)
         parts, finish = [], None
+        metadata, usage = {}, None
         try:
             for raw in resp.iter_lines(decode_unicode=True):
                 if not raw or not raw.startswith("data:"):
@@ -86,6 +114,11 @@ class BigModelClient:
                 except ValueError:
                     continue
                 choice = (chunk.get("choices") or [{}])[0]
+                for key in ("id", "model", "created"):
+                    if key in chunk:
+                        metadata[key] = chunk[key]
+                if chunk.get("usage"):
+                    usage = chunk["usage"]
                 delta = choice.get("delta") or {}
                 if delta.get("content"):
                     piece = delta["content"]
@@ -97,8 +130,9 @@ class BigModelClient:
                             pass   # 播报异常不影响生成
                 finish = choice.get("finish_reason") or finish
         except requests.RequestException as exc:
-            if not parts:
-                raise RuntimeError(f"网络请求失败（stream）：{exc}") from exc
-        return {"choices": [{"message": {"role": "assistant",
+            raise RuntimeError(f"流式响应中断，拒绝使用不完整生成结果：{exc}") from exc
+        if finish is None:
+            raise RuntimeError("流式响应未完整结束，拒绝使用不完整生成结果")
+        return {**metadata, "usage": usage, "choices": [{"message": {"role": "assistant",
                                          "content": "".join(parts)},
                              "finish_reason": finish}]}

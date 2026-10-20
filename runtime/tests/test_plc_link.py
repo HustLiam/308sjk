@@ -13,6 +13,10 @@
 
 import os
 import sys
+import threading
+import time
+
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -44,6 +48,46 @@ def _plc_stand_in():
                           6, host="127.0.0.1", port=port)
     bridge.serve_forever()
     return bridge, port
+
+
+@pytest.mark.parametrize("fault", ["aborted_socket", "error_response"])
+def test_background_link_closes_stale_socket_and_reconnects(fault):
+    class Client:
+        closed = False
+        broken = True
+        closes = 0
+        def connect(self):
+            if self.closed:
+                self.broken = False
+                self.closed = False
+            return True
+        def close(self):
+            self.closes += 1
+            self.closed = True
+    client = Client()
+    healthy = threading.Event()
+    notifications = []
+    link = PlcLink(None, [], on_status=lambda online, text: notifications.append(online))
+    link.client = client
+    def pump():
+        if client.broken:
+            if fault == "aborted_socket":
+                raise ConnectionAbortedError("WinError 10053")
+            return False
+        healthy.set()
+        return True
+    link.pump_once = pump
+    try:
+        link.start()
+        assert healthy.wait(3), "必须关闭失效 socket 才能恢复反馈"
+        deadline = time.monotonic() + 1
+        while not link.online and time.monotonic() < deadline:
+            time.sleep(.01)
+        assert link.online and client.closes >= 1
+        assert notifications == [False, True]
+        assert link.last_success_at is not None
+    finally:
+        link.stop()
 
 
 def test_scale_roundtrip_percent_to_meter():

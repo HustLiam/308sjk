@@ -51,6 +51,32 @@ def _tokens(text):
             if len(w) > 2 and w not in _NOISE}
 
 
+def diagnostic_evidence(errors):
+    """Keep failures and diagnostic lines, exclude successful setup chatter."""
+    lines = [line for item in errors for line in str(item).splitlines() if line.strip()]
+    useful = []
+    for line in lines:
+        stripped = line.strip()
+        if re.match(r"^(?:PASS\b|✓|\[runtime\]|\[verify\].*程序身份确认)", stripped):
+            continue
+        if stripped.startswith('[execution]') and not re.search(
+                r"['\"]op['\"]:\s*['\"]failed['\"]", stripped):
+            continue
+        useful.append(line)
+    # Failures must precede generic log headings in the bounded LLM context.
+    failed = [x for x in useful if re.search(r"\bFAIL\b|✗|Exception|Error:|超时|失败", x)]
+    return failed + [x for x in useful if x not in failed]
+
+
+def _signature_hit(signature, text):
+    # A waypoint/line/position number alone is not evidence of a compiler fault.
+    if re.fullmatch(r"[+-]?\d+(?:\.\d+)?", signature):
+        return False
+    if re.fullmatch(r"[a-z_][a-z0-9_]*", signature):
+        return re.search(r"(?<![a-z0-9_])" + re.escape(signature) + r"(?![a-z0-9_])", text) is not None
+    return signature in text
+
+
 def _lines_sim(a, b):
     """归一化行集合的 Jaccard 相似度（0~1）。"""
     la = {l.strip() for l in str(a).splitlines() if l.strip()}
@@ -95,16 +121,16 @@ class MemoryStore:
         top=5：症状相近的坑（如全冻结 P18 与画图段卡死 P22）常同时命中，
         多给两条参考无害（归因只进反馈不裁定），过紧会把真根因挤出列表。
         """
-        text = " \n ".join(str(e) for e in errors).lower()
+        text = " \n ".join(diagnostic_evidence(errors)).lower()
         scored = []
         for p in self.pitfalls:
             score = 0
             for sig in p.get("signatures", []):
                 s = sig.lower()
-                if s in text:
+                if _signature_hit(s, text):
                     score += len(s.split()) + 2      # 短语签名权重高
                 else:
-                    score += sum(1 for t in _tokens(s) if t in text) * 0.3
+                    score += sum(1 for t in _tokens(s) if _signature_hit(t, text)) * 0.3
             if score >= 1:
                 scored.append((score, p))
         scored.sort(key=lambda x: -x[0])

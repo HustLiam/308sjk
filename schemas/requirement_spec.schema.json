@@ -4,7 +4,14 @@
   "title": "requirement_spec",
   "description": "契约①：自然语言需求 → 结构化需求规格（gc 拥有 Schema 定义权，权威说明见 docs/gc-需求理解与闭环编排详细设计.md §2）。acceptance 四类结构逐字对齐 csk 文档 §5.1（判定引擎权威）。版本 v1.0.0-draft.3：draft.2 基础上落实 lx 收紧建议——io_list INT 量程须完整落入有符号域 [-32768,32767] 或无符号域 [0,65535] 之一（单个 %QW 只能用一种符号解释承载；lx 位宽表）。三方评审联签后冻结为 1.0.0。",
   "type": "object",
-  "required": ["schema_version", "task_id", "task_goal", "io_list", "constraints", "acceptance"],
+  "required": [
+    "schema_version",
+    "task_id",
+    "task_goal",
+    "io_list",
+    "constraints",
+    "acceptance"
+  ],
   "additionalProperties": false,
   "properties": {
     "schema_version": {
@@ -26,12 +33,139 @@
       "type": "array",
       "minItems": 1,
       "description": "IO 清单——三方一致性唯一源头（②ST 定位变量、③io_map、④地址映射）",
-      "items": { "$ref": "#/definitions/io_point" }
+      "items": {
+        "$ref": "#/definitions/io_point"
+      }
+    },
+    "axes": {
+      "type": "array",
+      "minItems": 1,
+      "description": "轴参数表（可选顶层段，⓪ 从 AML 确定性注入——spec 自足：②a 生成 prompt 与 R8 对账同源，不回读 AML。2026-09-22 分层指令）",
+      "items": {
+        "type": "object",
+        "required": [
+          "axis",
+          "stroke"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "axis": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+            "description": "轴名（如 x_axis）"
+          },
+          "type": {
+            "type": "string",
+            "description": "linear / rotary_modulo / rotary_finite"
+          },
+          "stroke": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "number"
+            },
+            "description": "行程 [lo,hi]（工程量）"
+          },
+          "unit": {
+            "type": "string",
+            "description": "工程单位（%、mm…）"
+          },
+          "limits": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "物理限幅 {vmax, accel}"
+          },
+          "defaults": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "MC 调用缺省动力学 {velocity, acceleration, deceleration}"
+          },
+          "poswin": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "到位容差（PLC 与判定引擎共用）"
+          },
+          "io": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "角色→io_list 通道名 {fb, sp, sw, v, rel_d?, err_id?}"
+          }
+        }
+      }
+    },
+    "hmi": {
+      "type": "object",
+      "required": [
+        "elements"
+      ],
+      "description": "人机界面设计（可选顶层段，① LLM 创作、S7 校验形式）：控件选择/类型语义/摆放由 agent 按需求判断；signal 必须逐字取 io_list 且 kind 与方向类型匹配",
+      "properties": {
+        "elements": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "kind",
+              "signal",
+              "label",
+              "pos"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "enum": [
+                  "BUTTON",
+                  "LAMP",
+                  "GAUGE"
+                ]
+              },
+              "type": {
+                "enum": [
+                  "trigger",
+                  "toggle"
+                ],
+                "description": "仅 BUTTON：请求动作类=trigger（瞬动）/维持状态类=toggle（自锁）"
+              },
+              "signal": {
+                "type": "string",
+                "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "description": "操作工母语短语"
+              },
+              "pos": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "description": "网格位置 [行,列]，不重叠"
+              }
+            }
+          }
+        }
+      }
     },
     "constraints": {
       "type": "array",
       "description": "时序约束、互锁条件、异常处理策略（供②生成逻辑、⑤映射为 forbidden_state 类准则）",
-      "items": { "$ref": "#/definitions/constraint" }
+      "items": {
+        "$ref": "#/definitions/constraint"
+      }
     },
     "acceptance": {
       "type": "array",
@@ -39,19 +173,37 @@
       "description": "可量化验收准则，封闭四类，落不进四类的需求必须重新组织",
       "items": {
         "oneOf": [
-          { "$ref": "#/definitions/ac_event_delay" },
-          { "$ref": "#/definitions/ac_region_containment" },
-          { "$ref": "#/definitions/ac_forbidden_state" },
-          { "$ref": "#/definitions/ac_sim_health" }
+          {
+            "$ref": "#/definitions/ac_event_delay"
+          },
+          {
+            "$ref": "#/definitions/ac_region_containment"
+          },
+          {
+            "$ref": "#/definitions/ac_forbidden_state"
+          },
+          {
+            "$ref": "#/definitions/ac_sim_health"
+          }
         ]
       }
+    },
+    "prog_id": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 32767,
+      "description": "程序身份，定位到 %QW20"
     }
   },
-
   "definitions": {
     "io_point": {
       "type": "object",
-      "required": ["name", "dir", "type", "device"],
+      "required": [
+        "name",
+        "dir",
+        "type",
+        "device"
+      ],
       "additionalProperties": false,
       "properties": {
         "name": {
@@ -60,18 +212,29 @@
           "description": "变量名——与②ST 定位变量、③io_map 的 plc_var 逐字一致（一致性检查器对账键）"
         },
         "dir": {
-          "enum": ["input", "output"],
+          "enum": [
+            "input",
+            "output"
+          ],
           "description": "input = Isaac→PLC（传感器/按钮注入）；output = PLC→Isaac（执行器/统计读出）"
         },
         "type": {
-          "enum": ["BOOL", "INT"],
+          "enum": [
+            "BOOL",
+            "INT"
+          ],
           "description": "对外类型冻结 BOOL/INT（lx 位宽契约：BOOL↔%QX，INT↔%QW；模拟量走 INT@%QW 定点换算，换算系数在 io_map 声明）。REAL 仅允许出现在②的 POU 内部计算"
         },
         "range": {
-          "type": ["array", "null"],
+          "type": [
+            "array",
+            "null"
+          ],
           "minItems": 2,
           "maxItems": 2,
-          "items": { "type": "number" },
+          "items": {
+            "type": "number"
+          },
           "description": "量程 [min, max]。type=INT 时必填（定点换算的 raw 区间），且须完整落入 [-32768,32767] 或 [0,65535] 之一（运行权威校验 S2 draft.3，lx 位宽表：单个 %QW 只能用一种符号解释承载）；type=BOOL 时必须为 null 或缺省"
         },
         "unit": {
@@ -82,24 +245,50 @@
           "type": "string",
           "minLength": 1,
           "description": "关联设备语义（供③选组件与绑定 quantity）"
+        },
+        "address": {
+          "type": "string",
+          "pattern": "^%(QX[0-9]+\\.[0-7]|QW[0-9]+)$",
+          "description": "PLC 侧地址：BOOL 用 %QXn.m 位号、INT 用 %QWn 字号（⓪ 预填注入——spec 自足，②a 生成与 ④采集器同源，2026-09-22 分层指令）"
+        },
+        "trigger": {
+          "type": "boolean",
+          "description": "开跑 stimulus（仅 dir=input 且带 address 的 BOOL）——④采集器复位稳定后置 1 的线圈，如 run/cmd_draw"
         }
       }
     },
-
     "constraint": {
       "type": "object",
-      "required": ["id", "kind", "desc"],
+      "required": [
+        "id",
+        "kind",
+        "desc"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "pattern": "^C[0-9]+$" },
-        "kind": { "enum": ["timing", "interlock", "exception"] },
-        "desc": { "type": "string", "minLength": 4 }
+        "id": {
+          "type": "string",
+          "pattern": "^C[0-9]+$"
+        },
+        "kind": {
+          "enum": [
+            "timing",
+            "interlock",
+            "exception"
+          ]
+        },
+        "desc": {
+          "type": "string",
+          "minLength": 4
+        }
       }
     },
-
     "signal_edge": {
       "type": "object",
-      "required": ["signal", "edge"],
+      "required": [
+        "signal",
+        "edge"
+      ],
       "additionalProperties": false,
       "properties": {
         "signal": {
@@ -107,70 +296,218 @@
           "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
           "description": "信号名，必须逐字存在于 io_list（语义规则 S3）"
         },
-        "edge": { "enum": ["rising", "falling"] }
+        "edge": {
+          "enum": [
+            "rising",
+            "falling"
+          ]
+        },
+        "occurrence": {
+          "enum": [
+            "first",
+            "last"
+          ],
+          "default": "first",
+          "description": "观测窗内真实边沿选择；last 表示最后一次，不把初始电平当作边沿"
+        }
       }
     },
-
     "ac_common": {
       "type": "object",
-      "required": ["id", "desc", "type"],
+      "required": [
+        "id",
+        "desc",
+        "type"
+      ],
       "properties": {
-        "id": { "type": "string", "pattern": "^AC[0-9]+$", "description": "准则标识，verdict.json 以此引用" },
-        "desc": { "type": "string", "minLength": 4 }
+        "id": {
+          "type": "string",
+          "pattern": "^AC[0-9]+$",
+          "description": "准则标识，verdict.json 以此引用"
+        },
+        "desc": {
+          "type": "string",
+          "minLength": 4
+        }
       }
     },
-
     "ac_event_delay": {
       "type": "object",
-      "required": ["id", "desc", "type", "from", "to", "op", "value", "unit"],
+      "required": [
+        "id",
+        "desc",
+        "type",
+        "from",
+        "to",
+        "op",
+        "value",
+        "unit"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "pattern": "^AC[0-9]+$" },
-        "desc": { "type": "string", "minLength": 4 },
-        "type": { "const": "event_delay" },
-        "from": { "$ref": "#/definitions/signal_edge" },
-        "to": { "$ref": "#/definitions/signal_edge" },
-        "op": { "enum": ["<=", "<", ">=", ">", "=="] },
-        "value": { "type": "number", "minimum": 0.1 },
-        "unit": { "const": "s", "description": "时间类阈值强制 >=0.1s（100ms，通信时序约束，主方案 §7）" }
+        "id": {
+          "type": "string",
+          "pattern": "^AC[0-9]+$"
+        },
+        "desc": {
+          "type": "string",
+          "minLength": 4
+        },
+        "type": {
+          "const": "event_delay"
+        },
+        "from": {
+          "$ref": "#/definitions/signal_edge"
+        },
+        "to": {
+          "$ref": "#/definitions/signal_edge"
+        },
+        "op": {
+          "enum": [
+            "<=",
+            "<",
+            ">=",
+            ">",
+            "=="
+          ]
+        },
+        "value": {
+          "type": "number",
+          "minimum": 0.1
+        },
+        "unit": {
+          "const": "s",
+          "description": "时间类阈值强制 >=0.1s（100ms，通信时序约束，主方案 §7）"
+        }
       }
     },
-
     "ac_region_containment": {
       "type": "object",
-      "required": ["id", "desc", "type", "asset", "region_center", "tolerance", "check_at"],
+      "required": [
+        "id",
+        "desc",
+        "type",
+        "asset",
+        "region_center",
+        "tolerance",
+        "check_at"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "pattern": "^AC[0-9]+$" },
-        "desc": { "type": "string", "minLength": 4 },
-        "type": { "const": "region_containment" },
-        "asset": { "type": "string", "minLength": 1, "description": "SceneSpec 中的物料/资产名（归③命名域）" },
+        "id": {
+          "type": "string",
+          "pattern": "^AC[0-9]+$"
+        },
+        "desc": {
+          "type": "string",
+          "minLength": 4
+        },
+        "type": {
+          "const": "region_containment"
+        },
+        "asset": {
+          "type": "string",
+          "minLength": 1,
+          "description": "SceneSpec 中的物料/资产名（归③命名域）"
+        },
         "region_center": {
-          "type": "array", "minItems": 3, "maxItems": 3,
-          "items": { "type": "number" },
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "number"
+          },
           "description": "目标区域中心 [x, y, z]，米"
         },
-        "tolerance": { "type": "number", "exclusiveMinimum": 0 },
-        "check_at": { "enum": ["end"], "description": "检查时机；v1 冻结 end（仿真终止时），扩展走 RFC" }
+        "tolerance": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "check_at": {
+          "enum": [
+            "end"
+          ],
+          "description": "检查时机；v1 冻结 end（仿真终止时），扩展走 RFC"
+        }
       }
     },
-
     "ac_forbidden_state": {
       "type": "object",
-      "required": ["id", "desc", "type", "when", "forbid"],
+      "required": [
+        "id",
+        "desc",
+        "type",
+        "when",
+        "forbid"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "pattern": "^AC[0-9]+$" },
-        "desc": { "type": "string", "minLength": 4 },
-        "type": { "const": "forbidden_state" },
-        "when": { "$ref": "#/definitions/signal_value" },
-        "forbid": { "$ref": "#/definitions/signal_value" }
-      }
+        "id": {
+          "type": "string",
+          "pattern": "^AC[0-9]+$"
+        },
+        "desc": {
+          "type": "string",
+          "minLength": 4
+        },
+        "type": {
+          "const": "forbidden_state"
+        },
+        "when": {
+          "$ref": "#/definitions/signal_value"
+        },
+        "forbid": {
+          "$ref": "#/definitions/signal_value"
+        },
+        "purpose": {
+          "enum": [
+            "safety",
+            "derived_state_consistency"
+          ],
+          "default": "safety"
+        },
+        "response_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 0.04,
+          "default": 0
+        },
+        "response_source": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "response_s"
+            ],
+            "properties": {
+              "response_s": {
+                "exclusiveMinimum": 0
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "purpose",
+              "response_source"
+            ],
+            "properties": {
+              "purpose": {
+                "const": "derived_state_consistency"
+              }
+            }
+          }
+        }
+      ]
     },
-
     "signal_value": {
       "type": "object",
-      "required": ["signal", "equals"],
+      "required": [
+        "signal"
+      ],
       "additionalProperties": false,
       "properties": {
         "signal": {
@@ -178,18 +515,91 @@
           "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
           "description": "信号名，必须逐字存在于 io_list（语义规则 S3）"
         },
-        "equals": { "type": ["boolean", "number"] }
-      }
+        "equals": {
+          "type": [
+            "boolean",
+            "number"
+          ]
+        },
+        "op": {
+          "enum": [
+            "<",
+            "<=",
+            ">",
+            ">="
+          ]
+        },
+        "value": {
+          "type": "number"
+        },
+        "tolerance": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "equals"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "op"
+                ]
+              },
+              {
+                "required": [
+                  "value"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "op",
+            "value"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "equals"
+                ]
+              },
+              {
+                "required": [
+                  "tolerance"
+                ]
+              }
+            ]
+          }
+        }
+      ]
     },
-
     "ac_sim_health": {
       "type": "object",
-      "required": ["id", "desc", "type"],
+      "required": [
+        "id",
+        "desc",
+        "type"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "pattern": "^AC[0-9]+$" },
-        "desc": { "type": "string", "minLength": 4 },
-        "type": { "const": "sim_health", "description": "仿真无发散、物料未掉出地面——判定引擎内置检查" }
+        "id": {
+          "type": "string",
+          "pattern": "^AC[0-9]+$"
+        },
+        "desc": {
+          "type": "string",
+          "minLength": 4
+        },
+        "type": {
+          "const": "sim_health",
+          "description": "仿真无发散、物料未掉出地面——判定引擎内置检查"
+        }
       }
     }
   }

@@ -115,13 +115,20 @@ def _clean_params(raw):
     return {k: v for k, v in raw.items() if v is not None}
 
 
-def _axes_info(device_model, io_list=()):
-    """归一化三轴信息 {axis: {stroke, scale, vmax}}（优先 device_model 运动学
-    v1.1：vmax 读 limits 分层；无模型时从 io_list 的 <axis>_fb 量程/单位推断；
-    再缺省的键不在此补——是否可走 gantry 由调用方按可解析轴集判定，缺口由
-    _gantry_asset 用库缺省填）。"""
+def _axes_info(spec, device_model=None, io_list=()):
+    """归一化三轴信息 {axis: {stroke, scale, vmax}}。
+
+    优先级（分层，2026-09-22 负责人指令——场景按 spec 对齐）：
+      1. spec["axes"]（① 从 AML 确定性注入——②a 生成与 ②b 场景同源同表，
+         场景不再直接依赖 AML/设备模型）；
+      2. device_model 运动学（老 spec 无 axes 段的回退）；
+      3. io_list 的 <axis>_fb 量程/单位推断（无模型离线形态）。
+    vmax 读 limits 分层；再缺省的键不在此补——是否可走 gantry 由调用方按
+    可解析轴集判定，缺口由 _gantry_asset 用库缺省填。"""
     axes = {}
-    for a in (device_model or {}).get("kinematics", {}).get("axes", []):
+    src = ((spec or {}).get("axes")
+           or (device_model or {}).get("kinematics", {}).get("axes", []))
+    for a in src:
         name = a.get("axis") or a.get("device", "").rsplit("/", 1)[-1]
         short = name.replace("_axis", "")
         unit = a.get("unit") or "%"
@@ -146,10 +153,37 @@ def _travel_of(info, fallback):
     return round((float(hi) - float(lo)) * info["scale"], 9)
 
 
+def build_scene_artifacts(scene, spec, outdir):
+    """构建本轮 MJCF/地址表；PLC 地址取自本轮 spec，禁止借用 latest。"""
+    import sys
+    root = Path(__file__).resolve().parents[2]
+    sys.path.insert(0, str(root / "scenegen"))
+    from scenegen.iomap import assign_modbus
+    from runtime.mujoco_build import build_mjcf
+    import mujoco
+    table = {p["name"]: p for p in spec["io_list"]}
+    mapped = assign_modbus(scene["io_map"])
+    for e in mapped:
+        point = table.get(e["plc_var"])
+        if not point or not point.get("address"):
+            raise ValueError("闭环物理通道 %s 缺少 spec PLC 地址" % e["plc_var"])
+        e["modbus"]["plc_addr"] = point["address"]
+    xml = build_mjcf(scene)
+    try:
+        mujoco.MjModel.from_xml_string(xml)
+    except ValueError as exc:
+        raise ValueError("本轮 MJCF 加载失败: %s" % exc) from exc
+    outdir = Path(outdir)
+    (outdir / "scene.xml").write_text(xml, encoding="utf-8")
+    (outdir / "io_map.json").write_text(
+        json.dumps(mapped, ensure_ascii=False, indent=2), encoding="utf-8")
+    return mapped
+
+
 def _clamp_to_contract(param_name, value):
-    """按契约参数界钳位。当前唯一触发点：travel_z 开区间下界 >0.01 恰好排除
-    绘图笔 10mm 行程（10×0.001=0.01）——钳到下界+10% 余量（笔行程量级保留，
-    0=落笔/travel=抬笔语义不变）；**待与 csk 对齐 z 下界后移除**（RFC 议题）。"""
+    """按契约参数界钳位（防御性）。2026-09-22 契约 travel_z 下界已对齐为
+    0.005（原 0.01 开区间恰好排除绘图笔 10mm 行程，与 AML stroke×scale=0.01
+    冲突致 R8 场景侧行程比对必挂，负责人指令修正）；正常路径不再触发本钳位。"""
     for p in CONTRACT_TYPES.get("gantry_xyz", {}).get("params", []):
         if p.get("name") != param_name:
             continue
@@ -160,14 +194,14 @@ def _clamp_to_contract(param_name, value):
     return value
 
 
-def _gantry_asset(device_model, io_list=()):
+def _gantry_asset(spec, device_model=None, io_list=()):
     """gantry_xyz 单资产（csk 组装器原生分支：完整机械结构+位置执行器）。
 
     travel_* = stroke×scale（米，按契约界钳位）；speed 取首轴（x）vmax×scale
     （单速参数约束下以主轴为准）；pose = 笔尖行程原点（组装器按 travel 铺底板/
     纸面——扫掠区以 _WORKSPACE_CENTER 为中心，与 v0 工位布局对齐）。
-    """
-    info = _axes_info(device_model, io_list)
+    轴信息优先取 spec["axes"]（分层对齐，2026-09-22）。"""
+    info = _axes_info(spec, device_model, io_list)
     travel = {ax: _clamp_to_contract("travel_%s" % ax,
                                      _travel_of(info.get(ax), fb))
               for ax, fb in _GANTRY_FALLBACK_TRAVEL.items()}
@@ -299,7 +333,7 @@ class SceneSpecGenerator:
         io_list = spec.get("io_list", [])
         # gantry 唯一路线（plotter 多资产遗留模块已移除，2026-09-09）：
         # 三轴信息缺项用库缺省行程补齐（_GANTRY_FALLBACK_TRAVEL）
-        assets = [_gantry_asset(device_model, io_list)]
+        assets = [_gantry_asset(spec, device_model, io_list)]
 
         io_map = route_physical_channels(io_list, {"assets": assets}, device_model)
         scene = {

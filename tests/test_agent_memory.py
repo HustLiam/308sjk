@@ -18,6 +18,21 @@ KB = REPO / "src" / "agent" / "knowledge" / "pitfalls.json"
 
 
 class TestPitfallMatching:
+    def test_waypoint_number_is_not_a_real_initialization_fault(self):
+        m = MemoryStore(kb_path=KB, episodic_path=REPO / 'workspace/memory/nope.json')
+        assert 'P06' not in {p['id'] for p in m.match_pitfalls(['FAIL PATH 未按顺序到达路点40'])}
+        assert 'P06' in {p['id'] for p in m.match_pitfalls(['REAL initial value 40 must be 40.0'])}
+    def test_successful_identity_and_plot_done_are_not_root_cause_signatures(self):
+        m = MemoryStore(kb_path=KB, episodic_path=REPO / 'workspace/memory/nope.json')
+        errors = [
+            '[verify] 程序身份确认: task (prog_id=4)',
+            "[execution] {'op': 'wait_until', 'parameters': {'signal': 'plot_done'}}",
+            '  PASS AC3 plot_done=1 期间 any_moving=1 样本 0',
+            '  FAIL AC1 plot_done↑ 未在观测窗内置位',
+        ]
+        hits = m.match_pitfalls(errors)
+        assert not {'P10', 'P12'} & {p['id'] for p in hits}
+
     def test_endcase_semicolon_hit(self):
         m = MemoryStore(kb_path=KB, episodic_path=REPO / "workspace" / "memory" / "nope.json")
         hits = m.match_pitfalls(["./st_files/123.st:509: error: ';' missing at the end of statement"])
@@ -117,6 +132,37 @@ class _CountingClient:
 
 
 class TestAttribution:
+    def test_diagnostic_context_includes_program_beyond_first_400_chars(self):
+        class Client:
+            payload = None
+            def chat_completions(self, payload):
+                self.payload = payload
+                return {'choices': [{'message': {'content': '{"root_cause":"代码问题","repair_hints":[]}'}}]}
+        client = Client()
+        engine = AttributionEngine(memory=MemoryStore(kb_path=KB,
+            episodic_path=REPO / 'workspace/memory/nope.json'), client=client)
+        engine.attribute('acceptance', ['FAIL PATH 未按顺序到达路点40'],
+                         context={'program_st': ' ' * 700 + 'seq_step := 40;'})
+        assert client.payload is not None
+        assert 'seq_step := 40;' in client.payload['messages'][0]['content']
+    def test_failure_survives_setup_log_context_limit(self):
+        logs = ['[runtime] ready'] * 15 + [
+            '[verify] 程序身份确认: task (prog_id=4)',
+            'FAIL PATH 未到达首个物理路点',
+        ]
+        out = AttributionEngine(enabled=False).attribute('acceptance', logs)
+        assert out['errors'] == ['FAIL PATH 未到达首个物理路点']
+
+    def test_partial_axis_motion_reports_observations_without_relaxing_acceptance(self):
+        from src.pipeline.mujoco_verdict import attribute
+        channels = [{'name': n, 'dir': d, 'type': 'analog'}
+                    for n, d in [('a_cmd', 'output'), ('b_cmd', 'output'), ('b_fb', 'input')]]
+        trace = [{'a_cmd': 0, 'b_cmd': 0, 'b_fb': 0},
+                 {'a_cmd': 0, 'b_cmd': 6, 'b_fb': 5}]
+        out = attribute([{'id': 'PATH', 'pass': False, 'evidence': 'no waypoint'}], trace, channels)
+        assert "['a_cmd']" in out and '不能确定' in out
+        assert '到位判定阈值过紧' not in out
+
     def test_known_error_skips_llm(self):
         client = _CountingClient("```json\n{}\n```")
         engine = AttributionEngine(
@@ -191,7 +237,7 @@ class TestOrchestratorAttribution:
                             deploy_url="http://127.0.0.1:1/deploy")
         monkeypatch.setattr(
             orch, "acceptance_gate",
-            lambda scenario: ("failed", ["matiec 编译失败: ';' missing at the end"]))
+            lambda scenario, runtime_expected=False: ("failed", ["matiec 编译失败: ';' missing at the end"]))
         result = orch.solve(self.SPEC,
                             PLCGenerator(client=None,
                                          seed_xml=REPO / "src" / "plc" / "plotter3axis.xml"),
@@ -210,7 +256,7 @@ class TestOrchestratorAttribution:
         monkeypatch.setattr(pl, "REGISTRY_PATH", reg)
         orch = Orchestrator(runs_root=tmp_path, project_root=REPO)
         monkeypatch.setattr(orch, "acceptance_gate",
-                            lambda scenario: ("ok", "场景验收: 全部通过 ✅"))
+                            lambda scenario, runtime_expected=False: ("ok", "场景验收: 全部通过 ✅"))
         result = orch.solve(self.SPEC,
                             PLCGenerator(client=None,
                                          seed_xml=REPO / "src" / "plc" / "plotter3axis.xml"),

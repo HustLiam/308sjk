@@ -26,7 +26,7 @@ from pymodbus.client import ModbusTcpClient
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gantry_bridge import AXES, derive_layout, load_io_map  # noqa: E402
 
-WS_W_M, WS_H_M = 0.6, 0.4          # 与 gantry_xyz 的 travel_x/y 一致（布局推导会按 io_map 修正画布）
+WS_W_M, WS_H_M = 0.6, 0.4          # 库缺省行程（io_map 无量程时的回退；实际画布随推导行程缩放）
 SCALE = 700                         # 像素/米
 MARGIN = 56
 DEFAULT_IO_MAP = os.path.normpath(os.path.join(
@@ -104,7 +104,11 @@ class JogApp:
         self.status = tk.Label(top, text="未连接", fg="#a00")
         self.status.pack(side=tk.LEFT, padx=8)
 
-        w_px, h_px = int(WS_W_M * SCALE), int(WS_H_M * SCALE)
+        # 画布尺寸跟实际行程（io_map 量程推导）——不再用 0.6/0.4 常量，
+        # 否则新场景 XY 只能点到旧画布范围（2026-09-23 实测：场景 1.0/1.0
+        # 画布仍 0.6/0.4，点击区域和标签全错）
+        self.ws_w, self.ws_h = float(travel["X"]), float(travel["Y"])
+        w_px, h_px = int(self.ws_w * SCALE), int(self.ws_h * SCALE)
         self.cv = tk.Canvas(root, width=w_px + 2 * MARGIN, height=h_px + 2 * MARGIN,
                             bg="#f4f4ef", highlightthickness=0)
         self.cv.pack(padx=8, pady=4)
@@ -149,16 +153,16 @@ class JogApp:
         self.cv.create_line(cx - 10, cy, cx + 10, cy, fill="#4a7dc9")
         self.cv.create_line(cx, cy - 10, cx, cy + 10, fill="#4a7dc9")
         self.cv.create_text(x0, y1 + 14, text="(0, 0) 行程原点", anchor="nw", fill="#666")
-        self.cv.create_text(x1, y0 - 8, text=f"({WS_W_M} m, {WS_H_M} m)", anchor="ne", fill="#666")
+        self.cv.create_text(x1, y0 - 8, text=f"({self.ws_w} m, {self.ws_h} m)", anchor="ne", fill="#666")
 
     def _m_to_canvas(self, x_m: float, y_m: float):
         return (MARGIN + x_m * SCALE,
-                MARGIN + (WS_H_M - y_m) * SCALE)          # 屏幕 y 向下 = 画布向上为 +Y
+                MARGIN + (self.ws_h - y_m) * SCALE)        # 屏幕 y 向下 = 画布向上为 +Y
 
     def _canvas_to_m(self, px: float, py: float):
         x = (px - MARGIN) / SCALE
-        y = (WS_H_M - (py - MARGIN) / SCALE)
-        return (max(0.0, min(x, WS_W_M)), max(0.0, min(y, WS_H_M)))
+        y = (self.ws_h - (py - MARGIN) / SCALE)
+        return (max(0.0, min(x, self.ws_w)), max(0.0, min(y, self.ws_h)))
 
     def _place_pen(self, x_m: float, y_m: float) -> None:
         px, py = self._m_to_canvas(x_m, y_m)
@@ -175,8 +179,8 @@ class JogApp:
         self._apply_cursor(e.x, e.y)
 
     def _apply_cursor(self, px, py):
-        if not (MARGIN - 4 <= px <= MARGIN + WS_W_M * SCALE + 4
-                and MARGIN - 4 <= py <= MARGIN + WS_H_M * SCALE + 4):
+        if not (MARGIN - 4 <= px <= MARGIN + self.ws_w * SCALE + 4
+                and MARGIN - 4 <= py <= MARGIN + self.ws_h * SCALE + 4):
             return
         x_m, y_m = self._canvas_to_m(px, py)
         self._place_pen(x_m, y_m)
@@ -262,7 +266,21 @@ def main():
     args = parser.parse_args()
 
     io_map = load_io_map(args.io_map if os.path.isfile(args.io_map) else None)
-    layout, _ = derive_layout(io_map)
+    # 行程从 io_map 的量程（米）推导——与运行时场景一致；缺省 gantry 布局不带
+    # 量程时回退库缺省 0.6/0.4/0.2（原行为）。症状：不推导时 X/Y 只能走到
+    # 0.6/0.4（新场景 1.0/1.0 的 60%/40%）、Z 一动即超出 0.01 行程被钳位。
+    travel_hint = {}
+    for e in io_map or []:
+        b = e.get("bind") or {}
+        ax = str(b.get("quantity", ""))[:1].upper()
+        if ax not in AXES:
+            asset = str(b.get("asset", ""))
+            if asset.endswith("_axis") and asset[:1].upper() in AXES:
+                ax = asset[:1].upper()
+        rng = b.get("range")
+        if ax in AXES and rng:
+            travel_hint[ax] = float(rng[1])
+    layout, _ = derive_layout(io_map, travel_hint or None)
     travel = {a: layout[a]["travel"] for a in AXES}
 
     root = tk.Tk()

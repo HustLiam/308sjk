@@ -8,98 +8,112 @@
       "dir": "input",
       "type": "BOOL",
       "range": null,
-      "device": "驱动使能主令开关（安全回路就绪后允许三轴驱动器上电；断开=受控断电）"
+      "device": "驱动使能主令开关（安全回路就绪后允许三轴驱动器上电；断开=受控断电）",
+      "address": "%QX0.0"
     },
     {
       "name": "cmd_home",
       "dir": "input",
       "type": "BOOL",
       "range": null,
-      "device": "回参考点按钮（Z 参考点=抬笔安全位）"
+      "device": "回参考点按钮（Z 参考点=抬笔安全位）",
+      "address": "%QX0.1"
     },
     {
       "name": "cmd_go",
       "dir": "input",
       "type": "BOOL",
       "range": null,
-      "device": "手动定位启动按钮（目标位置由 NC 设定值通道给出；落笔状态下 X/Y 请求被安全互锁拒绝）"
+      "device": "手动定位启动按钮（目标位置由 NC 设定值通道给出；落笔状态下 X/Y 请求被安全互锁拒绝）",
+      "address": "%QX0.2"
     },
     {
       "name": "jog_fwd",
       "dir": "input",
       "type": "BOOL",
       "range": null,
-      "device": "X 轴手动进给正向按钮（电平有效，仅抬笔状态允许）"
+      "device": "X 轴手动进给正向按钮（电平有效，仅抬笔状态允许）",
+      "address": "%QX0.3"
     },
     {
       "name": "jog_rev",
       "dir": "input",
       "type": "BOOL",
       "range": null,
-      "device": "X 轴手动进给反向按钮（电平有效，仅抬笔状态允许）"
+      "device": "X 轴手动进给反向按钮（电平有效，仅抬笔状态允许）",
+      "address": "%QX0.4"
     },
     {
       "name": "quickstop",
       "dir": "input",
       "type": "BOOL",
       "range": null,
-      "device": "急停（安全继电器触点，电平有效；受控减速并中止绘图）"
+      "device": "急停（安全继电器触点，电平有效；受控减速并中止绘图）",
+      "address": "%QX0.5"
     },
     {
       "name": "cmd_reset",
       "dir": "input",
       "type": "BOOL",
       "range": null,
-      "device": "故障复位按钮"
+      "device": "故障复位按钮",
+      "address": "%QX0.7"
     },
     {
       "name": "cmd_draw",
       "dir": "input",
       "type": "BOOL",
       "range": null,
-      "device": "绘图启动按钮（抬笔→定位起点→落笔绘制 20..80 正方形→抬笔→回中心）"
+      "device": "绘图启动按钮（抬笔→定位起点→落笔绘制 20..80 正方形→抬笔→回中心）",
+      "address": "%QX2.0"
     },
     {
       "name": "all_oe",
       "dir": "output",
       "type": "BOOL",
       "range": null,
-      "device": "就绪指示灯（三轴驱动器全部使能）"
+      "device": "就绪指示灯（三轴驱动器全部使能）",
+      "address": "%QX1.0"
     },
     {
       "name": "move_done",
       "dir": "output",
       "type": "BOOL",
       "range": null,
-      "device": "定位完成指示灯（手动定位完成汇总；绘图序列期间熄灭）"
+      "device": "定位完成指示灯（手动定位完成汇总；绘图序列期间熄灭）",
+      "address": "%QX1.1"
     },
     {
       "name": "any_moving",
       "dir": "output",
       "type": "BOOL",
       "range": null,
-      "device": "运动中指示灯（任一轴速度指令非零）"
+      "device": "运动中指示灯（任一轴速度指令非零）",
+      "address": "%QX1.2"
     },
     {
       "name": "fault_any",
       "dir": "output",
       "type": "BOOL",
       "range": null,
-      "device": "故障指示灯（任一驱动器故障位）"
+      "device": "故障指示灯（任一驱动器故障位）",
+      "address": "%QX1.3"
     },
     {
       "name": "pen_down",
       "dir": "output",
       "type": "BOOL",
       "range": null,
-      "device": "笔触纸指示灯（Z 行程下限区，含入场容差）"
+      "device": "笔触纸指示灯（Z 行程下限区，含入场容差）",
+      "address": "%QX2.1"
     },
     {
       "name": "plot_done",
       "dir": "output",
       "type": "BOOL",
       "range": null,
-      "device": "绘图完成指示灯（抬笔回中心后点亮；急停/故障中止时熄灭）"
+      "device": "绘图完成指示灯（抬笔回中心后点亮；急停/故障中止时熄灭）",
+      "address": "%QX2.2"
     },
     {
       "name": "x_fb",
@@ -110,7 +124,8 @@
         100
       ],
       "device": "X 轴位置反馈（编码器当量）",
-      "unit": "%"
+      "unit": "%",
+      "address": "%QW0"
     },
     {
       "name": "y_fb",
@@ -121,7 +136,8 @@
         100
       ],
       "device": "Y 轴位置反馈（编码器当量）",
-      "unit": "%"
+      "unit": "%",
+      "address": "%QW1"
     },
     {
       "name": "z_fb",
@@ -132,7 +148,8 @@
         10
       ],
       "device": "Z 轴笔位反馈（0=笔尖触纸，10=抬笔）",
-      "unit": "mm"
+      "unit": "mm",
+      "address": "%QW2"
     },
     {
       "name": "x_sp",
@@ -143,7 +160,8 @@
         100
       ],
       "device": "X 轴定位设定值（NC 写入，先于定位启动建立）",
-      "unit": "%"
+      "unit": "%",
+      "address": "%QW10"
     },
     {
       "name": "y_sp",
@@ -154,7 +172,8 @@
         100
       ],
       "device": "Y 轴定位设定值（NC 写入）",
-      "unit": "%"
+      "unit": "%",
+      "address": "%QW11"
     },
     {
       "name": "z_sp",
@@ -165,7 +184,8 @@
         10
       ],
       "device": "Z 轴笔位设定值（手动抬/落笔；不受笔互锁限制）",
-      "unit": "mm"
+      "unit": "mm",
+      "address": "%QW12"
     },
     {
       "name": "x_sw",
@@ -175,7 +195,8 @@
         0,
         65535
       ],
-      "device": "X 驱动器状态字（诊断通道；bit3=故障，bit10=到位）"
+      "device": "X 驱动器状态字（诊断通道；bit3=故障，bit10=到位）",
+      "address": "%QW6"
     },
     {
       "name": "y_sw",
@@ -185,7 +206,8 @@
         0,
         65535
       ],
-      "device": "Y 驱动器状态字（诊断通道）"
+      "device": "Y 驱动器状态字（诊断通道）",
+      "address": "%QW7"
     },
     {
       "name": "z_sw",
@@ -195,7 +217,8 @@
         0,
         65535
       ],
-      "device": "Z 驱动器状态字（诊断通道）"
+      "device": "Z 驱动器状态字（诊断通道）",
+      "address": "%QW8"
     },
     {
       "name": "x_v",
@@ -206,7 +229,8 @@
         120
       ],
       "device": "X 轴速度指令（伺服驱动器给定，带符号）",
-      "unit": "%/s"
+      "unit": "%/s",
+      "address": "%QW13"
     },
     {
       "name": "y_v",
@@ -217,7 +241,8 @@
         120
       ],
       "device": "Y 轴速度指令（伺服驱动器给定，带符号）",
-      "unit": "%/s"
+      "unit": "%/s",
+      "address": "%QW14"
     },
     {
       "name": "z_v",
@@ -228,7 +253,85 @@
         120
       ],
       "device": "Z 轴速度指令（伺服驱动器给定，带符号；轴组态限速 20）",
-      "unit": "mm/s"
+      "unit": "mm/s",
+      "address": "%QW15"
+    }
+  ],
+  "axes": [
+    {
+      "axis": "x_axis",
+      "type": "linear",
+      "stroke": [
+        0.0,
+        100.0
+      ],
+      "unit": "%",
+      "limits": {
+        "vmax": 40.0,
+        "accel": 80.0
+      },
+      "defaults": {
+        "velocity": 40.0,
+        "acceleration": 80.0,
+        "deceleration": 80.0
+      },
+      "poswin": 2.0,
+      "io": {
+        "fb": "x_fb",
+        "sp": "x_sp",
+        "sw": "x_sw",
+        "v": "x_v"
+      }
+    },
+    {
+      "axis": "y_axis",
+      "type": "linear",
+      "stroke": [
+        0.0,
+        100.0
+      ],
+      "unit": "%",
+      "limits": {
+        "vmax": 40.0,
+        "accel": 80.0
+      },
+      "defaults": {
+        "velocity": 40.0,
+        "acceleration": 80.0,
+        "deceleration": 80.0
+      },
+      "poswin": 2.0,
+      "io": {
+        "fb": "y_fb",
+        "sp": "y_sp",
+        "sw": "y_sw",
+        "v": "y_v"
+      }
+    },
+    {
+      "axis": "z_axis",
+      "type": "linear",
+      "stroke": [
+        0.0,
+        10.0
+      ],
+      "unit": "mm",
+      "limits": {
+        "vmax": 20.0,
+        "accel": 60.0
+      },
+      "defaults": {
+        "velocity": 20.0,
+        "acceleration": 60.0,
+        "deceleration": 60.0
+      },
+      "poswin": 1.0,
+      "io": {
+        "fb": "z_fb",
+        "sp": "z_sp",
+        "sw": "z_sw",
+        "v": "z_v"
+      }
     }
   ],
   "constraints": [

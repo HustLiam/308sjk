@@ -53,7 +53,20 @@ def parse_args():
     p.add_argument("--plc-port", type=int, default=502, help="OpenPLC Modbus 端口")
     p.add_argument("--plc-spec", default=None,
                    help="PLC requirement_spec.json（取 io_list range 推导换算；缺省 1:1）")
+    p.add_argument("--frame-output", help="将本仿真实例的画面原子发布为 npy，供 Studio 显示")
     return p.parse_args()
+
+
+def initialize_bridge_pose(model, data, bridge, joints, actuators):
+    """将真实物理初态与桥的开场目标一致，避免抬笔目标却从纸面零位起步。"""
+    import mujoco
+    initial = bridge.read_commands()
+    for axis, target in initial.items():
+        data.qpos[model.jnt_qposadr[joints[axis]]] = target
+        data.ctrl[actuators[axis]] = target
+    mujoco.mj_forward(model, data)
+    bridge.write_positions({axis: float(data.qpos[model.jnt_qposadr[joints[axis]]]) for axis in initial})
+    return initial
 
 
 def main():
@@ -99,15 +112,25 @@ def main():
     else:
         model = mujoco.MjModel.from_xml_string(build_mjcf(spec))
     data = mujoco.MjData(model)
+    # 参与轴 = 桥布局轴（由 io_map 推导；单轴/双轴场景只接实际绑定的轴）。
+    # 场景缺该轴的关节/执行器时显式失败——mj_name2id 返回 -1 的负索引会静默
+    # 写到别的轴上（2026-09-22 轴集通用化）
+    axes = list(layout)
     jid = {a: mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, f"joint_{a.lower()}")
-           for a in AXES}
+           for a in axes}
     aid = {a: mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, f"drive_{a.lower()}")
-           for a in AXES}
-    travel = {a: layout[a]["travel"] for a in AXES}
+           for a in axes}
+    missing = [f"joint_{a.lower()}/drive_{a.lower()}" for a in axes
+               if jid[a] < 0 or aid[a] < 0]
+    if missing:
+        raise SystemExit("场景缺少 io_map 绑定轴的关节/执行器：%s——核对 io_map 与 scene 资产"
+                         % ", ".join(missing))
+    travel = {a: layout[a]["travel"] for a in axes}
 
     bridge = GantryBridge(layout, n_regs, host=args.host, port=args.port)
     # 开场指令与场景初始位一致：X/Y 原点、Z 抬笔（客户端连上后由它接管）
-    bridge.set_commands({a: (travel[a] if a == "Z" else 0.0) for a in AXES})
+    bridge.set_commands({a: (travel[a] if a == "Z" else 0.0) for a in axes})
+    initial_cmd = initialize_bridge_pose(model, data, bridge, jid, aid)
     bridge.serve_forever()
     print(f"Modbus server ready (mujoco {mujoco.__version__}, in-process)")
     print(bridge.describe())
@@ -124,9 +147,11 @@ def main():
         print(plc_link.describe())
 
     model.opt.timestep = 1.0 / args.physics_hz
-    last_cmd = {a: 0.0 for a in AXES}       # 跟踪起点 = 0（作者位姿），阶跃必成斜坡
+    last_cmd = dict(initial_cmd)
     frame = 1.0 / args.physics_hz
     n_watch = 0
+    feedback_online_since = None
+    feedback_ready = False
 
     viewer_ctx = None
     if args.viewer:
@@ -170,12 +195,19 @@ def main():
         viewer_ctx.user_scn.ngeom = min(ink_next, INK_MAX)
         ink_last = tip
 
+    publisher = None
+    if args.frame_output:
+        from frame_stream import FramePublisher
+        publisher = FramePublisher(model, args.frame_output,
+                                   lookat=(gx + travel.get("X", 1.0) / 2,
+                                           gy + travel.get("Y", 1.0) / 2, 0.05))
+
     try:
         while viewer_ctx is None or viewer_ctx.is_running():
             t0 = time.perf_counter()
             n_watch += 1
             for a, target in bridge.read_commands().items():
-                step = axis_speed[a] * frame
+                step = axis_speed.get(a, 0.5) * frame
                 cur = last_cmd[a]
                 delta = target - cur
                 new = target if abs(delta) <= step else \
@@ -183,7 +215,18 @@ def main():
                 data.ctrl[aid[a]] = np.clip(new, 0.0, travel[a])
                 last_cmd[a] = new
             mujoco.mj_step(model, data)
-            bridge.write_positions({a: float(data.qpos[jid[a]]) for a in AXES})
+            bridge.write_positions({a: float(data.qpos[jid[a]]) for a in axes})
+            if plc_link is not None and not feedback_ready:
+                if not plc_link.online:
+                    feedback_online_since = None
+                elif feedback_online_since is None:
+                    feedback_online_since = time.monotonic()
+                elif time.monotonic() - feedback_online_since >= 0.1:
+                    # 至少完成物理反馈发布与数次 PLC 扫描，启动日志不冒充反馈已就绪。
+                    print("PLC 物理反馈已就绪", flush=True)
+                    feedback_ready = True
+            if publisher is not None:
+                publisher.publish(data)
             if viewer_ctx is not None:
                 drop_ink()
                 if n_watch % 2 == 0:
@@ -194,20 +237,22 @@ def main():
                     viewer_ctx.cam.azimuth = 135.0
                     viewer_ctx.cam.elevation = -42.0
                     viewer_ctx.cam.distance = 1.9
-                    viewer_ctx.cam.lookat[:] = np.array([gx + travel["X"] / 2,
-                                                         gy + travel["Y"] / 2,
+                    viewer_ctx.cam.lookat[:] = np.array([gx + travel.get("X", 0.6) / 2,
+                                                         gy + travel.get("Y", 0.4) / 2,
                                                          data.geom_xpos[paper_gid][2]])
                     viewer_ctx.sync()
             if args.watch and n_watch % int(args.physics_hz * 2) == 0:
                 fb = bridge.read_positions()
                 print(" ".join(f"Axis{a}: cmd={last_cmd[a]:.3f} fb={fb[a]:.3f}"
-                               for a in AXES), flush=True)
+                               for a in axes), flush=True)
             remain = frame - (time.perf_counter() - t0)
             if remain > 0:
                 time.sleep(remain)
     except KeyboardInterrupt:
         print("\nCtrl+C，停止中…")
     finally:
+        if publisher is not None:
+            publisher.close()
         if plc_link is not None:
             plc_link.stop()
         if viewer_ctx is not None:

@@ -21,21 +21,12 @@ REPO = os.path.normpath(os.path.join(HERE, "..", ".."))
 sys.path.insert(0, HERE)
 
 from modbus_io import connect, require_program  # noqa: E402
-from mujoco_verdict import Collector, evaluate, attribute  # noqa: E402
+from mujoco_verdict import Collector, evaluate, attribute, build_channels  # noqa: E402
 
 PROG_ID = 4
 SPEC = os.path.join(REPO, "examples", "specs", "plotter_square_csp.spec.json")
 SCENE = os.path.join(REPO, "runs", "latest", "scene.spec.json")
 IO_MAP = os.path.join(REPO, "runs", "latest", "io_map.json")
-
-# 采集通道 = io_map 物理通道（%QW）+ HMI 线圈；analog addr 由 io_map plc_addr 推导
-def channels():
-    io = json.load(open(IO_MAP, encoding="utf-8"))
-    chs = [{"name": e["plc_var"], "addr": int(e["modbus"]["plc_addr"][3:]),
-            "type": "analog"} for e in io if e["type"] == "float"]
-    chs += [{"name": n, "type": "coil"} for n in
-            ("run", "cmd_draw", "pen_down", "plot_done", "any_moving")]
-    return chs
 
 
 def boot_runtime():
@@ -64,21 +55,24 @@ def main():
     print("[verify] 程序身份确认: plotter_square_csp (prog_id=%d)" % PROG_ID)
     require_program(m, PROG_ID, "plotter_square_csp")
 
-    chs = channels()
+    # 通道/触发/完成信号全部由 spec(io_list 地址+trigger) + io_map(%QW) 推导
+    chs, triggers, done = build_channels(spec, json.load(open(IO_MAP, encoding="utf-8")))
     proc = boot_runtime()
-    print("[runtime] MuJoCo + plc_link 回环就绪（采集 %d 通道）" % len(chs))
+    print("[runtime] MuJoCo + plc_link 回环就绪（采集 %d 通道，触发 %s，完成 %s）"
+          % (len(chs), "+".join(triggers) or "无", "+".join(done) or "超时止"))
     try:
         col = Collector()
-        trace = col.collect(chs, timeout_s=120.0)
+        trace = col.collect(chs, triggers=triggers, done=done, timeout_s=120.0)
     finally:
         proc.kill()
     if not trace:
         print("场景验收: 采集失败（无样本）")
         return 1
-    print("[collect] %d 样本，%.1fs，plot_done=%s"
-          % (len(trace), trace[-1]["t"], trace[-1].get("plot_done")))
+    print("[collect] %d 样本，%.1fs，%s"
+          % (len(trace), trace[-1]["t"],
+             ", ".join("%s=%s" % (n, trace[-1].get(n)) for n in done) or "超时"))
 
-    results = evaluate(spec.get("acceptance", []), trace)
+    results = evaluate(spec.get("acceptance", []), trace, chs)
     fails = 0
     for r in results:
         print(("  PASS " if r["pass"] else "  FAIL ") + "%s %s — %s"
@@ -86,7 +80,7 @@ def main():
         fails += 0 if r["pass"] else 1
 
     if fails:
-        print(attribute(results, trace, chs))
+        print(attribute(results, trace, chs, done))
         print("场景验收: %d 项失败" % fails)
         return 1
     print("场景验收: 全部通过 ✅")

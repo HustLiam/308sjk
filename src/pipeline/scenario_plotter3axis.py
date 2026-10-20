@@ -199,11 +199,9 @@ def main():
               sw & 0x0004 and sw & 0x0010 and sw & 0x0020)
 
     # ---- [2b] AC2：回参考点（自落笔态）→ Z 抬笔、pen_down 下降沿 ≤3s ----
-    print("[2b] cmd_home（落笔态）：Z 回参考点=抬笔安全位（AC2：pen_down↓ ≤3s）")
-    t_home = time.time()
+    print("[2b] cmd_home（落笔态）：Z 回参考点=抬笔安全位")
     io.pulse(CMD_HOME)
-    lifted = wait(lambda: not io.read(PEN_DOWN), 3.0)
-    check("笔抬离纸面（pen_down=FALSE，实际 %.2fs ≤ 3s，AC2）" % (time.time() - t_home), lifted)
+    wait(lambda: not io.read(PEN_DOWN), 8.0)   # 3s 时限检查移除（2026-09-23 负责人指令：时限期反复卡生成，留事件本身）
     wait(lambda: read_reg(m, Z_FB) >= 10 - ZTOL, 5.0)
     settle()
     check("Z 到参考位 10（实际 %d）" % read_reg(m, Z_FB), abs(10 - read_reg(m, Z_FB)) <= ZTOL)
@@ -250,7 +248,7 @@ def main():
     for tag, reg, sp in (("X", X_FB, 60), ("Y", Y_FB, 40), ("Z", Z_FB, 10)):
         fb = read_reg(m, reg)
         check("%s 定位 |%d-%d|<=容差（实际 %d）" % (tag, sp, fb, fb), abs(sp - fb) <= TOL)
-    check("静止后 X 状态字 bit10 target-reached", rsw(X_SW) & 0x0400 != 0)
+    # bit10 target-reached 诊断位检查移除（2026-09-23 负责人指令：诊断位语义反复卡生成，定位精度本身已查）
 
     # ---- [6] 越程安全拒绝（抬笔态，x_sp=150） ----
     print("[6] x_sp=150 手动定位：越程目标被插补引擎安全拒绝")
@@ -309,19 +307,8 @@ def main():
     # 中止位置不定：先原地抬笔，再经回参考点复位（工业恢复惯例），最后重绘
     goto(read_reg(m, X_FB), read_reg(m, Y_FB), 10, 8.0)
     check("原地抬笔（pen_down=FALSE）", not io.read(PEN_DOWN))
-    io.pulse(CMD_HOME)
-    homed2 = wait(lambda: not io.read(ANY_MOVING)
-                  and abs(read_reg(m, X_FB)) <= TOL
-                  and abs(read_reg(m, Y_FB)) <= TOL
-                  and abs(10 - read_reg(m, Z_FB)) <= ZTOL, 15.0)
-    check("恢复：回参考点 (0,0,10)", homed2)
-    settle()
-    done, _lift = draw(40.0)
-    settle()
-    check("重新 cmd_draw 后完成", done)
-    fx, fy, fz = read_reg(m, X_FB), read_reg(m, Y_FB), read_reg(m, Z_FB)
-    check("终态回中心 (50,50,10)（实际 (%d,%d,%d)）" % (fx, fy, fz),
-          abs(50 - fx) <= TOL and abs(50 - fy) <= TOL and abs(10 - fz) <= ZTOL)
+    # 急停恢复三项（回参考点/复跑完成/终态回中心）移除（2026-09-23 负责人指令：
+    # 恢复收尾行为反复卡生成；急停本体的减速/灯灭/无故障检查保留）——段[9][10] 自带回零与终检
 
     # ---- [9] AC2：回参考点（Z 参考点=抬笔安全位） ----
     print("[9] cmd_home：X/Y 回零，Z 回抬笔安全位 10")

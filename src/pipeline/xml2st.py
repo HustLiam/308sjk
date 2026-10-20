@@ -212,7 +212,17 @@ def parse(xml_path):
                     vtype = _var_type_text(var, ns, problems, ctx)
                     if vtype is None:
                         continue
+                    if var.get("initialValue") is not None:
+                        problems.append('%s 中变量 %r 的 initialValue 属性不受支持；初值必须使用 <initialValue><simpleValue value="..."/></initialValue> 子元素，禁止静默丢失初值'
+                                        % (ctx, vname))
+                    init_node = var.find(ns + "initialValue")
+                    if init_node is not None and (init_node.find(ns + "simpleValue") is None
+                            or init_node.find(ns + "simpleValue").get("value") is None):
+                        problems.append("%s 中变量 %r 的初值不受支持；须提供 initialValue/simpleValue 的 value 属性" % (ctx, vname))
                     addr = var.get("address")
+                    if var.find(ns + "address") is not None:
+                        problems.append('%s 中变量 %r 的 <address> 子元素不受支持；请改为 <variable name="%s" address="%%QW0"> 的 address 属性'
+                                        % (ctx, vname, vname))
                     if addr is not None and not ADDRESS_RE.match(addr):
                         problems.append("%s 中变量 %r 的地址 %r 不合法（形如 %%QW0/%%QX0.1）"
                                         % (ctx, vname, addr))

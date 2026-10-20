@@ -31,27 +31,45 @@ AXES = ("X", "Y", "Z")                       # 固定轴序：布局推导与寄
 DEFAULT_TRAVEL = {"X": 0.6, "Y": 0.4, "Z": 0.2}   # out/gantry 场景的行程（米）
 
 
+def _entry_axis(entry):
+    """io_map 条目 → 轴名（X/Y/Z 之一，推导不出返回 None）。
+    兼容两种绑定风格：gantry（quantity=x_pos 首字母）与 linear_axis 契约 v1.1
+    （asset=x_axis 后缀），与 runtime/plc_link._axis_of 同一约定。"""
+    bind = entry.get("bind", {}) or {}
+    q = str(bind.get("quantity", "") or "")
+    if q[:1].upper() in AXES:
+        return q[:1].upper()
+    a = str(bind.get("asset", "") or "")
+    if a.endswith("_axis") and a[:1].upper() in AXES:
+        return a[:1].upper()
+    return None
+
+
 def derive_layout(io_map=None, travel=None):
     """从 io_map.json 推导寄存器布局。返回 (layout, n_regs)。
 
     layout: {axis: {"pos_reg", "cmd_reg", "travel"}}，位置区按契约 server_register，
-    指令区 = 传感区块总长 + 2*轴序号。io_map 为 None 时用内置默认布局。"""
+    指令区 = 传感区块总长 + 2*轴序号。**参与轴集合由 io_map 传感条目推导**
+    （单轴/双轴场景只接实际绑定的轴；io_map 缺轴信息时回退三轴全量——
+    示教器与内置布局的既有用法）。"""
     travel = {**DEFAULT_TRAVEL, **(travel or {})}
-    pos_reg = {a: 2 * i for i, a in enumerate(AXES)}   # 缺省：0/2/4
-    sensor_end = 6
+    axes = sorted({ax for e in io_map or []
+                   if e.get("modbus", {}).get("area") == "sensor_block"
+                   for ax in (_entry_axis(e),) if ax}) or list(AXES)
+    pos_reg = {a: 2 * i for i, a in enumerate(axes)}   # 缺省：按参与轴序 0/2/4…
+    sensor_end = 2 * len(axes)
     for entry in io_map or []:
         m = entry.get("modbus", {})
         if m.get("area") != "sensor_block":
             continue
-        quantity = entry.get("bind", {}).get("quantity", "")
-        axis = quantity[0].upper() if quantity[:1] else None
-        if axis in AXES:
+        axis = _entry_axis(entry)
+        if axis in axes:
             pos_reg[axis] = int(m["server_register"])
             sensor_end = max(sensor_end, int(m["server_register"]) + int(m.get("length", 2)))
     layout = {a: {"pos_reg": pos_reg[a], "cmd_reg": sensor_end + 2 * i,
-                  "travel": float(travel[a])}
-              for i, a in enumerate(AXES)}
-    return layout, sensor_end + 2 * len(AXES)
+                  "travel": float(travel.get(a, 1.0))}
+              for i, a in enumerate(axes)}
+    return layout, sensor_end + 2 * len(axes)
 
 
 def load_io_map(path):
@@ -167,12 +185,19 @@ class GantryBridge:
         return "127.0.0.1" if self.host in ("0.0.0.0", "") else self.host
 
     def stop(self):
+        """先关 Modbus 服务再停事件循环——只停循环会留下孤儿监听套接字，
+        同进程再起新桥时双绑定（Windows 允许），请求落进孤儿套接字超时
+        （2026-09-23 Studio 实测"桥在线但不应答"根因）。"""
         if self._loop is not None:
+            try:
+                import asyncio
+                from pymodbus.server import StopAsyncTcpServer
+                asyncio.run_coroutine_threadsafe(
+                    StopAsyncTcpServer(), self._loop).result(timeout=3)
+            except Exception:
+                pass
             self._loop.call_soon_threadsafe(self._loop.stop)
-
-    def stop(self):
-        if self._loop is not None:
-            self._loop.call_soon_threadsafe(self._loop.stop)
+            self._loop = None
 
     def describe(self) -> str:
         lines = [f"Modbus TCP {self.host}:{self.port}  (float32 大端, 1 寄存器 = 16bit)"]

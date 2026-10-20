@@ -8,56 +8,56 @@
       "dir": "input",
       "type": "BOOL",
       "range": null,
-      "device": "MC_Power 总使能（低=shutdown 命令）"
+      "device": "MC_Power 总使能（低=shutdown 命令）",
+      "address": "%QX0.0"
     },
     {
       "name": "cmd_home",
       "dir": "input",
       "type": "BOOL",
       "range": null,
-      "device": "MC_Home 回零指令（上升沿）"
+      "device": "MC_Home 回零指令（上升沿）",
+      "address": "%QX0.1"
     },
     {
       "name": "cmd_go",
       "dir": "input",
       "type": "BOOL",
       "range": null,
-      "device": "MC_MoveAbsolute 三轴并发定位指令（上升沿）"
+      "device": "MC_MoveAbsolute 三轴并发定位指令（上升沿）",
+      "address": "%QX0.2"
     },
     {
       "name": "jog_fwd",
       "dir": "input",
       "type": "BOOL",
       "range": null,
-      "device": "X 轴 MC_MoveJog 正向（电平）"
+      "device": "X 轴 MC_MoveJog 正向（电平）",
+      "address": "%QX0.3"
     },
     {
       "name": "jog_rev",
       "dir": "input",
       "type": "BOOL",
       "range": null,
-      "device": "X 轴 MC_MoveJog 反向（电平）"
+      "device": "X 轴 MC_MoveJog 反向（电平）",
+      "address": "%QX0.4"
     },
     {
       "name": "quickstop",
       "dir": "input",
       "type": "BOOL",
       "range": null,
-      "device": "MC_Stop 快停（电平，QSA 受控减速）"
-    },
-    {
-      "name": "inject_fault",
-      "dir": "input",
-      "type": "BOOL",
-      "range": null,
-      "device": "故障注入（目标越程 150 → FRA/FA）"
+      "device": "MC_Stop 快停（电平，QSA 受控减速）",
+      "address": "%QX0.5"
     },
     {
       "name": "cmd_reset",
       "dir": "input",
       "type": "BOOL",
       "range": null,
-      "device": "MC_Reset 故障复位（上升沿）"
+      "device": "MC_Reset 故障复位（上升沿）",
+      "address": "%QX0.7"
     },
     {
       "name": "x_fb",
@@ -68,7 +68,8 @@
         100
       ],
       "unit": "%",
-      "device": "X 轴编码器反馈（电机仿真写入）"
+      "device": "X 轴编码器反馈（电机仿真写入）",
+      "address": "%QW0"
     },
     {
       "name": "y_fb",
@@ -79,7 +80,8 @@
         100
       ],
       "unit": "%",
-      "device": "Y 轴编码器反馈"
+      "device": "Y 轴编码器反馈",
+      "address": "%QW1"
     },
     {
       "name": "z_fb",
@@ -90,7 +92,8 @@
         100
       ],
       "unit": "%",
-      "device": "Z 轴编码器反馈"
+      "device": "Z 轴编码器反馈",
+      "address": "%QW2"
     },
     {
       "name": "x_sp",
@@ -101,7 +104,8 @@
         100
       ],
       "unit": "%",
-      "device": "X 轴目标位置（主站写，先于 cmd_go 建立）"
+      "device": "X 轴目标位置（主站写，先于 cmd_go 建立）",
+      "address": "%QW10"
     },
     {
       "name": "y_sp",
@@ -112,7 +116,8 @@
         100
       ],
       "unit": "%",
-      "device": "Y 轴目标位置"
+      "device": "Y 轴目标位置",
+      "address": "%QW11"
     },
     {
       "name": "z_sp",
@@ -123,7 +128,8 @@
         100
       ],
       "unit": "%",
-      "device": "Z 轴目标位置"
+      "device": "Z 轴目标位置",
+      "address": "%QW12"
     },
     {
       "name": "x_sw",
@@ -133,7 +139,8 @@
         0,
         65535
       ],
-      "device": "X 驱动状态字（CiA 402 编码：bit0/1/2/3/4/5/6/10/12）"
+      "device": "X 驱动状态字（CiA 402 编码：bit0/1/2/3/4/5/6/10/12）",
+      "address": "%QW6"
     },
     {
       "name": "y_sw",
@@ -143,7 +150,8 @@
         0,
         65535
       ],
-      "device": "Y 驱动状态字"
+      "device": "Y 驱动状态字",
+      "address": "%QW7"
     },
     {
       "name": "z_sw",
@@ -153,7 +161,8 @@
         0,
         65535
       ],
-      "device": "Z 驱动状态字"
+      "device": "Z 驱动状态字",
+      "address": "%QW8"
     },
     {
       "name": "x_v",
@@ -164,7 +173,8 @@
         120
       ],
       "unit": "%/s",
-      "device": "X 电机速度指令（带符号，伺服环输出）"
+      "device": "X 电机速度指令（带符号，伺服环输出）",
+      "address": "%QW13"
     },
     {
       "name": "y_v",
@@ -175,7 +185,8 @@
         120
       ],
       "unit": "%/s",
-      "device": "Y 电机速度指令"
+      "device": "Y 电机速度指令",
+      "address": "%QW14"
     },
     {
       "name": "z_v",
@@ -186,49 +197,56 @@
         120
       ],
       "unit": "%/s",
-      "device": "Z 电机速度指令"
+      "device": "Z 电机速度指令",
+      "address": "%QW15"
     },
     {
       "name": "all_oe",
       "dir": "output",
       "type": "BOOL",
       "range": null,
-      "device": "三轴全部 Operation Enabled"
+      "device": "三轴全部 Operation Enabled",
+      "address": "%QX1.0"
     },
     {
       "name": "move_done",
       "dir": "output",
       "type": "BOOL",
       "range": null,
-      "device": "MC_MoveAbsolute 三轴 Done 汇总"
+      "device": "MC_MoveAbsolute 三轴 Done 汇总",
+      "address": "%QX1.1"
     },
     {
       "name": "any_moving",
       "dir": "output",
       "type": "BOOL",
       "range": null,
-      "device": "任一轴速度指令非零"
+      "device": "任一轴速度指令非零",
+      "address": "%QX1.2"
     },
     {
       "name": "fault_any",
       "dir": "output",
       "type": "BOOL",
       "range": null,
-      "device": "任一轴故障（sw bit3）"
+      "device": "任一轴故障（sw bit3）",
+      "address": "%QX1.3"
     },
     {
       "name": "cmd_halt",
       "dir": "input",
       "type": "BOOL",
       "range": null,
-      "device": "MC_Halt 受控暂停指令（上升沿，减速停不失能）"
+      "device": "MC_Halt 受控暂停指令（上升沿，减速停不失能）",
+      "address": "%QX2.0"
     },
     {
       "name": "cmd_rel",
       "dir": "input",
       "type": "BOOL",
       "range": null,
-      "device": "MC_MoveRelative 相对定位指令（上升沿）"
+      "device": "MC_MoveRelative 相对定位指令（上升沿）",
+      "address": "%QX2.1"
     },
     {
       "name": "rel_x_d",
@@ -239,7 +257,8 @@
         100
       ],
       "unit": "%",
-      "device": "X 相对定位距离（触发时叠加实际位置）"
+      "device": "X 相对定位距离（触发时叠加实际位置）",
+      "address": "%QW3"
     },
     {
       "name": "rel_y_d",
@@ -250,7 +269,8 @@
         100
       ],
       "unit": "%",
-      "device": "Y 相对定位距离"
+      "device": "Y 相对定位距离",
+      "address": "%QW4"
     },
     {
       "name": "rel_z_d",
@@ -261,7 +281,8 @@
         100
       ],
       "unit": "%",
-      "device": "Z 相对定位距离"
+      "device": "Z 相对定位距离",
+      "address": "%QW5"
     },
     {
       "name": "x_err_id",
@@ -271,7 +292,8 @@
         0,
         3
       ],
-      "device": "X MC 块 ErrorID（0=无 1=越程 2=轴故障 3=未使能）"
+      "device": "X MC 块 ErrorID（0=无 1=越程 2=轴故障 3=未使能）",
+      "address": "%QW16"
     },
     {
       "name": "y_err_id",
@@ -281,7 +303,8 @@
         0,
         3
       ],
-      "device": "Y MC 块 ErrorID"
+      "device": "Y MC 块 ErrorID",
+      "address": "%QW17"
     },
     {
       "name": "z_err_id",
@@ -291,7 +314,91 @@
         0,
         3
       ],
-      "device": "Z MC 块 ErrorID"
+      "device": "Z MC 块 ErrorID",
+      "address": "%QW18"
+    }
+  ],
+  "axes": [
+    {
+      "axis": "x_axis",
+      "type": "linear",
+      "stroke": [
+        0.0,
+        100.0
+      ],
+      "unit": "%",
+      "limits": {
+        "vmax": 40.0,
+        "accel": 80.0
+      },
+      "defaults": {
+        "velocity": 40.0,
+        "acceleration": 80.0,
+        "deceleration": 80.0
+      },
+      "poswin": 2.0,
+      "io": {
+        "fb": "x_fb",
+        "sp": "x_sp",
+        "sw": "x_sw",
+        "v": "x_v",
+        "rel_d": "rel_x_d",
+        "err_id": "x_err_id"
+      }
+    },
+    {
+      "axis": "y_axis",
+      "type": "linear",
+      "stroke": [
+        0.0,
+        100.0
+      ],
+      "unit": "%",
+      "limits": {
+        "vmax": 40.0,
+        "accel": 80.0
+      },
+      "defaults": {
+        "velocity": 40.0,
+        "acceleration": 80.0,
+        "deceleration": 80.0
+      },
+      "poswin": 2.0,
+      "io": {
+        "fb": "y_fb",
+        "sp": "y_sp",
+        "sw": "y_sw",
+        "v": "y_v",
+        "rel_d": "rel_y_d",
+        "err_id": "y_err_id"
+      }
+    },
+    {
+      "axis": "z_axis",
+      "type": "linear",
+      "stroke": [
+        0.0,
+        100.0
+      ],
+      "unit": "%",
+      "limits": {
+        "vmax": 40.0,
+        "accel": 80.0
+      },
+      "defaults": {
+        "velocity": 40.0,
+        "acceleration": 80.0,
+        "deceleration": 80.0
+      },
+      "poswin": 2.0,
+      "io": {
+        "fb": "z_fb",
+        "sp": "z_sp",
+        "sw": "z_sw",
+        "v": "z_v",
+        "rel_d": "rel_z_d",
+        "err_id": "z_err_id"
+      }
     }
   ],
   "constraints": [

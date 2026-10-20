@@ -1,0 +1,217 @@
+<?xml version='1.0' encoding='utf-8'?>
+<CAEXFile FileName="plotter_square_csp_station.aml" SchemaVersion="2.15">
+  <InstanceHierarchy Name="PlotterSquareCSPStation">
+    <InternalElement Name="gantry" ID="csp_gantry" RefBaseSystemUnitPath="PLCSystem/Gantry">
+      <ExternalInterface Name="run" ID="io_run" RefBaseClassPath="PLCInterfaces/DigitalInput">
+        <Attribute Name="address">
+          <Value>%QX0.0</Value>
+        </Attribute>
+        <Attribute Name="description">
+          <Value>OperatorPanel run 使能</Value>
+        </Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="cmd_reset" ID="io_cmd_reset" RefBaseClassPath="PLCInterfaces/DigitalInput">
+        <Attribute Name="address">
+          <Value>%QX0.7</Value>
+        </Attribute>
+        <Attribute Name="description">
+          <Value>OperatorPanel 复位</Value>
+        </Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="cmd_draw" ID="io_cmd_draw" RefBaseClassPath="PLCInterfaces/DigitalInput">
+        <Attribute Name="address">
+          <Value>%QX2.0</Value>
+        </Attribute>
+        <Attribute Name="description">
+          <Value>OperatorPanel 启动画方</Value>
+        </Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="any_moving" ID="io_any_moving" RefBaseClassPath="PLCInterfaces/DigitalOutput">
+        <Attribute Name="address">
+          <Value>%QX1.2</Value>
+        </Attribute>
+        <Attribute Name="description">
+          <Value>任一轴未到位</Value>
+        </Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="pen_down" ID="io_pen_down" RefBaseClassPath="PLCInterfaces/DigitalOutput">
+        <Attribute Name="address">
+          <Value>%QX2.1</Value>
+        </Attribute>
+        <Attribute Name="description">
+          <Value>笔接触状态（z&lt;=1）</Value>
+        </Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="plot_done" ID="io_plot_done" RefBaseClassPath="PLCInterfaces/DigitalOutput">
+        <Attribute Name="address">
+          <Value>%QX2.2</Value>
+        </Attribute>
+        <Attribute Name="description">
+          <Value>绘图完成</Value>
+        </Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="x_cmd" ID="io_x_cmd" RefBaseClassPath="PLCInterfaces/AnalogOutput">
+        <Attribute Name="address">
+          <Value>%QW3</Value>
+        </Attribute>
+        <Attribute Name="description">
+          <Value>X 轴插补位置目标（CSP 上总线）</Value>
+        </Attribute>
+        <Attribute Name="range_min">
+          <Value>0</Value>
+        </Attribute>
+        <Attribute Name="range_max">
+          <Value>100</Value>
+        </Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="y_cmd" ID="io_y_cmd" RefBaseClassPath="PLCInterfaces/AnalogOutput">
+        <Attribute Name="address">
+          <Value>%QW4</Value>
+        </Attribute>
+        <Attribute Name="description">
+          <Value>Y 轴插补位置目标</Value>
+        </Attribute>
+        <Attribute Name="range_min">
+          <Value>0</Value>
+        </Attribute>
+        <Attribute Name="range_max">
+          <Value>100</Value>
+        </Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="z_cmd" ID="io_z_cmd" RefBaseClassPath="PLCInterfaces/AnalogOutput">
+        <Attribute Name="address">
+          <Value>%QW5</Value>
+        </Attribute>
+        <Attribute Name="description">
+          <Value>Z 轴位置目标，单位mm、行程0..10mm；0为落笔。抬笔高度应在行程内选择，并与落笔高度保持足够的到位容差余量，不固定为1。</Value>
+        </Attribute>
+        <Attribute Name="range_min">
+          <Value>0</Value>
+        </Attribute>
+        <Attribute Name="range_max">
+          <Value>10</Value>
+        </Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="x_fb" ID="io_x_fb" RefBaseClassPath="PLCInterfaces/AnalogInput">
+        <Attribute Name="address">
+          <Value>%QW0</Value>
+        </Attribute>
+        <Attribute Name="description">
+          <Value>X 位置反馈</Value>
+        </Attribute>
+        <Attribute Name="range_min">
+          <Value>0</Value>
+        </Attribute>
+        <Attribute Name="range_max">
+          <Value>100</Value>
+        </Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="y_fb" ID="io_y_fb" RefBaseClassPath="PLCInterfaces/AnalogInput">
+        <Attribute Name="address">
+          <Value>%QW1</Value>
+        </Attribute>
+        <Attribute Name="description">
+          <Value>Y 位置反馈</Value>
+        </Attribute>
+        <Attribute Name="range_min">
+          <Value>0</Value>
+        </Attribute>
+        <Attribute Name="range_max">
+          <Value>100</Value>
+        </Attribute>
+      </ExternalInterface>
+      <ExternalInterface Name="z_fb" ID="io_z_fb" RefBaseClassPath="PLCInterfaces/AnalogInput">
+        <Attribute Name="address">
+          <Value>%QW2</Value>
+        </Attribute>
+        <Attribute Name="description">
+          <Value>Z 位置反馈</Value>
+        </Attribute>
+        <Attribute Name="range_min">
+          <Value>0</Value>
+        </Attribute>
+        <Attribute Name="range_max">
+          <Value>10</Value>
+        </Attribute>
+      </ExternalInterface>
+      <InternalElement Name="x_axis" ID="x_axis" RefBaseSystemUnitPath="PLCSystem/LinearAxis">
+        <Attribute Name="axis_type">
+          <Value>linear</Value>
+        </Attribute>
+        <Attribute Name="drive_model">
+          <Value>csp</Value>
+        </Attribute>
+        <Attribute Name="stroke_min">
+          <Value>0</Value>
+        </Attribute>
+        <Attribute Name="stroke_max">
+          <Value>100</Value>
+        </Attribute>
+        <Attribute Name="unit">
+          <Value>%</Value>
+        </Attribute>
+        <Attribute Name="vmax">
+          <Value>40.0</Value>
+        </Attribute>
+        <Attribute Name="accel">
+          <Value>80.0</Value>
+        </Attribute>
+        <Attribute Name="poswin">
+          <Value>2.0</Value>
+        </Attribute>
+      </InternalElement>
+      <InternalElement Name="y_axis" ID="y_axis" RefBaseSystemUnitPath="PLCSystem/LinearAxis">
+        <Attribute Name="axis_type">
+          <Value>linear</Value>
+        </Attribute>
+        <Attribute Name="drive_model">
+          <Value>csp</Value>
+        </Attribute>
+        <Attribute Name="stroke_min">
+          <Value>0</Value>
+        </Attribute>
+        <Attribute Name="stroke_max">
+          <Value>100</Value>
+        </Attribute>
+        <Attribute Name="unit">
+          <Value>%</Value>
+        </Attribute>
+        <Attribute Name="vmax">
+          <Value>40.0</Value>
+        </Attribute>
+        <Attribute Name="accel">
+          <Value>80.0</Value>
+        </Attribute>
+        <Attribute Name="poswin">
+          <Value>2.0</Value>
+        </Attribute>
+      </InternalElement>
+      <InternalElement Name="z_axis" ID="z_axis" RefBaseSystemUnitPath="PLCSystem/LinearAxis">
+        <Attribute Name="axis_type">
+          <Value>linear</Value>
+        </Attribute>
+        <Attribute Name="drive_model">
+          <Value>csp</Value>
+        </Attribute>
+        <Attribute Name="stroke_min">
+          <Value>0</Value>
+        </Attribute>
+        <Attribute Name="stroke_max">
+          <Value>10</Value>
+        </Attribute>
+        <Attribute Name="unit">
+          <Value>mm</Value>
+        </Attribute>
+        <Attribute Name="vmax">
+          <Value>20.0</Value>
+        </Attribute>
+        <Attribute Name="accel">
+          <Value>60.0</Value>
+        </Attribute>
+        <Attribute Name="poswin">
+          <Value>1.0</Value>
+        </Attribute>
+      </InternalElement>
+    </InternalElement>
+  </InstanceHierarchy>
+</CAEXFile>

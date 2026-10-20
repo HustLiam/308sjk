@@ -259,7 +259,7 @@ def _short_axis_name(name):
     return name[:-len("_axis")] if name.endswith("_axis") else name
 
 
-def _bind_axis_io(axis_name, short, io_names, problems):
+def _bind_axis_io(axis_name, short, io_names, problems, drive_model="internal402"):
     """按命名规则在 io_points 名集中绑定通道角色（确定性，非 LLM）。
 
     返回 io dict；任一必需角色缺失时返回 None（problems 已记，展开器/②b
@@ -267,7 +267,9 @@ def _bind_axis_io(axis_name, short, io_names, problems):
     """
     io = {}
     missing = False
-    for role, fmt, required in AXIS_IO_ROLES:
+    roles = (("fb", "%s_fb", True), ("cmd", "%s_cmd", True),
+             ("sw", "%s_sw", False)) if drive_model == "csp" else AXIS_IO_ROLES
+    for role, fmt, required in roles:
         var = fmt % short
         if var in io_names:
             io[role] = var
@@ -313,7 +315,8 @@ def _extract_axes(ctx):
             io = None
         else:
             seen_short[short] = dev["name"]
-            io = _bind_axis_io(dev["name"], short, ctx["io_names"], ctx["problems"])
+            io = _bind_axis_io(dev["name"], short, ctx["io_names"], ctx["problems"],
+                               params.get("drive_model", "internal402"))
         limits = {"vmax": params.get("vmax"), "accel": params.get("accel")}
         defaults = {"velocity": params.get("velocity", limits["vmax"]),
                     "acceleration": params.get("acceleration", limits["accel"]),
@@ -400,12 +403,15 @@ def build_io_list(model):
 
     返回 (io_items, pending)：io_items 可直接作为 spec 的 io_list 草稿（LLM 校验/
     补充的对象）；pending 列出尚不可通过契约校验、必须补充的条目（如 INT 缺量程）。
-    """
+    PLC 侧地址（%QXn.m/%QWn）随条目透传——spec 自足，②a 不回读 AML（分层，
+    2026-09-22 负责人指令）。"""
     io_items, pending = [], []
     for point in model.get("io_points", []):
         item = {"name": point["name"], "dir": point["dir"], "type": point["type"],
                 "range": point["range"],
                 "device": point["signal"] or "%s#%s" % (point["device"], point["name"])}
+        if point.get("address") is not None:
+            item["address"] = point["address"]
         if point.get("unit") is not None:
             item["unit"] = point["unit"]
         if point["type"] == "INT" and point["range"] is None:
@@ -413,3 +419,17 @@ def build_io_list(model):
                            "供 io_map 定点换算）" % point["name"])
         io_items.append(item)
     return io_items, pending
+
+
+def build_axes(model):
+    """device_model.kinematics.axes → spec 顶层 axes 段（紧凑投影）。
+
+    生成 prompt 与 R8 对账同源消费——spec 自足（轴数/参数在合同里），
+    ① 组装后确定性注入，不依赖 LLM 抄写（分层，2026-09-22 负责人指令）。"""
+    out = []
+    for a in (model or {}).get("kinematics", {}).get("axes", []):
+        out.append({"axis": a.get("axis"), "type": a.get("type"),
+                    "stroke": a.get("stroke"), "unit": a.get("unit"),
+                    "limits": a.get("limits"), "defaults": a.get("defaults"),
+                    "poswin": a.get("poswin"), "io": a.get("io")})
+    return out

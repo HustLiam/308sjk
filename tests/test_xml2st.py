@@ -49,6 +49,31 @@ class TestMotion3AxisArtifact:
 
 
 # ---------------------------------------------------------------- 反例用例
+def test_initial_value_attribute_is_rejected_instead_of_losing_constants(tmp_path):
+    text = GOOD_MINIMAL.replace('<variable name="x">', '<variable name="x" initialValue="TRUE">')
+    path = tmp_path / "bad_init.xml"
+    path.write_text(text, encoding="utf-8")
+    ok, _, errors = convert(path)
+    assert not ok and any("initialValue" in e and "simpleValue" in e for e in errors)
+
+
+def test_initial_value_child_survives_translation(tmp_path):
+    text = GOOD_MINIMAL.replace('<type><BOOL /></type>', '<type><BOOL /></type><initialValue><simpleValue value="TRUE"/></initialValue>')
+    path = tmp_path / "good_init.xml"
+    path.write_text(text, encoding="utf-8")
+    ok, st, errors = convert(path)
+    assert ok, errors
+    assert "x : BOOL := TRUE;" in st
+
+
+def test_unsupported_initial_value_child_is_rejected(tmp_path):
+    text = GOOD_MINIMAL.replace('<type><BOOL /></type>', '<type><BOOL /></type><initialValue><simpleValue/></initialValue>')
+    path = tmp_path / "missing_init.xml"
+    path.write_text(text, encoding="utf-8")
+    ok, _, errors = convert(path)
+    assert not ok and any("初值" in e for e in errors)
+
+
 GOOD_MINIMAL = """<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://www.plcopen.org/xml/tc6_0201">
   <fileHeader companyName="" productName="t" productVersion="1"

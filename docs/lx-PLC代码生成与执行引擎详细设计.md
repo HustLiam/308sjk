@@ -79,6 +79,7 @@ workspace/program.st       Modbus TCP :502
 - **定位变量独立分块**：同一个 VAR 块内，FB 实例等普通声明与带 AT 的定位声明混放，matiec 报 `invalid variable(s) declaration`——转换器自动拆为两个 VAR 块；
 - **结束符统一 `END_VAR`**：matiec 无 `END_VAR_INPUT` 等变体；
 - 声明渲染为 `名称 AT 地址 : 类型 := 初值;`，初值取自 `<initialValue><simpleValue value="...">`。
+- `variable initialValue="..."` 属性及无值/未支持的初值结构直接拒绝，避免静默丢失初值后坐标、速度或高度变成0。初值必须由模型按标准子元素生成，转换器不自动重写模型XML。
 
 ### 3.3 ST 装配（to_st）
 
@@ -153,6 +154,10 @@ docker run -d --name openplc -p 8080:8080 -p 502:502 fdamador/openplc
 Web API :8080、Modbus TCP :502；URL 与账号可经环境变量 `OPENPLC_URL / OPENPLC_USER / OPENPLC_PASS` 覆盖。
 
 ### 4.5 一键回归（run_regression.py，主方案 §8.4 CI 校验实体）
+
+> 2026-10-19 增补：`src/agent/closed_loop.py` 为完整 XML 生成的严格闭环入口，已以 DeepSeek V4 Pro high 推理完成“编译失败→反馈修复→MuJoCo 验收通过”，并复跑通过；新增地址子元素拒绝报文，OpenPLC 客户端默认直连。运行与证据见《lx-完整XML生成闭环运行指南》。
+
+> 同日自动化更新：严格入口在生成 XML 前调用 `TestPlanGenerator`，输出并校验声明式 `test_plan.json`，将启动、复位、使能、脉冲、采样及物理路径传给 PLC 生成器。PLC 修复只改完整 XML，各轮使用同一计划；规划元数据失败在生成 PLC 前处理。新 CLI/GUI 不调用固定画方规划器。计划结构见 `schemas/test_plan.schema.json`，设备引用及写入限制由 `src/agent/test_plan.py` 校验。
 
 三层按序执行，前置层失败即止（便宜层拦截原则，见协作指南 §3.2）：
 

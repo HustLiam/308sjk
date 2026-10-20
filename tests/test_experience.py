@@ -98,11 +98,12 @@ class TestFlipRecording:
         mem = MemoryStore(kb_path=KB, episodic_path=tmp_path / "f.json",
                           lessons_path=tmp_path / "lessons.json")
         orch = Orchestrator(runs_root=tmp_path, project_root=REPO,
+                            deploy_url="http://127.0.0.1:1/deploy",
                             attribution_engine=AttributionEngine(
                                 memory=mem, client=None))
         states = iter([("failed", ["  FAIL 画圆序列完成 plot_done=TRUE（999.0s）"]),
                        ("ok", "场景验收: 全部通过 ✅")])
-        monkeypatch.setattr(orch, "acceptance_gate", lambda s: next(states))
+        monkeypatch.setattr(orch, "acceptance_gate", lambda s, runtime_expected=False: next(states))
         result = orch.solve(spec, FakeGen(), acceptance="plotter3axis")
         assert result["status"] == "final"
         lessons = json.loads((tmp_path / "lessons.json").read_text(encoding="utf-8"))["lessons"]

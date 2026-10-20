@@ -62,8 +62,11 @@ def render_spec(spec, pending=()):
         elif a.get("type") == "region_containment":
             extra = "%s @%s 容差%s" % (a.get("asset"), a.get("region_center"), a.get("tolerance"))
         elif a.get("type") == "forbidden_state":
-            extra = "当 %s=%s 时禁止 %s=%s" % (a["when"]["signal"], a["when"]["equals"],
-                                              a["forbid"]["signal"], a["forbid"]["equals"])
+            def condition(ref):
+                return "%s%s%s%s" % (ref["signal"], "=" if "equals" in ref else ref["op"],
+                                      ref.get("equals", ref.get("value")),
+                                      "±%s" % ref["tolerance"] if "tolerance" in ref else "")
+            extra = "当 %s 时禁止 %s" % (condition(a["when"]), condition(a["forbid"]))
         lines.append("  %s [%s] %s%s" % (a.get("id"), a.get("type"), a.get("desc"),
                                         ("（%s）" % extra) if extra else ""))
     for p in pending:
@@ -259,7 +262,8 @@ def main():
     res = orch.solve(spec, generator, deploy=deploy,
                      acceptance=args.scenario if acceptance else None,
                      echo=narrate, trajectory=trajectory,
-                     scene_generator=SceneSpecGenerator(), device_model=device_model)
+                     scene_generator=SceneSpecGenerator(), device_model=device_model,
+                     aml_path=aml)
 
     run_dir = Path(res["run_dir"])
     print("\n" + "=" * 56)

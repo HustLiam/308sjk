@@ -20,6 +20,7 @@ from agent.pipeline import PLCGenerator  # noqa: E402
 SPEC = json.loads((REPO / "examples" / "specs" / "motion3axis.spec.json").read_text(encoding="utf-8"))
 MOTION_XML = REPO / "src" / "plc" / "motion3axis.xml"
 PLOTTER_XML = REPO / "src" / "plc" / "plotter3axis.xml"
+MOTION_AML = REPO / "examples" / "aml" / "motion3axis_station.aml"
 
 
 def mismatched_seed(tmp_path):
@@ -41,9 +42,11 @@ class TestFinalPath:
 
     def test_runs_layout(self, tmp_path):
         orch = Orchestrator(runs_root=tmp_path)
-        result = orch.solve(SPEC, PLCGenerator(client=None, seed_xml=MOTION_XML))
+        result = orch.solve(SPEC, PLCGenerator(client=None, seed_xml=MOTION_XML),
+                            aml_path=MOTION_AML)
         run_dir = Path(result["run_dir"])
-        assert (run_dir / "request.json").is_file()
+        assert (run_dir / "requirements" / "requirement_spec.json").is_file()
+        assert (run_dir / "requirements" / MOTION_AML.name).is_file()
         iter1 = run_dir / "iter_001"
         assert (iter1 / "plcopen.xml").is_file()
         assert (iter1 / "plc.st").is_file()
@@ -111,7 +114,7 @@ class TestAcceptanceGate:
     def test_acceptance_ok_reaches_final(self, tmp_path, monkeypatch):
         orch = Orchestrator(runs_root=tmp_path, project_root=REPO)
         monkeypatch.setattr(orch, "acceptance_gate",
-                            lambda scenario: ("ok", "场景验收: 全部通过 ✅"))
+                            lambda scenario, runtime_expected=False: ("ok", "场景验收: 全部通过 ✅"))
         result = orch.solve(SPEC, PLCGenerator(client=None, seed_xml=MOTION_XML),
                             acceptance="motion3axis")
         assert result["status"] == "final"
@@ -124,7 +127,7 @@ class TestAcceptanceGate:
         orch = Orchestrator(runs_root=tmp_path, project_root=REPO, max_iters=2,
                             deploy_url="http://127.0.0.1:1/deploy")
         monkeypatch.setattr(orch, "acceptance_gate",
-                            lambda scenario: ("failed", ["  FAIL X 回零（实际 37）",
+                            lambda scenario, runtime_expected=False: ("failed", ["  FAIL X 回零（实际 37）",
                                                          "场景验收: 存在失败 ❌"]))
         events = []
         result = orch.solve(SPEC, PLCGenerator(client=None, seed_xml=MOTION_XML),
@@ -138,7 +141,7 @@ class TestAcceptanceGate:
     def test_skipped_acceptance_does_not_block_final(self, tmp_path, monkeypatch):
         orch = Orchestrator(runs_root=tmp_path, project_root=REPO)
         monkeypatch.setattr(orch, "acceptance_gate",
-                            lambda scenario: ("skipped", "OpenPLC/Modbus 不在线"))
+                            lambda scenario, runtime_expected=False: ("skipped", "OpenPLC/Modbus 不在线"))
         result = orch.solve(SPEC, PLCGenerator(client=None, seed_xml=MOTION_XML),
                             acceptance="motion3axis")
         assert result["status"] == "final"
@@ -156,6 +159,20 @@ class TestGeneratorSeedGate:
     def test_seed_with_wrong_spec_fails_gate(self, tmp_path):
         out = PLCGenerator(client=None, seed_xml=mismatched_seed(tmp_path)).generate(SPEC)
         assert not out["ok"] and any("R2" in e for e in out["errors"])
+
+
+def test_compiler_configuration_failure_stops_instead_of_rewriting_plc(tmp_path, monkeypatch):
+    orch = Orchestrator(runs_root=tmp_path, max_iters=6)
+    calls = []
+    def deploy(path):
+        calls.append(path)
+        return 'failed', {'status': 'CONFIGURATION_ERROR', 'errors': ['unknown compile script']}
+    monkeypatch.setattr(orch, 'deploy_gate', deploy)
+    monkeypatch.setattr(orch, 'status_probe', lambda: None)
+    result = orch.solve(SPEC, PLCGenerator(client=None, seed_xml=MOTION_XML), deploy=True)
+    assert result['status'] == 'configuration_error'
+    assert len(calls) == 1
+    assert not (Path(result['run_dir']) / 'iter_002').exists()
 
 
 class TestSceneGate:
@@ -200,7 +217,8 @@ class TestSceneGate:
         result2 = orch.solve(self.PLOTTER_SPEC, PLCGenerator(client=None, seed_xml=self.PLOTTER_XML),
                              scene_generator=SceneSpecGenerator(), device_model=model)
         assert result2["status"] == "final"
-        assert sorted(p2.name for p2 in latest.iterdir()) == ["plcopen.xml", "scene.spec.json"]
+        assert sorted(p2.name for p2 in latest.iterdir()) == \
+            ["hmi.json", "plcopen.xml", "scene.spec.json"]
 
     def test_scene_gate_failure_goes_best_effort(self, tmp_path):
         class BrokenGen:
@@ -267,7 +285,7 @@ class TestRepairStrategy:
         states = iter([("failed", ["闸门4失败样本"]), ("ok", "场景验收: 全部通过 ✅")])
         orch = Orchestrator(runs_root=tmp_path, project_root=REPO,
                             deploy_url="http://127.0.0.1:1/deploy")
-        monkeypatch.setattr(orch, "acceptance_gate", lambda s: next(states))
+        monkeypatch.setattr(orch, "acceptance_gate", lambda s, runtime_expected=False: next(states))
         result = orch.solve(self.SPEC, FakeGen(), acceptance="plotter3axis")
         assert result["status"] == "final"
         assert calls == {"fresh": 1, "repair": 1}      # 第二轮定向修复而非重生成
@@ -291,7 +309,7 @@ class TestRepairStrategy:
         orch = Orchestrator(runs_root=tmp_path, project_root=REPO, max_iters=6,
                             deploy_url="http://127.0.0.1:1/deploy")
         monkeypatch.setattr(orch, "acceptance_gate",
-                            lambda s: ("failed", ["持续失败"]))
+                            lambda s, runtime_expected=False: ("failed", ["持续失败"]))
         result = orch.solve(self.SPEC, FlakyGen(), acceptance="plotter3axis")
         assert result["status"] == "best_effort"
         # 6 轮预算：fresh(1)→repair×3(熔断)→fresh(2,过静态闸重置计数)→repair(4)
@@ -313,7 +331,7 @@ class TestFeedbackFullArchive:
         full = ["FAIL 证据 %02d" % i for i in range(60)]
         orch = Orchestrator(runs_root=tmp_path, project_root=REPO, max_iters=1,
                             deploy_url="http://127.0.0.1:1/deploy")
-        monkeypatch.setattr(orch, "acceptance_gate", lambda s: ("failed", full))
+        monkeypatch.setattr(orch, "acceptance_gate", lambda s, runtime_expected=False: ("failed", full))
         result = orch.solve(SPEC, PLCGenerator(client=None, seed_xml=MOTION_XML),
                             acceptance="motion3axis")
         gate = json.loads((Path(result["run_dir"]) / "iter_001" / "gate.json")
@@ -351,7 +369,7 @@ class TestZeroProgressBreaker:
         orch = Orchestrator(runs_root=tmp_path, project_root=REPO, max_iters=3,
                             deploy_url="http://127.0.0.1:1/deploy")
         monkeypatch.setattr(orch, "acceptance_gate",
-                            lambda s: ("failed", ["FAIL 序列冻结：pl_step=1 恒定"]))
+                            lambda s, runtime_expected=False: ("failed", ["FAIL 序列冻结：pl_step=1 恒定"]))
         orch.solve(self.SPEC, self._gen(calls), acceptance="plotter3axis",
                    echo=lambda ev, p: events.append(ev))
         assert calls == {"fresh": 2, "repair": 1}
@@ -365,7 +383,7 @@ class TestZeroProgressBreaker:
                        ("failed", ["FAIL 回零（实际 12）"])])
         orch = Orchestrator(runs_root=tmp_path, project_root=REPO, max_iters=3,
                             deploy_url="http://127.0.0.1:1/deploy")
-        monkeypatch.setattr(orch, "acceptance_gate", lambda s: next(states))
+        monkeypatch.setattr(orch, "acceptance_gate", lambda s, runtime_expected=False: next(states))
         result = orch.solve(self.SPEC, self._gen(calls), acceptance="plotter3axis")
         assert result["status"] == "best_effort"
         assert calls == {"fresh": 1, "repair": 2}
