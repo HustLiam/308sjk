@@ -177,6 +177,8 @@ def main():
     output = Path(args.output).resolve()
     output.mkdir(parents=True, exist_ok=True)
     protocol_file = output / "protocol.json"
+    model_options = {key: os.environ.get(key) for key in
+                     ("LLM_THINKING", "LLM_REASONING_EFFORT", "LLM_MAX_OUTPUT_TOKENS")}
     sources = {str(p.relative_to(PROJECT_ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
                for base in ("src", "runtime", "schemas", "examples/aml")
                for p in (PROJECT_ROOT / base).rglob("*") if p.suffix in (".py", ".md", ".json", ".aml")}
@@ -184,14 +186,16 @@ def main():
         protocol = json.loads(protocol_file.read_text(encoding="utf-8"))
         if protocol["sources"] != sources:
             raise RuntimeError("Source changed: create a new benchmark instead of mixing versions")
+        if (protocol["model"] != MODEL or protocol["api_url"] != API_URL
+                or protocol.get("model_options") != model_options):
+            raise RuntimeError("Model configuration changed: create a new benchmark instead of mixing settings")
     else:
         protocol = {"id": "bench_" + datetime.now().strftime("%Y%m%d_%H%M%S"), "model": MODEL,
                     "api_url": API_URL, "max_iters": 6, "case_timeout_s": args.case_timeout,
                     "cases": matrix(), "sources": sources, "created_at": datetime.now(timezone.utc).isoformat(),
                     "generation": "fresh requirement + LLM plan + full XML; no manual repair",
                     "oracle": "after observed start edge, requested ordered contact vertices; moving contact samples within Euclidean tolerance 2.9 of requested edges (two axes each poswin=2); final safe pose. All-trace consistency response <=0.04s measured from source predicate change (one initial observation window); stable-source output glitches and unresolved end fail",
-                    "model_options": {key: os.environ.get(key) for key in
-                                      ("LLM_THINKING", "LLM_REASONING_EFFORT", "LLM_MAX_OUTPUT_TOKENS")}}
+                    "model_options": model_options}
         dump(protocol_file, protocol)
         baseline = output / "memory_baseline"
         baseline.mkdir()
@@ -243,6 +247,9 @@ def main():
         dump(folder / "result.json", result)
         summary = summarize(output, protocol)
         print(f"END {case['id']} {result['status']} success={success} {result['duration_s']}s; aggregate={summary['successes']}/{summary['completed']}", flush=True)
+        if result["status"] in ("api_unavailable", "api_blocked"):
+            print("Model service unavailable: preserving pending cases; no automatic rerun.", flush=True)
+            return 2
     return 0
 
 

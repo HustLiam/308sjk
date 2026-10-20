@@ -20,6 +20,7 @@
     "path_checks": {"type": "array", "minItems": 1, "maxItems": 16, "items": {
       "type": "object", "additionalProperties": false, "required": ["id", "desc", "points"], "properties": {
         "id": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]*$"}, "desc": {"type": "string", "minLength": 1},
+        "terminal": {"type": "boolean", "description": "If true, the final waypoint must also hold at the final observed sample; intermediate checkpoints leave this false or absent."},
         "segments": {"type": "object", "additionalProperties": false, "required": ["signals", "tolerance", "when"], "properties": {
           "signals": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string"}},
           "tolerance": {"type": "number", "minimum": 0.01}, "when": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "boolean"}}

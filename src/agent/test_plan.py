@@ -136,16 +136,14 @@ def validate_test_plan(plan, spec):
     _number(plan["completion"]["settle_s"], .1, 5, "settle_s")
     if minimum_duration > plan["timeout_s"]:
         raise TestPlanError("固定等待和脉冲时长已超过测试总超时")
-    completion = {c["signal"] for c in plan["completion"]["all"]}
-    ends = {a["to"]["signal"] for a in spec["acceptance"] if a["type"] == "event_delay"}
-    if not ends or not ends.issubset(completion):
-        raise TestPlanError("completion 应覆盖验收条件中的全部完成信号")
     checks = plan["path_checks"]
     if not isinstance(checks, list) or not 1 <= len(checks) <= 16:
         raise TestPlanError("运动任务必须提供1~16条物理路径检查")
     ids = {a["id"] for a in spec["acceptance"]} | {"EXECUTION"}
     for check in checks:
-        _keys(check, ("id", "desc", "points"), ("segments",))
+        _keys(check, ("id", "desc", "points"), ("segments", "terminal"))
+        if "terminal" in check and not isinstance(check["terminal"], bool):
+            raise TestPlanError("terminal 须为 BOOL，标记该路径最后一点是否为任务终态")
         if not isinstance(check["id"], str) or not re.fullmatch(r"[A-Z][A-Z0-9_]*", check["id"]) or check["id"] in ids:
             raise TestPlanError("检查 id 非法或重复")
         ids.add(check["id"])
@@ -193,6 +191,11 @@ def validate_test_plan(plan, spec):
                 if (state_a != state_b and changed and all(a["values"][n] == b["values"][n] for n in signals)
                         and all(abs(a["values"][n] - b["values"][n]) <= 2 * feedback[n] for n in changed)):
                     raise PlanFeasibilityError("工艺状态切换的位置间距不足以区分设备到位误差：%s。间距须大于两倍poswin；先修正设备/规格/计划，不进入PLC生成。" % changed)
+    from .completion_contract import CompletionConflict, validate_completion_contract
+    try:
+        validate_completion_contract(plan, spec)
+    except CompletionConflict as exc:
+        raise TestPlanError(str(exc)) from exc
     return plan
 
 
@@ -219,6 +222,8 @@ class TestPlanGenerator:
             try:
                 plan = json.loads(extract_json(reply) or "null")
                 validate_test_plan(plan, spec)
+                if spec.get("axes") and not any(c.get("terminal") is True for c in plan["path_checks"]):
+                    raise TestPlanError("新生成的运动任务计划必须至少有一条 terminal:true 完整路径，明确结束时保持的位置和工艺状态")
             except (ValueError, TypeError, KeyError) as exc:
                 error = str(exc)
                 (evidence / ("round_%03d.error.txt" % round_no)).write_text(error, encoding="utf-8")

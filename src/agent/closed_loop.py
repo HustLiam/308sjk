@@ -86,16 +86,18 @@ class RecordingClient(BigModelClient):
 
 
 def record_api_blocked(exc, run, client, stage):
-    """需求理解/规划阶段也留下明确终态，不将余额不足送去PLC修复。"""
-    if not re.search(r"HTTP\s+(?:401|402)\b", str(exc)):
+    """Record model service failures without turning them into PLC repair tasks."""
+    status = getattr(client, "blocked_status", None)
+    if status not in ("api_blocked", "api_unavailable") and not re.search(r"HTTP\s+(?:401|402)\b", str(exc)):
         return False
-    data = {"status": "api_blocked", "stage": stage, "error": str(exc), "model": MODEL,
+    status = status or "api_blocked"
+    data = {"status": status, "stage": stage, "error": str(exc), "model": MODEL,
             "model_calls": client.calls, "generation_mode": "full_xml", "seed_used": False,
             "require_online": True, "run_dir": str(run)}
     for name in ("api_error.json", "manifest.json"):
         (Path(run) / name).write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-    narrate("api_blocked", data)
-    print("RESULT: api_blocked -> %s" % run, flush=True)
+    narrate(status, data)
+    print("RESULT: %s -> %s" % (status, run), flush=True)
     return True
 
 

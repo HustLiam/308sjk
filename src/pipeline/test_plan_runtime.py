@@ -166,6 +166,10 @@ def evaluate_path_checks(plan, trace):
             cursor = found + 1
         if result["pass"]:
             result["evidence"] = "LLM 计划的全部%d个物理路点按序到达且工艺状态满足" % len(reached)
+            if check.get("terminal") is True:
+                result["terminal_pass"] = bool(trace) and matches(trace[-1])
+                if not result["terminal_pass"]:
+                    result.update({"pass": False, "evidence": result["evidence"] + "；最终样本未保持声明的任务终态"})
         segments = check.get("segments")
         if segments and result["pass"]:
             names, when = segments["signals"], segments["when"]

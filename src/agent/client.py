@@ -6,6 +6,10 @@ import requests
 from .config import API_URL
 
 
+class ModelUnavailableError(RuntimeError):
+    """Transport/service failure; retrying PLC code cannot repair it."""
+
+
 class BigModelClient:
     """负责与 BigModel /chat/completions 接口通信。"""
 
@@ -15,6 +19,7 @@ class BigModelClient:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.blocked_error = None
+        self.blocked_status = None
         self.output_limited = False
         # Windows 系统代理（注册表）会掐断长生成连接（ProxyError/RemoteDisconnected）；
         # 默认直连。确需代理的环境显式传 trust_env=True。
@@ -36,6 +41,19 @@ class BigModelClient:
         if self.blocked_error is not None:
             raise RuntimeError(self.blocked_error)
         payload = self.prepare_payload(payload)
+        try:
+            result = self._request_completions(payload, on_chunk, prefer_stream)
+        except (ModelUnavailableError, requests.RequestException) as exc:
+            self.blocked_error = str(exc)
+            self.blocked_status = "api_unavailable"
+            if isinstance(exc, ModelUnavailableError):
+                raise
+            raise ModelUnavailableError("模型服务响应不可用：%s" % exc) from exc
+        if (result.get("choices") or [{}])[0].get("finish_reason") == "length":
+            self.output_limited = True
+        return result
+
+    def _request_completions(self, payload, on_chunk, prefer_stream):
         if prefer_stream:
             result = self._post_stream(payload, on_chunk=on_chunk)
         else:
@@ -48,8 +66,6 @@ class BigModelClient:
                     result = self._post_stream(payload, on_chunk=on_chunk)
                 else:
                     raise
-        if (result.get("choices") or [{}])[0].get("finish_reason") == "length":
-            self.output_limited = True
         return result
 
     def prepare_payload(self, payload):
@@ -74,6 +90,9 @@ class BigModelClient:
             error = "接口返回 HTTP %s：%s" % (response.status_code, response.text)
             if response.status_code in (401, 402):
                 self.blocked_error = error
+                self.blocked_status = "api_blocked"
+            if response.status_code == 429 or response.status_code >= 500:
+                raise ModelUnavailableError(error)
             raise RuntimeError(error)
 
     def _post_json(self, payload: dict) -> dict:
@@ -82,7 +101,7 @@ class BigModelClient:
             resp = self.session.post(url, headers=self._headers(), json=payload,
                                      timeout=self.timeout)
         except requests.RequestException as exc:
-            raise RuntimeError(f"网络请求失败：{exc}") from exc
+            raise ModelUnavailableError(f"网络请求失败：{exc}") from exc
         self._check_status(resp)
         return resp.json()
 
@@ -98,7 +117,7 @@ class BigModelClient:
             resp = self.session.post(url, headers=self._headers(), json=body,
                                      timeout=(10, 90), stream=True)
         except requests.RequestException as exc:
-            raise RuntimeError(f"网络请求失败（stream）：{exc}") from exc
+            raise ModelUnavailableError(f"网络请求失败（stream）：{exc}") from exc
         self._check_status(resp)
         parts, finish = [], None
         metadata, usage = {}, None
@@ -130,9 +149,9 @@ class BigModelClient:
                             pass   # 播报异常不影响生成
                 finish = choice.get("finish_reason") or finish
         except requests.RequestException as exc:
-            raise RuntimeError(f"流式响应中断，拒绝使用不完整生成结果：{exc}") from exc
+            raise ModelUnavailableError(f"流式响应中断，拒绝使用不完整生成结果：{exc}") from exc
         if finish is None:
-            raise RuntimeError("流式响应未完整结束，拒绝使用不完整生成结果")
+            raise ModelUnavailableError("流式响应未完整结束，拒绝使用不完整生成结果")
         return {**metadata, "usage": usage, "choices": [{"message": {"role": "assistant",
                                          "content": "".join(parts)},
                              "finish_reason": finish}]}

@@ -41,6 +41,68 @@ def test_plan_schema_and_semantic_validator_agree():
     js.validate(plan(), json.loads((ROOT / "schemas/test_plan.schema.json").read_text(encoding="utf-8")))
 
 
+def test_intermediate_event_is_not_forced_to_remain_true_at_completion():
+    s, p = spec(), plan()
+    s['acceptance'].append({'id': 'MID', 'type': 'event_delay',
+        'from': {'signal': 'cmd_draw', 'edge': 'rising'},
+        'to': {'signal': 'pen_down', 'edge': 'rising'}, 'op': '<=', 'value': 20})
+    validate_test_plan(p, s)
+    assert p['completion']['all'] == [{'signal': 'plot_done', 'equals': True}]
+
+
+def test_completion_conflict_is_returned_to_plan_generator_before_plc(tmp_path):
+    bad = plan()
+    bad['path_checks'][0].update(terminal=True)
+    bad['path_checks'][0]['points'][-1]['states'] = {'pen_down': False}
+    bad['completion']['all'].append({'signal': 'pen_down', 'equals': True})
+    good = copy.deepcopy(bad)
+    good['completion']['all'][-1]['equals'] = False
+    class Client:
+        calls = []
+        def chat_completions(self, payload, **kwargs):
+            self.calls.append(copy.deepcopy(payload))
+            return {'choices': [{'message': {'content': json.dumps(bad if len(self.calls) == 1 else good)}}]}
+    client = Client()
+    assert TestPlanGenerator(client, report=lambda _: None).generate('complete task', spec(), tmp_path) == good
+    assert len(client.calls) == 2
+    assert '终态条件冲突' in client.calls[-1]['messages'][-1]['content']
+    assert not list(tmp_path.glob('*.xml'))
+
+
+def test_terminal_path_must_hold_at_last_sample_but_checkpoint_need_not():
+    check = plan()['path_checks'][0]
+    check.update(terminal=True)
+    trace = [{'t': 0, 'x_fb': 20, 'y_fb': 20, 'z_fb': 10},
+             {'t': 1, 'x_fb': 60, 'y_fb': 20, 'z_fb': 10}]
+    assert not evaluate_path_checks({'path_checks': [check]}, trace)[0]['pass']
+    check['terminal'] = False
+    assert evaluate_path_checks({'path_checks': [check]}, trace)[0]['pass']
+
+
+def test_terminal_plan_schema_matches_semantic_validation():
+    p = plan()
+    p['path_checks'][0]['terminal'] = True
+    validate_test_plan(p, spec())
+    js = pytest.importorskip('jsonschema')
+    js.validate(p, json.loads((ROOT / 'schemas/test_plan.schema.json').read_text(encoding='utf-8')))
+    p['path_checks'][0]['terminal'] = 1
+    with pytest.raises(TestPlanError, match='terminal'):
+        validate_test_plan(p, spec())
+
+
+def test_new_motion_plan_without_terminal_declaration_is_repaired(tmp_path):
+    bad, good = plan(), plan()
+    good['path_checks'][0]['terminal'] = True
+    class Client:
+        calls = 0
+        def chat_completions(self, *args, **kwargs):
+            self.calls += 1
+            return {'choices': [{'message': {'content': json.dumps(bad if self.calls == 1 else good)}}]}
+    client = Client()
+    assert TestPlanGenerator(client, report=lambda _: None).generate('task', spec(), tmp_path) == good
+    assert client.calls == 2
+
+
 @pytest.mark.parametrize("fault", ["output_write", "feedback_write", "unknown_signal", "short_pulse", "slow_sampling",
     "infinite_timeout", "wrong_task", "missing_cleanup", "script", "second_start", "missing_completion",
     "command_as_feedback", "loose_tolerance", "missing_axis", "unknown_property", "bad_initial", "bad_state"])
@@ -216,6 +278,7 @@ def test_turn_is_split_at_closest_vertex_not_first_entry_into_tolerance_box():
 
 def test_planner_repairs_invalid_metadata_and_preserves_raw_responses(tmp_path):
     p = plan()
+    p['path_checks'][0]['terminal'] = True
     broken = copy.deepcopy(p)
     broken["actions"][1]["values"] = {"plot_done": True}
     class Client:

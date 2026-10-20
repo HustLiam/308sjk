@@ -114,6 +114,8 @@ def narrate(event, payload, out=print):
         out("  △ 连续候选没有可靠推进，停止自动重写，保留最佳版与待处理问题。")
     elif event == "api_blocked":
         out("  ✗ 模型接口余额或鉴权阻断，停止调用；最佳版本和过程证据已保存。")
+    elif event == "api_unavailable":
+        out("  ✗ 模型服务网络、限流或服务器故障，停止调用并保留最佳版；恢复连接后再启动新任务。")
 
 
 class Orchestrator:
@@ -614,12 +616,13 @@ class Orchestrator:
                 echo(event, payload)
 
         def stop_for_api(error, attempted_iter):
-            record = {"status": "api_blocked", "attempted_iter": attempted_iter, "error": str(error),
+            status = getattr(getattr(generator, "client", None), "blocked_status", None) or "api_blocked"
+            record = {"status": status, "attempted_iter": attempted_iter, "error": str(error),
                       "best_iter": (tracker.best or {}).get("iter") if tracker else None}
             (run_dir / "api_error.json").write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
             self._write_summary(run_dir, history, tracker.best if tracker else None)
-            notify("api_blocked", record)
-            return {"status": "api_blocked", "iter": record["best_iter"], "attempted_iter": attempted_iter, "run_dir": run_dir}
+            notify(status, record)
+            return {"status": status, "iter": record["best_iter"], "attempted_iter": attempted_iter, "run_dir": run_dir}
 
         def fail(iter_dir, i, gate, errs, mode):
             nonlocal repair_fails, last_fail_sig, force_fresh, repair_base
@@ -753,7 +756,7 @@ class Orchestrator:
                     mode = "fresh"
                     force_fresh = False
             except RuntimeError as exc:
-                if not re.search(r"HTTP\s+(?:401|402)\b", str(exc)):
+                if not getattr(getattr(generator, "client", None), "blocked_error", None) and not re.search(r"HTTP\s+(?:401|402)\b", str(exc)):
                     raise
                 return stop_for_api(exc, i)
             xml_text = gen.get("xml")
