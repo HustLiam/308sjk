@@ -280,7 +280,7 @@ class TestRepairStrategy:
             def repair(self, previous_xml, spec, feedback, attempts=None):
                 calls["repair"] += 1
                 assert previous_xml == PLOTTER_XML.read_text(encoding="utf-8")
-                return {"ok": True, "xml": previous_xml, "mode": "repair"}
+                return {"ok": True, "xml": previous_xml.replace('pl_step := pl_step + 1;', 'pl_step := pl_step + 2;',1), "mode": "repair"}
 
         states = iter([("failed", ["闸门4失败样本"]), ("ok", "场景验收: 全部通过 ✅")])
         orch = Orchestrator(runs_root=tmp_path, project_root=REPO,
@@ -291,7 +291,7 @@ class TestRepairStrategy:
         assert calls == {"fresh": 1, "repair": 1}      # 第二轮定向修复而非重生成
 
     def test_repair_circuit_breaker_falls_back_to_fresh(self, tmp_path, monkeypatch):
-        """修复连续失败 3 次 → 回退全新生成（防死循环）。"""
+        """修复失败回退全新生成；若新稿与已测候选相同，应立即停止。"""
         from agent.orchestrator import Orchestrator
         calls = {"fresh": 0, "repair": 0}
 
@@ -312,8 +312,8 @@ class TestRepairStrategy:
                             lambda s, runtime_expected=False: ("failed", ["持续失败"]))
         result = orch.solve(self.SPEC, FlakyGen(), acceptance="plotter3axis")
         assert result["status"] == "best_effort"
-        # 6 轮预算：fresh(1)→repair×3(熔断)→fresh(2,过静态闸重置计数)→repair(4)
-        assert calls["fresh"] == 2 and calls["repair"] == 4
+        assert calls == {"fresh": 2, "repair": 2}
+        assert result['stop_reason']=='no_progress'
 
 
 class TestFeedbackFullArchive:
@@ -355,11 +355,13 @@ class TestZeroProgressBreaker:
             def generate(self, spec, feedback=None):
                 calls["fresh"] += 1
                 return {"ok": True,
-                        "xml": TestZeroProgressBreaker.PLOTTER_XML.read_text(encoding="utf-8")}
+                        "xml": TestZeroProgressBreaker.PLOTTER_XML.read_text(encoding="utf-8").replace(
+                            'pl_step := pl_step + 1;', 'pl_step := pl_step + %d;' % (calls['fresh']+calls['repair']),1)}
 
             def repair(self, previous_xml, spec, feedback, attempts=None):
                 calls["repair"] += 1
-                return {"ok": True, "xml": previous_xml, "mode": "repair"}
+                return {"ok": True, "xml": TestZeroProgressBreaker.PLOTTER_XML.read_text(encoding="utf-8").replace(
+                    'pl_step := pl_step + 1;', 'pl_step := pl_step + %d;' % (calls['fresh']+calls['repair']),1), "mode": "repair"}
         return FakeGen()
 
     def test_two_homogeneous_failures_force_fresh(self, tmp_path, monkeypatch):

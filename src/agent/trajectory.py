@@ -23,6 +23,19 @@
 
 import math
 
+
+def _positive(value, label):
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
+        raise ValueError("%s 必须是有限正数" % label)
+    return value
+
+
+def _center(value):
+    if not isinstance(value, (list, tuple)) or len(value) != 2 or any(
+            isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) for v in value):
+        raise ValueError("中心必须是两个有限数值 [x,y]")
+    return value
+
 # 站标准默认参数（缺参确认环节的建议值）
 DEFAULTS = {
     "square": {"center": [50, 50], "size": 60},
@@ -55,8 +68,8 @@ def _step(no, action, to=None, note=None, **extra):
 
 def plan_square(center=None, size=None):
     """方形轨迹：抬笔定位起点 → 落笔 → 四边闭合 → 抬笔 → 回中心。"""
-    center = center or DEFAULTS["square"]["center"]
-    size = size if size is not None else DEFAULTS["square"]["size"]
+    center = _center(center if center is not None else DEFAULTS["square"]["center"])
+    size = _positive(size if size is not None else DEFAULTS["square"]["size"], "边长")
     cx, cy = center
     half = size / 2.0
     x0, x1, y0, y1 = cx - half, cx + half, cy - half, cy + half
@@ -83,11 +96,11 @@ def plan_circle(center=None, radius=None, segments=None):
       （k=0 即起点 (cx, cy-r)；waypoints 同时给出全表，LLM 可逐点步进
         或按计数器公式实现，两者几何等价）
     """
-    center = center or DEFAULTS["circle"]["center"]
-    radius = radius if radius is not None else DEFAULTS["circle"]["radius"]
-    segments = segments or DEFAULTS["circle"]["segments"]
-    if segments < 8:
-        raise ValueError("圆折线段数 %d 过少（≥8 才能保证轨迹判定）" % segments)
+    center = _center(center if center is not None else DEFAULTS["circle"]["center"])
+    radius = _positive(radius if radius is not None else DEFAULTS["circle"]["radius"], "半径")
+    segments = DEFAULTS["circle"]["segments"] if segments is None else segments
+    if isinstance(segments, bool) or not isinstance(segments, int) or not 8 <= segments <= 360:
+        raise ValueError("圆折线段数必须是 8..360 的整数")
     cx, cy = center
     wp = []
     for k in range(segments):
@@ -102,7 +115,7 @@ def plan_circle(center=None, radius=None, segments=None):
               note="抬笔定位到圆周起点（圆心正下方）"),
         _step(2, "pen_down_move", _pt(cx, cy - radius, PEN_Z["down"], "落笔"),
               note="Z 下探落笔"),
-        _step(3, "circle_sweep", to=wp[-1], note="N 段折线整圆（waypoints 全表见下）",
+        _step(3, "circle_sweep", to=wp[0], note="N 段折线整圆（末段回到起点后再抬笔）",
               formula=formula, waypoints=wp),
         _step(4, "pen_up_move", _pt(cx, cy - radius, PEN_Z["up"], "抬笔"), note="Z 抬起"),
         _step(5, "pen_up_move", _pt(cx, cy, PEN_Z["up"], "回圆心"), note="完成位"),
@@ -158,8 +171,13 @@ _QUESTION = {
 def summarize_for_prompt(traj):
     """轨迹 → 生成 prompt 注入文本（权威步表；LLM 不得改坐标/发明几何）。"""
     p = traj["params"]
+    svg_real = traj.get("sampling", {}).get("coordinate_quantum", 1) < 1
+    svg_type = "REAL" if svg_real else "INT"
     if traj["shape"] == "square":
         head = "正方形：中心 (%g,%g)、边长 %g" % (p["center"][0], p["center"][1], p["size"])
+    elif traj["shape"] == "svg":
+        head = "SVG 轮廓：%d 条独立路径，%d 个 %s 路点；中心 (%g,%g)，适配框 %g×%g" % (
+            p["path_count"], p["point_count"], svg_type, *p["center"], p["width"], p["height"])
     else:
         head = "圆：圆心 (%g,%g)、半径 %g、%d 段折线" % (
             p["center"][0], p["center"][1], p["radius"], p["segments"])
@@ -176,11 +194,17 @@ def summarize_for_prompt(traj):
             s["no"], s["action"],
             "(%g,%g,%g)" % tuple(to) if to else "（见下）",
             "（%s）" % s["note"] if s.get("note") else ""))
-        if s["action"] == "circle_sweep":
-            lines.append("    折线公式：%s" % s["formula"])
-            lines.append("    waypoints 全表（依次走完，末点闭合回起点）：")
+        if s.get("waypoints"):
+            if s.get("formula"):
+                lines.append("    折线公式：%s" % s["formula"])
+            lines.append("    waypoints 全表（严格按序走完；不得连接不同 SVG 路径的落笔段）：")
             for k, w in enumerate(s["waypoints"]):
                 lines.append("      k=%02d (%g,%g,%g)" % (k, w[0], w[1], w[2]))
+    if traj["shape"] == "svg":
+        lines.append(("SVG 路点保留小数；目标和插补位置须用 REAL，禁止先转成 INT 或取整；只在最终位置寄存器输出时按 AML 编码倍率转换。" if svg_real else
+                      "SVG 路点已按 PLC INT 分辨率量化，直接实现步表；")+
+                     "polyline_sweep 是本步内依次移动到所有 waypoints 的工艺循环，不是一个标准 FB。不得把 SVG 当作圆重建，不得省略独立路径间的抬笔动作。")
+        lines.append("SVG 绘制期间保持三轴连续跟踪使能，不能每个 Done 都清掉启动线。每扫描先确定当前目标并调用全部插补器，再根据本次调用后的 Done 与当前新目标到位窗口推进步号；禁止用上一扫描 Done 连续跳过步表。")
     lines.append("完成语义：最后一步到位且全部插补空闲 → plot_done := TRUE；"
                  "急停/故障 → 序列清零且 plot_done := FALSE。")
     return "\n".join(lines)
@@ -189,12 +213,18 @@ def summarize_for_prompt(traj):
 def goal_text(traj):
     """轨迹 → 需求理解增强文本（拼进 request，让 spec 的 task_goal/acceptance 与几何一致）。"""
     p = traj["params"]
+    if traj["shape"] == "svg":
+        coordinate_type="REAL" if traj.get("sampling",{}).get("coordinate_quantum",1)<1 else "INT"
+        return ("描画 SVG 轮廓：%d 条独立路径、%d 个 %s 路点；中心 (%g,%g)，"
+                "等比适配框 %g×%g；每条路径先抬笔定位、再落笔按序描画、结束抬笔；全部完成后回中心。"
+                % (p["path_count"], p["point_count"], coordinate_type, *p["center"], p["width"], p["height"]))
     if traj["shape"] == "square":
         c, sz = p["center"], p["size"]
-        return ("画正方形：中心 (%d,%d)、边长 %d（%d..%d）；抬笔定位起点 → 落笔沿四边"
-                "画完整方形并闭合 → 抬笔回中心 (%d,%d,10)"
-                % (c[0], c[1], sz, c[0] - sz // 2, c[0] + sz // 2, c[0], c[1]))
+        return ("画正方形：中心 (%g,%g)、边长 %g（X %g..%g，Y %g..%g）；抬笔定位起点 → 落笔沿四边"
+                "画完整方形并闭合 → 抬笔回中心 (%g,%g,10)"
+                % (c[0], c[1], sz, c[0] - sz / 2, c[0] + sz / 2,
+                   c[1] - sz / 2, c[1] + sz / 2, c[0], c[1]))
     c, r, n = p["center"], p["radius"], p["segments"]
-    return ("画整圆：圆心 (%d,%d)、半径 %d；抬笔定位圆周起点 (%d,%d) → 落笔沿 %d 段"
-            "折线画整圆闭合 → 抬笔回圆心 (%d,%d,10)"
+    return ("画整圆：圆心 (%g,%g)、半径 %g；抬笔定位圆周起点 (%g,%g) → 落笔沿 %d 段"
+            "折线画整圆闭合 → 抬笔回圆心 (%g,%g,10)"
             % (c[0], c[1], r, c[0], c[1] - r, n, c[0], c[1]))

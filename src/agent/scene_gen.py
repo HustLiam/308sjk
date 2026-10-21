@@ -329,6 +329,14 @@ def _route_gantry(io_list, gantry):
 class SceneSpecGenerator:
     """spec (+device_model) → scene.spec.json（内嵌 io_map），确定性。"""
 
+    def __init__(self, contract=None):
+        self.version = SCENE_SPEC_VERSION if contract is None else contract["contract_version"]
+        self.registry = CONTRACT_TYPES if contract is None else {
+            name: {"quantities": {q["name"]: (q["direction"], q["dtype"])
+                                  for q in definition.get("quantities", [])},
+                   "params": definition.get("params", [])}
+            for name, definition in contract["types"].items()}
+
     def generate(self, spec, device_model=None):
         io_list = spec.get("io_list", [])
         # gantry 唯一路线（plotter 多资产遗留模块已移除，2026-09-09）：
@@ -338,7 +346,7 @@ class SceneSpecGenerator:
         io_map = route_physical_channels(io_list, {"assets": assets}, device_model)
         scene = {
             "scene_id": spec.get("task_id", "task"),
-            "spec_version": SCENE_SPEC_VERSION,
+            "spec_version": self.version,
             "units": "m",
             "physics": {"gravity": [0, 0, -9.81], "physics_dt": 0.008333, "solver": "tgs"},
             "ground": {"size": [1.5, 1.5], "friction": 0.8},
@@ -350,7 +358,7 @@ class SceneSpecGenerator:
                                 "early_stop": "plot_done settled"},
             },
         }
-        problems = validate_scene_outputs(scene, io_list)
+        problems = validate_scene_outputs(scene, io_list, self.registry)
         if problems:
             raise ValueError("scene.spec 生成产物自检失败: %s" % problems)
         return {"scene": scene, "io_map": io_map}
@@ -400,7 +408,7 @@ def _check_asset_params(asset, tdef, problems):
                            [p["name"] for p in tdef["params"]]))
 
 
-def validate_scene_outputs(scene, io_list):
+def validate_scene_outputs(scene, io_list, contract_types=None):
     """生成产物自检（编排闸门消费；问题清单为空=通过）。
 
     V0 场景骨架（scene_id/spec_version 模式、units/physics/script 结构）；
@@ -414,6 +422,7 @@ def validate_scene_outputs(scene, io_list):
     V4 绑定合法（bind.asset 是场景资产、quantity 已注册于该类型、dir↔quantity
        方向匹配、type↔dtype 匹配、range 若有则下界<上界）。
     """
+    registry = CONTRACT_TYPES if contract_types is None else contract_types
     problems = []
     if not re.match(r"^[a-z0-9_]{1,64}$", scene.get("scene_id") or ""):
         problems.append("V0: scene_id %r 须匹配 ^[a-z0-9_]{1,64}$" % scene.get("scene_id"))
@@ -427,10 +436,10 @@ def validate_scene_outputs(scene, io_list):
         if a.get("id") in seen:
             problems.append("V1: 资产 id %r 重复" % a.get("id"))
         seen.add(a.get("id"))
-        tdef = CONTRACT_TYPES.get(a.get("type"))
+        tdef = registry.get(a.get("type"))
         if tdef is None:
             problems.append("V1: 资产 %r 类型 %r 不在契约注册表 %s"
-                            % (a.get("id"), a.get("type"), sorted(CONTRACT_TYPES)))
+                            % (a.get("id"), a.get("type"), sorted(registry)))
         else:
             _check_asset_params(a, tdef, problems)
         pos = (a.get("pose") or {}).get("position")
@@ -478,7 +487,7 @@ def validate_scene_outputs(scene, io_list):
         if target is None:
             problems.append("V4: %s bind.asset %r 不在场景资产内" % (path, bind["asset"]))
             continue
-        quantity = CONTRACT_TYPES.get(target.get("type"), {}).get("quantities", {}).get(bind["quantity"])
+        quantity = registry.get(target.get("type"), {}).get("quantities", {}).get(bind["quantity"])
         if quantity is None:
             problems.append("V4: %s %s 无注册 quantity %r"
                             % (path, target.get("type"), bind["quantity"]))

@@ -167,7 +167,8 @@ def test_orchestrator_repairs_best_instead_of_last_rejected_candidate(tmp_path, 
         def repair(self, xml, s, feedback, **kw):
             bases.append(xml)
             assert "baseline_iter" in feedback
-            return {"xml": xml.replace("<!-- base -->", "<!-- regressed -->")}
+            return {"xml": xml.replace("<!-- base -->", "<!-- regressed -->").replace(
+                'x_cmd := x_tgt;', 'x_cmd := x_tgt + %d;' % len(bases),1)}
     orch = Orchestrator(runs_root=tmp_path, project_root=ROOT, max_iters=5)
     monkeypatch.setattr(orch, "_learn_from_outcome", lambda *a, **kw: None)
     rounds = []

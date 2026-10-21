@@ -29,7 +29,8 @@ def test_axes_do_not_silently_select_hybrid(tmp_path, monkeypatch):
     xml = (ROOT / "src/plc/plotter_square_csp.xml").read_text(encoding="utf-8")
     class Client:
         def chat_completions(self, payload, **kwargs):
-            assert "完整 PLCopen XML" in payload["messages"][0]["content"]
+            assert "PLCopen XML 工程" in payload["messages"][0]["content"]
+            assert "只输出**一个** ```xml 代码块" in payload["messages"][0]["content"]
             assert "不要输出任何 XML" not in payload["messages"][0]["content"]
             return {"choices": [{"message": {"content": "```xml\n" + xml + "\n```"}}]}
     gen = PLCGenerator(Client(), no_cards=True)

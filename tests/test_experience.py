@@ -91,7 +91,7 @@ class TestFlipRecording:
 
             def repair(self, previous_xml, spec, feedback, attempts=None):
                 calls["repair"] += 1
-                return {"ok": True, "xml": previous_xml, "mode": "repair"}
+                return {"ok": True, "xml": previous_xml.replace('pl_step := pl_step + 1;', 'pl_step := pl_step + 2;',1), "mode": "repair"}
 
         spec = json.loads((REPO / "examples" / "specs" / "plotter3axis.spec.json")
                           .read_text(encoding="utf-8"))
@@ -104,6 +104,7 @@ class TestFlipRecording:
         states = iter([("failed", ["  FAIL 画圆序列完成 plot_done=TRUE（999.0s）"]),
                        ("ok", "场景验收: 全部通过 ✅")])
         monkeypatch.setattr(orch, "acceptance_gate", lambda s, runtime_expected=False: next(states))
+        monkeypatch.setattr(orch, "_runtime_probe", lambda *args: [])
         result = orch.solve(spec, FakeGen(), acceptance="plotter3axis")
         assert result["status"] == "final"
         lessons = json.loads((tmp_path / "lessons.json").read_text(encoding="utf-8"))["lessons"]

@@ -84,13 +84,19 @@ def _device_summary(device_model):
     if not device_model:
         return "（未提供设备模型——纯自然语言需求，io_list 由需求文本推断）"
     axes = device_model.get("kinematics", {}).get("axes", [])
-    axis_lines = [
-        "  - %s: %s，行程 %s～%s %s，VMAX=%s，ACCEL=%s，POSWIN=%s" % (
-            a.get("axis"), a.get("type"), (a.get("stroke") or [None, None])[0],
-            (a.get("stroke") or [None, None])[1], a.get("unit") or "",
-            (a.get("limits") or {}).get("vmax"), (a.get("limits") or {}).get("accel"),
-            a.get("poswin"))
-        for a in axes]
+    axis_lines = []
+    for a in axes:
+        d = a.get("defaults") or {}
+        line = ("  - %s: %s，行程 %s～%s %s，VMAX=%s，ACCEL=%s，POSWIN=%s"
+                % (a.get("axis"), a.get("type"), (a.get("stroke") or [None, None])[0],
+                   (a.get("stroke") or [None, None])[1], a.get("unit") or "",
+                   (a.get("limits") or {}).get("vmax"), (a.get("limits") or {}).get("accel"),
+                   a.get("poswin")))
+        if d:
+            # MC 调用动力学（R8 比对项）：go/rel 实例字面量须与 defaults 逐字一致
+            line += "，MC动力学 defaults={velocity=%s, acceleration=%s, deceleration=%s}" % (
+                d.get("velocity"), d.get("acceleration"), d.get("deceleration"))
+        axis_lines.append(line)
     return "\n".join([
         "station: %s" % device_model.get("station"),
         "设备: %s" % ", ".join(d.get("name", "?") for d in device_model.get("devices", [])),
@@ -221,6 +227,11 @@ class RequirementUnderstander:
         params = {k: v for k, v in (data.get("params") or {}).items() if v is not None}
         return {"shape": data.get("shape") or "unknown", "params": params,
                 "note": data.get("note", "")}
+
+    def clarify(self, request_text, device_model=None, shape_info=None):
+        """生成前列出缺失/歧义项；实际回答由 chat 或脚本传入，IO 契约不变。"""
+        from .clarification import analyze_request
+        return analyze_request(request_text, device_model, shape_info)
 
     # ---------------- 主入口 ----------------
     def understand(self, request_text, device_model=None, task_id=None):

@@ -255,11 +255,14 @@ class MemoryStore:
         相似度口径 = 任务图形类型一致（画圆任务借鉴画圆经验，不借鉴画方）；
         返回按记录序倒序（最新优先），空 shape 视为不匹配（保守）。
         """
+        if not shape:
+            return []
         out = []
         for e in reversed(self._load_lessons()):
             if e.get("outcome") != outcome or e.get("shape") != shape:
                 continue
             item = {"task": e.get("task", ""), "fix_summary": e.get("fix_summary", "")}
+            item["diff_hunks"] = e.get("diff_hunks", [])[:2]
             if e.get("diagnosis"):
                 item["diagnosis"] = e["diagnosis"]
             out.append(item)

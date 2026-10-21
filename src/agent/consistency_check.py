@@ -238,9 +238,22 @@ def _interp_is_v3(root):
 
 
 def _call_args(st_text, call_name):
-    """ST 体中 call_name(...) 的实参文本（跨行）；调用不存在返回 None。"""
-    m = re.search(r"\b%s\s*\(([^)]*)\)" % re.escape(call_name), st_text)
-    return m.group(1) if m else None
+    """ST 体中 call_name(...) 的实参文本（跨行，括号配平——实参含嵌套
+    括号如 fire := man_go AND (NOT go_x_exe) 时不截断，2026-09-22 误报实证）；
+    调用不存在返回 None。"""
+    m = re.search(r"\b%s\s*\(" % re.escape(call_name), st_text)
+    if m is None:
+        return None
+    depth, start = 1, m.end()
+    for i in range(start, len(st_text)):
+        ch = st_text[i]
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                return st_text[start:i]
+    return None
 
 
 def _arg_number(args_text, arg_name):
@@ -344,6 +357,7 @@ def _check_axis_params(problems, root, device_model, scene):
     if gantry is None:
         return  # scene 无 gantry 轴承载（多资产/无仿真）——scene 侧无比对对象
     p = gantry.get("params", {})
+    from .scene_gen import _clamp_to_contract
     for a in axes:
         s, stroke = short_of(a), a.get("stroke")
         travel = p.get("travel_%s" % s)
@@ -351,7 +365,11 @@ def _check_axis_params(problems, root, device_model, scene):
             continue
         scale = _SCALE_BY_UNIT.get(a.get("unit") or "%", 0.01)
         expect = round((stroke[1] - stroke[0]) * scale, 9)
-        if abs(expect - travel) > 1e-6:
+        # csk 契约对 travel_z 设开区间下界 >0.01——绘图笔 10mm 行程（=0.01）被
+        # scene_gen 钳到下界+10%（0.011）。契约钳位值同样认可（两上游权威冲突的
+        # 已知议题，travel_z 下界 RFC 待 csk 裁决——2026-09-16 登记看板）。
+        clamped = round(_clamp_to_contract("travel_%s" % s, expect), 9)
+        if abs(expect - travel) > 1e-6 and abs(clamped - travel) > 1e-6:
             problems.append("R8: 轴 %r scene travel_%s=%s 与 AML stroke×scale=%s 不一致"
                             "（scene.spec 轴参数须与 PLC 侧同源 device_model）"
                             % (a["axis"], s, travel, expect))

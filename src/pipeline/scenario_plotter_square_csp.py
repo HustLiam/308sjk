@@ -19,9 +19,11 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.normpath(os.path.join(HERE, "..", ".."))
 sys.path.insert(0, HERE)
+sys.path.insert(0, REPO)
 
 from modbus_io import connect, require_program  # noqa: E402
 from mujoco_verdict import Collector, evaluate, attribute, build_channels  # noqa: E402
+from src.agent.evidence import save_acceptance_evidence  # noqa: E402
 
 PROG_ID = 4
 SPEC = os.path.join(REPO, "examples", "specs", "plotter_square_csp.spec.json")
@@ -63,6 +65,7 @@ def main():
     try:
         col = Collector()
         trace = col.collect(chs, triggers=triggers, done=done, timeout_s=120.0)
+        save_acceptance_evidence(trace)
     finally:
         proc.kill()
     if not trace:
@@ -73,6 +76,7 @@ def main():
              ", ".join("%s=%s" % (n, trace[-1].get(n)) for n in done) or "超时"))
 
     results = evaluate(spec.get("acceptance", []), trace, chs)
+    save_acceptance_evidence(trace, results)
     fails = 0
     for r in results:
         print(("  PASS " if r["pass"] else "  FAIL ") + "%s %s — %s"

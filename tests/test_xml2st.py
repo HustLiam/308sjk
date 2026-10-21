@@ -8,6 +8,8 @@ xml2st 转换器单测：交付物回归 + 反例。
 import sys
 from pathlib import Path
 
+import pytest
+
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src" / "pipeline"))
 
@@ -100,6 +102,27 @@ GOOD_MINIMAL = """<?xml version="1.0" encoding="UTF-8"?>
 """
 
 
+@pytest.mark.parametrize('name,block', [('x','localVars'), ('X','localVars'), ('x','inputVars')])
+def test_duplicate_names_across_pou_variable_blocks_are_rejected(tmp_path, name, block):
+    text = GOOD_MINIMAL.replace('</interface>',
+        f'<{block}><variable name="{name}" address="%QX0.0"><type><BOOL/></type></variable></{block}></interface>')
+    path = tmp_path/'duplicate.xml'
+    path.write_text(text, encoding='utf-8')
+    ok, _, errors = convert(path)
+    assert not ok and any('重复声明' in e and name in e for e in errors)
+
+
+def test_same_variable_name_in_different_pous_is_allowed(tmp_path):
+    text = GOOD_MINIMAL.replace('</pous>',
+        '<pou name="OTHER" pouType="functionBlock"><interface><localVars>'
+        '<variable name="x"><type><BOOL/></type></variable></localVars></interface>'
+        '<body><ST><xhtml xmlns="http://www.w3.org/1999/xhtml">x := TRUE;</xhtml></ST></body></pou></pous>')
+    path = tmp_path/'different_pous.xml'
+    path.write_text(text, encoding='utf-8')
+    ok, _, errors = convert(path)
+    assert ok, errors
+
+
 def _write(tmp_path, content, name="case.xml"):
     p = tmp_path / name
     p.write_text(content, encoding="utf-8")
@@ -111,6 +134,13 @@ def test_minimal_good_converts(tmp_path):
     assert ok, problems
     assert "AT %QW2" in st
     assert "y := y + 1;" in st
+
+
+@pytest.mark.parametrize('block', ['inputVars','outputVars','inOutVars'])
+def test_located_formal_parameter_is_rejected_before_matiec(tmp_path, block):
+    xml = GOOD_MINIMAL.replace('localVars',block)
+    ok, _, errors = convert(_write(tmp_path,xml))
+    assert not ok and any('定位变量' in error and block in error and 'localVars' in error for error in errors)
 
 
 def test_wrong_root_namespace_rejected(tmp_path):

@@ -190,6 +190,8 @@ def parse(xml_path):
             continue
 
         iface_lines = []
+        # IEC 标识符不区分大小写，整个 POU 的各变量块共享同一作用域。
+        declared_names = set()
         for xml_tag, st_kw, supported in VAR_BLOCKS:
             for vb in pou.findall(ns + "interface/" + ns + xml_tag):
                 if not supported:
@@ -209,6 +211,10 @@ def parse(xml_path):
                     if not IDENT_RE.match(vname):
                         problems.append("%s 中变量名非法: %r" % (ctx, vname))
                         continue
+                    if vname.casefold() in declared_names:
+                        problems.append("%s 中变量 %r 重复声明（变量名不区分大小写，各变量块共享作用域）" % (ctx, vname))
+                        continue
+                    declared_names.add(vname.casefold())
                     vtype = _var_type_text(var, ns, problems, ctx)
                     if vtype is None:
                         continue
@@ -220,6 +226,9 @@ def parse(xml_path):
                             or init_node.find(ns + "simpleValue").get("value") is None):
                         problems.append("%s 中变量 %r 的初值不受支持；须提供 initialValue/simpleValue 的 value 属性" % (ctx, vname))
                     addr = var.get("address")
+                    if addr and xml_tag != "localVars":
+                        problems.append("%s 中定位变量 %r 不能放在 <%s>；AT 地址只允许用于 <localVars>，请移动声明并保留名称、类型和地址"
+                                        % (ctx, vname, xml_tag))
                     if var.find(ns + "address") is not None:
                         problems.append('%s 中变量 %r 的 <address> 子元素不受支持；请改为 <variable name="%s" address="%%QW0"> 的 address 属性'
                                         % (ctx, vname, vname))

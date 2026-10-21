@@ -269,7 +269,7 @@ def test_orchestrator_freezes_same_plan_across_plc_repair(tmp_path, monkeypatch)
             return {"ok": True, "xml": (ROOT / "src/plc/plotter_square_csp.xml").read_text(encoding="utf-8")}
         def repair(self, previous_xml, spec, feedback, attempts=None, test_plan=None):
             seen.append(json.dumps(test_plan, sort_keys=True))
-            return {"ok": True, "xml": previous_xml, "mode": "repair"}
+            return {"ok": True, "xml": previous_xml.replace('x_cmd := x_tgt;', 'x_cmd := x_tgt + 1;',1), "mode": "repair"}
     orch = Orchestrator(runs_root=tmp_path, project_root=ROOT, max_iters=2)
     def acceptance(*args, **kw):
         paths.append(Path(orch._acceptance_context["AGENT_TEST_PLAN"]))

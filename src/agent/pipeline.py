@@ -23,44 +23,12 @@ import xml2st  # noqa: E402
 from .consistency_check import consistency_check  # noqa: E402
 from .config import MODEL, generation_options
 from .patternlib import pattern_cards, render_cards  # noqa: E402
+from .xml_normalization import normalize_program_io
 
 SKILL_PATH = Path(__file__).resolve().parent / "prompts" / "plcgen_skill.md"
 
-# 混合模式规则（2026-09-24 负责人指令：确定性部分代码化，灵活部分 agent 化）——
-# FB 库（INTERP/DRIVE402/MC_* 十二块）由代码逐字节拼装，LLM 只输出 PLC_PRG
-HYBRID_RULES_V2 = r"""
-
-## 混合生成模式 v2（本次任务的输出形态——重大变化）
-
-FB 定义层与轴栈接线层已由代码确定性生成（变量声明/使能链/go/rel/hm/jog 调用/
-插补引擎/驱动器/状态聚合——全部按 spec.axes 与 io_list 逐字展开）。
-**你不要输出任何 XML、不要写变量声明、不要写轴实例调用。**
-
-你只输出**工艺层逻辑**，单个 \`\`\`st 代码块（纯 ST 语句，无 PROGRAM/END 包装）。
-可用的上下文（代码已提供，直接引用）：
-- 全部 io_list 定位变量（run/cmd_draw/x_sp/x_fb/…）+ 轴目标总线 x_tgt/y_tgt/z_tgt
-- 触发线 go_x_exe/hm_x_exe/…（置 TRUE 启动对应轴命令，完成自动清零）
-- 完成信号 go_x.Done/ix_x.Busy/… + 汇总 all_oe/any_moving/move_done/fault_any
-- 你自己声明的变量写在 ST 开头（VAR 块）——代码会并入变量区
-
-工艺层职责：从 spec.constraints 与 trajectory 步表生成序列器 CASE/互锁条件/
-模式切换。这是你唯一的输出——约 30~60 行，把预算留给逻辑正确性。
-"""
-
 _FENCE_RE = re.compile(r"```(?:xml)?\s*([\s\S]*?)```", re.IGNORECASE)
 _PROJECT_RE = re.compile(r"<project[\s\S]*?</project>")
-
-
-_ST_FENCE_RE = re.compile(r"```(?:st)?\s*([\s\S]*?)```", re.IGNORECASE)
-
-
-def _extract_st(text):
-    """从回复中提取 ```st 工艺层代码块；找不到返回 None。"""
-    m = _ST_FENCE_RE.search(text)
-    if not m:
-        return None
-    st = m.group(1).strip()
-    return st if st and "PROGRAM" not in st.splitlines()[0] else None
 
 
 def extract_xml(text):
@@ -89,12 +57,14 @@ class PLCGenerator:
 
     def __init__(self, client, model=MODEL, max_rounds=3, seed_xml=None,
                  generic_patterns_only=False, address_table=None, report=None,
-                 no_cards=False, generation_mode="full_xml"):
-        if generation_mode not in ("full_xml", "hybrid"):
-            raise ValueError("generation_mode 必须为 full_xml 或 hybrid")
+                 no_cards=False, generation_mode="full_xml", position_mode=False, prog_id=2):
+        if generation_mode != "full_xml":
+            raise ValueError("已恢复更新前完整 XML 生成流程，不支持 hybrid 模式")
         self.generation_mode = generation_mode
         self.evidence_dir = None
         self.call_count = 0
+        self._failed_candidates = set()
+        self.stop_reason = None
         self.client = client
         self.model = model
         self.max_rounds = max_rounds
@@ -109,6 +79,8 @@ class PLCGenerator:
         # ⓪ 侧地址分配表（AML 通道 → %Q 地址）：设备契约，前置注入 prompt，
         # 让首次生成即按站约定表分配（错配仍由 R6 检查拦截）
         self.address_table = address_table or {}
+        self.position_mode = position_mode
+        self.prog_id = prog_id
         # 进度播报回调 report(msg: str)——生成期间实时向控制台回报（对话风格）
         self.report = report or (lambda msg: None)
 
@@ -118,8 +90,7 @@ class PLCGenerator:
             "model": self.model,
             "messages": messages,
             "max_tokens": 16384,
-            "temperature": 0.1,   # 结构化代码生成：严格遵循骨架/规则优先（0.3 实测
-                                  # 随机单点缺陷多，2026-09-23 训练循环调优）
+            "temperature": 0.3,   # 恢复远端更新前的 PLC 生成采样参数
             "thinking": {"type": "disabled"},  # 结构化代码生成不需要思考链
         }
         payload.update(generation_options(16384))
@@ -168,7 +139,13 @@ class PLCGenerator:
         if not ok and any("[consistency]" not in p and "R2:" in p for p in cproblems):
             if "<address>" in xml_text:
                 cproblems.append('定位地址必须写为 variable 的属性，例如 <variable name="run" address="%QX0.0">；禁止 <address> 子元素。')
-        return ok, ["[consistency] %s" % p for p in cproblems if not p.startswith("SKIP")]
+        errors = ["[consistency] %s" % p for p in cproblems if not p.startswith("SKIP")]
+        if self.position_mode:
+            from .position_control import position_program_problems
+            errors += ['[CSP] '+p for p in position_program_problems(xml_text,self.address_table,self.prog_id,io_list)]
+            from .position_control import svg_program_problems
+            errors += ['[SVG] '+p for p in svg_program_problems(xml_text,getattr(self,'_trajectory',None))]
+        return ok and not errors, errors
 
     @staticmethod
     def _parse_text(xml_text):
@@ -183,9 +160,6 @@ class PLCGenerator:
     # ---------------- prompt 拼装 ----------------
     def build_messages(self, spec, feedback=None, trajectory=None, test_plan=None):
         io_list = spec.get("io_list", [])
-        axes = spec.get("axes") or []
-        csp = bool(axes) and all((a.get("io") or {}).get("cmd")
-                                and not (a.get("io") or {}).get("v") for a in axes)
         if self.no_cards:
             cards = ""      # 自动化学习路线：不注入任何模式卡（经验库借鉴替代）
         else:
@@ -201,39 +175,35 @@ class PLCGenerator:
             "2. 每条约束都体现在逻辑中；acceptance 的时序/联锁在逻辑上可达；\n"
             "3. constraints 中的时序值（如延时 300ms）用 TON 的 PT 落地。\n" % len(io_list)
         )
-        if axes and not csp:
-            user += ("4. 顶层 axes 是轴参数权威表：go_<轴> 的 Velocity/Acceleration/"
-                     "Deceleration 字面量与 ix_<轴> 的 POSWIN、越程界限，逐字取该轴 "
-                     "defaults/poswin/stroke 的值，不得沿用示例值或自编；"
-                     "io_list 条目的 address 即该变量的 AT 地址。\n")
         if trajectory:
             from .trajectory import summarize_for_prompt
             user += ("\n" + summarize_for_prompt(trajectory)
                      + "\n（步表是确定性规划的权威产物：坐标、顺序、笔态逐字落地，"
                        "不得增删路点或改动数值；插补 FB 参数按速度上限配置。）\n")
-        if test_plan is not None:
-            user += ("\n已由测试规划 Agent 生成并校验的测试计划：\n"
-                     + json.dumps(test_plan, ensure_ascii=False, indent=2)
-                     + "\n按实际激励顺序响应启动/复位；path_checks 是所要求的物理路径。"
-                       "从反馈判断到位，不得伪造反馈或直接置完成灯。仍须输出完整PLCopen XML，"
-                       "不要输出测试脚本，不得改变测试计划、工艺形状或路点。"
-                       "绘图线段需要同步插补：两轴位移不等时，用同一进度计算两轴中间目标，"
-                       "不要把终点阶跃给两轴独立限速而画成折线。插补速率低于轴限速，"
-                       "每个顶点应等待真实反馈到位并保持至少100ms以供采样，抬笔到位后再返程。\n")
         if constraints:
             user += "约束清单：%s\n" % json.dumps(constraints, ensure_ascii=False)
+        if self.address_table:
+            user += '\nAML 定位地址（逐字遵守）：\n'+json.dumps(self.address_table,ensure_ascii=False,indent=2)
+        if self.position_mode:
+            from .position_control import position_scales
+            scales=position_scales(spec.get('io_list',[]))
+            user += ('\n本任务使用外部驱动闭位置环的 CSP 位置输出。保留原 MC/INTERP 轴栈与 SVG 步序。'
+                'x_cmd/y_cmd/z_cmd 为实际驱动输入，逐扫描直接输出原 dv_x/y/z.Setpoint 输入使用的同一位置量：'
+                'INT 型直接赋值：x_cmd := ix_x.Setpoint; y_cmd := ix_y.Setpoint; z_cmd := ix_z.Setpoint; '
+                '若有 x_interp/y_interp/z_interp 点动位置选择则使用该位置。'
+                '只有位置量是 REAL 时才 REAL_TO_INT，按 AML 地址绑定。'
+                'run/all_oe 未使能、quickstop 或 fault_any 时，cmd 写相应 fb 保持当前位置。'
+                'x_v/y_v/z_v 保留诊断用途，不能连接到 cmd，也不能把 HMI 的 sp 直接当插补输出。'
+                'DRIVE402 的 v_cmd 仅保留状态/诊断，不经速度通道驱动仿真。'
+                'prog_id 必须为 AT %QW20 的 INT，每扫描写 '+str(self.prog_id)+'。\n')
+            if any(v!=1 for v in scales.values()):
+                user+='\n高精度编码优先于上述通用规则：'+str(scales)+'。cmd 输出必须直接取 ix_x.pos/ix_y.pos/ix_z.posz 的 REAL 状态乘倍率后 REAL_TO_INT，禁止先取已取整的 Setpoint。停止保持也须将 fb 乘倍率。SVG 目标与 pos_target 使用 REAL，保留全部小数路点。\n'
+                user+='首次 XY 定位前必须先原地抬笔，待 Z 到位再横移；空闲使能期间保持 fb，防旧插补状态拉回原点。XY 线段需共享进度，按各轴位移比例缩放速度与加减速；不能让短轴先到导致曲线偏折。遵守 AML 的 0.01 到位窗口，REAL 比较使用 100.0/0.0 等实数常量，与 MC 的 INT/IN_OUT 边界显式转换。\n'
+        if test_plan is not None:
+            user += "\n本任务测试计划（保持工艺与判据不变）：\n"+json.dumps(test_plan,ensure_ascii=False,indent=2)
         if feedback:
             user += ("\n--- 上一轮反馈（必须全部修复）---\n%s\n" % feedback)
-        axes = spec.get("axes") or []
-        csp = axes and all((a.get("io") or {}).get("cmd")
-                           and not (a.get("io") or {}).get("v") for a in axes)
-        system = (SKILL_PATH.with_name("plcgen_csp_skill.md").read_text(encoding="utf-8")
-                  if csp else self.skill_prompt)
-        system += ("\n\n通用扫描周期检查（所有设备适用）：每个状态变量在一次扫描中的所有赋值必须有明确优先级。"
-                   "CASE 后的 IF/独立调度不得覆盖刚写入的退出或安全状态；内部步索引到末尾时必须存在可达出口。"
-                   "到位布尔量若在目标赋值之前计算，不能拿旧目标的到位结果跳过新动作，应在下一扫描或按新目标反馈确认。"
-                   "定时器必须每扫描调用并在新动作正确复位。完成条件须由实际反馈和全部收尾步骤满足后产生。"
-                   "不得为了通过测试改变传感器/工艺状态的物理含义；只能输出完整 XML，不使用预制程序替代。")
+        system = self.skill_prompt
         if not self.no_cards:
             system += "\n\n## 参考模式（已验收场景，勿照抄变量名）\n" + cards
         # 领域知识条目索引（P3 接线）：按任务选域节选——长尾知识打底，骨架仍在 skill
@@ -253,6 +223,7 @@ class PLCGenerator:
     # ---------------- 主入口 ----------------
     def generate(self, spec, feedback=None, trajectory=None, experience_hint=None, test_plan=None):
         """生成并过闸。返回 {ok, xml, rounds, history, errors}。"""
+        self._trajectory = trajectory if self.seed_xml is None else None
         io_list = spec.get("io_list", [])
 
         if self.seed_xml is not None:  # 种子模式：不调 LLM，产物仍过双闸门
@@ -261,52 +232,22 @@ class PLCGenerator:
             return {"ok": ok, "xml": self.seed_xml, "rounds": 0,
                     "history": [{"round": 0, "ok": ok, "errors": errors}], "errors": errors}
 
-        messages = self.build_messages(spec, feedback, trajectory, test_plan)
+        messages = self.build_messages(spec, feedback, trajectory, test_plan=test_plan)
         if experience_hint:
             messages[0]["content"] += (
                 "\n\n## 历史经验要点（本站同类任务自动化学到的教训——生成时就遵守，"
                 "不要等问题出现再修）\n%s" % experience_hint)
-        hybrid = self.generation_mode == "hybrid" and bool(spec.get("axes"))
-        # 无关——那是模式卡开关；hb4 实测画方走轨迹路线时 no_cards=True 误关 v2）
-        if hybrid:
-            messages[0]["content"] += HYBRID_RULES_V2
         history, errors = [], []
         for rnd in range(1, self.max_rounds + 1):
-            self.report("正在联系模型%s生成%s…"
-                        % ("第 %d 次，" % rnd if rnd > 1 else "",
-                           "PLC_PRG 工艺层（FB 库由代码拼装）" if hybrid
-                           else "完整 PLCopen 工程"))
+            self.report("正在联系模型%s生成完整 PLCopen 工程…"
+                        % ("第 %d 次，" % rnd if rnd > 1 else ""))
             reply = self._call(messages, prefer_stream=True)
             self.report("模型回复完毕，正在提取工程并校验…")
-            if hybrid:
-                # v2：LLM 只出工艺层 ST（```st）。extract_xml 不再先行——hb3
-                # 实测 LLM 回复带 XML 壳时 extract_xml 抢先成功绕过 v2 路径
-                proc = _extract_st(reply)
-                if proc is None:
-                    errors = ["[extract] 未找到 ```st 工艺层代码块（不要输出 XML）"]
-                else:
-                    try:
-                        from .stack_gen import merge_v2
-                        xml = merge_v2(proc, spec)
-                    except Exception as exc:
-                        errors = ["[hybrid] 合并失败: %s" % exc]
-                    else:
-                        ok, errors = self.gate(xml, io_list)
-                        if ok:
-                            history.append({"round": rnd, "ok": True, "errors": []})
-                            self.report("静态闸门通过（xml2st 契约 + 三方一致性），工程可用。")
-                            return {"ok": True, "xml": xml, "rounds": rnd,
-                                    "history": history, "errors": []}
-                history.append({"round": rnd, "ok": False, "errors": list(errors)})
-                self.report("校验发现 %d 处问题，正在带错误清单让模型修复…" % len(errors))
-                messages.append({"role": "assistant", "content": reply})
-                messages.append({"role": "user", "content": (
-                    "校验失败，共 %d 处错误：\n%s\n\n"
-                    "请修复后重新输出**工艺层 ST**（单个 ```st 代码块，不要 XML）。"
-                    % (len(errors), "\n".join("- %s" % e for e in errors[:15]))
-                )})
-                continue
             xml = extract_xml(reply)
+            if xml is not None:
+                xml, moved = normalize_program_io(xml)
+                if moved:
+                    self.report("已修正 %d 个程序定位 IO 的声明分组，工艺逻辑保持原样。" % moved)
             if xml is None:
                 errors = [reply] if reply.startswith("[output_limit]") else ["[extract] 回复中未找到 <project> XML（只输出一个 ```xml 代码块）"]
             else:
@@ -317,13 +258,14 @@ class PLCGenerator:
                     return {"ok": True, "xml": xml, "rounds": rnd, "history": history, "errors": []}
 
             history.append({"round": rnd, "ok": False, "errors": list(errors)})
+            from .repair_feedback import static_feedback
+            details = static_feedback(self, errors, xml)
             self.report("校验发现 %d 处问题，正在带错误清单让模型修复…" % len(errors))
             messages.append({"role": "assistant", "content": reply})
             messages.append({"role": "user", "content": (
                 "校验失败，共 %d 处错误：\n%s\n\n"
-                "请修复全部错误后，重新输出%s（仍在单个 ```xml 代码块中）。"
-                % (len(errors), "\n".join("- %s" % e for e in errors[:15]),
-                   "**PLC_PRG 单 POU**" if hybrid else "**完整**的 PLCopen XML 工程")
+                "请修复全部错误后，重新输出**完整**的 PLCopen XML 工程（仍在单个 ```xml 代码块中）。"
+                % (len(errors), details)
             )})
 
         return {"ok": False, "xml": None, "rounds": self.max_rounds,
@@ -340,13 +282,15 @@ class PLCGenerator:
         （experience_hint 仅首轮 fresh 使用，repair 走 match_lessons 失败匹配借鉴。）
         """
         attempts = attempts or max(2, self.max_rounds - 1)
+        self.repair_base_used = previous_xml
+        self._trajectory = trajectory
         io_list = spec.get("io_list", [])
         messages = self.build_messages(spec, trajectory=trajectory, test_plan=test_plan)
         messages.append({"role": "assistant",
                          "content": "```xml\n%s\n```" % previous_xml})
         messages.append({"role": "user", "content": (
-            "上一轮工程（见上）已通过静态契约校验（xml2st + 三方一致性），"
-            "但在后续闸门失败。失败证据与归因：\n%s\n\n"
+            "上一轮工程（见上）是本轮修复基底，失败闸门以证据为准。"
+            "修复后须重新通过静态契约、编译与验收。失败证据与归因：\n%s\n\n"
             "请做**最小修改**满足全部失败项：未提及的内容逐字保留；"
             "修复后重新输出**完整**工程（单个 ```xml 代码块）。" % (feedback or "（未提供明细）"))})
 
@@ -357,6 +301,10 @@ class PLCGenerator:
             reply = self._call(messages, prefer_stream=True)
             self.report("修复稿收到，正在提取并校验…")
             xml = extract_xml(reply)
+            if xml is not None:
+                xml, moved = normalize_program_io(xml)
+                if moved:
+                    self.report("已修正 %d 个程序定位 IO 的声明分组，工艺逻辑保持原样。" % moved)
             if xml is None:
                 errors = [reply] if reply.startswith("[output_limit]") else ["[extract] 回复中未找到 <project> XML（只输出一个 ```xml 代码块）"]
             else:
@@ -367,11 +315,13 @@ class PLCGenerator:
                     return {"ok": True, "xml": xml, "rounds": rnd,
                             "history": history, "errors": [], "mode": "repair"}
             history.append({"round": rnd, "ok": False, "errors": list(errors)})
+            from .repair_feedback import static_feedback
+            details = static_feedback(self, errors, xml)
             self.report("修复稿仍有 %d 处问题，继续回灌…" % len(errors))
             messages.append({"role": "assistant", "content": reply})
             messages.append({"role": "user", "content": (
                 "修复后工程仍有 %d 处静态校验错误：\n%s\n\n"
                 "请修复后重新输出完整工程（最小修改，其余保持不变）。"
-                % (len(errors), "\n".join("- %s" % e for e in errors[:15])))})
+                % (len(errors), details))})
         return {"ok": False, "xml": None, "rounds": attempts,
                 "history": history, "errors": errors, "mode": "repair"}

@@ -11,7 +11,7 @@ OpenPLC v3 运行时 HTTP 客户端。
   compile_status       GET  /compilation-logs     SUCCESS / FAILED / COMPILING
   start / stop         GET  /start_plc /stop_plc
   status               GET  /dashboard            Running / Stopped / Compiling
-  runtime_logs         GET  /runtime-logs
+  runtime_logs         GET  /runtime_logs
 
 会话有效期约 5 分钟，超时自动重登录一次。
 """
@@ -164,4 +164,7 @@ class OpenPLCClient:
         return "UNKNOWN"
 
     def runtime_logs(self):
-        return self._request("GET", "/runtime-logs").text
+        response = self._request("GET", "/runtime_logs")
+        if response.status_code != 200:
+            raise OpenPLCError("读取 Runtime 日志失败 HTTP %d" % response.status_code)
+        return response.text

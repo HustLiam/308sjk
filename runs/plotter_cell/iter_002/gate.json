@@ -1,16 +1,100 @@
 {
-  "gate": "all",
-  "ok": true,
-  "gates": {
-    "xml2st": true,
-    "consistency": [
-      "SKIP: io_map 未提供（仿真侧尚未产出）——仅对账 XML ↔ io_list 两方"
+  "gate": "acceptance",
+  "ok": false,
+  "errors": [
+    "[verify] 程序身份确认: plotter3axis (prog_id=2)",
+    "[1] 上电（run=0）：三轴 Ready To Switch On；初始笔位 z=0（触纸）",
+    "  PASS X 轴 sw.bit0=1 (实际 0031)",
+    "  PASS Y 轴 sw.bit0=1 (实际 0031)",
+    "  PASS Z 轴 sw.bit0=1 (实际 0031)",
+    "  PASS all_oe=FALSE",
+    "  PASS pen_down=TRUE（初始笔触纸）",
+    "[2] run=1 → 三轴使能（AC1：≤2s）",
+    "  PASS 三轴 Operation Enabled（all_oe=TRUE，实际 0.14s ≤ 2s）",
+    "  PASS X 轴 bit2=1 bit4=1 bit5=1 (实际 0437)",
+    "  PASS Y 轴 bit2=1 bit4=1 bit5=1 (实际 0437)",
+    "  PASS Z 轴 bit2=1 bit4=1 bit5=1 (实际 0437)",
+    "[2b] cmd_home（落笔态）：Z 回参考点=抬笔安全位（AC2：pen_down↓ ≤3s）",
+    "  FAIL 笔抬离纸面（pen_down=FALSE，实际 3.30s ≤ 3s，AC2）",
+    "  FAIL Z 到参考位 10（实际 0）",
+    "（验收暂停：段 [2] 存在失败，后续段未执行；已通过段：[1]——先修复本段，通过后重跑继续）",
+    "运行时内部状态时间线（诊断口自动采集）：",
+    "    [diag t=0.5s] pl_step=0 edge_dr=0 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0",
+    "    [diag t=1.0s] pl_step=0 edge_dr=0 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0",
+    "    [diag t=1.5s] pl_step=0 edge_dr=0 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0",
+    "    [diag t=2.0s] pl_step=0 edge_dr=0 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0",
+    "    [diag t=2.5s] pl_step=0 edge_dr=0 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0",
+    "    [diag t=3.0s] pl_step=0 edge_dr=0 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0",
+    "    [diag t=3.5s] pl_step=0 edge_dr=0 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0",
+    "    [diag t=4.0s] pl_step=0 edge_dr=0 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0",
+    "    [diag t=4.5s] pl_step=0 edge_dr=0 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0",
+    "    [diag t=5.0s] pl_step=0 edge_dr=0 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0",
+    "    [diag t=5.5s] pl_step=0 edge_dr=0 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0",
+    "    [diag t=6.0s] pl_step=0 edge_dr=0 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0",
+    "    [diag t=6.5s] pl_step=0 edge_dr=0 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0",
+    "    [diag t=7.0s] pl_step=0 edge_dr=0 go_x_exe=0 go_y_exe=0 go_z_exe=0 hm_x_exe=0"
+  ],
+  "attribution": {
+    "gate": "acceptance",
+    "errors": [
+      "[verify] 程序身份确认: plotter3axis (prog_id=2)",
+      "[1] 上电（run=0）：三轴 Ready To Switch On；初始笔位 z=0（触纸）",
+      "  PASS X 轴 sw.bit0=1 (实际 0031)",
+      "  PASS Y 轴 sw.bit0=1 (实际 0031)",
+      "  PASS Z 轴 sw.bit0=1 (实际 0031)",
+      "  PASS all_oe=FALSE",
+      "  PASS pen_down=TRUE（初始笔触纸）",
+      "[2] run=1 → 三轴使能（AC1：≤2s）"
     ],
-    "scene": {
-      "ok": true,
-      "assets": 1,
-      "io_map_vars": 6,
-      "r5": "active"
+    "pitfalls": [
+      {
+        "id": "P23",
+        "title": "CASE ELSE 复位兜底 + 三轴同款 FB 多实例：使能周期性重握手，cmd_home 后 Z 不动/抬笔超时",
+        "diagnosis": "驱动/MC 层 CASE 状态机加了 ELSE 复位兜底（ELSE state := 1 / ELSE sw := 0——旧 skill 规则『CASE 一律带 ELSE』的误导形态）。三轴同款 FB 实例并行时，matiec 优化器合并缺陷会周期性触发该兜底分支：驱动被反复拽回重握手，三轴 sw 同步在 0031→0033→0437 间循环、all_oe 闪烁。后果二选一：cmd_home 脉冲时刻 all_oe=FALSE，回参考点被使能前置条件拒绝（z_sw=0437 停在原位形成『假到位』，Z 永不动）；或使能跟随门以 all_oe 为条件反复坍缩（设定点钉回反馈值），抬笔远超 3s 预算。双侧对照实验定位：删 MC_POWER 自愈分支/硬接 Enable 均不能止振；**仅删两个 ELSE 分支（+pstep 显式初值）三轴 sw 立即恒稳 0437**，[2b] 段通过（plotter_cell iter3 补丁在线实证 2026-09-09）。2026-09-22 增补：此『优化器』确认为 OpenPLC st_optimizer 而非 matiec 本体（P24 详述机制并已运行时禁用）",
+        "fix": "状态值域封闭（只赋合法值）且显式初值时，CASE **不加** ELSE 复位兜底；三轴同款 FB（pwr/dv/interp 多实例）下尤其禁止 ELSE 内复位到重握手态（state := 1）或清输出（sw := 0）。需要防记错状态时用『ELSE 保持现状态不变』的空兜底。MC_POWER 的 pstep=4 掉线自愈分支（单扫描 sw 判定）可保留——无 ELSE 干扰时实测稳定。与 P18 的边界：显式初值始终必需；ELSE 兜底仅当状态确实可能越界，且兜底动作不得触发全握手重跑 若产物无 ELSE 兜底仍见此症状，查第二变体：FB 触发输入被硬编码 FALSE（如 hm_z(fire := FALSE)）——触发脚必须接真实命令信号（cmd_home 等），不需要的功能删整行而非假接线。"
+      },
+      {
+        "id": "P26",
+        "title": "DRIVE402 漏 v_cmd 赋值行：三轴速度输出恒 0，伺服不动而 sw 全正常",
+        "diagnosis": "DRIVE402 骨架尾部被截（skill 曾止于 sp_prev := Setpoint;）——LLM 重构本体时漏 `v_cmd := REAL_TO_INT(v_out);`，FB 声明 v_cmd 输出但永无赋值 → x_v/y_v/z_v 恒 0 → 场景伺服（按速度指令积分位置）永不移动。判别特征：sw=0037 使能正常、hm_*_exe/插补 setpoint 正常推进、唯独 v 系寄存器恒 0；与 P23 同签名但方向不同（P23=ELSE 兜底振荡致 sw 循环；本条=sw 恒稳 0037 而 v=0）",
+        "fix": "DRIVE402 本体尾部逐字保留两段：v_cmd := REAL_TO_INT(v_out); 与 sw 输出 CASE（1:0040/2:0031/3:0033/4:0037/5:0014/7:0018 + state4 到位 OR 16#0400）——只允许改 KP/QS_DECEL 常量。skill 骨架已补全（test_drive402_tail_present 防漂移）"
+      },
+      {
+        "id": "P25",
+        "title": "x_sw 无驱动源：漏 dv_x.sw 回拷行，上电段三轴 sw 恒 0000",
+        "diagnosis": "PLC_PRG 漏写驱动状态回拷行（x_sw := dv_x.sw; 及 x_v := dv_x.v_cmd;——motion3axis/plotter 种子接线节必有）。x_sw 是定位变量且唯一赋值点就是这行，漏后恒 0；上电段 [1] 判 sw.bit0=1 三轴全挂而 all_oe/pen_down 正常（程序在跑，纯接线缺失）。常见自创错误路由：借 MC_READSTATUS 写 x_sw——但 sw 是它的输入且该块无 sw 输出（只读状态解码器），或把 Enable 接 run 致 run=0 时不刷新。plotter_cell 2026-09-22 四轮（iter2/3/5/6）同款死线，skill 模板当时缺此行",
+        "fix": "dv_x 调用后每扫描执行 x_sw := dv_x.sw; x_v := dv_x.v_cmd;（三轴同款）；MC_READSTATUS 按模板 Enable := TRUE、sw := x_sw 直读定位变量，禁止自创中间变量路由"
+      },
+      {
+        "id": "P21",
+        "title": "pen_down 写成含使能条件的复合信号，上电恒 FALSE",
+        "diagnosis": "pen_down（笔态输出）被写成 run AND all_oe AND NOT quickstop AND … AND z_fb<=2 的复合命令信号——run=0（未使能）时恒 FALSE，上电初始触纸验收必挂。pen_down 是物理笔位的事实陈述：笔在纸上就是在纸上，与使能/序列/急停状态无关",
+        "fix": "pen_down := (z_fb <= 2)（纯物理阈值判定，不得复合任何条件）；'落笔期间禁止手动 X/Y' 这类互锁用独立信号复合（go_ok := … AND pen_down），不要把条件揉进 pen_down 本身"
+      },
+      {
+        "id": "P08",
+        "title": "边沿检测变量跨 FB 必须不同名",
+        "diagnosis": "不同 FB 用同名边沿记忆变量被优化器串扰",
+        "fix": "每个 FB 独立命名（edge_ir/edge_rs/edge_ma/edge_hm）"
+      }
+    ],
+    "similar_fixes": [],
+    "repair_hints": [
+      "状态值域封闭（只赋合法值）且显式初值时，CASE **不加** ELSE 复位兜底；三轴同款 FB（pwr/dv/interp 多实例）下尤其禁止 ELSE 内复位到重握手态（state := 1）或清输出（sw := 0）。需要防记错状态时用『ELSE 保持现状态不变』的空兜底。MC_POWER 的 pstep=4 掉线自愈分支（单扫描 sw 判定）可保留——无 ELSE 干扰时实测稳定。与 P18 的边界：显式初值始终必需；ELSE 兜底仅当状态确实可能越界，且兜底动作不得触发全握手重跑 若产物无 ELSE 兜底仍见此症状，查第二变体：FB 触发输入被硬编码 FALSE（如 hm_z(fire := FALSE)）——触发脚必须接真实命令信号（cmd_home 等），不需要的功能删整行而非假接线。",
+      "DRIVE402 本体尾部逐字保留两段：v_cmd := REAL_TO_INT(v_out); 与 sw 输出 CASE（1:0040/2:0031/3:0033/4:0037/5:0014/7:0018 + state4 到位 OR 16#0400）——只允许改 KP/QS_DECEL 常量。skill 骨架已补全（test_drive402_tail_present 防漂移）",
+      "dv_x 调用后每扫描执行 x_sw := dv_x.sw; x_v := dv_x.v_cmd;（三轴同款）；MC_READSTATUS 按模板 Enable := TRUE、sw := x_sw 直读定位变量，禁止自创中间变量路由",
+      "pen_down := (z_fb <= 2)（纯物理阈值判定，不得复合任何条件）；'落笔期间禁止手动 X/Y' 这类互锁用独立信号复合（go_ok := … AND pen_down），不要把条件揉进 pen_down 本身",
+      "每个 FB 独立命名（edge_ir/edge_rs/edge_ma/edge_hm）"
+    ]
+  },
+  "lessons": [
+    {
+      "sim": 0.32,
+      "gate": "acceptance",
+      "task": "plotter_sq_traj",
+      "fix_summary": "move_done 永假与 bit10 不置的修复：MC 层 Done 随运动完成回清，到位窗口与驱动 bit10 对齐",
+      "outcome": "resolved",
+      "kind": "flip"
     }
-  }
+  ]
 }

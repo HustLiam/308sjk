@@ -86,6 +86,7 @@ def main():
     step("write program.st", True, str(st_path))
 
     # ② 上传 + 编译 + 启动
+    client = None
     try:
         compiler = ensure_local_compiler(args.url)
     except CompilerConfigurationError as exc:
@@ -97,9 +98,18 @@ def main():
     else:
         print("  [INFO] compiler configuration not verified: " + compiler["status"])
     try:
-        client = OpenPLCClient(base_url=args.url)
+        client = OpenPLCClient(base_url=args.url,
+                               username=os.environ.get("OPENPLC_USERNAME", "openplc"),
+                               password=os.environ.get("OPENPLC_PASSWORD", "openplc"))
         client.login()
         step("login runtime", True, args.url)
+
+        status = client.status()
+        if status == "RUNNING":
+            status = client.stop()
+            step("stop before upload", status == "STOPPED", status)
+        if status != "STOPPED":
+            raise OpenPLCError("上传前 Runtime 未停止：" + status)
 
         st_file = client.upload_and_compile(st_text, args.name)
         step("upload & trigger compile", True, st_file)
@@ -130,6 +140,13 @@ def main():
         errors.append(msg + " / " + str(e.__cause__ or e))
         step("connect runtime", False, msg)
         return finish("FAILED", 1)
+    except requests.exceptions.RequestException as e:
+        errors.append(str(e))
+        step("runtime HTTP request", False, str(e))
+        return finish("FAILED", 1)
+    finally:
+        if client is not None:
+            client.session.close()
 
     return finish("OK", 0)
 

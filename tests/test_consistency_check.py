@@ -235,8 +235,10 @@ class TestR8AxisParams:
         assert not [p for p in problems if "R8" in p]
 
     def test_poswin_mismatch_detected(self):
+        # 全轴统一偏离 XML 初值 → 仍报硬错（单值可比）
         dm = json.loads(json.dumps(DEVICE_MODEL))
-        dm["kinematics"]["axes"][0]["poswin"] = 3.0
+        for a in dm["kinematics"]["axes"]:
+            a["poswin"] = 3.0
         ok, problems = consistency_check(MOTION_XML, IO_LIST, device_model=dm)
         assert not ok
         assert any("POSWIN 不一致" in p and "XML=2.0" in p for p in problems)
@@ -258,6 +260,14 @@ class TestR8AxisParams:
         tmp.write_text(patched, encoding="utf-8")
         ok, problems = consistency_check(tmp, IO_LIST, device_model=dm)
         assert not [p for p in problems if "POSWIN" in p and not p.startswith("SKIP")]
+
+    def test_mixed_poswin_requires_matching_instance_argument(self):
+        # master 已将 POSWIN 参数化，逐轴检查，不能继续跳过异构参数。
+        dm = json.loads(json.dumps(DEVICE_MODEL))
+        dm["kinematics"]["axes"][2]["poswin"] = 1.0
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, device_model=dm)
+        assert not ok
+        assert any("R8:" in p and "POSWIN" in p and "z_axis" in p for p in problems)
 
     def test_defaults_mismatch_detected(self):
         dm = json.loads(json.dumps(DEVICE_MODEL))
@@ -299,6 +309,16 @@ class TestR8AxisParams:
         ok, problems = consistency_check(text, IO_LIST, device_model=DEVICE_MODEL)
         assert not ok
         assert any("缺 go_y 调用" in p for p in problems)
+
+    def test_nested_paren_call_args_not_truncated(self):
+        # 实参含嵌套括号（fire := ... AND (NOT go_x_exe)、abort_bus := (a OR b)）
+        # 时 _call_args 须配平括号取全实参——[^)]* 截断曾致"缺 Velocity 实参"误报
+        # （plotter_cell 2026-09-22 三局各烧 1~2 轮实证）。
+        text = MOTION_XML.read_text(encoding="utf-8").replace(
+            "go_x(fire := cmd_go,",
+            "go_x(fire := cmd_go AND (NOT go_x_exe),", 1)
+        ok, problems = consistency_check(text, IO_LIST, device_model=DEVICE_MODEL)
+        assert not any("go_x 调用缺" in p for p in problems), problems
 
     def test_v3_form_xml_skipped(self):
         # plotter 种子仍 v3 形态（INTERP 带 VMAX）→ R8 记 SKIP 不误报
