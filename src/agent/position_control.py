@@ -281,34 +281,100 @@ def _non_drawing_guard(body, offset):
     return 1 in stack
 
 
+def _if_blocks(body):
+    """Yield complete IF blocks, including nested blocks, with comment offsets intact."""
+    code=re.sub(r'\(\*[\s\S]*?\*\)|//[^\n]*',lambda m:' '*len(m[0]),body)
+    stack=[]
+    for token in re.finditer(r'\b(IF|END_IF)\b',code,re.I):
+        if token[1].upper()=='IF':
+            header=re.match(r'IF\b([\s\S]*?)\bTHEN\b',code[token.start():],re.I)
+            if header:stack.append((token.start(),header[1],token.start()+header.end()))
+        elif stack:
+            start,condition,content=stack.pop()
+            end=token.end()+(code[token.end():token.end()+1]==';')
+            yield start,end,condition,content
+
+
 def svg_program_problems(xml, trajectory):
-    """拦截可确定的 SVG 扫描顺序和小数丢失问题，不对未知逻辑宣称正确。"""
-    if not trajectory or trajectory.get('shape')!='svg':
+    """统一检查语言/SVG绘图；旧函数名保留给已有调用方。"""
+    if not trajectory:
         return []
     root=ET.fromstring(xml);ns='{'+PLC_NS+'}'
     prg=root.find('.//'+ns+'pou[@name="PLC_PRG"]')
     if prg is None:return []
     body=''.join(prg.find('.//'+ns+'ST').itertext())
+    body=re.sub(r'\(\*[\s\S]*?\*\)|//[^\n]*',lambda m:' '*len(m[0]),body)
     problems=[]
     for match in re.finditer(r'\b(\w+)\s*:=\s*(\w+)\s+AND\s+NOT\s+\1\s*;',body,re.I):
         problems.append(match[1]+' 将边沿输出当作前值记忆，会在持续命令下反复触发；请用独立的上一扫描状态')
-    if 'draw_active' in body or 'pl_step' in body:
+    if any(v.get('name','').lower() in ('draw_active','pl_step') for v in prg.iter(ns+'variable')):
         for axis in 'xyz':
-            pattern=r'\bIF\s+ix_'+axis+r'\.Done\s+OR\s+ix_'+axis+r'\.Aborted\s+THEN\s+go_'+axis+r'_exe\s*:=\s*FALSE;'
-            for match in re.finditer(pattern,body,re.I):
-                if not _non_drawing_guard(body,match.start()):
+            for start,end,condition,content in _if_blocks(body):
+                if not re.search(r'\bix_'+axis+r'\.(?:Done|Aborted)\b',condition,re.I):continue
+                # 联合三轴到位后的整段结束清理不属于单轴提前断触发。
+                if all(re.search(r'\bix_'+a+r'\.Done\b',condition,re.I) for a in 'xyz'):continue
+                clear=re.search(r'\bgo_'+axis+r'_exe\s*:=\s*FALSE\s*;',body[content:end],re.I)
+                if clear and not _non_drawing_guard(body,content+clear.start()):
                     problems.append('绘图期间单轴完成即清 go_'+axis+'_exe，会打断连续跟踪；清理须限定在非绘图期间')
-    for m in re.finditer(r'\bIF\b([\s\S]*?)\bTHEN\b',body,re.I):
-        if 'pl_step' in m[1] and all('ix_'+a+'.Done' in m[1] for a in 'xyz'):
-            if any(m.start()<body.find('ix_'+a+'(') for a in 'xyz'):
-                problems.append('SVG 步进在插补调用之前读取 Done，可能连续跳步；完成判断须移至三轴调用之后并确认新目标实际到位')
+    for start,end,condition,_ in _if_blocks(body):
+        if re.search(r'\b(?:pl_step|draw_active)\b',condition,re.I) and all(re.search(r'\bix_'+a+r'\.Done\b',condition,re.I) for a in 'xyz'):
+            if not re.search(r'\bpl_step\s*:=',body[start:end],re.I):continue
+            calls=[re.search(r'\bix_'+a+r'\s*\(',body,re.I) for a in 'xyz']
+            if any(call and start<call.start() for call in calls):
+                problems.append('绘图步进在插补调用之前读取 Done，可能连续跳步；完成判断须移至三轴调用之后并确认新目标实际到位')
     fractional=any(not float(v).is_integer() for step in trajectory.get('steps',[])
                    for point in (step.get('waypoints') or [step['to']]) for v in point)
     if fractional:
         for var in prg.findall('.//'+ns+'interface//'+ns+'variable'):
             if var.get('name') in ('pl_tx','pl_ty','pl_tz') and var.find(ns+'type/'+ns+'INT') is not None:
-                problems.append('SVG 含小数路点，'+var.get('name')+' 必须使用 REAL，禁止将轨迹取整')
+                problems.append('绘图含小数路点，'+var.get('name')+' 必须使用 REAL，禁止将轨迹取整')
     return problems
+
+
+def repair_drawing_scan_order(xml, trajectory):
+    """只修复已识别的150ms驻留轴栈：移动完整步进块、限制单轴清理。
+
+    保留路点、驻留、插补FB和互锁；未知结构仍交给静态闸门与模型修复。
+    """
+    if not trajectory:return xml,False
+    ns='{'+PLC_NS+'}'
+    try:root=ET.fromstring(xml)
+    except ET.ParseError:return xml,False
+    prg=root.find('.//'+ns+'pou[@name="PLC_PRG"]')
+    if prg is None:return xml,False
+    source=prg.find('.//'+ns+'ST')
+    if source is None or len(source)!=1 or len(source[0]):return xml,False
+    if not svg_program_problems(xml,trajectory):return xml,False
+    st=source[0];body=st.text or ''
+    variables={v.get('name'):v for v in prg.findall('.//'+ns+'interface//'+ns+'variable')}
+    required={'draw_active','pl_step','hold_active','hold_timer'}|{'go_'+a+'_exe' for a in 'xyz'}
+    if not required<=variables.keys():return xml,False
+    if not re.search(r'hold_timer\s*\(\s*IN\s*:=\s*hold_active\s*,\s*PT\s*:=\s*T#150MS\s*\)\s*;',body,re.I):return xml,False
+    condition=r'\(pl_step<>0\)ANDNOTix_x\.BusyANDNOTix_y\.BusyANDNOTix_z\.BusyANDix_x\.DoneANDix_y\.DoneANDix_z\.Done'
+    advances=[b for b in _if_blocks(body) if re.fullmatch(condition,re.sub(r'\s','',b[2]),re.I)]
+    if len(advances)!=1:return xml,False
+    start,end,_,content=advances[0];advance=body[start:end]
+    if any(left<start<right for left,right,_,_ in _if_blocks(body)):return xml,False
+    if not all(text in advance for text in ('hold_timer.Q','pl_step := pl_step + 1;','draw_active := FALSE;')):return xml,False
+    body=body[:start]+body[end:]
+    changes=[]
+    for a in 'xyz':
+        expected='(go_'+a+'_exeORhm_'+a+'_exeORrel_'+a+'_exe)ANDix_'+a+'.DoneANDNOTix_'+a+'.Busy'
+        clears=[b for b in _if_blocks(body) if re.sub(r'\s','',b[2]).lower()==expected.lower()]
+        if len(clears)!=1:return xml,False
+        left,right,_,inside=clears[0]
+        expected_body=''.join(v+'_'+a+'_exe:=FALSE;' for v in ('go','hm','rel'))+'END_IF;'
+        if re.sub(r'\s','',body[inside:right]).upper()!=expected_body.upper():return xml,False
+        changes.append((left,right,'IF NOT draw_active THEN\n'+body[left:right]+'\nEND_IF;'))
+    for left,right,fixed in sorted(changes,reverse=True):body=body[:left]+fixed+body[right:]
+    calls=[re.search(r'\bix_'+a+r'\s*\([^()]*\)\s*;',body,re.I) for a in 'xyz']
+    if not all(calls):return xml,False
+    if any(left<call.start()<right for call in calls for left,right,_,_ in _if_blocks(body)):return xml,False
+    offset=max(m.end() for m in calls)
+    st.text=body[:offset]+'\n(* DRAWING_SCAN_ORDER: 当前目标插补执行后才允许推进，绘制期间保持跟踪。 *)\n'+advance+'\n'+body[offset:]
+    result=ET.tostring(root,encoding='unicode')
+    if svg_program_problems(result,trajectory):return xml,False
+    return '<?xml version="1.0" encoding="UTF-8"?>\n'+result,True
 
 
 def repair_svg_sequence(xml):

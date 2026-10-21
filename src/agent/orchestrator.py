@@ -111,7 +111,7 @@ def narrate(event, payload, out=print):
     elif event == "candidate_rejected":
         out("  · 候选未替换最佳版，下一轮仍基于第%s轮：%s" % (payload.get("best_iter"), "；".join(payload.get("reasons", []))))
     elif event == "no_progress":
-        out("  △ 连续候选没有可靠推进，停止自动重写，保留最佳版与待处理问题。")
+        out("  △ "+("；".join(payload.get('errors',[])) or "连续候选没有可靠推进，停止自动重写，保留最佳版与待处理问题。"))
     elif event == "api_blocked":
         out("  ✗ 模型接口余额或鉴权阻断，停止调用；最佳版本和过程证据已保存。")
 
@@ -707,6 +707,7 @@ class Orchestrator:
         from .repair_feedback import GenerationStalled, source_signature
         generator.memory = self.attribution.memory
         generator._failed_candidates = set()
+        generator._incomplete_outputs = 0
         generator.stop_reason = None
         candidates_seen = {}
         if getattr(generator, "initial_candidate", None) and not getattr(generator, "resume_validation", False):
@@ -782,7 +783,7 @@ class Orchestrator:
                     mode = "fresh"
                     force_fresh = False
             except GenerationStalled as exc:
-                stop_reason = "no_progress"
+                stop_reason = exc.reason
                 errors = [str(exc)]
                 history.append({"iter": i, "gate": "generate", "ok": False, "errors": errors})
                 self._dump_gate(iter_dir, "generate", ok=False, errors=errors)
@@ -797,6 +798,13 @@ class Orchestrator:
             if mode == "repair":
                 entry_base = getattr(generator, "repair_base_used", entry_base)
             if not xml_text:
+                errors=gen.get('errors',[])
+                if errors and all(error.startswith(('[output_limit]','[extract]')) for error in errors):
+                    stop_reason='output_limit' if any(error.startswith('[output_limit]') for error in errors) else 'invalid_output'
+                    history.append({'iter':i,'gate':'generate','ok':False,'errors':errors})
+                    self._dump_gate(iter_dir,'generate',ok=False,errors=errors)
+                    notify('no_progress',{'iter':i,'reason':stop_reason,'errors':errors})
+                    break
                 feedback = fail(iter_dir, i, "generate", gen.get("errors", []), mode)
                 notify("gate_failed", {"iter": i, "gate": "generate", "mode": mode})
                 continue
@@ -996,12 +1004,12 @@ class Orchestrator:
         best = (next((h for h in history if h.get("iter") == tracker.best["iter"]), None)
                 if tracker is not None and tracker.best else
                 max(history, key=lambda h: order.get(h.get("gate"), -1)) if history else None)
-        if best and not best.get("ok"):
+        if best and not best.get("ok") and not (best.get('gate')=='generate' and stop_reason in ('output_limit','invalid_output')):
             self.attribution.memory.record_fix(
                 best.get("gate"), best.get("errors", []),
                 "迭代上限未收敛（人工介入点 2），best=%s" % best.get("gate"), "abandoned")
         self._write_summary(run_dir, history, best)
-        if tracker is None and stop_reason not in ("no_progress", "env_down"):
+        if tracker is None and stop_reason not in ("no_progress", "env_down", "output_limit", "invalid_output"):
             self._learn_from_outcome(spec, history, None, None, "fresh", ok=False,
                                       shape=(trajectory or {}).get("shape"))
         notify("best_effort", {"run_dir": str(run_dir)})

@@ -733,7 +733,9 @@ class SVGWorkbench:
             state["messages"].append({"role":"agent", "text":
                 ("PLC 已生成，通过真实编译、部署及物理仿真验收。可下载场景描述 JSON 和最终 PLC XML。" if result["status"]=="final" else
                  {'env_down':'通信或Runtime环境中断，已保留候选及失败证据；恢复环境后可继续生成。',
-                  'no_progress':'模型返回了重复候选，已停止重复调用、编译与验收；已保留候选及失败证据。'
+                  'no_progress':'模型返回了重复候选，已停止重复调用、编译与验收；已保留候选及失败证据。',
+                  'output_limit':'模型回复被输出额度截断，已停止自动调用并保留此前候选；未将截断工程用于编译或仿真。',
+                  'invalid_output':'模型未返回完整 XML，已停止自动调用并保留此前候选；请检查模型响应。'
                  }.get(result.get('stop_reason'),"本轮未通过全部编译和物理仿真验收，已保留候选与失败证据；没有交付验收通过的 PLC。"))})
 
     def build_simulation(self, ident, revision, task):

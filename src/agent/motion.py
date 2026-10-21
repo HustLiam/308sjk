@@ -296,7 +296,7 @@ class Motion:
                         # 完成信号之外还要求物理位置跟上最后的指令。
                         targets = self.bridge.read_commands()
                         if all(abs(float(self.data.qpos[self.qids[a]])-targets[a])<.0015 for a in "XYZ"):
-                            if self.trajectory and self.trajectory.get('shape')=='svg' and not self.ink:
+                            if self.trajectory and self.trajectory.get('shape') in ('svg','square','circle') and not self.ink:
                                 raise RuntimeError("PLC 已报完成，但没有形成实际笔迹；绘图程序可能跳步，不能标记绘制完成")
                             with self.lock:self.info["status"] = "completed"
                             break
