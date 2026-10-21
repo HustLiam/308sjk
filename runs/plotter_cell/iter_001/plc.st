@@ -3,67 +3,131 @@ FUNCTION_BLOCK INTERP
     fire : BOOL;
     pos_target : INT;
     hold_req : BOOL;
-    VMAX : REAL := 40.0;
-    ACCEL : REAL := 80.0;
-    POSWIN : REAL := 2.0;
-    MAXPOS : INT;
+    vel_req : REAL;
+    acc_req : REAL;
+    dec_req : REAL;
   END_VAR
   VAR_OUTPUT
     Setpoint : INT;
     Busy : BOOL;
     Done : BOOL;
+    Aborted : BOOL;
   END_VAR
   VAR
     edge_ir : BOOL;
-    pos : REAL;
-    vel : REAL;
-    tgt : REAL;
-    dist : REAL;
-    stop_d : REAL;
+    pos : REAL := 0.0;
+    vel : REAL := 0.0;
+    tgt : REAL := 0.0;
+    dist : REAL := 0.0;
+    stop_d : REAL := 0.0;
     SCAN_T : REAL := 0.02;
+    POSWIN : REAL := 2.0;
   END_VAR
 IF fire AND NOT edge_ir THEN
-    IF pos_target > MAXPOS OR pos_target < 0 THEN
-        (* 目标越程: 不启动插补, 保持原位 *)
+    IF pos_target > 100 OR pos_target < 0 THEN
         Done := TRUE;
     ELSE
         tgt := INT_TO_REAL(pos_target);
-        Busy := TRUE;
-        Done := FALSE;
+        Busy := TRUE; Done := FALSE; Aborted := FALSE;
     END_IF;
 ELSIF fire AND NOT Busy AND (ABS(INT_TO_REAL(pos_target) - tgt) > 0.499) THEN
-    (* continuous tracking: new target starts new trajectory while fire held *)
     tgt := INT_TO_REAL(pos_target);
-    Busy := TRUE;
-    Done := FALSE;
+    Busy := TRUE; Done := FALSE; Aborted := FALSE;
 END_IF;
 edge_ir := fire;
 
 IF hold_req THEN
-    IF vel > 0.0 THEN vel := MAX(0.0, vel - ACCEL * SCAN_T);
-    ELSIF vel < 0.0 THEN vel := MIN(0.0, vel + ACCEL * SCAN_T);
+    IF vel > 0.0 THEN vel := MAX(0.0, vel - dec_req * SCAN_T);
+    ELSIF vel < 0.0 THEN vel := MIN(0.0, vel + dec_req * SCAN_T);
+    END_IF;
+    IF vel = 0.0 AND Busy THEN
+        Busy := FALSE; Done := FALSE; Aborted := TRUE;
     END_IF;
 ELSIF Busy THEN
     dist := tgt - pos;
-    stop_d := (vel * vel) / (2.0 * ACCEL);
+    stop_d := (vel * vel) / (2.0 * dec_req);
     IF ABS(dist) <= stop_d THEN
-        IF dist >= 0.0 THEN vel := MAX(0.0, vel - ACCEL * SCAN_T);
-        ELSE vel := MIN(0.0, vel + ACCEL * SCAN_T);
+        IF dist >= 0.0 THEN vel := MAX(0.0, vel - dec_req * SCAN_T);
+        ELSE vel := MIN(0.0, vel + dec_req * SCAN_T);
         END_IF;
         IF vel = 0.0 AND ABS(dist) <= POSWIN THEN
-            pos := tgt;
-            Busy := FALSE;
-            Done := TRUE;
+            pos := tgt; Busy := FALSE; Done := TRUE; Aborted := FALSE;
         END_IF;
     ELSE
-        IF dist > 0.0 THEN vel := MIN(VMAX, vel + ACCEL * SCAN_T);
-        ELSE vel := MAX(-VMAX, vel - ACCEL * SCAN_T);
+        IF dist > 0.0 THEN vel := MIN(vel_req, vel + acc_req * SCAN_T);
+        ELSE vel := MAX(-vel_req, vel - acc_req * SCAN_T);
         END_IF;
     END_IF;
 END_IF;
 
 pos := pos + vel * SCAN_T;
 Setpoint := REAL_TO_INT(pos);
+END_FUNCTION_BLOCK
+
+FUNCTION_BLOCK INTERP_Z
+  VAR_INPUT
+    fire : BOOL;
+    pos_target : INT;
+    hold_req : BOOL;
+    vel_req : REAL;
+    acc_req : REAL;
+    dec_req : REAL;
+  END_VAR
+  VAR_OUTPUT
+    Setpoint : INT;
+    Busy : BOOL;
+    Done : BOOL;
+    Aborted : BOOL;
+  END_VAR
+  VAR
+    edge_irz : BOOL;
+    posz : REAL := 0.0;
+    velz : REAL := 0.0;
+    tgtz : REAL := 10.0;
+    distz : REAL := 0.0;
+    stop_dz : REAL := 0.0;
+    SCAN_TZ : REAL := 0.02;
+    POSWINZ : REAL := 1.0;
+  END_VAR
+IF fire AND NOT edge_irz THEN
+    IF pos_target > 10 OR pos_target < 0 THEN
+        Done := TRUE;
+    ELSE
+        tgtz := INT_TO_REAL(pos_target);
+        Busy := TRUE; Done := FALSE; Aborted := FALSE;
+    END_IF;
+ELSIF fire AND NOT Busy AND (ABS(INT_TO_REAL(pos_target) - tgtz) > 0.499) THEN
+    tgtz := INT_TO_REAL(pos_target);
+    Busy := TRUE; Done := FALSE; Aborted := FALSE;
+END_IF;
+edge_irz := fire;
+
+IF hold_req THEN
+    IF velz > 0.0 THEN velz := MAX(0.0, velz - dec_req * SCAN_TZ);
+    ELSIF velz < 0.0 THEN velz := MIN(0.0, velz + dec_req * SCAN_TZ);
+    END_IF;
+    IF velz = 0.0 AND Busy THEN
+        Busy := FALSE; Done := FALSE; Aborted := TRUE;
+    END_IF;
+ELSIF Busy THEN
+    distz := tgtz - posz;
+    stop_dz := (velz * velz) / (2.0 * dec_req);
+    IF ABS(distz) <= stop_dz THEN
+        IF distz >= 0.0 THEN velz := MAX(0.0, velz - dec_req * SCAN_TZ);
+        ELSE velz := MIN(0.0, velz + dec_req * SCAN_TZ);
+        END_IF;
+        IF velz = 0.0 AND ABS(distz) <= POSWINZ THEN
+            posz := tgtz; Busy := FALSE; Done := TRUE; Aborted := FALSE;
+        END_IF;
+    ELSE
+        IF distz > 0.0 THEN velz := MIN(vel_req, velz + acc_req * SCAN_TZ);
+        ELSE velz := MAX(-vel_req, velz - acc_req * SCAN_TZ);
+        END_IF;
+    END_IF;
+END_IF;
+
+posz := posz + velz * SCAN_TZ;
+Setpoint := REAL_TO_INT(posz);
 END_FUNCTION_BLOCK
 
 FUNCTION_BLOCK DRIVE402
@@ -77,23 +141,16 @@ FUNCTION_BLOCK DRIVE402
     v_cmd : INT;
   END_VAR
   VAR
-    state : INT := 1;
     cmd : WORD;
-    pos_err : REAL;
-    v_ff : REAL;
-    v_out : REAL;
-    sp_prev : INT;
-  END_VAR
-  VAR
-    SCAN_T : REAL := 0.02;
+    state : INT := 1;
+    v_out : REAL := 0.0;
+    v_ff : REAL := 0.0;
+    pos_err : REAL := 0.0;
+    sp_prev : INT := 0;
     KP : REAL := 25.0;
     QS_DECEL : REAL := 120.0;
+    SCAN_T : REAL := 0.02;
   END_VAR
-(* ============ DRIVE402: 驱动器（CSP 跟随 + 位置环）============ *)
-(* 接收周期位置设定点（插补点），闭位置环，输出电机速度指令。 *)
-(* 不含轨迹规划——那是 PLC 侧 INTERP 的事。                  *)
-(* state: 1=SOD 2=RTSO 3=SO 4=OE 5=QSA 6=FRA 7=FA           *)
-
 cmd := cw AND 16#000F;
 
 IF state = 7 AND (cw AND 16#0080) <> 0 THEN
@@ -125,7 +182,6 @@ CASE state OF
     6: IF v_out = 0.0 THEN state := 7; END_IF;
 END_CASE;
 
-(* ---- 位置环：P 控制 + 设定值差分前馈 ---- *)
 IF state >= 4 AND state <= 6 THEN
     v_ff := INT_TO_REAL(Setpoint - sp_prev) / SCAN_T;
     pos_err := INT_TO_REAL(Setpoint) - INT_TO_REAL(pos_fb);
@@ -165,6 +221,8 @@ END_FUNCTION_BLOCK
 FUNCTION_BLOCK MC_POWER
   VAR_INPUT
     Enable : BOOL;
+    EnablePositive : BOOL;
+    EnableNegative : BOOL;
   END_VAR
   VAR_IN_OUT
     cw : WORD;
@@ -172,14 +230,16 @@ FUNCTION_BLOCK MC_POWER
   END_VAR
   VAR_OUTPUT
     Status : BOOL;
+    Busy : BOOL;
+    Error : BOOL;
   END_VAR
   VAR
     pstep : INT;
   END_VAR
-IF Enable AND pstep = 4 AND (sw AND 16#0004) = 0 AND (sw AND 16#0008) = 0 THEN
+IF Enable AND (EnablePositive OR EnableNegative) AND pstep = 4 AND (sw AND 16#0004) = 0 AND (sw AND 16#0008) = 0 THEN
     pstep := 0;
 END_IF;
-IF Enable THEN
+IF Enable AND (EnablePositive OR EnableNegative) THEN
     CASE pstep OF
         0: cw := (cw AND 16#00F0) OR 16#0006;  pstep := 1;
         1: IF (sw AND 16#0001) <> 0 THEN cw := (cw AND 16#00F0) OR 16#0007; pstep := 2; END_IF;
@@ -191,124 +251,317 @@ ELSE
     pstep := 0;
 END_IF;
 Status := (sw AND 16#0004) <> 0;
-END_FUNCTION_BLOCK
-
-FUNCTION_BLOCK MC_RESET
-  VAR_INPUT
-    fire : BOOL;
-  END_VAR
-  VAR_IN_OUT
-    cw : WORD;
-    sw : WORD;
-  END_VAR
-  VAR_OUTPUT
-    Done : BOOL;
-  END_VAR
-  VAR
-    edge_rs : BOOL;
-    busy : BOOL;
-  END_VAR
-IF fire AND NOT edge_rs THEN
-    busy := TRUE;
-END_IF;
-edge_rs := fire;
-IF busy THEN
-    IF (sw AND 16#0008) <> 0 THEN
-        cw := cw OR 16#0080;
-    ELSE
-        cw := cw AND 16#FF7F;
-        busy := FALSE;
-    END_IF;
-END_IF;
-Done := NOT busy AND (sw AND 16#0008) = 0 AND NOT fire;
-END_FUNCTION_BLOCK
-
-FUNCTION_BLOCK MC_STOP
-  VAR_INPUT
-    fire : BOOL;
-  END_VAR
-  VAR_IN_OUT
-    cw : WORD;
-    sw : WORD;
-  END_VAR
-  VAR_OUTPUT
-    Done : BOOL;
-  END_VAR
-IF fire THEN
-    cw := (cw AND 16#00F0) OR 16#0002;
-    Done := FALSE;
-ELSE
-    Done := TRUE;
-END_IF;
+Busy := Enable AND pstep < 4;
+Error := (sw AND 16#0008) <> 0;
 END_FUNCTION_BLOCK
 
 FUNCTION_BLOCK MC_MOVEABSOLUTE
   VAR_INPUT
     fire : BOOL;
     Position : INT;
+    Velocity : REAL;
+    Acceleration : REAL;
+    Deceleration : REAL;
+    sw : WORD;
+    abort_bus : BOOL;
   END_VAR
   VAR_IN_OUT
     interp_exe : BOOL;
+    dyn_vel : REAL;
+    dyn_acc : REAL;
+    dyn_dec : REAL;
   END_VAR
   VAR_OUTPUT
     Done : BOOL;
     Busy : BOOL;
+    Active : BOOL;
+    CommandAborted : BOOL;
+    Error : BOOL;
+    ErrorID : INT;
   END_VAR
   VAR
     edge_ma : BOOL;
+    edge_ab : BOOL;
   END_VAR
-(* 触发插补引擎的 fire 线 *)
 IF fire AND NOT edge_ma THEN
-    interp_exe := TRUE;
+    Error := FALSE; ErrorID := 0; CommandAborted := FALSE;
+    IF (sw AND 16#0008) <> 0 THEN
+        Error := TRUE; ErrorID := 2;
+    ELSIF (sw AND 16#0004) = 0 THEN
+        Error := TRUE; ErrorID := 3;
+    ELSIF Position < 0 OR Position > 100 THEN
+        Error := TRUE; ErrorID := 1;
+    ELSE
+        interp_exe := TRUE;
+        dyn_vel := Velocity; dyn_acc := Acceleration; dyn_dec := Deceleration;
+    END_IF;
 END_IF;
 edge_ma := fire;
-(* interp_exe 保持 TRUE 直到运动完成(由 PLC_PRG 的 INTERP.Done 清零) *)
-Done := NOT interp_exe;
+
+IF interp_exe AND abort_bus AND NOT edge_ab THEN
+    interp_exe := FALSE;
+    CommandAborted := TRUE;
+END_IF;
+edge_ab := abort_bus;
 Busy := interp_exe;
+Active := interp_exe;
+Done := NOT interp_exe AND NOT Error;
 END_FUNCTION_BLOCK
 
-FUNCTION_BLOCK MC_MOVEJOG
+FUNCTION_BLOCK MC_MOVEABSOLUTE_Z
   VAR_INPUT
-    JogForward : BOOL;
-    JogBackward : BOOL;
+    fire : BOOL;
+    Position : INT;
+    Velocity : REAL;
+    Acceleration : REAL;
+    Deceleration : REAL;
+    sw : WORD;
+    abort_bus : BOOL;
   END_VAR
   VAR_IN_OUT
-    jog_pos : INT;
+    interp_exe : BOOL;
+    dyn_vel : REAL;
+    dyn_acc : REAL;
+    dyn_dec : REAL;
   END_VAR
   VAR_OUTPUT
+    Done : BOOL;
     Busy : BOOL;
+    Active : BOOL;
+    CommandAborted : BOOL;
+    Error : BOOL;
+    ErrorID : INT;
   END_VAR
-IF JogForward AND jog_pos < 97 THEN
-    jog_pos := jog_pos + 1;
-ELSIF JogBackward AND jog_pos > 3 THEN
-    jog_pos := jog_pos - 1;
+  VAR
+    edge_maz : BOOL;
+    edge_abz : BOOL;
+  END_VAR
+IF fire AND NOT edge_maz THEN
+    Error := FALSE; ErrorID := 0; CommandAborted := FALSE;
+    IF (sw AND 16#0008) <> 0 THEN
+        Error := TRUE; ErrorID := 2;
+    ELSIF (sw AND 16#0004) = 0 THEN
+        Error := TRUE; ErrorID := 3;
+    ELSIF Position < 0 OR Position > 10 THEN
+        Error := TRUE; ErrorID := 1;
+    ELSE
+        interp_exe := TRUE;
+        dyn_vel := Velocity; dyn_acc := Acceleration; dyn_dec := Deceleration;
+    END_IF;
 END_IF;
-Busy := JogForward OR JogBackward;
+edge_maz := fire;
+
+IF interp_exe AND abort_bus AND NOT edge_abz THEN
+    interp_exe := FALSE;
+    CommandAborted := TRUE;
+END_IF;
+edge_abz := abort_bus;
+Busy := interp_exe;
+Active := interp_exe;
+Done := NOT interp_exe AND NOT Error;
 END_FUNCTION_BLOCK
 
 FUNCTION_BLOCK MC_HOME
   VAR_INPUT
     fire : BOOL;
+    sw : WORD;
   END_VAR
   VAR_IN_OUT
     home_exe : BOOL;
   END_VAR
   VAR_OUTPUT
     Done : BOOL;
+    Busy : BOOL;
+    Error : BOOL;
   END_VAR
   VAR
     edge_hm : BOOL;
   END_VAR
 IF fire AND NOT edge_hm THEN
     home_exe := TRUE;
+    Done := FALSE;
 END_IF;
 edge_hm := fire;
-(* home_exe 保持 TRUE 直到运动完成 *)
-Done := NOT home_exe;
+Busy := home_exe;
+Error := (sw AND 16#0008) <> 0;
+END_FUNCTION_BLOCK
+
+FUNCTION_BLOCK MC_HALT
+  VAR_INPUT
+    fire : BOOL;
+    ax_busy : BOOL;
+  END_VAR
+  VAR_OUTPUT
+    Stopping : BOOL;
+    Done : BOOL;
+    Busy : BOOL;
+    Error : BOOL;
+  END_VAR
+  VAR
+    edge_hl : BOOL;
+    done_latch : BOOL;
+  END_VAR
+IF fire AND NOT edge_hl THEN
+    done_latch := FALSE;
+    Stopping := TRUE;
+END_IF;
+edge_hl := fire;
+IF Stopping AND NOT ax_busy THEN
+    Stopping := FALSE;
+    done_latch := TRUE;
+END_IF;
+Busy := Stopping;
+Done := done_latch AND NOT Stopping;
+Error := FALSE;
+END_FUNCTION_BLOCK
+
+FUNCTION_BLOCK MC_MOVEJOG
+  VAR_INPUT
+    JogForward : BOOL;
+    JogBackward : BOOL;
+    Velocity : REAL;
+    cur_pos : INT;
+    sw : WORD;
+  END_VAR
+  VAR_IN_OUT
+    jog_pos : INT;
+  END_VAR
+  VAR_OUTPUT
+    Busy : BOOL;
+    Error : BOOL;
+  END_VAR
+  VAR
+    inc_step : INT;
+  END_VAR
+inc_step := REAL_TO_INT(Velocity * 0.02);
+IF inc_step < 1 THEN inc_step := 1; END_IF;
+
+IF (sw AND 16#0008) <> 0 OR (sw AND 16#0004) = 0 THEN
+    Error := TRUE;
+    Busy := FALSE;
+ELSIF JogForward AND NOT JogBackward THEN
+    Error := FALSE;
+    IF NOT Busy THEN
+        jog_pos := cur_pos;
+        Busy := TRUE;
+    END_IF;
+    IF jog_pos < 100 THEN
+        jog_pos := jog_pos + inc_step;
+        IF jog_pos > 100 THEN jog_pos := 100; END_IF;
+    END_IF;
+ELSIF JogBackward AND NOT JogForward THEN
+    Error := FALSE;
+    IF NOT Busy THEN
+        jog_pos := cur_pos;
+        Busy := TRUE;
+    END_IF;
+    IF jog_pos > 0 THEN
+        jog_pos := jog_pos - inc_step;
+        IF jog_pos < 0 THEN jog_pos := 0; END_IF;
+    END_IF;
+ELSE
+    Busy := FALSE;
+    Error := FALSE;
+END_IF;
+END_FUNCTION_BLOCK
+
+FUNCTION_BLOCK MC_READSTATUS
+  VAR_INPUT
+    Enable : BOOL;
+    sw : WORD;
+    interp_busy : BOOL;
+    v_act : INT;
+  END_VAR
+  VAR_OUTPUT
+    Valid : BOOL;
+    Moving : BOOL;
+    StandStill : BOOL;
+    Disabled : BOOL;
+    ErrorStop : BOOL;
+  END_VAR
+Valid := Enable;
+Moving := Enable AND (interp_busy OR (v_act <> 0));
+StandStill := Enable AND NOT Moving;
+Disabled := Enable AND ((sw AND 16#0004) = 0);
+ErrorStop := Enable AND ((sw AND 16#0008) <> 0);
+END_FUNCTION_BLOCK
+
+FUNCTION_BLOCK MC_READACTUALPOSITION
+  VAR_INPUT
+    Enable : BOOL;
+    ActualPosition : INT;
+  END_VAR
+  VAR_OUTPUT
+    Valid : BOOL;
+    Position : INT;
+  END_VAR
+Valid := Enable;
+Position := ActualPosition;
 END_FUNCTION_BLOCK
 
 PROGRAM PLC_PRG
   VAR
+    pl_step : INT := 0;
+    seg_t : REAL := 0.0;
+    fault_lat : BOOL;
+    jog_ok : BOOL;
+    man_go : BOOL;
+    man_hm : BOOL;
+    draw_ok : BOOL;
+    x_tgt : INT;
+    y_tgt : INT;
+    z_tgt : INT := 10;
+    x_jog_pos : INT;
+    x_cw : WORD := 6;
+    y_cw : WORD := 6;
+    z_cw : WORD := 6;
+    x_sww : WORD;
+    y_sww : WORD;
+    z_sww : WORD;
+    go_x_exe : BOOL;
+    go_y_exe : BOOL;
+    go_z_exe : BOOL;
+    hm_x_exe : BOOL;
+    hm_y_exe : BOOL;
+    hm_z_exe : BOOL;
+    halt_all : BOOL;
+    x_vel_bus : REAL := 40.0;
+    x_acc_bus : REAL := 80.0;
+    x_dec_bus : REAL := 80.0;
+    y_vel_bus : REAL := 40.0;
+    y_acc_bus : REAL := 80.0;
+    y_dec_bus : REAL := 80.0;
+    z_vel_bus : REAL := 20.0;
+    z_acc_bus : REAL := 60.0;
+    z_dec_bus : REAL := 60.0;
+    pwr_x : MC_POWER;
+    pwr_y : MC_POWER;
+    pwr_z : MC_POWER;
+    go_x : MC_MOVEABSOLUTE;
+    go_y : MC_MOVEABSOLUTE;
+    go_z : MC_MOVEABSOLUTE_Z;
+    hm_x : MC_HOME;
+    hm_y : MC_HOME;
+    hm_z : MC_HOME;
+    jg_x : MC_MOVEJOG;
+    hlt_x : MC_HALT;
+    hlt_y : MC_HALT;
+    hlt_z : MC_HALT;
+    rds_x : MC_READSTATUS;
+    rds_y : MC_READSTATUS;
+    rds_z : MC_READSTATUS;
+    rap_x : MC_READACTUALPOSITION;
+    rap_y : MC_READACTUALPOSITION;
+    rap_z : MC_READACTUALPOSITION;
+    ix_x : INTERP;
+    ix_y : INTERP;
+    ix_z : INTERP_Z;
+    dv_x : DRIVE402;
+    dv_y : DRIVE402;
+    dv_z : DRIVE402;
+  END_VAR
+  VAR
+    prog_id AT %QW20 : INT := 2;
     run AT %QX0.0 : BOOL;
     cmd_home AT %QX0.1 : BOOL;
     cmd_go AT %QX0.2 : BOOL;
@@ -317,226 +570,175 @@ PROGRAM PLC_PRG
     quickstop AT %QX0.5 : BOOL;
     cmd_reset AT %QX0.7 : BOOL;
     cmd_draw AT %QX2.0 : BOOL;
-  END_VAR
-  VAR
     all_oe AT %QX1.0 : BOOL;
     move_done AT %QX1.1 : BOOL;
     any_moving AT %QX1.2 : BOOL;
     fault_any AT %QX1.3 : BOOL;
     pen_down AT %QX2.1 : BOOL;
     plot_done AT %QX2.2 : BOOL;
-  END_VAR
-  VAR
     x_fb AT %QW0 : INT;
     y_fb AT %QW1 : INT;
     z_fb AT %QW2 : INT;
     x_sp AT %QW10 : INT;
     y_sp AT %QW11 : INT;
     z_sp AT %QW12 : INT;
-  END_VAR
-  VAR
-    x_sw AT %QW6 : WORD;
-    y_sw AT %QW7 : WORD;
-    z_sw AT %QW8 : WORD;
+    x_sw AT %QW6 : INT;
+    y_sw AT %QW7 : INT;
+    z_sw AT %QW8 : INT;
     x_v AT %QW13 : INT;
     y_v AT %QW14 : INT;
     z_v AT %QW15 : INT;
   END_VAR
-  VAR
-    prog_id AT %QW20 : INT := 2;
-  END_VAR
-  VAR
-    x_cw : WORD;
-    y_cw : WORD;
-    z_cw : WORD;
-    x_interp : INT;
-    y_interp : INT;
-    z_interp : INT;
-    x_tgt : INT;
-    y_tgt : INT;
-    z_tgt : INT;
-    x_jog_pos : INT;
-    go_x_exe : BOOL;
-    go_y_exe : BOOL;
-    go_z_exe : BOOL;
-    hm_x_exe : BOOL;
-    hm_y_exe : BOOL;
-    hm_z_exe : BOOL;
-    pen_up : BOOL;
-    pl_step : INT;
-    pl_tx : INT;
-    pl_ty : INT;
-    pl_tz : INT;
-  END_VAR
-  VAR
-    pwr_x : MC_POWER;
-    pwr_y : MC_POWER;
-    pwr_z : MC_POWER;
-    rs_x : MC_RESET;
-    st_x : MC_STOP;
-    st_y : MC_STOP;
-    st_z : MC_STOP;
-    go_x : MC_MOVEABSOLUTE;
-    go_y : MC_MOVEABSOLUTE;
-    go_z : MC_MOVEABSOLUTE;
-    jg_x : MC_MOVEJOG;
-    hm_x : MC_HOME;
-    hm_y : MC_HOME;
-    hm_z : MC_HOME;
-    ix_x : INTERP;
-    ix_y : INTERP;
-    ix_z : INTERP;
-    dv_x : DRIVE402;
-    dv_y : DRIVE402;
-    dv_z : DRIVE402;
-  END_VAR
-(* ---- program identity ---- *)
 prog_id := 2;
 
-(* ---- 扫描头：采样驱动器状态 ---- *)
-x_sw := dv_x.sw;
-y_sw := dv_y.sw;
-z_sw := dv_z.sw;
+(* ---- pen state: pure physical judgment ---- *)
+pen_down := (z_fb <= 2);
 
-(* ---- 使能 / 复位 / 快停（快停最后落笔 = 优先级最高） ---- *)
-pwr_x(Enable := run AND NOT quickstop, cw := x_cw, sw := x_sw);
-pwr_y(Enable := run AND NOT quickstop, cw := y_cw, sw := y_sw);
-pwr_z(Enable := run AND NOT quickstop, cw := z_cw, sw := z_sw);
-rs_x(fire := cmd_reset, cw := x_cw, sw := x_sw);
-st_x(fire := quickstop, cw := x_cw, sw := x_sw);
-st_y(fire := quickstop, cw := y_cw, sw := y_sw);
-st_z(fire := quickstop, cw := z_cw, sw := z_sw);
+(* ---- fault latch & reset (C3/C6) ---- *)
+IF quickstop OR ((x_sww AND 16#0008) <> 0) OR ((y_sww AND 16#0008) <> 0) OR ((z_sww AND 16#0008) <> 0) THEN
+    fault_lat := TRUE;
+END_IF;
+IF cmd_reset AND (NOT quickstop) AND run
+   AND ((x_sww AND 16#0008) = 0) AND ((y_sww AND 16#0008) = 0) AND ((z_sww AND 16#0008) = 0) THEN
+    fault_lat := FALSE;
+END_IF;
+fault_any := fault_lat;
 
-(* ---- 笔状态（抬笔判定用编码器反馈，pen_down 输出同源） ---- *)
-pen_up := z_fb >= 8;
+(* ---- enable chain (C4/AC1) ---- *)
+halt_all := quickstop OR fault_lat OR (NOT run);
+pwr_x(Enable := run, EnablePositive := TRUE, EnableNegative := TRUE, cw := x_cw, sw := x_sww);
+pwr_y(Enable := run, EnablePositive := TRUE, EnableNegative := TRUE, cw := y_cw, sw := y_sww);
+pwr_z(Enable := run, EnablePositive := TRUE, EnableNegative := TRUE, cw := z_cw, sw := z_sww);
+all_oe := pwr_x.Status AND pwr_y.Status AND pwr_z.Status;
 
-(* ---- 绘图序列器：cmd_draw（电平门控）启动，9 步目标表 ---- *)
-(* 机制：触发扫描锁存步 1 目标并置 exe 电平（全程保持）；此后每步只改 pl_t* ——
-   INTERP 连续跟踪模式检测目标变化自动起新轨迹；步进条件=三轴 Busy 全落且 Done。
-   全程无单扫描选通/边沿记忆变量（运行时优化器会吞掉这类赋值——避坑#7 变体） *)
-IF (quickstop OR fault_any) AND (pl_step <> 0) THEN
-    pl_step := 0;
-    go_x_exe := FALSE;
-    go_y_exe := FALSE;
-    go_z_exe := FALSE;
+(* ---- manual gating: pen interlock C1, enable C4 ---- *)
+jog_ok := all_oe AND (NOT pen_down) AND (NOT halt_all);
+man_go := cmd_go AND all_oe AND (NOT pen_down) AND (NOT halt_all);
+man_hm := cmd_home AND all_oe AND (NOT halt_all);
+
+(* ---- target bus defaults ---- *)
+x_tgt := x_sp;
+y_tgt := y_sp;
+
+(* ---- jog (X only) ---- *)
+jg_x(JogForward := jog_fwd AND jog_ok, JogBackward := jog_rev AND jog_ok,
+     Velocity := 40.0, cur_pos := x_fb, sw := x_sww, jog_pos := x_jog_pos);
+IF (jog_fwd OR jog_rev) AND jog_ok AND jg_x.Busy THEN
+    x_tgt := x_jog_pos;
+END_IF;
+
+(* ---- draw sequencer (C2/C5, trajectory step table) ---- *)
+draw_ok := cmd_draw AND run AND all_oe AND (NOT pen_down) AND (NOT fault_lat) AND (NOT quickstop);
+IF draw_ok AND (pl_step = 0) THEN
+    go_z_exe := TRUE; go_x_exe := TRUE; go_y_exe := TRUE;
+    plot_done := FALSE;
+    pl_step := 1;
+    seg_t := 0.0;
 END_IF;
 
 CASE pl_step OF
-    0: IF cmd_draw AND all_oe AND NOT quickstop AND NOT fault_any AND pen_up THEN
-           plot_done := FALSE;
-           pl_tx := x_interp; pl_ty := y_interp; pl_tz := 10;
-           go_x_exe := TRUE;
-           go_y_exe := TRUE;
-           go_z_exe := TRUE;
-           pl_step := 1;
-       END_IF;
-    1: pl_tx := x_interp; pl_ty := y_interp; pl_tz := 10;
-    2: pl_tx := 20; pl_ty := 20; pl_tz := 10;
-    3: pl_tx := 20; pl_ty := 20; pl_tz := 0;
-    4: pl_tx := 80; pl_ty := 20; pl_tz := 0;
-    5: pl_tx := 80; pl_ty := 80; pl_tz := 0;
-    6: pl_tx := 20; pl_ty := 80; pl_tz := 0;
-    7: pl_tx := 20; pl_ty := 20; pl_tz := 0;
-    8: pl_tx := 20; pl_ty := 20; pl_tz := 10;
-    9: pl_tx := 50; pl_ty := 50; pl_tz := 10;
+    1: x_tgt := 20; y_tgt := 20; z_tgt := 10;   (* pen_up_move (20,20,10) *)
+    2: x_tgt := 20; y_tgt := 20; z_tgt := 0;    (* pen_down_move (20,20,0) *)
+    3: x_tgt := 80; y_tgt := 20; z_tgt := 0;    (* move (80,20,0) *)
+    4: x_tgt := 80; y_tgt := 80; z_tgt := 0;    (* move (80,80,0) *)
+    5: x_tgt := 20; y_tgt := 80; z_tgt := 0;    (* move (20,80,0) *)
+    6: x_tgt := 20; y_tgt := 20; z_tgt := 0;    (* move (20,20,0) close *)
+    7: x_tgt := 20; y_tgt := 20; z_tgt := 10;   (* pen_up_move (20,20,10) *)
+    8: x_tgt := 50; y_tgt := 50; z_tgt := 10;   (* pen_up_move (50,50,10) *)
 END_CASE;
 
-(* 步进：三轴插补全部空闲（连续模式下 Busy 落下=到位）且 Done 汇聚 *)
-IF (pl_step <> 0) AND NOT ix_x.Busy AND NOT ix_y.Busy AND NOT ix_z.Busy
-   AND ix_x.Done AND ix_y.Done AND ix_z.Done THEN
-    IF pl_step = 9 THEN
-        plot_done := TRUE;
-        pl_step := 0;
-        go_x_exe := FALSE;
-        go_y_exe := FALSE;
-        go_z_exe := FALSE;
-    ELSE
-        pl_step := pl_step + 1;
-    END_IF;
-END_IF;
-
-(* ---- MC 指令层：手动定位/点动须抬笔（笔互锁 C1），序列期间禁止手动 ---- *)
-go_x(fire := cmd_go AND pen_up AND (pl_step = 0), Position := x_sp, interp_exe := go_x_exe);
-go_y(fire := cmd_go AND pen_up AND (pl_step = 0), Position := y_sp, interp_exe := go_y_exe);
-go_z(fire := cmd_go AND (pl_step = 0), Position := z_sp, interp_exe := go_z_exe);
-hm_x(fire := cmd_home AND pen_up AND (pl_step = 0), home_exe := hm_x_exe);
-hm_y(fire := cmd_home AND pen_up AND (pl_step = 0), home_exe := hm_y_exe);
-hm_z(fire := cmd_home AND (pl_step = 0), home_exe := hm_z_exe);
-jg_x(JogForward := jog_fwd AND pen_up AND (pl_step = 0),
-     JogBackward := jog_rev AND pen_up AND (pl_step = 0), jog_pos := x_jog_pos);
-
-(* ---- 插补目标路由：序列 > 回零 > 手动；Z 回零位=抬笔安全位 10 ---- *)
-IF (pl_step <> 0) THEN
-    x_tgt := pl_tx;
-ELSIF hm_x_exe THEN
-    x_tgt := 0;
-ELSE
-    x_tgt := x_sp;
-END_IF;
-IF (pl_step <> 0) THEN
-    y_tgt := pl_ty;
-ELSIF hm_y_exe THEN
-    y_tgt := 0;
-ELSE
-    y_tgt := y_sp;
-END_IF;
-IF (pl_step <> 0) THEN
-    z_tgt := pl_tz;
-ELSIF hm_z_exe THEN
-    z_tgt := 10;
-ELSE
+(* manual Z setpoint when idle (no sequencer run) *)
+IF pl_step = 0 THEN
     z_tgt := z_sp;
 END_IF;
 
-ix_x(fire := go_x_exe OR hm_x_exe, pos_target := x_tgt, hold_req := FALSE,
-     VMAX := 40.0, ACCEL := 80.0, POSWIN := 2.0, MAXPOS := 100);
-ix_y(fire := go_y_exe OR hm_y_exe, pos_target := y_tgt, hold_req := FALSE,
-     VMAX := 40.0, ACCEL := 80.0, POSWIN := 2.0, MAXPOS := 100);
-ix_z(fire := go_z_exe OR hm_z_exe, pos_target := z_tgt, hold_req := FALSE,
-     VMAX := 20.0, ACCEL := 60.0, POSWIN := 1.0, MAXPOS := 10);
+(* segment timeout watchdog (C6) *)
+IF pl_step = 0 THEN
+    seg_t := 0.0;
+ELSIF ix_x.Busy OR ix_y.Busy OR ix_z.Busy THEN
+    seg_t := seg_t + 0.02;
+    IF seg_t > 6.0 THEN
+        fault_lat := TRUE;
+    END_IF;
+ELSE
+    seg_t := 0.0;
+END_IF;
 
-(* ---- 触发线清除（m3a 语义：exe 保持到 Done；序列期间 exe 为序列持有，仅清手动/回零线） ---- *)
-IF ix_x.Done AND (pl_step = 0) THEN go_x_exe := FALSE; END_IF;
-IF ix_y.Done AND (pl_step = 0) THEN go_y_exe := FALSE; END_IF;
-IF ix_z.Done AND (pl_step = 0) THEN go_z_exe := FALSE; END_IF;
-IF ix_x.Done THEN hm_x_exe := FALSE; END_IF;
-IF ix_y.Done THEN hm_y_exe := FALSE; END_IF;
-IF ix_z.Done THEN hm_z_exe := FALSE; END_IF;
-
-(* ---- 步进：三轴插补全部完成且 exe 线已清（m3a 握手） ---- *)
-IF (pl_step <> 0) AND NOT go_x_exe AND NOT go_y_exe AND NOT go_z_exe
-   AND ix_x.Done AND ix_y.Done AND ix_z.Done THEN
-    IF pl_step = 9 THEN
+(* step advance: all axes in-position (C2 in-pos sequence) *)
+IF (pl_step <> 0) AND (NOT ix_x.Busy) AND (NOT ix_y.Busy) AND (NOT ix_z.Busy)
+   AND ix_x.Done AND ix_y.Done AND ix_z.Done AND (NOT fault_lat) AND (NOT quickstop) THEN
+    IF pl_step = 8 THEN
         plot_done := TRUE;
         pl_step := 0;
+        go_x_exe := FALSE; go_y_exe := FALSE; go_z_exe := FALSE;
     ELSE
         pl_step := pl_step + 1;
     END_IF;
 END_IF;
 
-(* ---- 插补点路由：点动时用 jog_pos，否则用 INTERP 输出 ---- *)
-IF jg_x.Busy THEN
-    x_interp := x_jog_pos;
-ELSE
-    x_interp := ix_x.Setpoint;
+(* abort: quickstop / fault / run-off -> reset sequencer, kill plot_done (C3) *)
+IF halt_all OR fault_lat THEN
+    IF pl_step <> 0 THEN
+        pl_step := 0;
+        go_x_exe := FALSE; go_y_exe := FALSE; go_z_exe := FALSE;
+    END_IF;
+    plot_done := FALSE;
 END_IF;
-y_interp := ix_y.Setpoint;
-z_interp := ix_z.Setpoint;
 
-(* ---- 驱动器：跟随插补点，闭位置环 ---- *)
-dv_x(cw := x_cw, Setpoint := x_interp, pos_fb := x_fb);
-x_v := dv_x.v_cmd;
-dv_y(cw := y_cw, Setpoint := y_interp, pos_fb := y_fb);
-y_v := dv_y.v_cmd;
-dv_z(cw := z_cw, Setpoint := z_interp, pos_fb := z_fb);
-z_v := dv_z.v_cmd;
+(* ---- MC command layer ---- *)
+rap_x(Enable := TRUE, ActualPosition := x_fb);
+rap_y(Enable := TRUE, ActualPosition := y_fb);
+rap_z(Enable := TRUE, ActualPosition := z_fb);
 
-(* ---- 应用状态 ---- *)
-all_oe := pwr_x.Status AND pwr_y.Status AND pwr_z.Status;
-move_done := (go_x.Done AND go_y.Done AND go_z.Done) AND (pl_step = 0);
-any_moving := (x_v <> 0) OR (y_v <> 0) OR (z_v <> 0);
-fault_any := (x_sw AND 16#0008) <> 0 OR (y_sw AND 16#0008) <> 0 OR (z_sw AND 16#0008) <> 0;
-pen_down := z_fb <= 2;
+go_x(fire := man_go AND (NOT go_x_exe), Position := x_tgt, Velocity := 40.0, Acceleration := 80.0, Deceleration := 80.0,
+     sw := x_sww, abort_bus := (ix_x.Aborted OR halt_all),
+     interp_exe := go_x_exe, dyn_vel := x_vel_bus, dyn_acc := x_acc_bus, dyn_dec := x_dec_bus);
+go_y(fire := man_go AND (NOT go_y_exe), Position := y_tgt, Velocity := 40.0, Acceleration := 80.0, Deceleration := 80.0,
+     sw := y_sww, abort_bus := (ix_y.Aborted OR halt_all),
+     interp_exe := go_y_exe, dyn_vel := y_vel_bus, dyn_acc := y_acc_bus, dyn_dec := y_dec_bus);
+go_z(fire := man_hm AND (NOT go_z_exe), Position := 10, Velocity := 20.0, Acceleration := 60.0, Deceleration := 60.0,
+     sw := z_sww, abort_bus := (ix_z.Aborted OR halt_all),
+     interp_exe := go_z_exe, dyn_vel := z_vel_bus, dyn_acc := z_acc_bus, dyn_dec := z_dec_bus);
+
+hm_x(fire := man_hm, sw := x_sww, home_exe := hm_x_exe);
+hm_y(fire := man_hm, sw := y_sww, home_exe := hm_y_exe);
+hm_z(fire := man_hm, sw := z_sww, home_exe := hm_z_exe);
+IF hm_z.Busy THEN z_tgt := 10; END_IF;
+
+hlt_x(fire := halt_all, ax_busy := ix_x.Busy);
+hlt_y(fire := halt_all, ax_busy := ix_y.Busy);
+hlt_z(fire := halt_all, ax_busy := ix_z.Busy);
+
+rds_x(Enable := TRUE, sw := x_sww, interp_busy := ix_x.Busy, v_act := x_v);
+rds_y(Enable := TRUE, sw := y_sww, interp_busy := ix_y.Busy, v_act := y_v);
+rds_z(Enable := TRUE, sw := z_sww, interp_busy := ix_z.Busy, v_act := z_v);
+
+(* ---- shared interpolation cores (OR trigger lines) ---- *)
+ix_x(fire := (go_x_exe OR hm_x_exe), pos_target := x_tgt,
+     hold_req := hlt_x.Stopping, vel_req := x_vel_bus, acc_req := x_acc_bus, dec_req := x_dec_bus);
+ix_y(fire := (go_y_exe OR hm_y_exe), pos_target := y_tgt,
+     hold_req := hlt_y.Stopping, vel_req := y_vel_bus, acc_req := y_acc_bus, dec_req := y_dec_bus);
+ix_z(fire := (go_z_exe OR hm_z_exe), pos_target := z_tgt,
+     hold_req := hlt_z.Stopping, vel_req := z_vel_bus, acc_req := z_acc_bus, dec_req := z_dec_bus);
+
+dv_x(cw := x_cw, Setpoint := ix_x.Setpoint, pos_fb := x_fb);
+dv_y(cw := y_cw, Setpoint := ix_y.Setpoint, pos_fb := y_fb);
+dv_z(cw := z_cw, Setpoint := ix_z.Setpoint, pos_fb := z_fb);
+
+x_sw := WORD_TO_INT(dv_x.sw);
+y_sw := WORD_TO_INT(dv_y.sw);
+z_sw := WORD_TO_INT(dv_z.sw);
+x_sww := dv_x.sw;  y_sww := dv_y.sw;  z_sww := dv_z.sw;
+x_v := dv_x.v_cmd;  y_v := dv_y.v_cmd;  z_v := dv_z.v_cmd;
+
+IF ix_x.Done OR ix_x.Aborted THEN go_x_exe := FALSE; hm_x_exe := FALSE; END_IF;
+IF ix_y.Done OR ix_y.Aborted THEN go_y_exe := FALSE; hm_y_exe := FALSE; END_IF;
+IF ix_z.Done OR ix_z.Aborted THEN go_z_exe := FALSE; hm_z_exe := FALSE; END_IF;
+
+(* ---- status lamps ---- *)
+move_done := (NOT rds_x.Moving) AND (NOT rds_y.Moving) AND (NOT rds_z.Moving)
+             AND (pl_step = 0) AND (NOT fault_any) AND (NOT quickstop) AND all_oe;
+any_moving := rds_x.Moving OR rds_y.Moving OR rds_z.Moving;
 END_PROGRAM
 
 CONFIGURATION Config0

@@ -1,5 +1,41 @@
 # gc 本地开发日志（devlog-gc）
 
+## 2026-10-21 用户授权提交 master
+
+按用户明确要求提交当前工作台及完整依赖、测试、运行证据至master。远端fetch确认master仍为01c489c，与gc无新的上游代码差异；642通过、6Qt跳过的已验证实现保持不变。README修正仅SVG入口、生成不部署和SVG验收未接入的旧说明。提交前保留本日志副本，个人分支记录完整实现；合入提交移除devlog，master发布后在gc恢复。本机Git代理127.0.0.1:10808未运行，远端操作仅在当前命令临时清空http/https代理，未改全局配置。
+
+## 2026-10-21 语言绘图与SVG双来源
+
+新增drawing_input适配原clarification/trajectory的正方形与圆规划器，不生成中间SVG。新会话默认语言描述；无SVG及选区时开放工艺输入，“画一个正方形”可直接产生预览，或在左侧规划后使用默认工艺。支持有标签的中心/边长/半径/直径/圆段数及“边长为40”等常见表达；缺参使用界面明示默认值，按AML检查设备坐标、单位和行程；不支持或无效输入不改变原轨迹。
+
+会话保存drawing_mode、简洁drawing_text与独立language_geometry；切换来源保留原SVG资产、选区和参数，但让规格失效，避免旧SVG要求混入语言任务。当前来源参与冻结输入比较；语言生成归档trajectory及来源，不复制保留的SVG为input.svg。清空上下文保留几何、清掉工艺；资产替换重验当前来源。旧已导入会话仍为SVG来源，旧空会话可直接语言输入。前端按当前来源独立判断按钮状态；右侧直接描述图形、左侧预览、默认工艺统一消费同一轨迹。摘要精简并去掉重复权威步表，嵌入预览收起重复标题；完整生成输入和独立预览文件保留。
+
+验证：根tests/642通过、6Qt跳过；覆盖无SVG直接对话整理规格、两类几何/增量修改、无效输入原子性、默认工艺、来源往返、旧会话、资产更换、生成快照及HTTP令牌/版本/忙碌保护。真实Chrome检查无SVG正方形→默认工艺→生成按钮可用、SVG导入/清空选区→语言恢复→圆形、非法尺寸保护、桌面与390px无横向溢出，JS异常0。Windows禁用8766，浏览器验证使用系统分配的隔离端口。确认用户服务空闲后重启8765，保留原产物目录和模型配置；本次真实模型调用/PLC部署0。截图和摘要E:/chagpt/308sjk-language-drawing；临时服务/Chrome和测试文件收尾清理，未push。
+
+## 2026-10-21 自动修复反馈、重复候选与通信恢复
+
+将尚未接线的repair_feedback接入PLCGenerator.generate/repair内部静态回路，共用归因引擎MemoryStore，错误按族限量回灌且保留全部错误、故障库命中与具体建议到逐调用feedback.json。相同源码与相同静态错误再次出现时抛GenerationStalled，solve保存no_progress，不再调用归因/蒸馏模型。静态通过后的候选也按XML结构/代码指纹去重，在场景构建、部署和物理运行前停止；忽略排版、注释和时间戳，保留字面量及混合XML文本。旧测试中原样返回XML或仅改注释的替身改为确实修改语句，继续检查原有修复路由、退化回退和计划冻结。
+
+历史resolved经验预注入增加diff_hunks；实际采用的repair_base_used参与成功经验差异计算。VerifiedPLCGenerator切回较好候选时合并其失败证据与本轮完整归因，明确二者来源；failed_candidate的时序建议不再覆盖原归因，静态候选重试也恢复逐调用错误和知识修法。
+
+最近b3851eae...中断原文为pymodbus No response received，旧字符串分类漏掉了它。现将其识别为env_down，不交由模型补偿通信故障；通信中断最多对同稿重验一次并归档首轮证据，源码/身份改变或停止未确认不自动重试。再次点击生成且冻结输入相同时，环境中断候选直接过全部闸门，不先调用模型；行为失败候选仍走定向修复，原样返回会立即停止。SVG的明确画方/画圆指令在规格变动或需求调用前拒绝，防止保留SVG与新工艺相互矛盾。
+
+验证：根tests/ 629通过、6Qt跳过；包括静态知识检索/重复熔断、部署前去重、通信恢复/持续失败、旧No response记录续验、回退归因和形状冲突。完整XML旧system与0.3采样回归通过。空闲确认后重启8765，首页与模型配置正常，实际HTTP冲突返回400并验证原会话未变；未调用真实模型或重跑实际PLC运动。服务日志和验证摘要保存在E:/chagpt/308sjk-repair-loop，测试中间目录收尾清理；未push。
+
+## 2026-10-20 相机方向与部署日志
+
+按用户明确确认保持左旋右移并反转两类鼠标增量；垂直平移改用真正的屏幕上方向基向量，避免45度视角下退化为深度移动。部署记录仅在前端映射为中文流程成功/失败，不展示临时文件、内部路径和英文步骤；底层 steps/errors 保留用于诊断。浏览器验证场景页和Runtime页真实左/右键拖动、七步文案及失败分支；无异常，根412通过。静态脚本刷新即可生效，无需重启服务。
+
+## 2026-10-20 绘图精度与显示性能
+
+用独立高精度 AML 保留原地址与轴行程，将 cmd 编码精度提高100倍；SVG 路点0.01、展开容差0.02，输出取 REAL 插补状态，XY 同步、启动先抬笔、空闲保持。P06 阻止 REAL 改型后隐式比较/INT IN_OUT 混用，保留旧 MC 总线 INT 并另设 REAL 目标。实际 PLC 样本做40ms统一时间插值，墙钟补步与阻尼速度前馈，墨迹按物理笔尖采样。新交付e1a2cad真编译/全程运动通过，95%误差11.001→0.247mm、RMS0.139mm。
+
+以原生 WebGL2 渲染后台导出的真实 MJCF 几何，增量位置/笔迹，DPR自适应最高2560×1440；显示约60 FPS，拖动滚轮本地响应，暂停与重启保留快照。去除截图指定统计/标记/重置/状态字样并分隔按钮组。根412与浏览器实操通过（2025×990、59.6 FPS、间隔43px、无页面异常）。旧版本证据与新结果保留在工作台 work/precision-comparison；无 push。
+
+## 2026-10-20 网页模型运动闭环
+
+接入 lx PlcLink/GantryBridge/SafeCoilIO，单线程拥有 PLC Modbus 与 MuJoCo 数据面；启动前校验冻结 XML、部署回执、prog_id、三轴位置通道，停止指令读回确认，页面显示实时位置和物理笔迹。标准 SVG 步序提前读取 Done 导致首点报完成，使用独立新交付修复连续跟踪与完成判定，旧 final 不改。真部署 matiec 通过，完整轨迹 18.83s / 393 墨点 / 最终中心抬笔。测试根409、runtime27；Chrome 按钮及图像通过。服务重启后按当前部署程序与哈希重新判定可启动性。
+
 > 技术说明专用（改了什么/为什么/如何验证/踩坑），永不进 master；进度与协调写协作看板。
 
 ## 2026-09-01 gc 侧首批实现（Schema 草案 / 一致性检查器 / 生成器 v0 / 编排器半环）
@@ -969,3 +1005,257 @@ lx 改种子 FB（INTERP 越程常量参数化）时等价测试变红 → 刷�
 注释替换 25 处（memory/orchestrator/domain 三份/gc 两文档/看板/术语手册/周报
 模板/单测）；本日志与 changelog 历史行保留原词存档，changelog 新增更名登记行
 作为新旧术语的映射依据。术语手册词条已更新（原"坑库"定义行改注更名）。
+
+## 2026-09-22 画方战役 P24~P27 修复链：st_optimizer 根因拔除 + skill 模板缺行族
+
+### 起点与交接核对
+
+上会话（2026-09-16/17，其 devlog 两节未写盘即交接，本节覆盖其要点）完成 7 局
+战役，前沿推进到在线验收 [2b] 段（抬笔超时）。工作区未提交改动核对齐全：
+R8 三处修复（POSWIN 异构 SKIP / 提取器兼容 html:p / travel_z 契约钳位豁免）+
+skill 两条硬规则（每轴接线必抄骨架 / 触发输入禁常量封死）+ P23 修法扩充，
+pytest 216 绿。今晨又一局（11:49~13:55）六轮未收敛，iter2/4/6 三轮部署编译
+失败且报错行号与本地产物语义对不上——由此入手。
+
+### P24：OpenPLC st_optimizer 原地改写上传件（环境级根因）
+
+取证链（全部可复现）：
+
+1. 容器 `/workdir/webserver/st_files/941763.st` 与本地产物 plc.st diff：
+   INTERP_Z 的 21 行 `IF hold_req` 块被搬进 INTERP 体内、`IF hold_req THEN`
+   与配对 `END_IF;` 两壳被删——本地 ST 完全合法，变形发生在上传之后；
+2. 上传还原实验：把 17945 字节合法 ST 原样上传，OpenPLC 落盘 17921 字节
+   错序件（md5 与战役件一致）——排除本侧管线；
+3. `webserver/scripts/compile_program.sh` 读源：matiec 之前跑
+   `./st_optimizer st_files/x.st st_files/x.st` **原地改写**；
+4. `utils/st_optimizer_src/st_optimizer.cpp`（214 行）核读机制：首个 IF 块
+   之后向全文件扫描，把与其**头行文本完全相同**的后续 IF 块的**函数体**
+   （剥壳）拼进首个块内，随后同名块整块丢弃。INTERP 与 INTERP_Z 各有一行
+   字节相同的 `IF hold_req THEN`（z 轴 poswin 异构迫使 LLM 拆双 FB）即触发。
+
+**修复**：容器内 compile_program.sh 注释 `./st_optimizer` 行（标记
+`#DISABLED-GC-P24`）。**影响面实证**：对现行两个种子（plotter3axis /
+motion3axis 转换产物）跑优化器，唯一差异是文件尾追加一个空行（diff 547a548
+/ 735a736）——禁用对 lx 侧种子部署与 run_regression L3 零影响；历史件
+993061.st md5 与种子优化输出一致，交叉印证。P10（选通赋值被吞）与 P23 的
+"优化器"实为同一二进制，两条目已加交叉引用；P23 的"matiec 优化器"表述已
+更正为 st_optimizer。
+
+### 模板缺行族 P25~P27（skill 骨架不完整 → LLM 自创死线）
+
+优化器拔除后真实错误浮出，三局战役（sq8/9/10）逐层剥离出 skill 模板三处
+缺行，全部"种子有、模板漏"：
+
+- **P25**：接线节缺 `x_sw := dv_x.sw; x_v := dv_x.v_cmd;` 回拷行——x_sw 是
+  定位变量且唯一赋值点就是这行，漏后恒 0，[1] 上电段三轴 sw.bit0 判定全挂
+  （sq8 四轮同款；LLM 自创 MC_READSTATUS 写镜像路由，但该块 sw 是输入无
+  输出）。补行后 [1][2] 即过。
+- **P26**：DRIVE402 骨架截尾于 `sp_prev := Setpoint;`——LLM 补写丢
+  `v_cmd := REAL_TO_INT(v_out);`，v_cmd 声明后永无赋值，三轴速度输出恒 0、
+  场景伺服不动（sq9 四轮 [2b]；probe_2b 探针实证 hm/z_interp 正常而 z_v=0；
+  一行补写后 z_v=+120、Z 0.1s 抬到位）。骨架补全尾部两段（v_cmd 行 + sw
+  输出 CASE + state4 到位 OR 16#0400）并写明接口类型（v_cmd 是 INT——LLM
+  曾自声明 REAL 引发类型连锁错）。
+- **P27**：MC_HOME 本体只有摘要无内联——LLM 自创"到位位 0x0400 判完成"，
+  但 0x0400 空闲时已置位（轴停目标上即 pos_err≤2 且 v_ff=0，z_sw=0437），
+  home_exe 置位同扫描被清零，cmd_home 请求被无声吞掉（sq10 两轮 [2b]，
+  探针实证 cmd_home 后 hm_z_exe/pl_step/z_interp 全 0）。补 MC_HOME 权威
+  本体内联（plotter 种子逐字）+ 硬规则：完成判定只允许故障位 0x0008，
+  运动完成由 PLC_PRG 的 ix.Done 清 exe 行承担，0x0400 禁入任何 FB 的
+  完成/启动判定。
+
+### R8 误报修复（consistency_check.py）
+
+`_call_args` 原用 `\(([^)]*)\)` 提取实参，遇嵌套括号（`fire := cmd_go AND
+(NOT go_x_exe)`）在首个右括号截断 → "go_x 调用缺 Velocity 实参"误报
+（三局各烧 1~2 轮；iter 实物核验 Velocity=40.0 全在）。改括号配平提取，
+负测试 test_nested_paren_call_args_not_truncated 保证。
+
+### 防漂移与测试
+
+- tests/test_skill_skeleton_sync.py 增 test_drive402_tail_present
+  （v_cmd 行与 sw CASE 三行必须在场——截尾类漂移的针对性单测）；
+- 故障库 P01~P27（净增 P24/P25/P26/P27 四条，P10/P19/P23 增补）；
+- pytest 216→218 全绿。
+
+### 战役记录
+
+sq8：前沿 [1]（P25 死线）；sq9：前沿 [2b]（P26）；sq10：前沿 [2b]
+（P27）；**sq11：final 收敛**——六轮：iter1 generate（API 质量类）、
+iter2 [3] 段场景脚本 pymodbus 写异常（基础设施瞬态，非程序错）、iter3 [3]
+落笔互锁缺、iter4 [5] move_done 聚合、iter5 [8] 恢复回参考点、
+**iter6 [1]~[10] 全 PASS**（含急停受控减速 0.28s、越区 0 次、终态 (51,51,10)），
+final 冻结 + runs/latest 更新 + 验收"全部通过 ✅"。落笔互锁/move_done/恢复
+回零三处修复均由验收回喂自行完成（知识库未新增条目——修法属规格 C/AC 判据
+范畴，回喂文本已足够定向）。2 轮内收敛指标未达（第 6 轮过），sq12 以齐备
+知识栈再冲：**iter3 收敛**（iter1 generate 空转=API 质量类、iter2 [2b]
+修复轮、iter3 全 PASS，18:01 final 冻结 + runs/latest 更新，复验 218 绿）。
+两次 final 的首轮稳定缺口同集：落笔互锁（C2）/move_done 聚合/急停后恢复
+回零三处规格级语义靠验收回喂一轮修复——若要压到 ≤2 轮，下一步应把这三处
+写进 skill 工艺层模板（当前仅验收文本描述）。
+
+### 环境与工具备注
+
+- VM 容器变更已登记看板（lx 知会：run_regression L3 同环境，种子零影响）；
+- 探针脚本 workspace/probe_2b.py（追加 dbg 寄存器 + Modbus 逐周期采样 +
+  伺服模拟，可改 iter 路径复用）；诊断件 workspace/vm_941763.st、
+  iter006_inout_fix.st、iter002_vcmd_fix.st 留档；
+- Bash 后台起战役必须用 run_in_background：普通 `&` 会随会话回收（sq10
+  首启实证）。
+
+
+## 2026-10-19 master 同步与 Agent 交互功能
+
+- 在 gc 分支先保存 `gc-before-master-sync-20261019` stash，合入 origin/master b2d06f6，再恢复原本地改动。文档冲突保留双方记录；runs/latest 采用 master 的 CSP XML/scene/io_map，旧本地 latest 原件另存 workspace/backups/gc-before-master-sync-20261019。没有 push。
+- 新增 clarification.py：显式几何解析与缺项问题、有限正数/分段数/AML 行程校验、百分比坐标与毫米的歧义拦截、交互重答和脚本化答案。chat 的 --confirm 不再触发旧 _terminal_confirm 阻塞；修改规格后同步重新规划，默认独立 task_id 保留历史。
+- 新增 visualization.py：纯内嵌 SVG/JS 页面，参数、步表、抬落笔路径、拖动与播放。用户内容仅经安全 JSON 和 textContent 展示。修正 goal_text 对小数的整型截断及圆步表末段闭合；未知开场位置不作假定。
+- 新增 replay.py/evidence.py：回放已有 gate/trace/verdict/log，保留失败阶段、诊断、ST 差异和样本来源。编排器每轮刷新回放并将当前目录传给验收子进程；CSP 场景只增加证据记录，不改 evaluate/attribute。没有采样的旧运行明确只展示已有日志，skipped 不显示为在线全过。
+- 验证：修改前基线 218；修改后根 253 + runtime 27 全绿。35 项新增测试包含模拟验收子进程到 trace/log/replay 的完整链路。Chrome 独立 headless 配置检查方/圆预览、旧日志模式、变量曲线、滑块及轮次切换，零页面异常；人工检查预览截图。
+- 环境：默认 Git 代理 127.0.0.1:10808 不在线；临时禁用代理并切 Windows schannel 完成 fetch。pytest 系统临时目录权限受限，改用 workspace 下 basetemp；不修改系统配置。scenegen 旧 USD 测试缺 pxr，未安装新依赖。192.168.12.131:22 连接超时，在线验收未重跑。
+
+## 2026-10-19 SVG 路径输入
+
+- 新增 `svg_input.py`，标准库实现路径扫描器与椭圆端点参数转换；支持 M/L/H/V/C/S/Q/T/A/Z 相对/绝对/隐式重复、基础形状和分组仿射变换。根 preserveAspectRatio=none 保留非等比变换；不支持的可见内容明确拒绝，避免悄悄少画。
+- 适配边界用二/三次贝塞尔导数根与椭圆弧扫角内极值，避免控制点边界或完整椭圆边界把局部曲线缩得过小。贝塞尔按控制点到线段（非无限直线）的距离细分，能保留共线回折；弧用仿射椭圆半径上界控制折线误差。有限数值、源文件大小/深度/段数/点数预算前置校验，极端弧数值转换为可读报错。
+- 按 AML X/Y 同单位坐标适配，默认翻转 SVG Y；分离离散容差与 INT 量化偏移。量化前后检查行程，检查 INT 域与可表示 Z 抬笔高度；连续重合点合并，退化子路径拒绝。每个独立路径按输入顺序抬笔定位、落笔按序描画、抬笔，开放路径不擅自闭合。
+- chat 与 orchestrator 共用 --svg 系列参数，直接传完整步表给生成/修复，不让模型重新猜轮廓；拒绝原样种子复制模式。交互修正规格支持适配框/中心/容差调整。保存 input.svg 原字节和 SHA-256，归档前检测文件变化；复用已有预览/回放，不改冻结 Schema 或验收语义。
+- 验证：根 pytest **311 passed**；SVG 专项 **58 passed**（含路径命令、变换、极值、回折、曲线/弧、抬笔、预算、越程、量化退化、源文件变更、离线 CLI、生成提示路点完整性、编排器参数接线）。Chrome 独立 headless 检查 4 路径/42 点/17 步/50 路段的示例，滑块、播放、390px 布局通过，零页面异常，截图人工检查通过。
+- 示例 `examples/svg/house.svg`；预览与截图保存 `E:\chagpt\308sjk-svg-20261019`。未安装依赖，未调用真实模型生成新 PLC，未执行任意 SVG 在线几何验收；标准方/圆脚本不可代替任意 SVG 判定。代码在 gc 本地，未 push。
+
+## 2026-10-19 浏览器 SVG 绘图工作台
+
+- 新增 `src/agent/web.py` 与 `web_ui/{index.html,app.js,style.css}`。标准库本地服务 + 原生页面，不新增依赖；上传源文件只转换成点列，不注入原 SVG DOM。路径支持画布点击、复选框、全选/清空/反选；参数框、抬落笔预览、Agent 对话、规格核对、异步生成、进度与下载组成完整入口。
+- `parse_svg` 可附加路径编号/元素标签；svg_catalog 用屏幕容差生成点列，限制总预览预算并适配画布。plan_svg 新增 selected_paths；按源文档顺序执行子集，适配仍按全图边界，取消某路径不改变其余图形的位置比例。CLI 增 --svg-paths，尺寸对话修正保留选区。
+- 会话持久化 session.json + draft；revision 检查拒绝旧页面写入。选区/参数变更使规格失效，未提交参数亦禁止生成；空选区持久化并阻断生成。单后台任务串行使用模型；失败恢复可编辑状态，异常隐藏 Key，刷新恢复，重启标记中断。生成使用独立随机 task_id 冻结 spec/trajectory/input.svg/web-request.json。
+- 真实生成接线复用 RequirementUnderstander 的 understand/refine、PLCGenerator(no_cards=True) 与 Orchestrator.solve，固定 deploy=False/acceptance=None；不跳过现有离线闸门。限制来源、请求大小、令牌和会话产物读取；Key 仅留在 Python。
+- 验证：根 **327 passed**；工作台相关 16 项（包括参数化边界）+ 原 SVG 58 项均通过。Chrome 独立配置实际文件导入、画布与复选框、选区预览、参数更新、刷新恢复、空选择、390px 布局和旧规格阻断通过，零页面异常。隔离模型替身验证对话→生成进度→XML 下载，不把替身 XML 当成所选图形的真实 PLC 实证。
+- 已启动本地 127.0.0.1:8765 服务，产物默认 `E:\chagpt\308sjk-svg-workbench`；截图同目录。服务读取现有模型配置，本次未发真实生成请求，未部署运行时，未修改冻结契约，未 push。
+
+## 2026-10-19 基础资产分区与可替换组件库
+
+- 工作台升级为 AML / 组件库 / SVG 三分区。未上传 SVG 时也能管理设备与组件；详情显示轴与 IO、组件接口、质量/增益/阻尼和几何参数，支持下载、整包或子项替换及恢复默认。候选文件与当前设备组合先校验，失败保留旧状态；旧规格失效与 revision 机制延续。
+- 新增 assets.py：内容寻址资产库、AML 解析/数值检查、兼容组件契约及 JSON 包验证。资产按会话引用，SVG 替换保留 AML/组件库；老会话升级保留历史。路径规划、理解、PLC 地址表和场景生成均改为消费会话 device_model，禁止混用启动时全局默认模型。SceneSpecGenerator 新增可选实例契约，不修改全局 CONTRACT_TYPES。
+- runtime 物理默认值迁至 physics_defaults.json，physics_assets.py 负责有限数值、类型、维数和几何校验；build_mjcf 与命令行均可传物理参数，gantry 与 plotter 分支按调用消费，不污染全局默认值。当前只接受已实现组件接口的数据，不执行上传脚本或假装能加载任意新组件。
+- 每次生成保存 assets/device.aml、component-library.json、components.json、physics.json 与 assets-manifest.json；输入 SVG 原字节照旧冻结。生成完成后用快照物理参数构建 scene.xml 并提供下载，历史结果不受后续替换影响；本次未启动真实设备或自动仿真运行。
+- 验证：根 **345 passed**，runtime **27 passed**（pymodbus 服务端测试退出时有遗留异步任务提示，测试均通过，本批未修改桥线程）；18 项新增资产测试，含当前 AML 传入理解/生成适配器、契约约束实际生效、物理增益经 MuJoCo 模型加载验证、原值不污染、历史快照独立。默认 gantry/plotter_cell 构建输出与 HEAD 原构建器**逐字节一致**。
+- Chrome 隔离配置实际文件上传覆盖 AML/整库/契约/物理参数/SVG、失败保留、下载、默认恢复、选区、刷新及 390px 布局，零页面异常；生成与历史下载用隔离模型替身验证。截图保存在 E:\chagpt\308sjk-svg-workbench/{assets-overview,assets-selected,assets-mobile}.png。未改仓库冻结契约，无新依赖，未 push。
+
+## 2026-10-19 工作台展示精简
+
+按用户截图移除圈选节点及对应 JS 写入：品牌、副标题、模型配置/站台信息、资产快照说明、组件库说明标签、AML 与组件库摘要/哈希行。资产详情和操作保留，后端资产校验及快照逻辑不变。根 345 项通过；Chrome 检查节点移除、资产详情、轨迹选择、390px 布局，零页面异常，截图 E:\chagpt\308sjk-svg-workbench\ui-cleanup.png；未 push。
+
+## 2026-10-19 SVG 摘要与生成结果精简
+
+移除 SVG 路径数/大小、SHA 行及更新说明；结果区取消任务编号/状态，前后端仅提供最新成功任务的 final/scene.spec.json 和 final/plcopen.xml。io_map 保持内嵌于 SceneSpec，不单独导出，不改变映射或冻结文件；历史列表读取时同步过滤，中间轮次、闸门记录与资产快照留在磁盘。最新任务运行或失败时隐藏旧结果，避免误下载此前 PLC。
+
+验证：根 349 项通过；新增四组历史任务状态回归，覆盖最终文件过滤、映射保留、无额外导出、原场景字节不变、下载归属和 HTTP 附件。Chrome 检查真实已完成任务的两个下载、SVG 节点删除、失败状态隐藏结果、过滤中间稿及 390px 布局；截图 E:\chagpt\308sjk-svg-workbench\results-cleanup.png。已重启本地后台，未触发模型生成/设备部署，未 push。
+
+## 2026-10-20 轨迹预览说明精简
+
+`visualization.write_view` 按页面类型生成页眉和提示区；轨迹预览去除品牌、副标题及顶部说明块，JS 同步取消对这些节点的写入。回放页仍使用原说明，轨迹和参数等内嵌数据保留。已用新版模板重渲染本地工作台 7 个已有预览，逐一检查内嵌 JSON 等价，并重启后台。
+
+根 349 项通过；Chrome 检查节点移除、轨迹与参数呈现、播放、滑块和 390px 布局，零页面异常。截图 E:\chagpt\308sjk-svg-workbench\preview-cleanup.png。本次仅调整展示，未运行模型生成或设备验收，未 push。
+
+## 2026-10-20 三业务工作台与网页仿真场景
+
+按负责人确认拆为三部分：资产管理与 PLC 生成、独立仿真场景生成、OpenPLC Runtime 状态。仿真画面嵌入网页，第三部分本次仅展示状态，部署和运动控制留后续。保留已有资产/对话/生成界面及仅两份最终下载；MJCF 构建从 `_generate` 回调移至独立异步动作，失败不影响已经完成的 PLC 交付。
+
+新增 simulation.py 复用现有 MJCF 和 Modbus 布局代码，读取同一任务冻结的场景/需求/物理参数，经 MuJoCo 加载校验后写 simulation/。PLC 地址取最终 XML，不采用顺序分配出的 PLC 地址替代真实接线；合成 cmd 或范围缺失只记为待适配，不绑定猜测地址。final 交付不变，io_map 内部副本不对外独立导出。请求 revision 必须最新；对账实际冻结输入，拒绝不同资产/需求的旧任务构建，全部恢复相同输入时允许复用已有交付。
+
+网页预览沿用 CSP Studio 的 MuJoCo Renderer，每个请求在同一线程创建/关闭 GL 上下文，只 mj_forward、不 mj_step；无需 PySide6，也未引入 CDN 或新依赖。第二、三部分均可显示模型并旋转/缩放视角。Runtime 页只 GET 既有 :8600/status，trust_env=False；不可达时部署服务离线、Runtime 未获取，始终区分当前页面未接入运动控制。没有新增控制路由或执行在线部署。
+
+验证：根 362 项通过，新增场景/HTTP/状态覆盖；Chrome 独立服务复用已有 SVG 交付验证实际 MJCF 构建、渲染、相机、状态、刷新、下载与 390px 布局，零页面异常。截图 E:\chagpt\308sjk-svg-workbench\business-{scene,runtime}.png。当前已有 SVG 的 x/y/z_v 与合成 x/y/z_cmd 不匹配既有位置桥，界面如实显示通道待适配；未将场景预览视为闭环运行。已重启 :8765，并复用现有会话交付完成实际场景构建与 PNG 渲染冒烟；两份 final 文件 SHA-256 均保持一致。未调用模型生成、未运行 PLC、未 push。
+
+
+## 2026-10-20 PLC 生成页紧凑布局
+
+第一业务页收拢为资产管理、绘图素材与参数、PLC 代码生成三个区域。AML/组件库在左上，SVG 上传移入绘图区，参数入口在画布前默认折叠；桌面视口内左侧独立滚动，右侧栏保持位置，生成按钮固定在栏底。右栏新增工艺对话/执行进度/生成产物标签，生成时打开进度、成功后切换产物，保留两份最终下载及原交互节点；小屏幕自动堆叠。未改后端/API 或生成行为，静态页面刷新即生效。
+
+根 362 项通过；Chrome 检查四种桌面尺寸无整页滚动、左侧展开详情后右栏不移动、生成按钮持续可见。隔离生成替身验证进度→产物及文件下载、对话草稿保留；SVG 文件实际上传、参数修改使规格失效、iframe 轨迹预览和 390px 布局通过，零页面异常。截图 E:/chagpt/308sjk-svg-workbench/compact-generation{,-mobile}.png。未调用模型或运行 PLC，未 push。
+
+
+## 2026-10-20 默认工艺、清空上下文与鼠标场景操作
+
+移除预览的规划参数卡片（回放保留）、选区的 path/rect、路点/单位和顺序说明、对话发送提示。新增服务端清空上下文动作，重建干净准备请求并清除旧规格/报告/消息/日志，保留资产、轨迹和任务交付；请求版本与忙碌保护延续。默认工艺复用无客户端 RequirementUnderstander 模板模式，按当前 AML/轨迹构建可直接交给生成器的规格，无额外需求 LLM 调用。工艺摘要独立 presentation.py，中文化变量引用并保留自定义目标语义，完整契约不变；旧冗长消息只在返回视图时转换。
+
+三维预览取消底部按钮，改为指针捕获拖动旋转、右键/中键平移、滚轮缩放，支持方向键/加减号/Home；鼠标事件合并、单帧请求串行，以最新目标视角跟进。后端增加有界相机平移，不调用物理步进或 PLC 控制。
+
+根 374 项通过；Chrome 使用隔离服务验证清空后刷新仍为空、默认工艺准备→生成替身→真实 MJCF 构建/渲染、鼠标拖动/平移/滚轮和键盘复位、无按钮及 390px 布局，零页面异常。截图 E:/chagpt/308sjk-svg-workbench/interaction-{dialogue,scene}.png。已更新 9 个已有预览并逐一核对嵌入数据不变，重启 :8765；实际服务的新控件、既有预览和相机平移/越界拒绝冒烟通过。未清空用户真实会话、未调用真实模型或运行 PLC，未 push。
+
+## 2026-10-20 前端接入 lx OpenPLC 执行链路
+
+增加 runtime_control 薄适配，第三页通过同一 lx 部署服务调用最终 XML 部署并启动、当前 Runtime 程序启停、状态轮询和日志。部署前基于冻结 AML/规格/组件契约/最终场景重验便宜闸门，保留原 XML 和产物列表；后台异步执行、跨会话串行、版本与归属保护，操作记录可刷新恢复，中断结果不冒充成功。lx serve 补充启停与日志端点，共享操作锁；清理上轮 deploy_result 后再部署，失败步骤原样回传，成功结果附精确 XML hash；OpenPLCClient 屏蔽系统代理并沿用现有执行方法，非默认登录通过后端环境指定。
+
+根 383 项通过；隔离 HTTP 覆盖 lx 端点/锁/错误与回执、实际冻结交付 R6 检查、工作台权限/版本/当前性和异步失败。Chrome 实际点击启动→停止→部署并读取日志，验证状态与步骤、桌面固定侧栏及移动布局，零页面异常；执行器和 OpenPLC 为替身，MJCF 真实渲染。截图 E:/chagpt/308sjk-svg-workbench/runtime-control.png。VM :8080/:502 不可达，未实际部署或启停 PLC；SVG 速度指令与现有位置桥接的适配范围待负责人确认，仿真仍显示未启动。未 push。
+
+已核实所有真实会话空闲，重启工作台 :8765（PID 29804），启动 lx 部署服务 :8600（PID 30280，后端目标沿用 VM 192.168.12.131）。实际冒烟：/health 正常、页面四个操作控件已加载、工作台状态回传 service=online / runtime=UNREACHABLE，两个 stderr 日志为空。未发送任何真实部署/启停请求，用户资产、会话和模型配置保留。
+
+## 2026-10-20 修复部署入口并完成实际部署
+
+用户报告 No module named pipeline。独立解释器以 python -m src.agent.web 启动可复现，agent.web 测试入口因 sys.path 加 src 没暴露；deployment_preflight 改用 consistency_check 已加载的 xml2st，不引入新搜索路径。双入口子进程经真实临时 HTTP 服务部署到替身，覆盖实际启动路径；当前用户任务冻结输入离线校验通过。
+
+真实重试在 /upload-program 超时，文件已到容器但状态/RPC 调用未完成；同期间前端轮询仍在访问 Runtime。新增独立 Runtime 访问锁，部署/启停互斥且等待在途只读请求，期间状态返回 BUSY、日志拒绝插入。run_deploy 登录后先停现有程序再上传，保留后续真编译/启动；RequestException 也形成结构化 FAILED 结果，finally 关闭会话。容器源码证实运行日志路由为 /runtime_logs，客户端同步修正并检查 HTTP 状态。
+
+回归中发现 tests/test_experience.py 的假验收失败会经 _runtime_probe 实际部署诊断程序并恢复种子，曾将在线 Runtime 切回 plotter3axis 种子；已向用户说明并显式隔离此测试的探针。最终根 393 项通过（58.94s），期间真实 /deploy 请求数保持 3 次不变，之后单独重新部署用户 XML。该文件未改写：任务 svg_web_a4b0f72c36e5ea28045e999cebc11012，XML→920 行 ST、上传757835.st 的首次成功后再恢复当前任务，最终实际停止/上传/matiec 编译/启动通过、Runtime RUNNING、回执 SHA 与原 XML f23d14a0106b663b62c2a9a7f547775c065ac294cda2905485bc0f9a106f9bec 一致。最终证据保存该任务 runtime-deploy.json（以证据中的最终上传文件号为准）。
+
+后续边界：当前生成 XML 的 prog_id 为未定位局部变量，%QW20=0，未修改冻结交付；未发送绘图按钮命令，未启动 MuJoCo 运动、未做行为验收。工作台重启 PID16076、部署服务重启 PID1992，API 配置和会话保留；未 push。
+
+## 2026-10-20 SVG 转换为位置指令
+
+新增 position_control.py：AML 原26通道、地址和量程保留，添加三轴位置输出，驱动参考连接从速度切到位置，速度仅诊断；添加独立默认 CSP AML。未扩展四份冻结契约或 axis_object.io。自动转换读取原 dv.Setpoint 接线，复用同一位置量（含已有点动选择），INT 直连/REAL量化，追加使能/急停/故障位置保持门控，保留原 FB、SVG 步序与 MC 参数；身份在新 XML 绑定 %QW20。拒绝未知布局/冲突，旧 final 不修改。enable_position 只在会话版本有效、空闲且原任务输入匹配时转换已有交付，否则仅准备新资产/规格；独立新任务记录来源。转换用种子走编排器，无 LLM 调用；后续新生成及修复增加CSP提示/闸门，部署前同样复核。CLI 随位置 AML 启用。
+
+根402通过，新增9项覆盖资产不重排、位置源类型/门控、旧逻辑保持、错误速度/HMI源拒绝、地址冲突、幂等、无模型转换与新场景映射。默认资产测试更新，执行接口回归继续用显式旧 AML 的26通道种子，避免改变测试含义。当前真实会话 c6d7ce... 由 a4b0f72c 转出新任务3ee73213073324be934cd138d24d6b56，旧 XML f23d14a... 哈希未变；新 AML29 IO、位置%QW3/4/5、反馈%QW0/1/2，MJCF真加载、runtime_ready=true。真实939行ST、上传453356.st、matiec与启动PASS、程序身份2、回执匹配。LX原生PlcLink单周期读取位置输出并将原反馈值写回成功，无启动/绘图线圈写入；证据position-deploy.json和position-bridge-check.json留任务内。
+
+实际Chrome验证位置模式按钮/两项交付、中文阶段、Runtime运行中身份2、映射就绪、真实场景图和移动布局，截图 E:/chagpt/308sjk-svg-workbench/position-workbench.png。工作台重启PID8784；未接网页物理运动控制、未跑完整SVG几何验收，未push。
+
+
+## 2026-10-20 master 更新与仿真验证 Studio
+
+先stash保护本地全部修改和未跟踪工作，再将origin/master01c489c合入gc（merge2f43211），恢复stash并逐处合并11份冲突；备份stash保留。采用远端的完整XML/进度跟踪/轴实例POSWIN检查/编译环境检查，保留本地位置编码闸门、证据与回放、代理规避及非默认Runtime凭证。旧“异构POSWIN跳过”测试调整为逐轴参数不匹配应拒绝。task_inputs统一读取requirements规格并兼容旧路径，新增任务规格冻结AML、地址、轴参数。
+
+UI收敛两页，生成流程保留；Studio复用hmi_gen和csk判定器，手动BOOL输入由Motion线程队列串行执行，触发150ms、使能保持、操作前身份校验，停止复位并回读。其他会话/输出信号/自动运行写请求被拒绝。原始PLC采样与实际MuJoCo关节采样分离保存，PATH使用真实物理反馈，不能用整数寄存器检验0.01精度。验收记录绑定XML/scene/io/spec哈希，手动/中断不标PASS。配对导入外部SceneSpec和PLCXML，可选原规格，校验后建立独立任务；无规格仅调试；失败目录清理、既有产物不动。任务选择器可返回生成交付。
+
+实际旧任务Z场景11mm与新主干10mm要求冲突；只对完全匹配旧内置契约的资产派生新任务/快照，保持XML字节及旧final，记录migration来源。解决状态轮询返回BUSY导致错误拒绝启动；失败提示直接出现在仿真页。长时间轮询浏览器出现ERR_NO_BUFFER_SPACE，改为HTTP/1.1复用并在错误时关闭连接；150次快照2.39s，最终浏览器无异常。
+
+测试591通过、6Qt因缺PySide6跳过，四XML静态通过。runtime测试退出仍有既有pymodbus异步服务任务销毁提示，未影响测试结果或网页Motion（其不启动桥服务端）。实际手动及全程绘图、228PLC/2533物理样本、导入与切换、1472×825约60FPS和390px均通过。当前PLC完成绘图但PATH首路点未满足规格，保留FAIL与原始证据，没有调宽容差或修改交付。证据E:/chagpt/308sjk-studio-integration；后台:8765；未push。
+
+
+## 2026-10-20 重生成SVG空白绘图恢复
+
+对照用户新任务ba0a717a与旧可绘图交付、stash中的旧Motion，数据桥仍按实际PLC命令运行。新PLC的pl_tx/y/z是INT，步进在三轴调用前读取Done，并每轴Done清持续触发；迹线只到35/53/10，4.55s假完成且ink0。提示summarize_for_prompt/goal_text仍将0.01路点说成INT，与高精度生成要求冲突；修正提示、扫描顺序说明，并在LLM生成/修复闸门拦截旧Done和整数目标，保留显式种子转换语义。加实际无笔迹完成检查。已知P22/P10优先对照。
+
+标准生成稿在新任务修复：完整匹配嵌套IF，Done清理受draw_active保护，逐字使用当前冻结REAL步表与各段实际点数、先抬笔、调用后到位推进，复用原FB定义和高精度编码；补POSWIN无初值、SCAN_TZ、非必有rel变量支持，未知布局和重复转换拒绝。原final未改，来源记conversion.json。新ba95449d静态与实际matiec/部署通过、31秒/1503点/三笔完整绘图、回中心，精度/覆盖独立对参考计算约0.25mm(P95)。本次未调用模型，原0555...哈希不变、新ebcf...，不回退已有Studio/模型逻辑。
+
+回归两次遇到不同HTTP测试10053；定位工作台拒绝POST及lx成功start路径都可能未读请求体即关闭Windows连接，RST使调用方收不到响应。修成有界读取再鉴权/路由，部署读取同一body；没有重试非幂等操作。对应局部50项与最终完整595项通过，6Qt缺PySide6跳过，既有pymodbus服务退出任务提示仍存在。新增4项覆盖重生成拦截、真实标准结构恢复变体、假完成失败和REAL提示，连接拒绝测试扩大到10次。实际浏览器3笔轨迹/状态/画布与错误检查通过。严格PATH第2步仍因实际到位窗口未通过，报告未改、容差未放宽。证据E:/chagpt/308sjk-svg-recovery；最后重启后台8184、lx26844并重部署同稿，模型停止。未push。
+
+## 2026-10-20 部署循环与新稿启动恢复
+
+根因记录在gc设计§13.15。workspace/deploy_result.json与VM实际ST确认prog_id普通声明和AT声明重复，matiec失败后手动start只复活旧二进制，LAST_DEPLOYMENT为空；保留精确回执检查。xml2st按POU跨块/casefold检查重复名，生成提示补唯一声明。runtime_deployment单独留存失败，不因start/stop覆盖，UI禁用未匹配当前XML的模型运行按钮；失败优先于STOPPED提示，避免继续引导启动旧程序。
+
+联测在自动reset与run同时开启时卡MC_POWER，改成150ms复位后再run，使能不再被复位控制字打断。当前LLM标准变体同型Z/REAL目标/嵌套Busy步进得到明确适配，首次转换的REAL_TO_INT赋给REAL被真实matiec拦截，修复为按声明类型保留REAL、旧INT目标仍显式转换。新增回归对应覆盖此错误；边沿自引用与Done清持续触发也加生成检查。按当前冻结轨迹派生修复任务，原final不改，不改生成ST。391c1466实际一次部署自动启动后直接模型运行32.27s完成1821点，PATH严格精度仍FAIL，报告保留。
+
+603通过、6Qt跳过；浏览器验证真实按钮/回执以及启停不覆盖失败日志，无页面异常，证据E:/chagpt/308sjk-deployment-cycle。未push。
+
+## 2026-10-20 按要求回退 PLC 生成部分
+
+通过reflog和stash定位最新拉取前快照ad1876b/父91f7dc6，不能仅用父提交而丢掉gc本地SVG/CSP工作。恢复旧skill原文、纯FB库、prompt装配以及generate/repair错误回灌；旧temperature=0.3。移除新CSP提示选择、额外扫描策略和hybrid分支，保留API/model配置、证据、截断保护、验证闸门与test_plan兼容。Studio、orchestrator新产物布局、部署与物理运动不修改，既有产物保留。
+
+备份与前后哈希在E:/chagpt/308sjk-plc-generation-rollback。同步测试改与同一冻结FB库比对接口，库没有PROGRAM，直接解析接口。新增3项回退回归，恢复前prompt hash 4f3d3034...被锁定，CSP也不切换短提示；真实返回替身覆盖生成/修复与证据。全tests/runtime606通过、6Qt跳过，既有pymodbus任务退出提示仍在。未真实调用模型生成或部署，不宣称PLC质量已在线验收。
+
+## 2026-10-20 PROGRAM 定位变量布局部署修复
+
+错误签名：matiec invalid input variable(s) declaration / unexpected token after VAR_INPUT，实际行包含AT；VAR_OUTPUT同类。不同于P02的FB内CONSTANT，原因为PROGRAM定位IO放在input/output形参列表。新增独立normalizer，在模型generate/repair提取后将PROGRAM的带address变量移至localVars，FB形参及ST逻辑不改，保留变量元数据和块属性，无改动返回原字串；raw response照常留存。xml2st静态拒绝所有非localVars中的AT，错误源名与合法改法进入反馈，种子不自动改写。旧prompt/生成策略未改。
+
+当前30个声明机械迁移，新任务aee93a07；源8a0180c4不改，新旧所有POU本体相同。真实compile116786.st通过，deploy/start成功，Runtime RUNNING、hash213982e4...一致、Modbus prog_id=2。未启动模型运动。615通过，6Qt跳过；证据E:/chagpt/308sjk-program-io-deploy-fix。未push。
+
+## 2026-10-21 新生成产物的物理验收闭环
+
+不再以离线生成绿当作交付成功。网页采用WorkbenchOrchestrator接现有lx部署与Motion，失败回原修复循环，只有同源码实际物理PASS才final。环境错误不归因成PLC故障。证据按XML/场景/映射/规格/轨迹/采样绑定；SVG逐展开路点及实际接触线段的最大偏差判定，poswin不改。原system提示哈希仍4f3d3034...，完整XML及0.3策略保留。
+
+实际新SVG暴露共享NOT draw_active分支被正则只认首轴、R8检查太晚丢失修复上下文、matiec只返回行号无法准确修类型、标准INTERP小窗口离散越过目标后不Done、伺服转角过冲等问题。修正对应检查、补源码行反馈和标准插补收尾；伺服根据实际位置命令差分与模型质量矩阵做惯性及采样时序补偿，未改资产/未直接赋物理位置。真实求解器测试与实际指令回放验证，线上仍逐轮严格裁定。
+
+显式重试保持相同冻结输入才继承失败候选并重新全部验收；物理检查回退时保留较好源码继续修复。首份新折线a68e595f...全部PASS，871物理/350接触采样、6路点，最大偏差0.1047倍容差；双路径f91631c4...全部PASS，1522物理/531接触采样、9路点、12.938s，最大偏差0.0771倍容差。两份均经历真实失败与修复，保留各轮原始证据。
+
+后续实测补齐：XML body重复END_FUNCTION_BLOCK/END_PROGRAM仅移除冗余页脚，不改工艺，源模型response保留；完整POU/VAR框架在便宜层拒绝。仅pl_step无draw_active的序列也拦截无条件清触发。几何PASS而PATH失败的候选不应继续改已通过插补器，反馈改成到位后才计时、未到位归零、保持旧目标至少150ms再换步；原先运动开始即累加pl_dwell，即使上限8改15也无实际稳定等待，导致抬笔点未到位即横移。此处修复由LLM根据实际报告完成，最终全PASS。
+
+完整639通过、6Qt跳过；Node语法及git diff --check通过（已有pymodbus退出提示不影响结果）。证据E:/chagpt/308sjk-new-generation-validation/run_20261021_000657，旧system哈希未变，既有交付不覆盖，未push。任意SVG有限轮次收敛仍不作保证，未通过产物不发布final。

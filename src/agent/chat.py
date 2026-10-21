@@ -29,8 +29,8 @@ from pathlib import Path
 
 import requests
 
-from .config import MODEL, PROJECT_ROOT, get_api_key
-from .requirement import RequirementUnderstander
+from .config import MODEL, PROJECT_ROOT, RUNS_DIR, get_api_key
+from .requirement import RequirementUnderstander, _derive_task_id
 
 DEFAULT_AML = PROJECT_ROOT / "examples" / "aml" / "plotter3axis_station.aml"
 # 可靠回显的验收准则要点（回显时提示用户重点核对——LLM 谓词健全性弱项）
@@ -112,9 +112,44 @@ def read_multiline(prompt):
     return "\n".join(lines)
 
 
+def ask_clarification(question):
+    default = question.get("default")
+    suffix = " [回车采用 %s]" % json.dumps(default, ensure_ascii=False) if default is not None else ""
+    try:
+        value = input("需要确认：%s%s（q 退出）: " % (question["question"], suffix)).strip()
+    except EOFError:
+        from .clarification import ClarificationRequired
+        raise ClarificationRequired([question])
+    if value.lower() in ("q", "quit", "exit"):
+        raise KeyboardInterrupt
+    return value or None
+
+
+def save_preparation(prepared, run_dir):
+    from .visualization import write_preview
+    run_dir = Path(run_dir)
+    run_dir.mkdir(parents=True, exist_ok=True)
+    trajectory = prepared.get("trajectory")
+    if trajectory and trajectory.get("shape") == "svg":
+        import hashlib
+        data = Path(trajectory["source"]["file"]).read_bytes()
+        if hashlib.sha256(data).hexdigest() != trajectory["source"]["sha256"]:
+            raise ValueError("SVG 文件在规划后发生变化，请重新导入")
+        (run_dir / "input.svg").write_bytes(data)
+    (run_dir / "clarifications.json").write_text(
+        json.dumps({k: v for k, v in prepared.items() if k != "trajectory"},
+                   ensure_ascii=False, indent=2), encoding="utf-8")
+    if trajectory is None:
+        return None
+    (run_dir / "trajectory.json").write_text(
+        json.dumps(trajectory, ensure_ascii=False, indent=2), encoding="utf-8")
+    return write_preview(trajectory, run_dir / "trajectory-preview.html",
+                         unit=prepared["unit"], sources=prepared["sources"])
+
+
 # ---------------- 主流程 ----------------
 
-def main():
+def main(argv=None):
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     except Exception:
@@ -133,7 +168,19 @@ def main():
     parser.add_argument("--max-iters", type=int, default=6)
     parser.add_argument("--no-curated-patterns", action="store_true",
                         help="生成仅用通用运动原语（排除自动策展场景卡）——泛化验证口径")
-    args = parser.parse_args()
+    parser.add_argument("--preview-only", action="store_true", help="澄清参数并保存轨迹预览，不生成、部署或验收 PLC")
+    parser.add_argument("--open-preview", action="store_true", help="在浏览器打开本地轨迹预览")
+    parser.add_argument("--answers", help="预先回答澄清问题的 JSON 文件（center/size/radius/segments/shape 等）")
+    parser.add_argument("--runs-root", default=str(RUNS_DIR), help="本次任务产物根目录")
+    parser.add_argument("--task-id", help="本次任务标识（默认生成新标识，保留历史运行）")
+    parser.add_argument("--replay", metavar="RUN_DIR", help="离线生成已有任务的故障回放，不连接模型和 PLC")
+    from .svg_input import add_svg_arguments
+    add_svg_arguments(parser)
+    args = parser.parse_args(argv)
+
+    if args.replay:
+        from .replay import main as replay_main
+        return replay_main([args.replay])
 
     from .aml_parser import parse_aml
     from .attribution import AttributionEngine
@@ -149,7 +196,7 @@ def main():
     # ---- ⓪ 设备描述 ----
     aml = args.aml
     if aml is None:
-        if args.request:  # 脚本化模式（--request）无交互环境，直接用默认 AML
+        if args.request or args.svg:  # 文件输入也可直接使用默认 AML
             aml = str(DEFAULT_AML)
         else:
             aml = input("AML 设备描述路径 [回车=%s]: " % DEFAULT_AML.name).strip() or str(DEFAULT_AML)
@@ -167,7 +214,7 @@ def main():
     # ---- ① 需求理解 + 回显/修正循环（人工介入点 1） ----
     understander = RequirementUnderstander(
         client=BigModelClient(get_api_key()) if get_api_key() else None, model=MODEL)
-    request_text = args.request
+    request_text = args.request or ("按照 SVG 路径描画轮廓，保留各路径次序与抬落笔动作。" if args.svg else None)
     if request_text is None:
         request_text = read_multiline("请描述你的需求（多行，空行结束；写清工艺意图和安全要求就行，数值细节可以不写）：")
     if not request_text.strip():
@@ -176,19 +223,58 @@ def main():
     if understander.client is None:
         print("（没找到 ZHIPUAI_API_KEY，我先退化为模板模式——只有设备 IO 预填，工艺部分会是空白。）")
 
-    # ---- 轨迹参数化路线：绘图类需求先确认几何参数（确定性轨迹规划） ----
-    trajectory = None
-    ex = understander.extract_shape(request_text)
-    if ex["shape"] in ("square", "circle"):
-        from .orchestrator import _terminal_confirm
-        from .trajectory import goal_text, plan_with_confirm
-        trajectory = plan_with_confirm(ex["shape"], ex["params"],
-                                       confirm=_terminal_confirm)
-        print("轨迹我规划好了：%s。序列器会严格按这份步表走。" % goal_text(trajectory))
-        request_text = "%s。已确认几何：%s" % (request_text, goal_text(trajectory))
+    # ---- 主动澄清 + 可视预览；脚本化确认模式始终无 input() ----
+    from datetime import datetime, timezone
+    from .clarification import ClarificationRequired, extract_explicit_geometry, prepare_request
+    from .spec_validator import TASK_ID_RE
+    task_id = args.task_id or ("%s_%s" % (
+        _derive_task_id(device_model), datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")))
+    if not TASK_ID_RE.fullmatch(task_id):
+        parser.error("--task-id 必须是小写字母开头的 [a-z0-9_]")
+    run_dir = Path(args.runs_root) / task_id
+    try:
+        answers = json.loads(Path(args.answers).read_text(encoding="utf-8-sig")) if args.answers else {}
+        if not isinstance(answers, dict):
+            raise ValueError("澄清答案必须是 JSON 对象")
+        if args.svg:
+            from .svg_input import prepare_svg_request
+            prepared = prepare_svg_request(args, request_text, device_model, answers)
+        else:
+            ex = extract_explicit_geometry(request_text)
+            if ex["shape"] == "unknown" and not ex["multiple_shapes"] and not args.preview_only:
+                ex = understander.extract_shape(request_text)
+            prepared = prepare_request(request_text, device_model, shape_info=ex, answers=answers,
+                                       ask=None if args.confirm else ask_clarification,
+                                       accept_defaults=args.confirm)
+    except ClarificationRequired as exc:
+        print(json.dumps({"status": "needs_clarification", "questions": exc.questions}, ensure_ascii=False, indent=2))
+        return 2
+    except (OSError, ValueError) as exc:
+        print("澄清参数无法使用：%s" % exc)
+        return 2
+    except KeyboardInterrupt:
+        print("已退出，尚未生成或部署 PLC。")
+        return 0
+    request_text, trajectory = prepared["request_text"], prepared["trajectory"]
+    try:
+        preview = save_preparation(prepared, run_dir)
+    except (OSError, ValueError) as exc:
+        print("轨迹输入无法保存：%s" % exc)
+        return 2
+    if preview:
+        print("轨迹预览（生成前）：%s" % preview.resolve())
+        print("参数来源：%s" % json.dumps(prepared["sources"], ensure_ascii=False))
+        if args.open_preview:
+            import webbrowser
+            webbrowser.open(preview.resolve().as_uri())
+    if args.preview_only:
+        if preview is None:
+            print("当前需求没有可预览的方形或圆形轨迹；澄清记录已保存。")
+            return 2
+        return 0
 
     print("明白了，我来把你的需求整理成正式规格…")
-    result = understander.understand(request_text, device_model=device_model)
+    result = understander.understand(request_text, device_model=device_model, task_id=task_id)
     spec = result["spec"]
     if spec is None:
         print("规格没组装成功，问题如下：")
@@ -208,20 +294,44 @@ def main():
         if ans in ("q", "Q", "quit", "exit"):
             print("好的，就此打住（规格没有下发生成）。")
             return 0
-        print("收到，我按你的意见只改相关部分，其他保持原样…")
+        print("收到，我按你的意见更新规格与轨迹…")
+        try:
+            if args.svg:
+                from .svg_input import refine_svg_request
+                revised = refine_svg_request(args, prepared, ans, device_model)
+            else:
+                revised = prepare_request(ans, device_model,
+                                          shape_info={"shape": (trajectory or {}).get("shape", "unknown"),
+                                                      "params": (trajectory or {}).get("params", {})},
+                                          ask=ask_clarification)
+        except (ClarificationRequired, ValueError) as exc:
+            print(str(exc))
+            continue
+        except KeyboardInterrupt:
+            return 0
         result = understander.refine(spec, request_text,
-                                     device_model=device_model, correction=ans)
+                                     device_model=device_model, correction=revised["request_text"])
         if result["spec"] is None:
             print("这次修正没成功，先保留上一版规格。问题在：")
             for p in (result["report"].get("problems") or [])[:5]:
                 print("   - %s" % p)
             continue
         spec = result["spec"]
+        spec["task_id"] = task_id
+        if revised["trajectory"] is not None:
+            trajectory = revised["trajectory"]
+            preview = save_preparation(revised, run_dir)
+            prepared = revised
+            print("轨迹预览已更新：%s" % preview.resolve())
+        request_text += "\n用户修正：" + revised["request_text"]
         print("改好了（%s 轮），再请你过目：" % result["report"].get("rounds", 0))
 
     # ---- 生成模式 ----
     seed = args.seed
-    if seed is None and not args.confirm:
+    if args.svg and seed is not None:
+        print("SVG 绘图需要按路点生成代码；--seed 会原样复用旧程序，请去掉 --seed（或仅使用 --preview-only）。")
+        return 2
+    if seed is None and not args.confirm and not args.svg:
         pick = input("代码生成方式 [l=LLM 现场生成（每轮约5~8分钟） / 回车=用种子 %s]: "
                      % "src/plc/plotter3axis.xml").strip()
         if pick not in ("l", "L"):
@@ -229,11 +339,13 @@ def main():
     client = BigModelClient(get_api_key()) if (seed is None and get_api_key()) else None
     address_table = {p["name"]: p["address"] for p in device_model.get("io_points", [])
                      if p.get("address")}
+    from .position_control import position_io
     talk = lambda msg: print("  · " + msg)   # 生成器的实时进度播报（对话风格）
     generator = (PLCGenerator(client=client, seed_xml=seed,
                               generic_patterns_only=(args.no_curated_patterns
                                                      or trajectory is not None),
-                              address_table=address_table, report=talk)
+                              address_table=address_table, report=talk,
+                              position_mode=position_io(device_model),prog_id=spec.get('prog_id',2))
                  if (seed or client) else None)
     if generator is None:
         print("既无种子也无 API Key，无法生成。")
@@ -255,7 +367,7 @@ def main():
     # ---- solve 循环（自主迭代，全程播报） ----
     from .orchestrator import narrate
 
-    orch = Orchestrator(max_iters=args.max_iters,
+    orch = Orchestrator(runs_root=args.runs_root, max_iters=args.max_iters,
                         attribution_engine=AttributionEngine(
                             client=BigModelClient(get_api_key())
                             if get_api_key() else None))
@@ -266,6 +378,8 @@ def main():
                      aml_path=aml)
 
     run_dir = Path(res["run_dir"])
+    if (run_dir / "replay.html").is_file():
+        print("运行与故障回放：%s" % (run_dir / "replay.html").resolve())
     print("\n" + "=" * 56)
     if res["status"] == "final":
         final = run_dir / "final"

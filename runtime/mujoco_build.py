@@ -14,24 +14,13 @@
 import argparse
 import json
 import os
+try:
+    from .physics_assets import load_physics, validate_physics
+except ImportError:  # 保留 python runtime/mujoco_build.py 独立入口。
+    from physics_assets import load_physics, validate_physics
 
 # gantry_xyz 组件的 MJCF 几何/动力学常数（与 scenegen/components.py 的 USD 侧保持同源数值）
-GANTRY_CONST = {
-    # 质量（kg）：x/y/z 滑块
-    "mass": (4.0, 3.0, 0.4),
-    # 位置执行器增益（kp）与关节阻尼：对齐 USD DriveAPI 的 stiffness/damping
-    "kp": (6000.0, 6000.0, 4000.0),
-    "damping": (250.0, 250.0, 80.0),
-    # 底座/导轨外观几何（box 半尺寸，米）
-    "base_half": (0.45, 0.35, 0.02),
-    "saddle_half": (0.045, 0.21, 0.03),
-    "head_half": (0.05, 0.05, 0.04),
-    "slider_half": (0.03, 0.03, 0.045),
-    "pen_length": 0.135,                # 笔尖（球面最低点）到 z_carriage 原点距离；
-                                        # MJCF 轴长 = pen_length − pen_radius（球头半径补偿，
-                                        # 否则 q=0 时球面悬空半径高度——2026-09-09 落笔 7mm 根因）
-    "pen_radius": 0.0075,
-}
+GANTRY_CONST = load_physics()["gantry"]  # 数值保持原库值；允许每次构建传入独立资产。
 
 
 def _vec(v):
@@ -42,9 +31,10 @@ PLOTTER_TYPES = ("ground", "work_table", "linear_axis", "tool_head", "pen", "hmi
 MJCF_TYPES = ("gantry_xyz",) + PLOTTER_TYPES   # 契约导出用（cli components）
 
 
-def build_mjcf(spec: dict) -> str:
+def build_mjcf(spec: dict, physics=None) -> str:
     """SceneSpec dict → MJCF XML 字符串。支持 gantry_xyz（单资产）
     与 plotter_cell 组件集（多资产装配）。"""
+    constants = GANTRY_CONST if physics is None else validate_physics(physics)["gantry"]
     supported = MJCF_TYPES
     assets = spec.get("assets", [])
     others = [a for a in assets if a.get("type") not in supported]
@@ -52,7 +42,7 @@ def build_mjcf(spec: dict) -> str:
         raise ValueError(f"spec 含未支持组件类型: {sorted({a.get('type') for a in others})}"
                          f"（当前支持 {supported}）")
     if any(a.get("type") in PLOTTER_TYPES for a in assets):
-        return _plotter_xml(spec)
+        return _plotter_xml(spec, constants)
     picked = [a for a in assets if a.get("type") in supported]
     if not picked:
         raise ValueError(f"spec 中找不到受支持组件（{supported}）")
@@ -66,7 +56,7 @@ def build_mjcf(spec: dict) -> str:
     gx, gy, gz = a.get("pose", {}).get("position", (0, 0, 0))
     dt = float(spec.get("physics", {}).get("physics_dt", 1 / 60))
     grav = spec.get("physics", {}).get("gravity", (0, 0, -9.81))
-    c = GANTRY_CONST
+    c = constants
 
     # io_map 中 *_cmd 的 range 与 travel 不一致时以 travel 为准（与 USD 侧钳位语义一致）
     xml = f"""<mujoco model="{spec.get('scene_id', 'gantry')}">
@@ -163,7 +153,7 @@ def _parse_paper_area(text, size):
     return (size[0] * (x1 - x0) / 2, size[1] * (y1 - y0) / 2)
 
 
-def _plotter_xml(spec: dict) -> str:
+def _plotter_xml(spec: dict, constants=None) -> str:
     assets = spec.get("assets", [])
     axes = [a for a in assets if a.get("type") == "linear_axis"]   # 声明序即链序（R2）
     letters = [a.get("params", {}).get("axis") for a in axes]
@@ -204,7 +194,7 @@ def _plotter_xml(spec: dict) -> str:
         float(spec.get("ground", {}).get("friction", 0.8))
     dt = float(spec.get("physics", {}).get("physics_dt", 1 / 60))
     grav = spec.get("physics", {}).get("gravity", (0, 0, -9.81))
-    c = GANTRY_CONST                                               # 动力学库值（R4）
+    c = GANTRY_CONST if constants is None else constants             # 动力学资产（R4）
 
     panel = next((a for a in assets if a.get("type") == "hmi_panel"), None)
     panel_xml = ""
@@ -276,8 +266,9 @@ def main():
     p.add_argument("--spec", default=os.path.normpath(
         os.path.join(here, "..", "scenegen", "out", "gantry", "scene.spec.json")))
     p.add_argument("--out", default=None, help="写出 .xml 路径；缺省打印到 stdout")
+    p.add_argument("--physics", default=None, help="替换默认物理参数 JSON")
     args = p.parse_args()
-    xml = build_mjcf(load_spec(args.spec))
+    xml = build_mjcf(load_spec(args.spec), load_physics(args.physics) if args.physics else None)
     if args.out:
         with open(args.out, "w", encoding="utf-8") as f:
             f.write(xml)

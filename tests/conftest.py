@@ -16,10 +16,17 @@ def _isolate_memory_defaults(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
-def _isolate_deployment_http(monkeypatch):
+def _isolate_deployment_http(monkeypatch,request):
     """Unit tests must not invoke live diagnostic deployments on the shared PLC."""
     import requests
     import agent.orchestrator as orch
     def offline(*args, **kwargs):
         raise requests.ConnectionError("unit tests have no live deployment HTTP access")
     monkeypatch.setattr(orch._LOCAL, 'request', offline)
+    # This transport test installs its own read-only requests.Session fake.
+    transport_test = request.node.originalname == 'test_runtime_status_only_reads_existing_deploy_service'
+    if 'lx' not in request.fixturenames and not transport_test:
+        from agent.runtime_control import LXRuntime,RuntimeControlError
+        def offline_runtime(*args,**kwargs):
+            raise RuntimeControlError('unit tests have no live Runtime access')
+        monkeypatch.setattr(LXRuntime,'request',offline_runtime)

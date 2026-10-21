@@ -1,0 +1,707 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ns0:CAEXFile xmlns:ns0="http://www.dke.de/CAEX" FileName="plotter3axis_station.aml" SchemaVersion="3.0">
+  <ns0:SuperiorStandardVersion>AutomationML 2.10</ns0:SuperiorStandardVersion>
+  <ns0:InstanceHierarchy Name="PlotterCell">
+    <ns0:InternalElement Name="Plotter3Axis" ID="dev_plotter" RefBaseSystemUnitPath="PlotterLib/GantryPlotter">
+      <ns0:RoleRequirements Role="AutomationMLRoleClassLib/Machine/Plotter" />
+      <ns0:Attribute Name="workspace_x">
+        <ns0:Value>100</ns0:Value>
+        <ns0:Unit>%</ns0:Unit>
+      </ns0:Attribute>
+      <ns0:Attribute Name="workspace_y">
+        <ns0:Value>100</ns0:Value>
+        <ns0:Unit>%</ns0:Unit>
+      </ns0:Attribute>
+      <ns0:Attribute Name="drawing_area">
+        <ns0:Value>20..80 x 20..80</ns0:Value>
+      </ns0:Attribute>
+      <ns0:InternalElement Name="x_axis" ID="dev_x_axis" RefBaseSystemUnitPath="PlotterLib/LinearAxis">
+        <ns0:RoleRequirements Role="AutomationMLRoleClassLib/Machine/Axis/Linear" />
+        <ns0:Attribute Name="axis_type">
+          <ns0:Value>linear</ns0:Value>
+        </ns0:Attribute>
+        <ns0:Attribute Name="stroke_min">
+          <ns0:Value>0.0</ns0:Value>
+        </ns0:Attribute>
+        <ns0:Attribute Name="stroke_max">
+          <ns0:Value>100.0</ns0:Value>
+        </ns0:Attribute>
+        <ns0:Attribute Name="unit">
+          <ns0:Value>%</ns0:Value>
+        </ns0:Attribute>
+        <ns0:Attribute Name="vmax">
+          <ns0:Value>40.0</ns0:Value>
+        </ns0:Attribute>
+        <ns0:Attribute Name="accel">
+          <ns0:Value>80.0</ns0:Value>
+        </ns0:Attribute>
+        <ns0:Attribute Name="poswin">
+          <ns0:Value>0.01</ns0:Value>
+        </ns0:Attribute>
+        <ns0:Attribute Name="voltage">
+          <ns0:Value>24.0</ns0:Value>
+        </ns0:Attribute>
+        <ns0:Attribute Name="power">
+          <ns0:Value>200.0</ns0:Value>
+        </ns0:Attribute>
+        <ns0:ExternalInterface Name="mech_flange" ID="if_x_flange" RefBaseClassPath="AutomationMLInterfaceClassLib/Mechanical/Flange" />
+        <ns0:ExternalInterface Name="x_encoder" ID="if_x_enc" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/Encoder">
+          <ns0:Attribute Name="resolution">
+            <ns0:Value>1</ns0:Value>
+            <ns0:Unit>%</ns0:Unit>
+          </ns0:Attribute>
+        </ns0:ExternalInterface>
+        <ns0:ExternalInterface Name="x_pos_ref" ID="if_x_vref" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/PositionReference" />
+        <ns0:ExternalInterface Name="x_drive_status" ID="if_x_dstat" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/StatusWord" />
+      </ns0:InternalElement>
+      <ns0:InternalElement Name="y_axis" ID="dev_y_axis" RefBaseSystemUnitPath="PlotterLib/LinearAxis">
+        <ns0:RoleRequirements Role="AutomationMLRoleClassLib/Machine/Axis/Linear" />
+        <ns0:Attribute Name="axis_type">
+          <ns0:Value>linear</ns0:Value>
+        </ns0:Attribute>
+        <ns0:Attribute Name="stroke_min">
+          <ns0:Value>0.0</ns0:Value>
+        </ns0:Attribute>
+        <ns0:Attribute Name="stroke_max">
+          <ns0:Value>100.0</ns0:Value>
+        </ns0:Attribute>
+        <ns0:Attribute Name="unit">
+          <ns0:Value>%</ns0:Value>
+        </ns0:Attribute>
+        <ns0:Attribute Name="vmax">
+          <ns0:Value>40.0</ns0:Value>
+        </ns0:Attribute>
+        <ns0:Attribute Name="accel">
+          <ns0:Value>80.0</ns0:Value>
+        </ns0:Attribute>
+        <ns0:Attribute Name="poswin">
+          <ns0:Value>0.01</ns0:Value>
+        </ns0:Attribute>
+        <ns0:Attribute Name="voltage">
+          <ns0:Value>24.0</ns0:Value>
+        </ns0:Attribute>
+        <ns0:Attribute Name="power">
+          <ns0:Value>200.0</ns0:Value>
+        </ns0:Attribute>
+        <ns0:ExternalInterface Name="mech_flange" ID="if_y_flange" RefBaseClassPath="AutomationMLInterfaceClassLib/Mechanical/Flange" />
+        <ns0:ExternalInterface Name="y_encoder" ID="if_y_enc" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/Encoder" />
+        <ns0:ExternalInterface Name="y_pos_ref" ID="if_y_vref" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/PositionReference" />
+        <ns0:ExternalInterface Name="y_drive_status" ID="if_y_dstat" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/StatusWord" />
+      </ns0:InternalElement>
+      <ns0:InternalElement Name="z_axis" ID="dev_z_axis" RefBaseSystemUnitPath="PlotterLib/PenAxis">
+        <ns0:RoleRequirements Role="AutomationMLRoleClassLib/Machine/Axis/Linear" />
+        <ns0:Attribute Name="axis_type">
+          <ns0:Value>linear</ns0:Value>
+        </ns0:Attribute>
+        <ns0:Attribute Name="stroke_min">
+          <ns0:Value>0.0</ns0:Value>
+        </ns0:Attribute>
+        <ns0:Attribute Name="stroke_max">
+          <ns0:Value>10.0</ns0:Value>
+        </ns0:Attribute>
+        <ns0:Attribute Name="unit">
+          <ns0:Value>mm</ns0:Value>
+        </ns0:Attribute>
+        <ns0:Attribute Name="vmax">
+          <ns0:Value>20.0</ns0:Value>
+        </ns0:Attribute>
+        <ns0:Attribute Name="accel">
+          <ns0:Value>60.0</ns0:Value>
+        </ns0:Attribute>
+        <ns0:Attribute Name="poswin">
+          <ns0:Value>0.01</ns0:Value>
+        </ns0:Attribute>
+        <ns0:Attribute Name="voltage">
+          <ns0:Value>24.0</ns0:Value>
+        </ns0:Attribute>
+        <ns0:Attribute Name="power">
+          <ns0:Value>100.0</ns0:Value>
+        </ns0:Attribute>
+        <ns0:ExternalInterface Name="mech_flange" ID="if_z_flange" RefBaseClassPath="AutomationMLInterfaceClassLib/Mechanical/Flange" />
+        <ns0:ExternalInterface Name="z_encoder" ID="if_z_enc" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/Encoder" />
+        <ns0:ExternalInterface Name="z_pos_ref" ID="if_z_vref" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/PositionReference" />
+        <ns0:ExternalInterface Name="z_drive_status" ID="if_z_dstat" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/StatusWord" />
+      </ns0:InternalElement>
+      <ns0:InternalElement Name="pen" ID="dev_pen" RefBaseSystemUnitPath="PlotterLib/PenAssembly">
+        <ns0:RoleRequirements Role="AutomationMLRoleClassLib/Machine/Tool/Pen" />
+        <ns0:Attribute Name="tip_diameter">
+          <ns0:Value>0.5</ns0:Value>
+          <ns0:Unit>mm</ns0:Unit>
+        </ns0:Attribute>
+        <ns0:ExternalInterface Name="pen_mount" ID="if_pen_mount" RefBaseClassPath="AutomationMLInterfaceClassLib/Mechanical/Flange" />
+      </ns0:InternalElement>
+      <ns0:InternalLink Name="mount_x" RefPartnerSideA="if_x_mount" RefPartnerSideB="if_x_flange" />
+      <ns0:InternalLink Name="mount_y" RefPartnerSideA="if_y_mount" RefPartnerSideB="if_y_flange" />
+      <ns0:InternalLink Name="mount_z" RefPartnerSideA="if_z_mount" RefPartnerSideB="if_z_flange" />
+      <ns0:InternalLink Name="mount_pen" RefPartnerSideA="if_z_tool" RefPartnerSideB="if_pen_mount" />
+      <ns0:ExternalInterface Name="x_mount" ID="if_x_mount" RefBaseClassPath="AutomationMLInterfaceClassLib/Mechanical/Flange" />
+      <ns0:ExternalInterface Name="y_mount" ID="if_y_mount" RefBaseClassPath="AutomationMLInterfaceClassLib/Mechanical/Flange" />
+      <ns0:ExternalInterface Name="z_mount" ID="if_z_mount" RefBaseClassPath="AutomationMLInterfaceClassLib/Mechanical/Flange" />
+      <ns0:ExternalInterface Name="z_tool" ID="if_z_tool" RefBaseClassPath="AutomationMLInterfaceClassLib/Mechanical/Flange" />
+    </ns0:InternalElement>
+    <ns0:InternalElement Name="OperatorPanel" ID="dev_panel" RefBaseSystemUnitPath="PlotterLib/OperatorPanel">
+      <ns0:RoleRequirements Role="AutomationMLRoleClassLib/HMI/OperatorPanel" />
+      <ns0:Attribute Name="voltage">
+        <ns0:Value>24.0</ns0:Value>
+      </ns0:Attribute>
+      <ns0:ExternalInterface Name="run_sw" ID="if_run_sw" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/ButtonContact">
+        <ns0:Attribute Name="description">
+          <ns0:Value>驱动使能主令开关（安全回路就绪后允许三轴驱动器上电；断开=受控断电）</ns0:Value>
+        </ns0:Attribute>
+      </ns0:ExternalInterface>
+      <ns0:ExternalInterface Name="home_btn" ID="if_home_btn" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/ButtonContact">
+        <ns0:Attribute Name="description">
+          <ns0:Value>回参考点按钮（Z 参考点=抬笔安全位）</ns0:Value>
+        </ns0:Attribute>
+      </ns0:ExternalInterface>
+      <ns0:ExternalInterface Name="go_btn" ID="if_go_btn" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/ButtonContact">
+        <ns0:Attribute Name="description">
+          <ns0:Value>手动定位启动按钮（目标位置由 NC 设定值通道给出；落笔状态下 X/Y 请求被安全互锁拒绝）</ns0:Value>
+        </ns0:Attribute>
+      </ns0:ExternalInterface>
+      <ns0:ExternalInterface Name="jog_fwd_btn" ID="if_jog_fwd_btn" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/ButtonContact">
+        <ns0:Attribute Name="description">
+          <ns0:Value>X 轴手动进给正向按钮（电平有效，仅抬笔状态允许）</ns0:Value>
+        </ns0:Attribute>
+      </ns0:ExternalInterface>
+      <ns0:ExternalInterface Name="jog_rev_btn" ID="if_jog_rev_btn" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/ButtonContact">
+        <ns0:Attribute Name="description">
+          <ns0:Value>X 轴手动进给反向按钮（电平有效，仅抬笔状态允许）</ns0:Value>
+        </ns0:Attribute>
+      </ns0:ExternalInterface>
+      <ns0:ExternalInterface Name="estop" ID="if_estop" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/ButtonContact">
+        <ns0:Attribute Name="description">
+          <ns0:Value>急停（安全继电器触点，电平有效；受控减速并中止绘图）</ns0:Value>
+        </ns0:Attribute>
+      </ns0:ExternalInterface>
+      <ns0:ExternalInterface Name="fault_reset_btn" ID="if_fault_reset_btn" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/ButtonContact">
+        <ns0:Attribute Name="description">
+          <ns0:Value>故障复位按钮</ns0:Value>
+        </ns0:Attribute>
+      </ns0:ExternalInterface>
+      <ns0:ExternalInterface Name="draw_btn" ID="if_draw_btn" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/ButtonContact">
+        <ns0:Attribute Name="description">
+          <ns0:Value>绘图启动按钮（抬笔→定位起点→落笔绘制 20..80 正方形→抬笔→回中心）</ns0:Value>
+        </ns0:Attribute>
+      </ns0:ExternalInterface>
+      <ns0:ExternalInterface Name="ready_lamp" ID="if_ready_lamp" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/LampCircuit" />
+      <ns0:ExternalInterface Name="done_lamp" ID="if_done_lamp" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/LampCircuit" />
+      <ns0:ExternalInterface Name="moving_lamp" ID="if_moving_lamp" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/LampCircuit" />
+      <ns0:ExternalInterface Name="fault_lamp" ID="if_fault_lamp" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/LampCircuit" />
+      <ns0:ExternalInterface Name="pen_lamp" ID="if_pen_lamp" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/LampCircuit" />
+      <ns0:ExternalInterface Name="plot_done_lamp" ID="if_plot_done_lamp" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/LampCircuit" />
+      <ns0:ExternalInterface Name="x_ref" ID="if_x_ref" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/PositionReference">
+        <ns0:Attribute Name="description">
+          <ns0:Value>X 轴定位设定值端子（NC 数值录入，行程 0..100%）</ns0:Value>
+        </ns0:Attribute>
+      </ns0:ExternalInterface>
+      <ns0:ExternalInterface Name="y_ref" ID="if_y_ref" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/PositionReference">
+        <ns0:Attribute Name="description">
+          <ns0:Value>Y 轴定位设定值端子（NC 数值录入）</ns0:Value>
+        </ns0:Attribute>
+      </ns0:ExternalInterface>
+      <ns0:ExternalInterface Name="z_ref" ID="if_z_ref" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/PositionReference">
+        <ns0:Attribute Name="description">
+          <ns0:Value>Z 轴笔位设定值端子（NC 数值录入，0..10mm）</ns0:Value>
+        </ns0:Attribute>
+      </ns0:ExternalInterface>
+    </ns0:InternalElement>
+    <ns0:InternalElement Name="ControlCabinet" ID="dev_cabinet" RefBaseSystemUnitPath="PlotterLib/ControlCabinet">
+      <ns0:RoleRequirements Role="AutomationMLRoleClassLib/AutomationComponents/PLC" />
+      <ns0:Attribute Name="voltage">
+        <ns0:Value>230.0</ns0:Value>
+      </ns0:Attribute>
+      <ns0:InternalElement Name="PLC" ID="dev_plc" RefBaseSystemUnitPath="PlotterLib/SoftPLCController">
+        <ns0:RoleRequirements Role="AutomationMLRoleClassLib/AutomationComponents/PLC" />
+        <ns0:Attribute Name="scan_cycle">
+          <ns0:Value>20</ns0:Value>
+          <ns0:Unit>ms</ns0:Unit>
+        </ns0:Attribute>
+        <ns0:InternalElement Name="DI_Module" ID="dev_di" RefBaseSystemUnitPath="PlotterLib/DigitalInputModule">
+          <ns0:RoleRequirements Role="AutomationMLRoleClassLib/AutomationComponents/IO-Module" />
+          <ns0:ExternalInterface Name="run" ID="ch_run" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalInput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QX0.0</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>驱动使能主令开关（安全回路就绪后允许三轴驱动器上电；断开=受控断电）</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+          <ns0:ExternalInterface Name="cmd_home" ID="ch_home" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalInput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QX0.1</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>回参考点按钮（Z 参考点=抬笔安全位）</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+          <ns0:ExternalInterface Name="cmd_go" ID="ch_go" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalInput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QX0.2</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>手动定位启动按钮（目标位置由 NC 设定值通道给出；落笔状态下 X/Y 请求被安全互锁拒绝）</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+          <ns0:ExternalInterface Name="jog_fwd" ID="ch_jog_fwd" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalInput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QX0.3</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>X 轴手动进给正向按钮（电平有效，仅抬笔状态允许）</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+          <ns0:ExternalInterface Name="jog_rev" ID="ch_jog_rev" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalInput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QX0.4</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>X 轴手动进给反向按钮（电平有效，仅抬笔状态允许）</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+          <ns0:ExternalInterface Name="quickstop" ID="ch_quickstop" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalInput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QX0.5</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>急停（安全继电器触点，电平有效；受控减速并中止绘图）</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+          <ns0:ExternalInterface Name="cmd_reset" ID="ch_reset" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalInput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QX0.7</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>故障复位按钮</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+          <ns0:ExternalInterface Name="cmd_draw" ID="ch_draw" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalInput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QX2.0</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>绘图启动按钮（抬笔→定位起点→落笔绘制 20..80 正方形→抬笔→回中心）</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+        </ns0:InternalElement>
+        <ns0:InternalElement Name="DO_Module" ID="dev_do" RefBaseSystemUnitPath="PlotterLib/DigitalOutputModule">
+          <ns0:RoleRequirements Role="AutomationMLRoleClassLib/AutomationComponents/IO-Module" />
+          <ns0:ExternalInterface Name="all_oe" ID="ch_all_oe" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalOutput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QX1.0</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>就绪指示灯（三轴驱动器全部使能）</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+          <ns0:ExternalInterface Name="move_done" ID="ch_move_done" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalOutput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QX1.1</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>定位完成指示灯（手动定位完成汇总；绘图序列期间熄灭）</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+          <ns0:ExternalInterface Name="any_moving" ID="ch_any_moving" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalOutput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QX1.2</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>运动中指示灯（任一轴速度指令非零）</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+          <ns0:ExternalInterface Name="fault_any" ID="ch_fault_any" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalOutput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QX1.3</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>故障指示灯（任一驱动器故障位）</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+          <ns0:ExternalInterface Name="pen_down" ID="ch_pen_down" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalOutput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QX2.1</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>笔触纸指示灯（Z 行程下限区，含入场容差）</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+          <ns0:ExternalInterface Name="plot_done" ID="ch_plot_done" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/DigitalOutput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QX2.2</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>绘图完成指示灯（抬笔回中心后点亮；急停/故障中止时熄灭）</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+        </ns0:InternalElement>
+        <ns0:InternalElement Name="AI_Module" ID="dev_ai" RefBaseSystemUnitPath="PlotterLib/AnalogInputModule">
+          <ns0:RoleRequirements Role="AutomationMLRoleClassLib/AutomationComponents/IO-Module" />
+          <ns0:ExternalInterface Name="x_fb" ID="ch_x_fb" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogInput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QW0</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>X 轴位置反馈（编码器当量）</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_min">
+              <ns0:Value>0</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_max">
+              <ns0:Value>100</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="unit">
+              <ns0:Value>%</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+          <ns0:ExternalInterface Name="y_fb" ID="ch_y_fb" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogInput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QW1</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>Y 轴位置反馈（编码器当量）</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_min">
+              <ns0:Value>0</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_max">
+              <ns0:Value>100</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="unit">
+              <ns0:Value>%</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+          <ns0:ExternalInterface Name="z_fb" ID="ch_z_fb" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogInput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QW2</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>Z 轴笔位反馈（0=笔尖触纸，10=抬笔）</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_min">
+              <ns0:Value>0</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_max">
+              <ns0:Value>10</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="unit">
+              <ns0:Value>mm</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+          <ns0:ExternalInterface Name="x_sp" ID="ch_x_sp" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogInput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QW10</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>X 轴定位设定值（NC 写入，先于定位启动建立）</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_min">
+              <ns0:Value>0</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_max">
+              <ns0:Value>100</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="unit">
+              <ns0:Value>%</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+          <ns0:ExternalInterface Name="y_sp" ID="ch_y_sp" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogInput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QW11</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>Y 轴定位设定值（NC 写入）</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_min">
+              <ns0:Value>0</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_max">
+              <ns0:Value>100</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="unit">
+              <ns0:Value>%</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+          <ns0:ExternalInterface Name="z_sp" ID="ch_z_sp" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogInput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QW12</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>Z 轴笔位设定值（手动抬/落笔；不受笔互锁限制）</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_min">
+              <ns0:Value>0</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_max">
+              <ns0:Value>10</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="unit">
+              <ns0:Value>mm</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+        </ns0:InternalElement>
+        <ns0:InternalElement Name="AO_Module" ID="dev_ao" RefBaseSystemUnitPath="PlotterLib/AnalogOutputModule">
+          <ns0:RoleRequirements Role="AutomationMLRoleClassLib/AutomationComponents/IO-Module" />
+          <ns0:ExternalInterface Name="x_sw" ID="ch_x_sw" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogOutput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QW6</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>X 驱动器状态字（诊断通道；bit3=故障，bit10=到位）</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_min">
+              <ns0:Value>0</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_max">
+              <ns0:Value>65535</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+          <ns0:ExternalInterface Name="y_sw" ID="ch_y_sw" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogOutput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QW7</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>Y 驱动器状态字（诊断通道）</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_min">
+              <ns0:Value>0</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_max">
+              <ns0:Value>65535</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+          <ns0:ExternalInterface Name="z_sw" ID="ch_z_sw" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogOutput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QW8</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>Z 驱动器状态字（诊断通道）</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_min">
+              <ns0:Value>0</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_max">
+              <ns0:Value>65535</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+          <ns0:ExternalInterface Name="x_v" ID="ch_x_v" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogOutput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QW13</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>X 轴速度诊断（不作为驱动器位置输入）</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_min">
+              <ns0:Value>-120</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_max">
+              <ns0:Value>120</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="unit">
+              <ns0:Value>%/s</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+          <ns0:ExternalInterface Name="y_v" ID="ch_y_v" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogOutput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QW14</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>Y 轴速度诊断（不作为驱动器位置输入）</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_min">
+              <ns0:Value>-120</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_max">
+              <ns0:Value>120</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="unit">
+              <ns0:Value>%/s</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+          <ns0:ExternalInterface Name="z_v" ID="ch_z_v" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogOutput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QW15</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>Z 轴速度诊断（不作为驱动器位置输入）</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_min">
+              <ns0:Value>-120</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_max">
+              <ns0:Value>120</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="unit">
+              <ns0:Value>mm/s</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+          <ns0:ExternalInterface Name="x_cmd" ID="ch_x_cmd" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogOutput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QW3</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>X 轴插补位置输出（CSP）</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_min">
+              <ns0:Value>0</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_max">
+              <ns0:Value>10000</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="unit">
+              <ns0:Value>0.01 %</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+          <ns0:ExternalInterface Name="y_cmd" ID="ch_y_cmd" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogOutput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QW4</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>Y 轴插补位置输出（CSP）</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_min">
+              <ns0:Value>0</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_max">
+              <ns0:Value>10000</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="unit">
+              <ns0:Value>0.01 %</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+          <ns0:ExternalInterface Name="z_cmd" ID="ch_z_cmd" RefBaseClassPath="AutomationMLInterfaceClassLib/Signal/AnalogOutput">
+            <ns0:Attribute Name="address">
+              <ns0:Value>%QW5</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="description">
+              <ns0:Value>Z 轴插补位置输出（CSP）</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_min">
+              <ns0:Value>0</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="range_max">
+              <ns0:Value>1000</ns0:Value>
+            </ns0:Attribute>
+            <ns0:Attribute Name="unit">
+              <ns0:Value>0.01 mm</ns0:Value>
+            </ns0:Attribute>
+          </ns0:ExternalInterface>
+        </ns0:InternalElement>
+      </ns0:InternalElement>
+    </ns0:InternalElement>
+    <ns0:InternalLink Name="wire_run" RefPartnerSideA="if_run_sw" RefPartnerSideB="ch_run" />
+    <ns0:InternalLink Name="wire_home" RefPartnerSideA="if_home_btn" RefPartnerSideB="ch_home" />
+    <ns0:InternalLink Name="wire_go" RefPartnerSideA="if_go_btn" RefPartnerSideB="ch_go" />
+    <ns0:InternalLink Name="wire_jog_fwd" RefPartnerSideA="if_jog_fwd_btn" RefPartnerSideB="ch_jog_fwd" />
+    <ns0:InternalLink Name="wire_jog_rev" RefPartnerSideA="if_jog_rev_btn" RefPartnerSideB="ch_jog_rev" />
+    <ns0:InternalLink Name="wire_estop" RefPartnerSideA="if_estop" RefPartnerSideB="ch_quickstop" />
+    <ns0:InternalLink Name="wire_fault_reset" RefPartnerSideA="if_fault_reset_btn" RefPartnerSideB="ch_reset" />
+    <ns0:InternalLink Name="wire_draw" RefPartnerSideA="if_draw_btn" RefPartnerSideB="ch_draw" />
+    <ns0:InternalLink Name="wire_ready_lamp" RefPartnerSideA="if_ready_lamp" RefPartnerSideB="ch_all_oe" />
+    <ns0:InternalLink Name="wire_done_lamp" RefPartnerSideA="if_done_lamp" RefPartnerSideB="ch_move_done" />
+    <ns0:InternalLink Name="wire_moving_lamp" RefPartnerSideA="if_moving_lamp" RefPartnerSideB="ch_any_moving" />
+    <ns0:InternalLink Name="wire_fault_lamp" RefPartnerSideA="if_fault_lamp" RefPartnerSideB="ch_fault_any" />
+    <ns0:InternalLink Name="wire_pen_lamp" RefPartnerSideA="if_pen_lamp" RefPartnerSideB="ch_pen_down" />
+    <ns0:InternalLink Name="wire_plot_done_lamp" RefPartnerSideA="if_plot_done_lamp" RefPartnerSideB="ch_plot_done" />
+    <ns0:InternalLink Name="wire_x_fb" RefPartnerSideA="if_x_enc" RefPartnerSideB="ch_x_fb" />
+    <ns0:InternalLink Name="wire_y_fb" RefPartnerSideA="if_y_enc" RefPartnerSideB="ch_y_fb" />
+    <ns0:InternalLink Name="wire_z_fb" RefPartnerSideA="if_z_enc" RefPartnerSideB="ch_z_fb" />
+    <ns0:InternalLink Name="wire_x_cmd" RefPartnerSideA="if_x_vref" RefPartnerSideB="ch_x_cmd" />
+    <ns0:InternalLink Name="wire_y_cmd" RefPartnerSideA="if_y_vref" RefPartnerSideB="ch_y_cmd" />
+    <ns0:InternalLink Name="wire_z_cmd" RefPartnerSideA="if_z_vref" RefPartnerSideB="ch_z_cmd" />
+    <ns0:InternalLink Name="wire_x_sw" RefPartnerSideA="if_x_dstat" RefPartnerSideB="ch_x_sw" />
+    <ns0:InternalLink Name="wire_y_sw" RefPartnerSideA="if_y_dstat" RefPartnerSideB="ch_y_sw" />
+    <ns0:InternalLink Name="wire_z_sw" RefPartnerSideA="if_z_dstat" RefPartnerSideB="ch_z_sw" />
+    <ns0:InternalLink Name="wire_x_sp" RefPartnerSideA="if_x_ref" RefPartnerSideB="ch_x_sp" />
+    <ns0:InternalLink Name="wire_y_sp" RefPartnerSideA="if_y_ref" RefPartnerSideB="ch_y_sp" />
+    <ns0:InternalLink Name="wire_z_sp" RefPartnerSideA="if_z_ref" RefPartnerSideB="ch_z_sp" />
+  </ns0:InstanceHierarchy>
+  <ns0:SystemUnitClassLib Name="PlotterLib">
+    <ns0:Version>1.0</ns0:Version>
+    <ns0:SystemUnitClass Name="GantryPlotter">
+      <ns0:Attribute Name="workspace_x">
+        <ns0:Value>100</ns0:Value>
+      </ns0:Attribute>
+      <ns0:Attribute Name="workspace_y">
+        <ns0:Value>100</ns0:Value>
+      </ns0:Attribute>
+    </ns0:SystemUnitClass>
+    <ns0:SystemUnitClass Name="LinearAxis">
+      <ns0:Attribute Name="axis_type">
+        <ns0:Value>linear</ns0:Value>
+      </ns0:Attribute>
+      <ns0:Attribute Name="voltage">
+        <ns0:Value>24.0</ns0:Value>
+      </ns0:Attribute>
+    </ns0:SystemUnitClass>
+    <ns0:SystemUnitClass Name="PenAxis">
+      <ns0:Attribute Name="axis_type">
+        <ns0:Value>linear</ns0:Value>
+      </ns0:Attribute>
+      <ns0:Attribute Name="stroke_max">
+        <ns0:Value>10.0</ns0:Value>
+      </ns0:Attribute>
+    </ns0:SystemUnitClass>
+    <ns0:SystemUnitClass Name="PenAssembly">
+      <ns0:Attribute Name="tip_diameter">
+        <ns0:Value>0.5</ns0:Value>
+      </ns0:Attribute>
+    </ns0:SystemUnitClass>
+    <ns0:SystemUnitClass Name="OperatorPanel">
+      <ns0:Attribute Name="voltage">
+        <ns0:Value>24.0</ns0:Value>
+      </ns0:Attribute>
+    </ns0:SystemUnitClass>
+    <ns0:SystemUnitClass Name="ControlCabinet">
+      <ns0:Attribute Name="voltage">
+        <ns0:Value>230.0</ns0:Value>
+      </ns0:Attribute>
+    </ns0:SystemUnitClass>
+    <ns0:SystemUnitClass Name="SoftPLCController">
+      <ns0:Attribute Name="scan_cycle">
+        <ns0:Value>20</ns0:Value>
+      </ns0:Attribute>
+    </ns0:SystemUnitClass>
+    <ns0:SystemUnitClass Name="DigitalInputModule" />
+    <ns0:SystemUnitClass Name="DigitalOutputModule" />
+    <ns0:SystemUnitClass Name="AnalogInputModule" />
+    <ns0:SystemUnitClass Name="AnalogOutputModule" />
+  </ns0:SystemUnitClassLib>
+  <ns0:RoleClassLib Name="AutomationMLRoleClassLib">
+    <ns0:Version>1.0</ns0:Version>
+    <ns0:RoleClass Name="Machine">
+      <ns0:RoleClass Name="Plotter" />
+      <ns0:RoleClass Name="Axis">
+        <ns0:RoleClass Name="Linear" />
+      </ns0:RoleClass>
+      <ns0:RoleClass Name="Tool">
+        <ns0:RoleClass Name="Pen" />
+      </ns0:RoleClass>
+    </ns0:RoleClass>
+    <ns0:RoleClass Name="HMI">
+      <ns0:RoleClass Name="OperatorPanel" />
+    </ns0:RoleClass>
+    <ns0:RoleClass Name="AutomationComponents">
+      <ns0:RoleClass Name="PLC" />
+      <ns0:RoleClass Name="IO-Module" />
+    </ns0:RoleClass>
+  </ns0:RoleClassLib>
+  <ns0:InterfaceClassLib Name="AutomationMLInterfaceClassLib">
+    <ns0:Version>1.0</ns0:Version>
+    <ns0:InterfaceClass Name="Signal">
+      <ns0:InterfaceClass Name="DigitalInput" />
+      <ns0:InterfaceClass Name="DigitalOutput" />
+      <ns0:InterfaceClass Name="AnalogInput" />
+      <ns0:InterfaceClass Name="AnalogOutput" />
+      <ns0:InterfaceClass Name="ButtonContact" />
+      <ns0:InterfaceClass Name="LampCircuit" />
+      <ns0:InterfaceClass Name="Encoder" />
+      <ns0:InterfaceClass Name="VelocityReference" />
+      <ns0:InterfaceClass Name="StatusWord" />
+      <ns0:InterfaceClass Name="PositionReference" />
+    </ns0:InterfaceClass>
+    <ns0:InterfaceClass Name="Mechanical">
+      <ns0:InterfaceClass Name="Flange" />
+    </ns0:InterfaceClass>
+  </ns0:InterfaceClassLib>
+</ns0:CAEXFile>

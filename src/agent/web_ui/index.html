@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>PLC 与仿真工作台</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/scene_view.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+<header>
+  <h1>PLC 与仿真工作台</h1>
+</header>
+<main>
+  <div id="error" role="alert" hidden></div>
+  <nav class="workflow-tabs" aria-label="业务流程">
+    <button id="workflow-tab-1" aria-selected="true" aria-controls="workflow-panel-1"><span>01</span>资产管理与 PLC 代码生成</button>
+    <button id="workflow-tab-2" aria-selected="false" aria-controls="workflow-panel-2"><span>02</span>仿真与验证</button>
+  </nav>
+  <section id="workflow-panel-1" aria-labelledby="workflow-tab-1">
+  <div class="workspace generation-workspace">
+  <div class="generation-main">
+  <section class="asset-area" aria-label="资产管理">
+    <div class="asset-heading"><strong>资产管理</strong></div>
+    <div class="asset-grid">
+      <section class="card asset-card" id="aml-card">
+        <div class="asset-card-head"><strong>设备描述</strong><span class="badge">已校验</span></div>
+        <p id="aml-name" class="asset-name">正在加载…</p>
+        <div class="actions"><label class="button" for="aml-file">替换 AML</label><input id="aml-file" type="file" accept=".aml" hidden><a id="aml-download" class="asset-link" download>下载当前</a></div>
+        <details class="asset-details"><summary>查看设备、轴与 IO</summary><div id="aml-details"></div></details>
+      </section>
+      <section class="card asset-card" id="library-card">
+        <div class="asset-card-head"><strong>组件库</strong></div>
+        <p id="library-name" class="asset-name">正在加载…</p>
+        <div class="actions"><label class="button" for="library-file">替换组件库</label><input id="library-file" type="file" accept=".json,application/json" hidden><a id="library-download" class="asset-link" download>导出当前库</a></div>
+        <details class="asset-details"><summary>查看或替换接口契约、物理参数</summary>
+          <div class="asset-part-head"><strong>组件接口契约</strong><span id="contract-version"></span></div>
+          <div class="actions part-actions"><label class="button" for="contract-file">替换契约 JSON</label><input id="contract-file" type="file" accept=".json,application/json" hidden><a id="contract-download" class="asset-link" download>下载契约</a></div><div id="contract-details"></div>
+          <div class="asset-part-head"><strong>物理参数资产</strong><span id="physics-version"></span></div>
+          <div class="actions part-actions"><label class="button" for="physics-file">替换物理参数 JSON</label><input id="physics-file" type="file" accept=".json,application/json" hidden><a id="physics-download" class="asset-link" download>下载参数</a></div><div id="physics-details"></div>
+          <p class="asset-footnote">使用当前后端已实现的参数化组件；新增组件接口需配套后端实现。</p>
+        </details>
+      </section>
+    </div>
+  </section>
+    <section class="drawing-column" aria-label="绘图素材与参数">
+      <div class="card drawing-card">
+        <div class="card-head"><div><strong>绘图素材与参数</strong></div>
+          <div class="tabs" role="tablist" aria-label="视图"><button id="select-tab" role="tab" aria-selected="true">选择路径</button><button id="preview-tab" role="tab" aria-selected="false" disabled>轨迹预览</button></div>
+        </div>
+        <div class="drawing-source-tabs" role="group" aria-label="绘图轨迹来源">
+          <button id="language-source" type="button" aria-pressed="true">语言描述</button><button id="svg-source" type="button" aria-pressed="false">SVG 导入</button>
+        </div>
+        <section id="language-source-panel" class="language-source-panel" aria-label="语言绘图任务">
+          <form id="language-form"><label for="drawing-description">描述要绘制的图形</label>
+            <textarea id="drawing-description" rows="2" maxlength="8000" placeholder="例如：画一个正方形，边长40，中心(50,50)"></textarea>
+            <div class="language-actions"><div class="actions"><button id="square-example" type="button">正方形示例</button><button id="circle-example" type="button">圆形示例</button></div><button id="plan-language" type="submit" class="primary">预览轨迹</button></div>
+          </form>
+          <p class="language-help">支持正方形和圆，也可直接在右侧对话中描述。未指定时使用中心(50,50)、正方形边长60或圆半径25、24段；尺寸使用设备坐标。</p>
+          <p id="language-summary" class="language-summary" role="status" hidden></p>
+        </section>
+        <div id="svg-source-panel" hidden>
+        <section class="asset-card drawing-source" id="dropzone" aria-label="绘图素材">
+          <div class="drawing-file"><span id="filename">拖入或选择 SVG</span><span id="svg-status" class="badge">待导入</span></div>
+          <div class="actions"><label class="button primary" for="file">选择 / 替换 SVG</label><input id="file" type="file" accept=".svg,image/svg+xml" hidden><button id="example">加载示例</button><a id="svg-download" class="asset-link" download hidden>下载当前</a></div>
+        </section>
+      <details class="drawing-settings parameters"><summary><strong>绘图参数</strong></summary>
+        <form id="parameters"><div class="parameter-grid">
+          <label>适配框宽度<input id="width" type="number" min=".001" step="any" value="60" required></label>
+          <label>适配框高度<input id="height" type="number" min=".001" step="any" value="60" required></label>
+          <label>中心 X<input id="center-x" type="number" step="any" value="50" required></label>
+          <label>中心 Y<input id="center-y" type="number" step="any" value="50" required></label>
+          <label>曲线容差<input id="tolerance" type="number" min=".000001" step="any" value=".25" required></label>
+          <label>点数预算<input id="max-points" type="number" min="2" max="4096" step="1" value="1200" required></label>
+        </div><div class="parameter-bottom"><label class="check"><input id="flip-y" type="checkbox" checked>保持 SVG 的视觉朝向</label><button id="apply" type="submit" disabled>更新轨迹</button></div></form>
+      </details>
+        <div id="selection-view">
+          <div class="canvas"><svg id="drawing" viewBox="0 0 680 440" aria-label="点击路径切换选中状态"><defs><pattern id="grid" width="34" height="34" patternUnits="userSpaceOnUse"><path d="M 34 0 L 0 0 0 34" fill="none" stroke="#dfe8eb" stroke-width=".65"/></pattern></defs><rect width="680" height="440" fill="url(#grid)"/><g id="outlines"></g></svg><div id="empty"><span>从一张矢量图开始</span><p>导入后，可在画布上点击轮廓，<br>也可在下方逐条勾选。</p></div></div>
+          <div class="selection-toolbar"><p><i class="swatch"></i>已选轨迹 <i class="swatch muted-swatch"></i>未选轨迹</p><div class="actions"><button id="select-all" disabled>全选</button><button id="select-none" disabled>清空</button><button id="invert" disabled>反选</button></div></div>
+          <div id="paths" class="path-list" aria-label="可选路径列表"></div>
+        </div>
+        </div>
+        <div id="preview-view" hidden><iframe id="preview-frame" title="选中轨迹的设备坐标预览"></iframe></div>
+      </div>
+    </section>
+  </div>
+    <aside class="agent-column card" aria-label="PLC 代码生成">
+      <div class="agent-heading"><strong>PLC 代码生成</strong><span id="phase" class="badge">等待描述</span><button id="clear-context" class="text-button">清空上下文</button></div>
+      <div class="agent-tabs" role="tablist" aria-label="PLC 生成">
+        <button id="agent-chat-tab" role="tab" aria-selected="true" aria-controls="agent-chat-pane">工艺对话</button>
+        <button id="agent-progress-tab" role="tab" aria-selected="false" aria-controls="agent-progress-pane">执行进度</button>
+        <button id="agent-artifacts-tab" role="tab" aria-selected="false" aria-controls="agent-artifacts-pane">生成产物</button>
+      </div>
+      <div class="agent-body">
+      <section id="agent-chat-pane" class="agent-pane" role="tabpanel" aria-labelledby="agent-chat-tab">
+      <div id="messages" class="messages" aria-live="polite"><div class="message agent"><small>AGENT</small><p>可直接描述“画一个正方形”，或导入 SVG 选择路径。预览轨迹后，补充工艺或使用默认工艺，再生成 PLC。</p></div></div>
+      <details id="spec-card" hidden><summary>查看当前需求规格</summary><pre id="spec"></pre></details>
+      <form id="chat-form"><label class="sr-only" for="message">工艺要求或修改意见</label><textarea id="message" rows="3" maxlength="8000" placeholder="输入工艺要求，或使用默认工艺" disabled></textarea><div class="composer-footer"><button id="default-process" type="button" disabled>使用默认工艺</button><button id="send" type="submit" disabled>发送给 Agent</button></div></form>
+      </section>
+      <section id="agent-progress-pane" class="agent-pane" role="tabpanel" aria-labelledby="agent-progress-tab" hidden>
+      <p id="progress-empty" class="pane-empty">暂无生成任务</p>
+      <section id="progress-panel" hidden><div class="subheading"><strong>执行进度</strong><span id="busy-label"></span></div><div id="logs" aria-live="polite"></div></section>
+      </section>
+      <section id="agent-artifacts-pane" class="agent-pane" role="tabpanel" aria-labelledby="agent-artifacts-tab" hidden>
+      <p id="artifacts-empty" class="pane-empty">暂无生成产物</p>
+      <section id="artifacts" hidden><div class="subheading"><strong>生成结果</strong></div><div id="downloads"></div></section>
+      </section>
+      </div>
+      <div class="agent-footer"><button id="generate" class="primary generate" disabled>生成并验证 PLC <span>↗</span></button></div>
+    </aside>
+  </div>
+  </section>
+  <section id="workflow-panel-2" aria-labelledby="workflow-tab-2" hidden>
+    <div class="studio-heading"><div><h2>仿真与验证</h2><span id="studio-task">等待 PLC 生成</span></div><span id="studio-elapsed">运行时间 —</span><button id="import-simulation">导入场景与 PLC</button><button id="refresh-runtime">刷新状态</button></div>
+    <dialog id="import-dialog"><form id="import-form"><div class="subheading"><strong>导入外部仿真文件</strong><button id="close-import" type="button" aria-label="关闭">×</button></div><p>使用资产管理中的当前 AML 和组件库校验。</p><label>场景 JSON<input id="import-scene-file" type="file" accept=".json" required></label><label>PLC XML<input id="import-plc-file" type="file" accept=".xml" required></label><label>需求规格 JSON（可选，用于验收）<input id="import-spec-file" type="file" accept=".json"></label><p id="import-error" class="runtime-failure" hidden></p><button id="confirm-import" type="submit" class="primary">导入并加载</button></form></dialog>
+    <dl class="runtime-metrics studio-metrics"><div><dt>部署服务</dt><dd id="deploy-service-state">未查询</dd></div><div><dt>OpenPLC Runtime</dt><dd id="plc-runtime-state">未查询</dd></div><div><dt>当前程序</dt><dd id="plc-program-state">—</dd></div><div><dt>仿真运动</dt><dd id="simulation-motion-state">未启动</dd></div></dl>
+    <p id="runtime-connection" class="runtime-feedback" role="status" hidden></p>
+    <p id="motion-error" class="runtime-failure" role="status" hidden></p>
+    <div class="studio-layout">
+      <aside class="studio-controls card">
+        <section class="studio-control-section"><div class="subheading"><strong>仿真场景</strong><span id="scene-status" class="badge">待生成</span></div><label class="sr-only" for="simulation-task">选择仿真任务</label><select id="simulation-task" class="simulation-task"></select>
+          <div class="actions"><button id="build-scene" class="primary" disabled>生成仿真场景</button><a id="scene-download" class="button" hidden download>下载</a></div>
+          <div class="studio-source-links"><a id="scene-source" hidden download>场景描述 JSON</a><a id="scene-library" hidden download>组件库</a></div>
+        </section>
+        <section class="studio-control-section"><div class="subheading"><strong>PLC 部署</strong><span id="runtime-status" class="badge">待连接</span></div>
+          <div class="actions"><button id="deploy-runtime" class="primary" disabled>部署并启动 PLC</button></div>
+          <div class="actions"><button id="start-runtime" disabled>启动 Runtime</button><button id="stop-runtime" disabled>停止 Runtime</button></div>
+        </section>
+        <section class="studio-control-section"><div class="subheading"><strong>模型运行</strong><span id="hmi-status" class="badge">未连接</span></div>
+          <div class="actions"><button id="start-motion" class="primary" disabled>启动模型运动</button><button id="manual-motion" disabled>手动调试</button><button id="stop-motion" disabled>停止模型</button></div>
+          <button id="verify-motion" class="button verify-button" disabled>运行验收</button>
+        </section>
+        <section class="studio-control-section hmi-section"><strong>操作面板</strong><div id="hmi-buttons" class="hmi-buttons"></div><div id="hmi-lamps" class="hmi-lamps"></div><div id="hmi-gauges" class="hmi-gauges"></div><p id="hmi-empty" class="pane-empty">生成 PLC 后加载操作面板</p></section>
+      </aside>
+      <div class="studio-main">
+        <section class="card studio-view-card"><div class="subheading"><strong>实时仿真</strong><span id="studio-view-state">等待场景</span></div><div id="runtime-viewport" class="scene-preview" hidden></div><div id="scene-empty" class="studio-empty">生成仿真场景后查看模型</div></section>
+        <section class="card studio-details">
+          <div class="agent-tabs studio-tabs" role="tablist" aria-label="仿真结果">
+            <button id="studio-result-tab" role="tab" aria-selected="true" aria-controls="studio-result-pane">验收结果</button><button id="studio-trace-tab" role="tab" aria-selected="false" aria-controls="studio-trace-pane">信号趋势</button><button id="studio-logs-tab" role="tab" aria-selected="false" aria-controls="studio-logs-pane">运行日志</button><button id="studio-history-tab" role="tab" aria-selected="false" aria-controls="studio-history-pane">运行记录</button>
+          </div>
+          <section id="studio-result-pane" role="tabpanel" aria-labelledby="studio-result-tab"><div class="subheading"><strong id="verification-status">暂无验收结果</strong><span id="verification-summary"></span></div><div id="verification-results"></div><div id="verification-downloads" class="actions"></div><details id="runtime-checks" hidden><summary>查看通道检查</summary><div id="runtime-compatibility"></div></details></section>
+          <section id="studio-trace-pane" role="tabpanel" aria-labelledby="studio-trace-tab" hidden><label class="trace-picker">信号<select id="trace-signal"></select></label><div id="trace-chart"></div></section>
+          <section id="studio-logs-pane" role="tabpanel" aria-labelledby="studio-logs-tab" hidden><section id="runtime-operation" hidden aria-live="polite"><strong id="runtime-operation-title"></strong><div id="runtime-operation-steps"></div></section><pre id="scene-logs" class="workflow-logs" hidden></pre><details class="runtime-log-panel"><summary>Runtime 日志</summary><button id="read-runtime-logs" disabled>读取日志</button><pre id="runtime-logs" class="workflow-logs" hidden></pre></details></section>
+          <section id="studio-history-pane" role="tabpanel" aria-labelledby="studio-history-tab" hidden><div id="studio-history" class="studio-history"></div></section>
+        </section>
+      </div>
+    </div>
+  </section>
+</main>
+</body></html>

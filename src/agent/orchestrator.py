@@ -128,6 +128,7 @@ class Orchestrator:
         # 归因引擎（确定性故障库优先，无命中时转 LLM 归因）——只进反馈包，不参与闸门裁定
         self.attribution = attribution_engine or AttributionEngine()
         self._addr_table = None
+        self._evidence_dir = None
 
     # ---------------- 归因与失败处理 ----------------
     @staticmethod
@@ -210,7 +211,17 @@ class Orchestrator:
         history.append({"iter": i, "gate": gate, "errors": errors})
         self._dump_gate(iter_dir, gate, ok=False, errors=errors,
                         attribution=attribution, lessons=lessons)
+        self._refresh_replay(Path(iter_dir).parent)
         return feedback
+
+    @staticmethod
+    def _refresh_replay(run_dir):
+        """回放是观测产物，不参与闸门裁定。"""
+        from .replay import write_replay
+        try:
+            write_replay(run_dir)
+        except (OSError, ValueError, TypeError) as exc:
+            (Path(run_dir) / "replay-error.txt").write_text(str(exc), encoding="utf-8")
 
     @staticmethod
     def _render_lessons(lessons):
@@ -240,7 +251,7 @@ class Orchestrator:
         """
         mem = self.attribution.memory
         task = spec.get("task_id")
-        fails = [h for h in history if not h.get("ok")]
+        fails = [h for h in history if not h.get("ok") and h.get("errors")]
         if ok and fails and final_mode == "repair" and base_xml:
             last = fails[-1]
             hunks = self._diff_skeleton(base_xml, final_xml)
@@ -278,6 +289,11 @@ class Orchestrator:
                 kind="distilled", outcome="resolved" if ok else "abandoned")
 
     # ---------------- 闸门 ----------------
+    def build_artifacts(self, scene, spec, iter_dir):
+        """执行端可覆盖构建器，以消费该任务冻结的组件与物理资产。"""
+        from .scene_gen import build_scene_artifacts
+        return build_scene_artifacts(scene, spec, iter_dir)
+
     def deploy_gate(self, xml_path):
         """闸门3：POST /deploy 真编译。返回 (state, detail)：
         state ∈ ok / failed / skipped（服务不在线，半环不阻塞）。"""
@@ -310,6 +326,8 @@ class Orchestrator:
         live = getattr(self, "_acceptance_live", None)
         env = dict(os.environ, PYTHONUNBUFFERED="1", PYTHONIOENCODING="utf-8")
         env.update(getattr(self, "_acceptance_context", {}))
+        if self._evidence_dir is not None:
+            env["AGENT_EVIDENCE_DIR"] = str(Path(self._evidence_dir).resolve())
         proc = subprocess.Popen(
             [sys.executable, str(script)], cwd=str(self.project_root),
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
@@ -360,6 +378,9 @@ class Orchestrator:
             raise
         finally:
             timer.cancel()
+            evidence = self._evidence_dir or getattr(self, "_acceptance_context", {}).get("AGENT_EVIDENCE_DIR")
+            if evidence:
+                (Path(evidence) / "acceptance.log").write_text("\n".join(lines), encoding="utf-8")
         if expired.is_set():
             proc.wait()
             raise subprocess.TimeoutExpired(proc.args, self.acceptance_timeout)
@@ -683,6 +704,14 @@ class Orchestrator:
             tracker = ProgressTracker(run_dir, spec, test_plan, self.project_root, strict=require_online)
 
         history = []          # 迭代记忆：改了什么 → 哪条闸门翻转
+        from .repair_feedback import GenerationStalled, source_signature
+        generator.memory = self.attribution.memory
+        generator._failed_candidates = set()
+        generator.stop_reason = None
+        candidates_seen = {}
+        if getattr(generator, "initial_candidate", None) and not getattr(generator, "resume_validation", False):
+            candidates_seen[source_signature(generator.initial_candidate)] = "续修基底"
+        stop_reason = None
         feedback = None       # 上轮反馈包（程序拼装，不靠 LLM 现场发挥）
         best = None           # best-effort：进展最多的一轮
         repair_base = None    # 最近一次过静态闸门的产物（定向修复的基础）
@@ -741,7 +770,7 @@ class Orchestrator:
                             h.get("task") or "历史任务",
                             "｜诊断：" + h["diagnosis"] if h.get("diagnosis") else "",
                             h.get("fix_summary", ""),
-                            "") for h in hints)
+                            "\n" + "\n".join(h.get("diff_hunks", [])[:2]) if h.get("diff_hunks") else "") for h in hints)
             try:
                 if would_repair and not force_fresh:
                     gen = generator.repair(repair_base, spec, feedback, **traj_kw)
@@ -752,11 +781,21 @@ class Orchestrator:
                     gen = generator.generate(spec, feedback=feedback, **traj_kw)
                     mode = "fresh"
                     force_fresh = False
+            except GenerationStalled as exc:
+                stop_reason = "no_progress"
+                errors = [str(exc)]
+                history.append({"iter": i, "gate": "generate", "ok": False, "errors": errors})
+                self._dump_gate(iter_dir, "generate", ok=False, errors=errors)
+                notify("no_progress", {"iter": i, "reason": stop_reason, "errors": errors})
+                break
             except RuntimeError as exc:
                 if not re.search(r"HTTP\s+(?:401|402)\b", str(exc)):
                     raise
                 return stop_for_api(exc, i)
             xml_text = gen.get("xml")
+            mode = gen.get("mode", mode)
+            if mode == "repair":
+                entry_base = getattr(generator, "repair_base_used", entry_base)
             if not xml_text:
                 feedback = fail(iter_dir, i, "generate", gen.get("errors", []), mode)
                 notify("gate_failed", {"iter": i, "gate": "generate", "mode": mode})
@@ -785,6 +824,18 @@ class Orchestrator:
                 feedback = fail(iter_dir, i, "consistency", hard2, mode)
                 notify("gate_failed", {"iter": i, "gate": "consistency", "mode": mode})
                 continue
+
+            # A previously tested source cannot justify another compile/physical run.
+            if getattr(generator, "client", None) is not None and not getattr(generator, "seed_xml", None):
+                signature = source_signature(xml_text)
+                if signature in candidates_seen:
+                    stop_reason = "no_progress"
+                    errors = ["候选与%s程序相同（忽略排版、注释和时间戳），停止重复编译与验收。" % candidates_seen[signature]]
+                    history.append({"iter": i, "gate": "generate", "ok": False, "errors": errors})
+                    self._dump_gate(iter_dir, "generate", ok=False, errors=errors)
+                    notify("no_progress", {"iter": i, "reason": stop_reason, "errors": errors})
+                    break
+                candidates_seen[signature] = "第 %d 轮" % i
 
             # 静态闸门全过 → 本产物成为后续定向修复的基础（后续闸门失败也不丢）
             if tracker is None:
@@ -819,10 +870,9 @@ class Orchestrator:
                                   "assets": len(scene_out["scene"]["assets"]),
                                   "io_map_vars": len(scene_out["io_map"]),
                                   "r5": "active"}
-                if require_online or acceptance == "mujoco":
+                if require_online or acceptance in ("mujoco","workbench"):
                     try:
-                        from .scene_gen import build_scene_artifacts
-                        build_scene_artifacts(scene_out["scene"], spec, iter_dir)
+                        self.build_artifacts(scene_out["scene"], spec, iter_dir)
                     except (ValueError, RuntimeError) as exc:
                         feedback = fail(iter_dir, i, "scene", [str(exc)], mode)
                         notify("gate_failed", {"iter": i, "gate": "scene"})
@@ -898,11 +948,12 @@ class Orchestrator:
                         notify("configuration_error", {"iter": i, "errors": errors})
                         return {"status": "configuration_error", "iter": i, "run_dir": run_dir}
                     if state == "env_down":
-                        fail(iter_dir, i, "acceptance",
-                             detail if isinstance(detail, list) else [str(detail)], mode)
+                        stop_reason = "env_down"
+                        errors=detail if isinstance(detail,list) else [str(detail)]
+                        self._dump_gate(iter_dir,"acceptance",ok=False,gates=gates,errors=errors)
                         notify("gate_failed", {"iter": i, "gate": "acceptance(env_down)"})
                         history.append({"iter": i, "gate": "acceptance", "ok": False,
-                                        "env_down": True})
+                                        "env_down": True,"errors":errors})
                         break        # 环境故障：重试无意义，中止战役（结果 best_effort）
                     if state == "failed":
                         errs = detail if isinstance(detail, list) else [str(detail)]
@@ -928,6 +979,7 @@ class Orchestrator:
                     feedback = tracker.feedback(self._fail(iter_dir, i, "acceptance", decision["reasons"], history))
                     notify("candidate_rejected", {"best_iter": (tracker.best or {}).get("iter"), "reasons": decision["reasons"]})
                     continue
+            self._refresh_replay(run_dir)
             history.append({"iter": i, "gate": "all", "ok": True})
             self._learn_from_outcome(spec, history, entry_base, xml_text, mode, ok=True,
                                       shape=(trajectory or {}).get("shape"))
@@ -949,12 +1001,12 @@ class Orchestrator:
                 best.get("gate"), best.get("errors", []),
                 "迭代上限未收敛（人工介入点 2），best=%s" % best.get("gate"), "abandoned")
         self._write_summary(run_dir, history, best)
-        if tracker is None:
+        if tracker is None and stop_reason not in ("no_progress", "env_down"):
             self._learn_from_outcome(spec, history, None, None, "fresh", ok=False,
                                       shape=(trajectory or {}).get("shape"))
         notify("best_effort", {"run_dir": str(run_dir)})
         return {"status": "best_effort", "iter": (best or {}).get("iter"), "run_dir": run_dir,
-                "stop_reason": tracker.stop_reason if tracker and tracker.stop_reason else "iteration_limit"}
+                "stop_reason": stop_reason or (tracker.stop_reason if tracker and tracker.stop_reason else "iteration_limit")}
 
     # ---------------- 产物 ----------------
     @staticmethod
@@ -1108,17 +1160,25 @@ def main():
                         help="自然语言需求文本（或 .txt 文件路径），配合 --aml 使用")
     parser.add_argument("--confirm-params", action="store_true",
                         help="轨迹参数逐项终端确认（缺省自动采纳站标准值；非标准参数验收按标准几何判定）")
+    parser.add_argument("--answers", help="澄清问题的 JSON 答案文件")
     parser.add_argument("--task-id", default=None,
                         help="覆盖 spec.task_id（区分同站多役的 runs 目录；^[a-z][a-z0-9_]*$）")
     parser.add_argument("--prog-id", type=int, default=None,
                         help="覆盖程序身份 prog_id@%%QW20（画方=2/画圆=3，进 spec 供生成器落身份）")
+    from .svg_input import add_svg_arguments
+    add_svg_arguments(parser)
     args = parser.parse_args()
+    if args.svg and args.seed:
+        parser.error("SVG 绘图必须按路点生成代码，不能用 --seed 原样复用旧程序")
+    if args.svg and args.aml and not args.spec and not args.request:
+        args.request = "按照 SVG 路径描画轮廓，保留路径次序与抬落笔动作。"
 
     from .aml_parser import parse_aml
     from .client import BigModelClient
     from .config import MODEL
 
     trajectory = None
+    prepared = None
     device_model = None
     if args.aml and args.request:
         if args.spec:
@@ -1135,17 +1195,28 @@ def main():
         from .requirement import RequirementUnderstander
         understander = RequirementUnderstander(client=client, model=MODEL)
 
-        # ---- 轨迹参数化路线：识别形状 → 参数确认 → 确定性轨迹规划 ----
-        ex = understander.extract_shape(request_text)
-        if ex["shape"] in ("square", "circle"):
-            from .trajectory import DEFAULTS, goal_text, plan_with_confirm
-            confirm = _terminal_confirm if args.confirm_params else None
-            trajectory = plan_with_confirm(ex["shape"], ex["params"], confirm=confirm)
-            print("① 轨迹规划：%s（%s）；缺参已按站标准值补齐"
-                  % (ex["shape"], goal_text(trajectory)))
-            request_text = "%s。已确认几何：%s" % (request_text, goal_text(trajectory))
-        elif ex["shape"] != "unknown":
-            print("形状识别异常：%r" % ex)
+        # 与对话入口共用主动澄清；非交互模式默认值留档，必需歧义不能跳过。
+        from .clarification import ClarificationRequired, extract_explicit_geometry, prepare_request
+        from .chat import ask_clarification
+        try:
+            answers = json.loads(Path(args.answers).read_text(encoding="utf-8-sig")) if args.answers else {}
+            if args.svg:
+                from .svg_input import prepare_svg_request
+                prepared = prepare_svg_request(args, request_text, device_model, answers)
+            else:
+                ex = extract_explicit_geometry(request_text)
+                if ex["shape"] == "unknown" and not ex["multiple_shapes"]:
+                    ex = understander.extract_shape(request_text)
+                prepared = prepare_request(request_text, device_model, shape_info=ex, answers=answers,
+                                           ask=ask_clarification if args.confirm_params else None,
+                                           accept_defaults=not args.confirm_params)
+        except ClarificationRequired as exc:
+            print(json.dumps({"status": "needs_clarification", "questions": exc.questions}, ensure_ascii=False, indent=2))
+            return 2
+        except (ValueError, OSError) as exc:
+            print("澄清参数无法使用：%s" % exc)
+            return 2
+        request_text, trajectory = prepared["request_text"], prepared["trajectory"]
 
         print("① 需求理解：模式=%s" % ("llm" if client else "template"))
         res = understander.understand(request_text, device_model=device_model,
@@ -1184,12 +1255,38 @@ def main():
         spec = json.loads(Path(args.spec).read_text(encoding="utf-8"))
 
     address_table = {}
+    if args.svg and prepared is None:
+        from .svg_input import prepare_svg_request
+        try:
+            answers = json.loads(Path(args.answers).read_text(encoding="utf-8-sig")) if args.answers else {}
+            prepared = prepare_svg_request(args, spec["task_goal"], device_model, answers)
+        except (ValueError, OSError) as exc:
+            print("SVG 输入无法使用：%s" % exc)
+            return 2
+        trajectory, spec["task_goal"] = prepared["trajectory"], prepared["request_text"]
+    if args.task_id:
+        spec["task_id"] = args.task_id
+    if prepared is not None:
+        from .chat import save_preparation
+        from .spec_validator import TASK_ID_RE
+        if not TASK_ID_RE.fullmatch(spec.get("task_id", "")):
+            print("task_id 必须是小写字母开头的 [a-z0-9_]")
+            return 2
+        try:
+            preview = save_preparation(prepared, Path(args.runs_root or RUNS_DIR) / spec["task_id"])
+        except (ValueError, OSError) as exc:
+            print("轨迹归档失败：%s" % exc)
+            return 2
+        if preview:
+            print("轨迹预览：%s" % preview.resolve())
     if device_model:
         address_table = {p["name"]: p["address"] for p in device_model.get("io_points", [])
                          if p.get("address")}
+    from .position_control import position_io
+    position_mode=position_io(device_model or {})
     if args.seed:
         generator = PLCGenerator(client=None, seed_xml=args.seed,
-                                 address_table=address_table)
+                                 address_table=address_table,position_mode=position_mode,prog_id=spec.get('prog_id',2))
     else:
         api_key = get_api_key()
         if not api_key:
@@ -1201,7 +1298,7 @@ def main():
         generator = PLCGenerator(client=BigModelClient(api_key), model=MODEL,
                                  no_cards=(args.no_curated_patterns
                                            or trajectory is not None),
-                                 address_table=address_table)
+                                 address_table=address_table,position_mode=position_mode,prog_id=spec.get('prog_id',2))
 
     scenario = args.scenario
     if scenario is None:

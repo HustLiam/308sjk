@@ -52,6 +52,36 @@ python src/pipeline/serve.py &            # 起服务
 curl -X POST http://127.0.0.1:8600/deploy --data-binary @src/plc/motion3axis.xml
 ```
 
+## 本地 VM 中 OpenPLC 启动速查
+
+VMware VM（Ubuntu 24.04 @192.168.12.131，容器 `fdamador/openplc`：Web :8080 / Modbus :502；`ssh yushanyue@192.168.12.131` 密钥直连，docker 需 sudo）：
+
+```bash
+# ① VM 未开机时（容器随 VM 自启；vmrun 路径按本机安装位置）：
+"/e/VMware/vmrun.exe" start "D:\Ubuntu24.0\Ubuntu 64 位.vmx"
+
+# ② 宿主机 ping 不通 VM 时——VMware 网络服务挂了（VMnet8 掉 169.254 即此症），
+#    管理员 PowerShell：
+Start-Service VMnetDHCP; Start-Service 'VMware NAT Service'
+
+# ③ PLC runtime 启动（容器 Up 还不够——Modbus :502 要等 runtime 启动才监听）：
+python -c "import sys;sys.path.insert(0,'src');from pipeline.openplc_client import OpenPLCClient as C;c=C(base_url='http://192.168.12.131:8080');c.login();print(c.start())"
+```
+
+## 全闸门在线验证（生成 + 真编译 + 在线验收）
+
+```bash
+# ① 编译服务（闸门3；不在线则该闸门记 skipped 不阻塞）：
+OPENPLC_URL=http://192.168.12.131:8080 nohup python src/pipeline/serve.py > workspace/serve.log 2>&1 &
+
+# ② 对话式入口（环境探测到 serve/Modbus 在线自动启用闸门3/4）：
+python -m src.agent.chat --modbus-host 192.168.12.131
+
+# ③ 或编排器直连（显式强制全闸门）：
+python -m src.agent.orchestrator examples/specs/plotter3axis.spec.json \
+    --deploy --acceptance --scenario plotter3axis --modbus-host 192.168.12.131
+```
+
 ## 目录结构
 
 ```
@@ -148,3 +178,57 @@ curl -X POST http://127.0.0.1:8600/deploy --data-binary @src/plc/motion3axis.xml
 
 - **XML 是唯一源码**：只产出 PLCopen XML，`.st` 由 xml2st 机械推导；对外接口 = `AT %QX/%QW` 定位变量（统一 %Q 区），编译错误回喂 agent 纠错
 - 完整契约（ST 子集、位宽表、显式拒绝清单）的权威定义见 `docs/lx-PLC代码生成与执行引擎详细设计.md` §3
+
+
+## 主动澄清、轨迹预览与故障回放
+
+对话入口会在生成前追问缺失或有歧义的绘图参数，先保存可交互的本地轨迹预览；规格修改时同步更新。现有任务可离线查看逐轮报错、诊断、变量曲线及 ST 差异。用法与证据说明见 `docs/gc-需求理解与闭环编排详细设计.md` §11。
+
+```bash
+# 只预览，不生成或部署 PLC；--confirm 为无终端输入模式，采用的默认值会留档
+python -m src.agent.chat --request "画一个圆，半径20" --preview-only --confirm
+# 交互澄清后，用浏览器打开预览
+python -m src.agent.chat --request "画一个正方形" --preview-only --open-preview
+# 回放已有运行（不连接模型或 PLC）
+python -m src.agent.replay runs/plotter_cell --open
+```
+
+预览位置会打印到终端；`--runs-root` 可指定产物根目录，`--answers` 可读取预先回答的 JSON。新任务验收完成或失败后自动生成 `replay.html`；历史运行缺少采样时只回放已保存的日志。
+
+## SVG 路径输入
+
+SVG 可直接作为绘图轮廓，支持路径命令、贝塞尔曲线、椭圆弧、基础形状与分组变换。系统等比适配到设备坐标框，按当前 IO 编码精度量化路点，并为独立路径安排抬落笔；超行程、点数超预算或不支持的可见元素会在生成前报错。范围与参数见 `docs/gc-需求理解与闭环编排详细设计.md` §12。
+
+```bash
+# 无需模型或 PLC 即可预览；宽高使用设备坐标，不是 SVG 的毫米/像素
+python -m src.agent.chat --svg examples/svg/house.svg --svg-width 60 --svg-height 60 --preview-only --confirm --open-preview
+# 配置模型后，去掉 --preview-only 进入现有生成流程；--runs-root 可指定产物目录
+```
+
+任务目录同时保存 `input.svg`、含源文件校验值的 `trajectory.json` 和交互预览。网页生成按冻结轨迹检查实际路点与接触笔迹，验收证据绑定同一份 XML、规格、场景和采样；历史产物缺少对应证据时不会补记通过。见 gc 设计 §13.18。
+
+## PLC 与仿真工作台
+
+在项目根目录启动：
+
+```bash
+python -m src.agent.web --open
+```
+
+打开 `http://127.0.0.1:8765`，在“绘图素材与参数”选择轨迹来源：语言模式可直接输入“画一个正方形，边长40”或“画一个圆，半径20”，无需 SVG 或选区；SVG 模式支持导入、选择路径和调整参数。预览后使用默认工艺或向右侧 Agent 补充要求，核对规格，再点击“生成并验证 PLC”。缺省几何参数在界面明示；切换来源保留绘图输入并使旧规格失效。见 gc 设计 §13.20。
+
+页面显示后台进度；新产物须通过静态校验、真实编译部署及物理仿真验收，才提供场景描述 `scene.spec.json`（内含 `io_map`）与最终 `plcopen.xml`。当前任务未成功时不显示旧结果。服务读取项目现有模型配置；未配置模型时仍可规划、预览和使用默认工艺。
+
+页面顶部提供 **AML、组件库、SVG** 三个基础资产区：查看当前文件与内容，上传替换或下载。组件库包含接口契约和物理参数，可导出整个 JSON 包修改后替换，也可单独替换契约或物理参数 JSON。替换先校验，失败保留当前资产；成功使旧规格失效，生成保存不可变资产快照。范围及文件格式见 gc 设计 §13.4。
+
+页面按两个业务部分切换：
+
+1. **资产管理与 PLC 代码生成**：左侧管理资产、绘图素材与折叠参数，右侧固定 PLC 生成栏；可使用默认工艺直接准备生成，或对话补充要求。支持清空会话上下文并保留资产、轨迹和历史交付；对话仅回显简洁工艺目标。交付场景描述 JSON 和最终 PLC XML。
+2. **仿真与验证**：整合场景构建、PLC 部署、Runtime 启停、模型运行与验收。参考 CSP Studio，左侧是运行配置、HMI 按钮/状态灯和分轴数值，右侧显示实际模型与笔迹；下方提供验收结果、信号趋势、运行日志与历史记录。自动运行时面板只读；连接手动调试后可操作 BOOL 输入，触发按钮使用至少 150ms 脉冲。网页显示实际 MuJoCo 几何与运动，支持旋转、平移、滚轮缩放和高清显示。
+
+通过“导入场景与 PLC”配对上传外部场景 JSON 与 PLC XML，按当前 AML/组件库校验；可选上传需求规格 JSON 以配置验收。未提供规格时仅允许手动调试，不报告工艺验收通过。任务选择器可切回原工作台产物，导入不覆盖已有交付。
+仿真与验证经 `DEPLOY_URL`（默认 `http://127.0.0.1:8600/deploy`）接入 lx 部署服务。服务使用 `OPENPLC_URL`、`MODBUS_HOST`、`MODBUS_PORT` 连接 Runtime；非默认登录可设置 `OPENPLC_USERNAME` / `OPENPLC_PASSWORD`，无需在浏览器填写。部署仍由 `run_deploy.py` 执行 XML 转换、真编译和启动；新产物生成期间会自动部署并验收，已有交付或外部导入也可在第二页显式部署运行。启动模型前核验任务、程序身份与部署回执；停止后保留真实笔迹，后端重启也可查看上次快照。见 gc 设计 §13.8~13.13、§13.18。
+
+SVG 工作台新会话默认使用 `plotter3axis_precision_station.aml`。位置输出 `x_cmd/y_cmd/z_cmd` 保留 `%QW3/4/5` 地址，以 0.01 个轴工程单位编码，量程放大100倍后仍在 INT16 域；反馈和设备行程保持原单位，桥按各自量程换算。生成器直接使用 REAL 插补状态编码，SVG 小数路点量化为0.01，默认曲线展开容差0.02。原 `x_v/y_v/z_v` 保留诊断，`prog_id` 定位 `%QW20`。旧 `plotter3axis_csp_station.aml` 与交付仍可读取；资产量程变化后须重新生成并部署相应 XML。详见 gc 设计 §13.10~13.12。
+
+这是带 Python 后端的交互页面，需要保持服务运行；原有独立 HTML 预览仍可直接打开。默认产物保存到 `E:\chagpt\308sjk-svg-workbench`，可用 `--runs-root` 覆盖；`--port` 修改端口，`--aml` 指定设备模型。生成失败时保留候选和证据，按故障库与归因修复；重复候选及时停止，通信中断与代码失败分开处理。详细机制见 gc 设计 §13。

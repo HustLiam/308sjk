@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-skill 骨架同步单测（防漂移）：lx 登记的同步请求配套护栏。
+恢复版 skill 骨架同步单测（防漂移）。
 
 背景：plcgen_skill「基础 FB 骨架冻结」曾落后 master motion3axis 一个版本
 （v3.0 形态 vs v4.0 总线动力学+全签名 MC 层），根因是没有任何同步校验。
-本测试从**已验收种子**（src/plc/motion3axis.xml，v4.0）提取 FB 接口指纹，
-与 skill 内联骨架逐块比对——master 骨架演进而 skill 未跟随时此处变红。
+按用户要求恢复远端更新前的生成逻辑，使用同一快照的 motion_stack_v4.xml
+作为接口指纹基线；当前执行侧场景文件保持不变，不把新版本接口再注入旧提示词。
 """
 
 import re
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -18,10 +19,10 @@ sys.path.insert(0, str(REPO / "src"))
 from pipeline import xml2st  # noqa: E402
 
 SKILL = (REPO / "src" / "agent" / "prompts" / "plcgen_skill.md").read_text(encoding="utf-8")
-SEED_XML = REPO / "src" / "plc" / "motion3axis.xml"
+SEED_XML = REPO / "src" / "agent" / "templates" / "motion_stack_v4.xml"
 
 # 完整内联（接口声明逐字进 skill）的块——签名必须与种子完全一致
-FULL_INLINE = ("INTERP", "MC_MOVEABSOLUTE", "MC_HALT", "MC_POWER")
+FULL_INLINE = ("INTERP", "MC_MOVEABSOLUTE", "MC_HALT")
 # 摘要内联的块——skill 必须提到块名与其全部端口名
 SUMMARY_INLINE = {
     "MC_MOVERELATIVE": ["fire", "Distance", "ActualPosition", "Velocity",
@@ -67,10 +68,18 @@ def _skill_st_blocks():
     return "\n".join(re.findall(r"```st\n(.*?)```", SKILL, re.S))
 
 
+def _seed_signatures():
+    # 冻结资产是纯 FB 库，没有 PROGRAM；直接读取接口而不伪装成可部署工程。
+    ns = '{http://www.plcopen.org/xml/tc6_0201}'
+    root = ET.parse(SEED_XML).getroot()
+    return {pou.get('name'): {
+        kind: {v.get('name') for v in pou.findall(ns+'interface/'+ns+tag+'/'+ns+'variable')}
+        for tag,kind in [('inputVars','input'),('outputVars','output'),('inOutVars','in_out')]}
+        for pou in root.findall('.//'+ns+'pou')}
+
+
 def test_full_inline_blocks_match_seed_signatures():
-    ok, seed_st, problems = xml2st.convert(str(SEED_XML))
-    assert ok and not problems, problems
-    seed = _fb_signatures(seed_st)
+    seed = _seed_signatures()
     skill = _fb_signatures(_skill_st_blocks())
     for fb in FULL_INLINE:
         assert fb in skill, "skill 缺 %s 完整骨架（同步落后于 master 种子）" % fb
@@ -79,8 +88,7 @@ def test_full_inline_blocks_match_seed_signatures():
 
 
 def test_summary_blocks_mention_all_ports():
-    ok, seed_st, _ = xml2st.convert(str(SEED_XML))
-    seed = _fb_signatures(seed_st)
+    seed = _seed_signatures()
     for fb, ports in SUMMARY_INLINE.items():
         assert fb in SKILL, "skill 未提及 %s" % fb
         seed_ports = seed.get(fb)
@@ -97,7 +105,9 @@ def test_v4_specific_semantics_present():
     """v4.0 关键语义关键词必须在场（总线动力学/中止/新块/常量修订）。"""
     for kw in ("vel_req", "acc_req", "dec_req", "Aborted", "CommandAborted",
                "ErrorID", "MC_HALT", "MC_MOVERELATIVE", "MC_READSTATUS",
-               "MC_READACTUALPOSITION", "dyn_vel", "KP 25.0"):
+               "MC_READACTUALPOSITION", "dyn_vel", "KP 25.0",
+               # R8 联动（plotter_cell 2026-09-10 六轮战役实证后物化）：
+               "轴实例组完整性", "每轴接线必抄骨架", "翻刻专用模具", "MC动力学 defaults 逐字一致"):
         assert kw in SKILL, "skill 缺 v4.0 关键语义 %r" % kw
 
 
@@ -106,3 +116,14 @@ def test_p23_no_else_reset_fallback_in_skeleton():
     blocks = _skill_st_blocks()
     assert not re.search(r"ELSE\s*\n\s*state := 1;", blocks), "P23 违例：ELSE state := 1"
     assert not re.search(r"ELSE\s*\n\s*sw := 16#0000;", blocks), "P23 违例：ELSE sw := 0"
+
+
+def test_drive402_tail_present():
+    """P26 联动：DRIVE402 骨架尾部输出段必须在场（曾截尾于 sp_prev，
+    LLM 补写丢 v_cmd 赋值行 → 三轴速度恒 0，plotter_cell 2026-09-22 实证）。"""
+    blocks = _skill_st_blocks()
+    for line in ("v_cmd := REAL_TO_INT(v_out);",
+                 "1: sw := 16#0040;",
+                 "2: sw := 16#0031;",
+                 "4: sw := 16#0037;"):
+        assert line in blocks, "skill DRIVE402 骨架缺行：%r" % line

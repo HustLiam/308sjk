@@ -133,8 +133,8 @@
     "空转",
     "赋值消失"
    ],
-   "diagnosis": "主程序内单扫描选通/边沿记忆变量的赋值被优化器静默丢弃（症状：序列器步进空转、FB 状态不翻转、手动路径正常）",
-   "fix": "改连续跟踪模式：触发线全程电平保持，目标值变化自动起新轨迹（INTERP 增 fire AND NOT Busy AND 目标变化分支）；或经 %QX 线圈级信号驱动。PLC_PRG 内不写单扫描脉冲逻辑",
+   "diagnosis": "主程序内单扫描选通/边沿记忆变量的赋值被优化器静默丢弃（症状：序列器步进空转、FB 状态不翻转、手动路径正常）。2026-09-22 机制确认（P24）：『优化器』是 OpenPLC compile_program.sh 前置的 st_optimizer 二进制——IF 头行文本与文件内更早出现者完全相同时整块跳过=赋值消失",
+   "fix": "改连续跟踪模式：触发线全程电平保持，目标值变化自动起新轨迹（INTERP 增 fire AND NOT Busy AND 目标变化分支）；或经 %QX 线圈级信号驱动。PLC_PRG 内不写单扫描脉冲逻辑。根治见 P24（运行时已禁用 st_optimizer，2026-09-22）",
    "source": "plotter3axis 诊断口实证 2026-09-07（避坑7 变体）"
   },
   {
@@ -251,9 +251,9 @@
     "when invoking FB",
     "used for parameter"
    ],
-   "diagnosis": "FB 调用时给非 VAR_INPUT 的内部变量传值（如 go_x(interp_exe := x)——interp_exe 是 FB 内部 VAR 不是形参）",
-   "fix": "只给 VAR_INPUT 形参赋值；FB 内部状态经 FB 输出读回后在主程序里用，或把该变量提为 VAR_INPUT",
-   "source": "plotter_sq_traj iter1 编译实证 2026-09-08"
+   "diagnosis": "FB 调用时给非 VAR_INPUT 的内部变量传值（如 go_x(interp_exe := x)——interp_exe 是 FB 内部 VAR 不是形参）；变体（2026-09-22 plotter_cell iter6 实证）：把 home_exe/jog_pos 这类双向状态参数从骨架的 VAR_IN_OUT 挪进 VAR_OUTPUT 后仍在调用处 := 绑定",
+   "fix": "调用实参表只绑 VAR_INPUT/VAR_IN_OUT 形参；VAR_OUTPUT 一律经实例字段读回（hm_x.Done 形态）。FB↔调用侧每扫描双向传递的状态参数（MC_HOME.home_exe、MC_MOVEJOG.jog_pos）必须保持骨架的 VAR_IN_OUT 声明——VAR_IN_OUT 在调用处 := 绑定合法",
+   "source": "plotter_sq_traj iter1 编译实证 2026-09-08；VAR_OUTPUT 变体 plotter_cell iter6 2026-09-22"
   },
   {
    "id": "P20",
@@ -306,9 +306,62 @@
     "Z 轴 bit2=1 bit4=1 bit5=1",
     "cmd_home（落笔态）：Z 回参考点=抬笔安全位"
    ],
-   "diagnosis": "驱动/MC 层 CASE 状态机加了 ELSE 复位兜底（ELSE state := 1 / ELSE sw := 0——旧 skill 规则『CASE 一律带 ELSE』的误导形态）。三轴同款 FB 实例并行时，matiec 优化器合并缺陷会周期性触发该兜底分支：驱动被反复拽回重握手，三轴 sw 同步在 0031→0033→0437 间循环、all_oe 闪烁。后果二选一：cmd_home 脉冲时刻 all_oe=FALSE，回参考点被使能前置条件拒绝（z_sw=0437 停在原位形成『假到位』，Z 永不动）；或使能跟随门以 all_oe 为条件反复坍缩（设定点钉回反馈值），抬笔远超 3s 预算。双侧对照实验定位：删 MC_POWER 自愈分支/硬接 Enable 均不能止振；**仅删两个 ELSE 分支（+pstep 显式初值）三轴 sw 立即恒稳 0437**，[2b] 段通过（plotter_cell iter3 补丁在线实证 2026-09-09）",
-   "fix": "状态值域封闭（只赋合法值）且显式初值时，CASE **不加** ELSE 复位兜底；三轴同款 FB（pwr/dv/interp 多实例）下尤其禁止 ELSE 内复位到重握手态（state := 1）或清输出（sw := 0）。需要防记错状态时用『ELSE 保持现状态不变』的空兜底。MC_POWER 的 pstep=4 掉线自愈分支（单扫描 sw 判定）可保留——无 ELSE 干扰时实测稳定。与 P18 的边界：显式初值始终必需；ELSE 兜底仅当状态确实可能越界，且兜底动作不得触发全握手重跑",
+   "diagnosis": "驱动/MC 层 CASE 状态机加了 ELSE 复位兜底（ELSE state := 1 / ELSE sw := 0——旧 skill 规则『CASE 一律带 ELSE』的误导形态）。三轴同款 FB 实例并行时，matiec 优化器合并缺陷会周期性触发该兜底分支：驱动被反复拽回重握手，三轴 sw 同步在 0031→0033→0437 间循环、all_oe 闪烁。后果二选一：cmd_home 脉冲时刻 all_oe=FALSE，回参考点被使能前置条件拒绝（z_sw=0437 停在原位形成『假到位』，Z 永不动）；或使能跟随门以 all_oe 为条件反复坍缩（设定点钉回反馈值），抬笔远超 3s 预算。双侧对照实验定位：删 MC_POWER 自愈分支/硬接 Enable 均不能止振；**仅删两个 ELSE 分支（+pstep 显式初值）三轴 sw 立即恒稳 0437**，[2b] 段通过（plotter_cell iter3 补丁在线实证 2026-09-09）。2026-09-22 增补：此『优化器』确认为 OpenPLC st_optimizer 而非 matiec 本体（P24 详述机制并已运行时禁用）",
+   "fix": "状态值域封闭（只赋合法值）且显式初值时，CASE **不加** ELSE 复位兜底；三轴同款 FB（pwr/dv/interp 多实例）下尤其禁止 ELSE 内复位到重握手态（state := 1）或清输出（sw := 0）。需要防记错状态时用『ELSE 保持现状态不变』的空兜底。MC_POWER 的 pstep=4 掉线自愈分支（单扫描 sw 判定）可保留——无 ELSE 干扰时实测稳定。与 P18 的边界：显式初值始终必需；ELSE 兜底仅当状态确实可能越界，且兜底动作不得触发全握手重跑 若产物无 ELSE 兜底仍见此症状，查第二变体：FB 触发输入被硬编码 FALSE（如 hm_z(fire := FALSE)）——触发脚必须接真实命令信号（cmd_home 等），不需要的功能删整行而非假接线。",
    "source": "plotter_cell iter2-5 在线战役实证 + 三组对照补丁实验（自愈分支移除/Enable 硬接/仅删 ELSE）2026-09-09"
+  },
+  {
+   "id": "P24",
+   "domain": "optimizer",
+   "title": "OpenPLC st_optimizer 同名 IF 头跨 POU 合并：合法 ST 被改写后 matiec 报错行号错乱",
+   "signatures": [
+    "invalid variable before ':=' in ST assignment statement",
+    "invalid statement list in 'ELSEIF' statement of ST 'IF' statement",
+    "Optimizing ST program"
+   ],
+   "diagnosis": "OpenPLC compile_program.sh 在 matiec 之前跑 ./st_optimizer 对上传件**原地改写**（源码 utils/st_optimizer_src/st_optimizer.cpp）：遇到首个 IF 块后向全文件扫描，把与其**头行文本完全相同**的后续 IF 块的**函数体**（剥掉 IF/END_IF 壳）拼接进首个块内，随后同名块整块丢弃。同一 ST 文件内跨 POU/FB 出现字节相同的 IF 头行即触发（plotter_cell 2026-09-22：INTERP 与 INTERP_Z 各有一行 `IF hold_req THEN`，Z 的 21 行体被搬进 INTERP、Z 自身残废——matiec 报 9 处 invalid variable + 2 处 ELSEIF 错，行号与本地产物语义对不上，修复回路原地打转三轮）。与 P10 同源（整块跳过=赋值消失），P23 的『优化器』亦是此件。判别法：本地产物 plc.st 合法但部署编译挂 + 报错行内容与本地同行号不符",
+   "fix": "根治=运行时禁用 st_optimizer：容器内 compile_program.sh 注释 `./st_optimizer` 行（2026-09-22 已落地 192.168.12.131 容器，标记 #DISABLED-GC-P24；禁用后 iter6 原件编译全绿实证）。环境不可改时的生成侧止血：同一文件内跨 POU 禁止文本完全相同的 IF 头行（拆轴专用 FB 时条件行带轴名区分）。诊断口诀：部署编译挂且行号对不上时，先取容器 st_files/<n>.st 与本地 plc.st 比对确认被改写",
+   "source": "plotter_cell iter2/4/6 三轮同错实证 + st_optimizer.cpp 源码核读 + 上传还原实验（上传 17945B 合法 ST 落盘 17921B 错序件）2026-09-22"
+  },
+  {
+   "id": "P25",
+   "domain": "runtime",
+   "title": "x_sw 无驱动源：漏 dv_x.sw 回拷行，上电段三轴 sw 恒 0000",
+   "signatures": [
+    "[1] 上电（run=0）：三轴 Ready To Switch On",
+    "FAIL X 轴 sw.bit0=1 (实际 0000)",
+    "FAIL Y 轴 sw.bit0=1 (实际 0000)",
+    "FAIL Z 轴 sw.bit0=1 (实际 0000)"
+   ],
+   "diagnosis": "PLC_PRG 漏写驱动状态回拷行（x_sw := dv_x.sw; 及 x_v := dv_x.v_cmd;——motion3axis/plotter 种子接线节必有）。x_sw 是定位变量且唯一赋值点就是这行，漏后恒 0；上电段 [1] 判 sw.bit0=1 三轴全挂而 all_oe/pen_down 正常（程序在跑，纯接线缺失）。常见自创错误路由：借 MC_READSTATUS 写 x_sw——但 sw 是它的输入且该块无 sw 输出（只读状态解码器），或把 Enable 接 run 致 run=0 时不刷新。plotter_cell 2026-09-22 四轮（iter2/3/5/6）同款死线，skill 模板当时缺此行",
+   "fix": "dv_x 调用后每扫描执行 x_sw := dv_x.sw; x_v := dv_x.v_cmd;（三轴同款）；MC_READSTATUS 按模板 Enable := TRUE、sw := x_sw 直读定位变量，禁止自创中间变量路由",
+   "source": "plotter_cell 2026-09-22 四轮同款实证（skill 模板补行后关闭）"
+  },
+  {
+   "id": "P26",
+   "domain": "runtime",
+   "title": "DRIVE402 漏 v_cmd 赋值行：三轴速度输出恒 0，伺服不动而 sw 全正常",
+   "signatures": [
+    "笔抬离纸面（pen_down=FALSE，实际 3.3",
+    "Z 到参考位 10（实际 0）",
+    "hm_z_exe=1 z_interp=10"
+   ],
+   "diagnosis": "DRIVE402 骨架尾部被截（skill 曾止于 sp_prev := Setpoint;）——LLM 重构本体时漏 `v_cmd := REAL_TO_INT(v_out);`，FB 声明 v_cmd 输出但永无赋值 → x_v/y_v/z_v 恒 0 → 场景伺服（按速度指令积分位置）永不移动。判别特征：sw=0037 使能正常、hm_*_exe/插补 setpoint 正常推进、唯独 v 系寄存器恒 0；与 P23 同签名但方向不同（P23=ELSE 兜底振荡致 sw 循环；本条=sw 恒稳 0037 而 v=0）",
+   "fix": "DRIVE402 本体尾部逐字保留两段：v_cmd := REAL_TO_INT(v_out); 与 sw 输出 CASE（1:0040/2:0031/3:0033/4:0037/5:0014/7:0018 + state4 到位 OR 16#0400）——只允许改 KP/QS_DECEL 常量。skill 骨架已补全（test_drive402_tail_present 防漂移）",
+   "source": "plotter_cell sq9 四轮 [2b] 同款实证 + probe_2b 探针（hm/z_interp 正常、z_v=0）2026-09-22"
+  },
+  {
+   "id": "P27",
+   "domain": "runtime",
+   "title": "MC_HOME 用到位位 0x0400 判完成：空闲即置位吞回零触发，hm_exe 恒 0",
+   "signatures": [
+    "cmd_home 后 hm_z_exe=0",
+    "z_sw=0437",
+    "回零请求被吞"
+   ],
+   "diagnosis": "MC_HOME 本体把完成判定写成 home_exe AND (sw AND 16#0400)<>0 即清 home_exe——但 DRIVE402 的 0x0400 到位位在空闲时已置位（轴停目标上即 pos_err≤2 且 v_ff=0，sw=0437），home_exe 置位的同一扫描即被清零：ix_z 的 fire（go_z_exe OR hm_z_exe）从未为 TRUE，插补不动、0x0400 恒稳，回零请求被无声吞掉（探针实证：cmd_home 脉冲后 hm_z_exe/pl_step/z_interp 全 0）。与 P23 第二变体的区别：那边 fire 被常量封死，这边 fire 正常但完成判定吞触发",
+   "fix": "MC_HOME 完成判定只允许故障位：IF home_exe AND (sw AND 16#0008) <> 0 THEN home_exe := FALSE;——运动完成的清零由 PLC_PRG 的 IF ix_z.Done OR ix_z.Aborted THEN ... hm_z_exe := FALSE; 承担（模板既有行）。禁止用 0x0400 到位位做任何 FB 的完成/启动判定（它陈述『现在没在动』而非『任务完成』）",
+   "source": "plotter_cell sq10 iter3/iter4 [2b] 同款 + probe_2b 探针（hm_z_exe 恒 0、z_sw=0437）2026-09-22"
   }
  ]
 }
