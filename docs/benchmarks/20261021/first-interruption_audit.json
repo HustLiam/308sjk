@@ -1,0 +1,43 @@
+{
+  "audit_at": "2026-10-21T01:30:36.415842+00:00",
+  "status": "interrupted",
+  "complete_cases": [
+    "hexagon_r15"
+  ],
+  "interrupted_attempts": [
+    {
+      "case": "heptagon_r15",
+      "status": "interrupted",
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_verified_20261020_161033_heptagon_r15",
+      "requests_saved": 4,
+      "completed_call_timings": 3,
+      "requests_without_complete_response": [
+        "call_004.request.json"
+      ],
+      "recorded_call_duration_s": 75.0,
+      "total_duration_s": null,
+      "note": "No result or active process at audit. Full elapsed time and outcome of the in-flight request were not recorded; do not invent a duration or verdict."
+    }
+  ],
+  "never_started_cases": [
+    "heptagon_r30",
+    "circle_r15",
+    "circle_r30",
+    "rectangle_r15",
+    "rectangle_r30",
+    "irregular_r15",
+    "irregular_r30",
+    "concave_r15",
+    "concave_r30",
+    "ellipse_r15",
+    "ellipse_r30",
+    "triangle_r15",
+    "triangle_r30",
+    "square_r15",
+    "square_r30",
+    "pentagon_r15",
+    "pentagon_r30",
+    "hexagon_r30"
+  ],
+  "recovery_protocol": "D:\\Study\\SIMENS PLC\\workspace\\benchmark_general_resume_20261021\\protocol.json"
+}

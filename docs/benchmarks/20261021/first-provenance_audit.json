@@ -1,0 +1,41 @@
+{
+  "benchmark": "bench_verified_20261020_161033",
+  "audit_type": "read-only text equality of extracted model XML (normal filesystem newline normalization)",
+  "cases": [
+    {
+      "case": "hexagon_r15",
+      "iterations": [
+        {
+          "iteration": "iter_001",
+          "matches_raw_model_response": [
+            "call_004.response.json"
+          ],
+          "full_xml_provenance_verified": true
+        },
+        {
+          "iteration": "iter_002",
+          "matches_raw_model_response": [
+            "call_005.response.json"
+          ],
+          "full_xml_provenance_verified": true
+        }
+      ],
+      "plan_present": true,
+      "plan_model_response_matches": [
+        "call_003.response.json"
+      ],
+      "llm_plan_provenance_verified": true
+    },
+    {
+      "case": "heptagon_r15",
+      "iterations": [],
+      "plan_present": true,
+      "plan_model_response_matches": [
+        "call_003.response.json"
+      ],
+      "llm_plan_provenance_verified": true
+    }
+  ],
+  "model_calls_for_audit": 0,
+  "deployments_for_audit": 0
+}

@@ -1,0 +1,1193 @@
+{
+  "id": "bench_resume_20261021_093036",
+  "model": "deepseek-flash",
+  "api_url": "https://api.deepseek.com",
+  "max_iters": 6,
+  "case_timeout_s": 2400,
+  "cases": [
+    {
+      "id": "heptagon_r15",
+      "family": "heptagon",
+      "label": "正七边形",
+      "scale": 15,
+      "vertices": [
+        [
+          65.0,
+          50.0
+        ],
+        [
+          59.352,
+          61.727
+        ],
+        [
+          46.662,
+          64.624
+        ],
+        [
+          36.485,
+          56.508
+        ],
+        [
+          36.485,
+          43.492
+        ],
+        [
+          46.662,
+          35.376
+        ],
+        [
+          59.352,
+          38.273
+        ]
+      ],
+      "request": "三轴CSP绘图仪画一个正七边形。中心(50,50)，外接圆半径15；首顶点(65,50)，逆时针逐顶点直线闭合。X/Y使用0..100工程坐标，Z使用毫米。run使能且cmd_draw上升沿启动，cmd_reset复位。先抬笔到Z=10后移动到首顶点，落笔到Z=0，完成全部绘制后先抬笔到Z=10，再回(50,50,10)，静止后保持plot_done。pen_down必须反映真实接触，依据z_fb<=1判定，不得用状态序号或命令值掩盖接触。传感器反馈到PLC派生状态的一致性允许最多40ms异步响应，使用显式派生状态响应预算；安全互锁不使用此预算。从启动到完整收尾60秒以内；所有到位检查使用设备poswin。未使能时不得运动。"
+    },
+    {
+      "id": "heptagon_r30",
+      "family": "heptagon",
+      "label": "正七边形",
+      "scale": 30,
+      "vertices": [
+        [
+          80.0,
+          50.0
+        ],
+        [
+          68.705,
+          73.455
+        ],
+        [
+          43.324,
+          79.248
+        ],
+        [
+          22.971,
+          63.017
+        ],
+        [
+          22.971,
+          36.983
+        ],
+        [
+          43.324,
+          20.752
+        ],
+        [
+          68.705,
+          26.545
+        ]
+      ],
+      "request": "三轴CSP绘图仪画一个正七边形。中心(50,50)，外接圆半径30；首顶点(80,50)，逆时针逐顶点直线闭合。X/Y使用0..100工程坐标，Z使用毫米。run使能且cmd_draw上升沿启动，cmd_reset复位。先抬笔到Z=10后移动到首顶点，落笔到Z=0，完成全部绘制后先抬笔到Z=10，再回(50,50,10)，静止后保持plot_done。pen_down必须反映真实接触，依据z_fb<=1判定，不得用状态序号或命令值掩盖接触。传感器反馈到PLC派生状态的一致性允许最多40ms异步响应，使用显式派生状态响应预算；安全互锁不使用此预算。从启动到完整收尾60秒以内；所有到位检查使用设备poswin。未使能时不得运动。"
+    },
+    {
+      "id": "circle_r15",
+      "family": "circle",
+      "label": "圆",
+      "scale": 15,
+      "vertices": [
+        [
+          65.0,
+          50.0
+        ],
+        [
+          64.772,
+          52.605
+        ],
+        [
+          64.095,
+          55.13
+        ],
+        [
+          62.99,
+          57.5
+        ],
+        [
+          61.491,
+          59.642
+        ],
+        [
+          59.642,
+          61.491
+        ],
+        [
+          57.5,
+          62.99
+        ],
+        [
+          55.13,
+          64.095
+        ],
+        [
+          52.605,
+          64.772
+        ],
+        [
+          50.0,
+          65.0
+        ],
+        [
+          47.395,
+          64.772
+        ],
+        [
+          44.87,
+          64.095
+        ],
+        [
+          42.5,
+          62.99
+        ],
+        [
+          40.358,
+          61.491
+        ],
+        [
+          38.509,
+          59.642
+        ],
+        [
+          37.01,
+          57.5
+        ],
+        [
+          35.905,
+          55.13
+        ],
+        [
+          35.228,
+          52.605
+        ],
+        [
+          35.0,
+          50.0
+        ],
+        [
+          35.228,
+          47.395
+        ],
+        [
+          35.905,
+          44.87
+        ],
+        [
+          37.01,
+          42.5
+        ],
+        [
+          38.509,
+          40.358
+        ],
+        [
+          40.358,
+          38.509
+        ],
+        [
+          42.5,
+          37.01
+        ],
+        [
+          44.87,
+          35.905
+        ],
+        [
+          47.395,
+          35.228
+        ],
+        [
+          50.0,
+          35.0
+        ],
+        [
+          52.605,
+          35.228
+        ],
+        [
+          55.13,
+          35.905
+        ],
+        [
+          57.5,
+          37.01
+        ],
+        [
+          59.642,
+          38.509
+        ],
+        [
+          61.491,
+          40.358
+        ],
+        [
+          62.99,
+          42.5
+        ],
+        [
+          64.095,
+          44.87
+        ],
+        [
+          64.772,
+          47.395
+        ]
+      ],
+      "request": "三轴CSP绘图仪画一个圆。圆心(50,50)，半径15；从最右侧开始逆时针，至少36段近似闭合曲线。X/Y使用0..100工程坐标，Z使用毫米。run使能且cmd_draw上升沿启动，cmd_reset复位。先抬笔到Z=10后移动到首顶点，落笔到Z=0，完成全部绘制后先抬笔到Z=10，再回(50,50,10)，静止后保持plot_done。pen_down必须反映真实接触，依据z_fb<=1判定，不得用状态序号或命令值掩盖接触。传感器反馈到PLC派生状态的一致性允许最多40ms异步响应，使用显式派生状态响应预算；安全互锁不使用此预算。从启动到完整收尾60秒以内；所有到位检查使用设备poswin。未使能时不得运动。"
+    },
+    {
+      "id": "circle_r30",
+      "family": "circle",
+      "label": "圆",
+      "scale": 30,
+      "vertices": [
+        [
+          80.0,
+          50.0
+        ],
+        [
+          79.544,
+          55.209
+        ],
+        [
+          78.191,
+          60.261
+        ],
+        [
+          75.981,
+          65.0
+        ],
+        [
+          72.981,
+          69.284
+        ],
+        [
+          69.284,
+          72.981
+        ],
+        [
+          65.0,
+          75.981
+        ],
+        [
+          60.261,
+          78.191
+        ],
+        [
+          55.209,
+          79.544
+        ],
+        [
+          50.0,
+          80.0
+        ],
+        [
+          44.791,
+          79.544
+        ],
+        [
+          39.739,
+          78.191
+        ],
+        [
+          35.0,
+          75.981
+        ],
+        [
+          30.716,
+          72.981
+        ],
+        [
+          27.019,
+          69.284
+        ],
+        [
+          24.019,
+          65.0
+        ],
+        [
+          21.809,
+          60.261
+        ],
+        [
+          20.456,
+          55.209
+        ],
+        [
+          20.0,
+          50.0
+        ],
+        [
+          20.456,
+          44.791
+        ],
+        [
+          21.809,
+          39.739
+        ],
+        [
+          24.019,
+          35.0
+        ],
+        [
+          27.019,
+          30.716
+        ],
+        [
+          30.716,
+          27.019
+        ],
+        [
+          35.0,
+          24.019
+        ],
+        [
+          39.739,
+          21.809
+        ],
+        [
+          44.791,
+          20.456
+        ],
+        [
+          50.0,
+          20.0
+        ],
+        [
+          55.209,
+          20.456
+        ],
+        [
+          60.261,
+          21.809
+        ],
+        [
+          65.0,
+          24.019
+        ],
+        [
+          69.284,
+          27.019
+        ],
+        [
+          72.981,
+          30.716
+        ],
+        [
+          75.981,
+          35.0
+        ],
+        [
+          78.191,
+          39.739
+        ],
+        [
+          79.544,
+          44.791
+        ]
+      ],
+      "request": "三轴CSP绘图仪画一个圆。圆心(50,50)，半径30；从最右侧开始逆时针，至少36段近似闭合曲线。X/Y使用0..100工程坐标，Z使用毫米。run使能且cmd_draw上升沿启动，cmd_reset复位。先抬笔到Z=10后移动到首顶点，落笔到Z=0，完成全部绘制后先抬笔到Z=10，再回(50,50,10)，静止后保持plot_done。pen_down必须反映真实接触，依据z_fb<=1判定，不得用状态序号或命令值掩盖接触。传感器反馈到PLC派生状态的一致性允许最多40ms异步响应，使用显式派生状态响应预算；安全互锁不使用此预算。从启动到完整收尾60秒以内；所有到位检查使用设备poswin。未使能时不得运动。"
+    },
+    {
+      "id": "rectangle_r15",
+      "family": "rectangle",
+      "label": "长方形",
+      "scale": 15,
+      "vertices": [
+        [
+          65,
+          57.5
+        ],
+        [
+          35,
+          57.5
+        ],
+        [
+          35,
+          42.5
+        ],
+        [
+          65,
+          42.5
+        ]
+      ],
+      "request": "三轴CSP绘图仪画一个长方形。按以下顶点顺序逐段直线绘制并闭合：[[65, 57.5], [35, 57.5], [35, 42.5], [65, 42.5]]。X/Y使用0..100工程坐标，Z使用毫米。run使能且cmd_draw上升沿启动，cmd_reset复位。先抬笔到Z=10后移动到首顶点，落笔到Z=0，完成全部绘制后先抬笔到Z=10，再回(50,50,10)，静止后保持plot_done。pen_down必须反映真实接触，依据z_fb<=1判定，不得用状态序号或命令值掩盖接触。传感器反馈到PLC派生状态的一致性允许最多40ms异步响应，使用显式派生状态响应预算；安全互锁不使用此预算。从启动到完整收尾60秒以内；所有到位检查使用设备poswin。未使能时不得运动。"
+    },
+    {
+      "id": "rectangle_r30",
+      "family": "rectangle",
+      "label": "长方形",
+      "scale": 30,
+      "vertices": [
+        [
+          80,
+          65.0
+        ],
+        [
+          20,
+          65.0
+        ],
+        [
+          20,
+          35.0
+        ],
+        [
+          80,
+          35.0
+        ]
+      ],
+      "request": "三轴CSP绘图仪画一个长方形。按以下顶点顺序逐段直线绘制并闭合：[[80, 65.0], [20, 65.0], [20, 35.0], [80, 35.0]]。X/Y使用0..100工程坐标，Z使用毫米。run使能且cmd_draw上升沿启动，cmd_reset复位。先抬笔到Z=10后移动到首顶点，落笔到Z=0，完成全部绘制后先抬笔到Z=10，再回(50,50,10)，静止后保持plot_done。pen_down必须反映真实接触，依据z_fb<=1判定，不得用状态序号或命令值掩盖接触。传感器反馈到PLC派生状态的一致性允许最多40ms异步响应，使用显式派生状态响应预算；安全互锁不使用此预算。从启动到完整收尾60秒以内；所有到位检查使用设备poswin。未使能时不得运动。"
+    },
+    {
+      "id": "irregular_r15",
+      "family": "irregular",
+      "label": "非正凸五边形",
+      "scale": 15,
+      "vertices": [
+        [
+          65,
+          50
+        ],
+        [
+          54.5,
+          62.0
+        ],
+        [
+          38.0,
+          57.5
+        ],
+        [
+          41.0,
+          39.5
+        ],
+        [
+          59.0,
+          44.0
+        ]
+      ],
+      "request": "三轴CSP绘图仪画一个非正凸五边形。按以下顶点顺序逐段直线绘制并闭合：[[65, 50], [54.5, 62.0], [38.0, 57.5], [41.0, 39.5], [59.0, 44.0]]。X/Y使用0..100工程坐标，Z使用毫米。run使能且cmd_draw上升沿启动，cmd_reset复位。先抬笔到Z=10后移动到首顶点，落笔到Z=0，完成全部绘制后先抬笔到Z=10，再回(50,50,10)，静止后保持plot_done。pen_down必须反映真实接触，依据z_fb<=1判定，不得用状态序号或命令值掩盖接触。传感器反馈到PLC派生状态的一致性允许最多40ms异步响应，使用显式派生状态响应预算；安全互锁不使用此预算。从启动到完整收尾60秒以内；所有到位检查使用设备poswin。未使能时不得运动。"
+    },
+    {
+      "id": "irregular_r30",
+      "family": "irregular",
+      "label": "非正凸五边形",
+      "scale": 30,
+      "vertices": [
+        [
+          80,
+          50
+        ],
+        [
+          59.0,
+          74.0
+        ],
+        [
+          26.0,
+          65.0
+        ],
+        [
+          32.0,
+          29.0
+        ],
+        [
+          68.0,
+          38.0
+        ]
+      ],
+      "request": "三轴CSP绘图仪画一个非正凸五边形。按以下顶点顺序逐段直线绘制并闭合：[[80, 50], [59.0, 74.0], [26.0, 65.0], [32.0, 29.0], [68.0, 38.0]]。X/Y使用0..100工程坐标，Z使用毫米。run使能且cmd_draw上升沿启动，cmd_reset复位。先抬笔到Z=10后移动到首顶点，落笔到Z=0，完成全部绘制后先抬笔到Z=10，再回(50,50,10)，静止后保持plot_done。pen_down必须反映真实接触，依据z_fb<=1判定，不得用状态序号或命令值掩盖接触。传感器反馈到PLC派生状态的一致性允许最多40ms异步响应，使用显式派生状态响应预算；安全互锁不使用此预算。从启动到完整收尾60秒以内；所有到位检查使用设备poswin。未使能时不得运动。"
+    },
+    {
+      "id": "concave_r15",
+      "family": "concave",
+      "label": "凹六边形",
+      "scale": 15,
+      "vertices": [
+        [
+          65,
+          35
+        ],
+        [
+          65,
+          47.0
+        ],
+        [
+          47.0,
+          47.0
+        ],
+        [
+          47.0,
+          65
+        ],
+        [
+          35,
+          65
+        ],
+        [
+          35,
+          35
+        ]
+      ],
+      "request": "三轴CSP绘图仪画一个凹六边形。按以下顶点顺序逐段直线绘制并闭合：[[65, 35], [65, 47.0], [47.0, 47.0], [47.0, 65], [35, 65], [35, 35]]。X/Y使用0..100工程坐标，Z使用毫米。run使能且cmd_draw上升沿启动，cmd_reset复位。先抬笔到Z=10后移动到首顶点，落笔到Z=0，完成全部绘制后先抬笔到Z=10，再回(50,50,10)，静止后保持plot_done。pen_down必须反映真实接触，依据z_fb<=1判定，不得用状态序号或命令值掩盖接触。传感器反馈到PLC派生状态的一致性允许最多40ms异步响应，使用显式派生状态响应预算；安全互锁不使用此预算。从启动到完整收尾60秒以内；所有到位检查使用设备poswin。未使能时不得运动。"
+    },
+    {
+      "id": "concave_r30",
+      "family": "concave",
+      "label": "凹六边形",
+      "scale": 30,
+      "vertices": [
+        [
+          80,
+          20
+        ],
+        [
+          80,
+          44.0
+        ],
+        [
+          44.0,
+          44.0
+        ],
+        [
+          44.0,
+          80
+        ],
+        [
+          20,
+          80
+        ],
+        [
+          20,
+          20
+        ]
+      ],
+      "request": "三轴CSP绘图仪画一个凹六边形。按以下顶点顺序逐段直线绘制并闭合：[[80, 20], [80, 44.0], [44.0, 44.0], [44.0, 80], [20, 80], [20, 20]]。X/Y使用0..100工程坐标，Z使用毫米。run使能且cmd_draw上升沿启动，cmd_reset复位。先抬笔到Z=10后移动到首顶点，落笔到Z=0，完成全部绘制后先抬笔到Z=10，再回(50,50,10)，静止后保持plot_done。pen_down必须反映真实接触，依据z_fb<=1判定，不得用状态序号或命令值掩盖接触。传感器反馈到PLC派生状态的一致性允许最多40ms异步响应，使用显式派生状态响应预算；安全互锁不使用此预算。从启动到完整收尾60秒以内；所有到位检查使用设备poswin。未使能时不得运动。"
+    },
+    {
+      "id": "ellipse_r15",
+      "family": "ellipse",
+      "label": "椭圆",
+      "scale": 15,
+      "vertices": [
+        [
+          65.0,
+          50.0
+        ],
+        [
+          64.772,
+          51.302
+        ],
+        [
+          64.095,
+          52.565
+        ],
+        [
+          62.99,
+          53.75
+        ],
+        [
+          61.491,
+          54.821
+        ],
+        [
+          59.642,
+          55.745
+        ],
+        [
+          57.5,
+          56.495
+        ],
+        [
+          55.13,
+          57.048
+        ],
+        [
+          52.605,
+          57.386
+        ],
+        [
+          50.0,
+          57.5
+        ],
+        [
+          47.395,
+          57.386
+        ],
+        [
+          44.87,
+          57.048
+        ],
+        [
+          42.5,
+          56.495
+        ],
+        [
+          40.358,
+          55.745
+        ],
+        [
+          38.509,
+          54.821
+        ],
+        [
+          37.01,
+          53.75
+        ],
+        [
+          35.905,
+          52.565
+        ],
+        [
+          35.228,
+          51.302
+        ],
+        [
+          35.0,
+          50.0
+        ],
+        [
+          35.228,
+          48.698
+        ],
+        [
+          35.905,
+          47.435
+        ],
+        [
+          37.01,
+          46.25
+        ],
+        [
+          38.509,
+          45.179
+        ],
+        [
+          40.358,
+          44.255
+        ],
+        [
+          42.5,
+          43.505
+        ],
+        [
+          44.87,
+          42.952
+        ],
+        [
+          47.395,
+          42.614
+        ],
+        [
+          50.0,
+          42.5
+        ],
+        [
+          52.605,
+          42.614
+        ],
+        [
+          55.13,
+          42.952
+        ],
+        [
+          57.5,
+          43.505
+        ],
+        [
+          59.642,
+          44.255
+        ],
+        [
+          61.491,
+          45.179
+        ],
+        [
+          62.99,
+          46.25
+        ],
+        [
+          64.095,
+          47.435
+        ],
+        [
+          64.772,
+          48.698
+        ]
+      ],
+      "request": "三轴CSP绘图仪画一个椭圆。中心(50,50)，X半长轴15、Y半短轴7.5；从最右侧开始逆时针，至少36段近似闭合曲线。X/Y使用0..100工程坐标，Z使用毫米。run使能且cmd_draw上升沿启动，cmd_reset复位。先抬笔到Z=10后移动到首顶点，落笔到Z=0，完成全部绘制后先抬笔到Z=10，再回(50,50,10)，静止后保持plot_done。pen_down必须反映真实接触，依据z_fb<=1判定，不得用状态序号或命令值掩盖接触。传感器反馈到PLC派生状态的一致性允许最多40ms异步响应，使用显式派生状态响应预算；安全互锁不使用此预算。从启动到完整收尾60秒以内；所有到位检查使用设备poswin。未使能时不得运动。"
+    },
+    {
+      "id": "ellipse_r30",
+      "family": "ellipse",
+      "label": "椭圆",
+      "scale": 30,
+      "vertices": [
+        [
+          80.0,
+          50.0
+        ],
+        [
+          79.544,
+          52.605
+        ],
+        [
+          78.191,
+          55.13
+        ],
+        [
+          75.981,
+          57.5
+        ],
+        [
+          72.981,
+          59.642
+        ],
+        [
+          69.284,
+          61.491
+        ],
+        [
+          65.0,
+          62.99
+        ],
+        [
+          60.261,
+          64.095
+        ],
+        [
+          55.209,
+          64.772
+        ],
+        [
+          50.0,
+          65.0
+        ],
+        [
+          44.791,
+          64.772
+        ],
+        [
+          39.739,
+          64.095
+        ],
+        [
+          35.0,
+          62.99
+        ],
+        [
+          30.716,
+          61.491
+        ],
+        [
+          27.019,
+          59.642
+        ],
+        [
+          24.019,
+          57.5
+        ],
+        [
+          21.809,
+          55.13
+        ],
+        [
+          20.456,
+          52.605
+        ],
+        [
+          20.0,
+          50.0
+        ],
+        [
+          20.456,
+          47.395
+        ],
+        [
+          21.809,
+          44.87
+        ],
+        [
+          24.019,
+          42.5
+        ],
+        [
+          27.019,
+          40.358
+        ],
+        [
+          30.716,
+          38.509
+        ],
+        [
+          35.0,
+          37.01
+        ],
+        [
+          39.739,
+          35.905
+        ],
+        [
+          44.791,
+          35.228
+        ],
+        [
+          50.0,
+          35.0
+        ],
+        [
+          55.209,
+          35.228
+        ],
+        [
+          60.261,
+          35.905
+        ],
+        [
+          65.0,
+          37.01
+        ],
+        [
+          69.284,
+          38.509
+        ],
+        [
+          72.981,
+          40.358
+        ],
+        [
+          75.981,
+          42.5
+        ],
+        [
+          78.191,
+          44.87
+        ],
+        [
+          79.544,
+          47.395
+        ]
+      ],
+      "request": "三轴CSP绘图仪画一个椭圆。中心(50,50)，X半长轴30、Y半短轴15.0；从最右侧开始逆时针，至少36段近似闭合曲线。X/Y使用0..100工程坐标，Z使用毫米。run使能且cmd_draw上升沿启动，cmd_reset复位。先抬笔到Z=10后移动到首顶点，落笔到Z=0，完成全部绘制后先抬笔到Z=10，再回(50,50,10)，静止后保持plot_done。pen_down必须反映真实接触，依据z_fb<=1判定，不得用状态序号或命令值掩盖接触。传感器反馈到PLC派生状态的一致性允许最多40ms异步响应，使用显式派生状态响应预算；安全互锁不使用此预算。从启动到完整收尾60秒以内；所有到位检查使用设备poswin。未使能时不得运动。"
+    },
+    {
+      "id": "triangle_r15",
+      "family": "triangle",
+      "label": "正三角形",
+      "scale": 15,
+      "vertices": [
+        [
+          65.0,
+          50.0
+        ],
+        [
+          42.5,
+          62.99
+        ],
+        [
+          42.5,
+          37.01
+        ]
+      ],
+      "request": "三轴CSP绘图仪画一个正三角形。中心(50,50)，外接圆半径15；首顶点(65,50)，逆时针逐顶点直线闭合。X/Y使用0..100工程坐标，Z使用毫米。run使能且cmd_draw上升沿启动，cmd_reset复位。先抬笔到Z=10后移动到首顶点，落笔到Z=0，完成全部绘制后先抬笔到Z=10，再回(50,50,10)，静止后保持plot_done。pen_down必须反映真实接触，依据z_fb<=1判定，不得用状态序号或命令值掩盖接触。传感器反馈到PLC派生状态的一致性允许最多40ms异步响应，使用显式派生状态响应预算；安全互锁不使用此预算。从启动到完整收尾60秒以内；所有到位检查使用设备poswin。未使能时不得运动。"
+    },
+    {
+      "id": "triangle_r30",
+      "family": "triangle",
+      "label": "正三角形",
+      "scale": 30,
+      "vertices": [
+        [
+          80.0,
+          50.0
+        ],
+        [
+          35.0,
+          75.981
+        ],
+        [
+          35.0,
+          24.019
+        ]
+      ],
+      "request": "三轴CSP绘图仪画一个正三角形。中心(50,50)，外接圆半径30；首顶点(80,50)，逆时针逐顶点直线闭合。X/Y使用0..100工程坐标，Z使用毫米。run使能且cmd_draw上升沿启动，cmd_reset复位。先抬笔到Z=10后移动到首顶点，落笔到Z=0，完成全部绘制后先抬笔到Z=10，再回(50,50,10)，静止后保持plot_done。pen_down必须反映真实接触，依据z_fb<=1判定，不得用状态序号或命令值掩盖接触。传感器反馈到PLC派生状态的一致性允许最多40ms异步响应，使用显式派生状态响应预算；安全互锁不使用此预算。从启动到完整收尾60秒以内；所有到位检查使用设备poswin。未使能时不得运动。"
+    },
+    {
+      "id": "square_r15",
+      "family": "square",
+      "label": "正方形",
+      "scale": 15,
+      "vertices": [
+        [
+          65.0,
+          50.0
+        ],
+        [
+          50.0,
+          65.0
+        ],
+        [
+          35.0,
+          50.0
+        ],
+        [
+          50.0,
+          35.0
+        ]
+      ],
+      "request": "三轴CSP绘图仪画一个正方形。中心(50,50)，外接圆半径15；首顶点(65,50)，逆时针逐顶点直线闭合。X/Y使用0..100工程坐标，Z使用毫米。run使能且cmd_draw上升沿启动，cmd_reset复位。先抬笔到Z=10后移动到首顶点，落笔到Z=0，完成全部绘制后先抬笔到Z=10，再回(50,50,10)，静止后保持plot_done。pen_down必须反映真实接触，依据z_fb<=1判定，不得用状态序号或命令值掩盖接触。传感器反馈到PLC派生状态的一致性允许最多40ms异步响应，使用显式派生状态响应预算；安全互锁不使用此预算。从启动到完整收尾60秒以内；所有到位检查使用设备poswin。未使能时不得运动。"
+    },
+    {
+      "id": "square_r30",
+      "family": "square",
+      "label": "正方形",
+      "scale": 30,
+      "vertices": [
+        [
+          80.0,
+          50.0
+        ],
+        [
+          50.0,
+          80.0
+        ],
+        [
+          20.0,
+          50.0
+        ],
+        [
+          50.0,
+          20.0
+        ]
+      ],
+      "request": "三轴CSP绘图仪画一个正方形。中心(50,50)，外接圆半径30；首顶点(80,50)，逆时针逐顶点直线闭合。X/Y使用0..100工程坐标，Z使用毫米。run使能且cmd_draw上升沿启动，cmd_reset复位。先抬笔到Z=10后移动到首顶点，落笔到Z=0，完成全部绘制后先抬笔到Z=10，再回(50,50,10)，静止后保持plot_done。pen_down必须反映真实接触，依据z_fb<=1判定，不得用状态序号或命令值掩盖接触。传感器反馈到PLC派生状态的一致性允许最多40ms异步响应，使用显式派生状态响应预算；安全互锁不使用此预算。从启动到完整收尾60秒以内；所有到位检查使用设备poswin。未使能时不得运动。"
+    },
+    {
+      "id": "pentagon_r15",
+      "family": "pentagon",
+      "label": "正五边形",
+      "scale": 15,
+      "vertices": [
+        [
+          65.0,
+          50.0
+        ],
+        [
+          54.635,
+          64.266
+        ],
+        [
+          37.865,
+          58.817
+        ],
+        [
+          37.865,
+          41.183
+        ],
+        [
+          54.635,
+          35.734
+        ]
+      ],
+      "request": "三轴CSP绘图仪画一个正五边形。中心(50,50)，外接圆半径15；首顶点(65,50)，逆时针逐顶点直线闭合。X/Y使用0..100工程坐标，Z使用毫米。run使能且cmd_draw上升沿启动，cmd_reset复位。先抬笔到Z=10后移动到首顶点，落笔到Z=0，完成全部绘制后先抬笔到Z=10，再回(50,50,10)，静止后保持plot_done。pen_down必须反映真实接触，依据z_fb<=1判定，不得用状态序号或命令值掩盖接触。传感器反馈到PLC派生状态的一致性允许最多40ms异步响应，使用显式派生状态响应预算；安全互锁不使用此预算。从启动到完整收尾60秒以内；所有到位检查使用设备poswin。未使能时不得运动。"
+    },
+    {
+      "id": "pentagon_r30",
+      "family": "pentagon",
+      "label": "正五边形",
+      "scale": 30,
+      "vertices": [
+        [
+          80.0,
+          50.0
+        ],
+        [
+          59.271,
+          78.532
+        ],
+        [
+          25.729,
+          67.634
+        ],
+        [
+          25.729,
+          32.366
+        ],
+        [
+          59.271,
+          21.468
+        ]
+      ],
+      "request": "三轴CSP绘图仪画一个正五边形。中心(50,50)，外接圆半径30；首顶点(80,50)，逆时针逐顶点直线闭合。X/Y使用0..100工程坐标，Z使用毫米。run使能且cmd_draw上升沿启动，cmd_reset复位。先抬笔到Z=10后移动到首顶点，落笔到Z=0，完成全部绘制后先抬笔到Z=10，再回(50,50,10)，静止后保持plot_done。pen_down必须反映真实接触，依据z_fb<=1判定，不得用状态序号或命令值掩盖接触。传感器反馈到PLC派生状态的一致性允许最多40ms异步响应，使用显式派生状态响应预算；安全互锁不使用此预算。从启动到完整收尾60秒以内；所有到位检查使用设备poswin。未使能时不得运动。"
+    },
+    {
+      "id": "hexagon_r30",
+      "family": "hexagon",
+      "label": "正六边形",
+      "scale": 30,
+      "vertices": [
+        [
+          80.0,
+          50.0
+        ],
+        [
+          65.0,
+          75.981
+        ],
+        [
+          35.0,
+          75.981
+        ],
+        [
+          20.0,
+          50.0
+        ],
+        [
+          35.0,
+          24.019
+        ],
+        [
+          65.0,
+          24.019
+        ]
+      ],
+      "request": "三轴CSP绘图仪画一个正六边形。中心(50,50)，外接圆半径30；首顶点(80,50)，逆时针逐顶点直线闭合。X/Y使用0..100工程坐标，Z使用毫米。run使能且cmd_draw上升沿启动，cmd_reset复位。先抬笔到Z=10后移动到首顶点，落笔到Z=0，完成全部绘制后先抬笔到Z=10，再回(50,50,10)，静止后保持plot_done。pen_down必须反映真实接触，依据z_fb<=1判定，不得用状态序号或命令值掩盖接触。传感器反馈到PLC派生状态的一致性允许最多40ms异步响应，使用显式派生状态响应预算；安全互锁不使用此预算。从启动到完整收尾60秒以内；所有到位检查使用设备poswin。未使能时不得运动。"
+    }
+  ],
+  "sources": {
+    "src\\agent\\aml_parser.py": "2edd726919344ef8d7c2d8dde1565fa2c094b9c4498183a2b53efb1fe20b8e03",
+    "src\\agent\\attribution.py": "4af6dd4df4253b2afad505d80076b75b5e51eeedcf5ed02e7f7ed4db006938d4",
+    "src\\agent\\benchmark.py": "43da1758308a86a403285c6166754d0e8837df013ae170c3371afad8218a92fd",
+    "src\\agent\\chat.py": "5cb87f61908f608a0f91da66e8f076a7928d715fc208b53f3159c7e5a1a6f699",
+    "src\\agent\\client.py": "e72f864385574accf3767525cc5302865ebcc9665f8eaa3867bdc29811e3ac2e",
+    "src\\agent\\closed_loop.py": "212c2104d48f2a2c79e06b43168858bf9c4b7439aa0bb468495ac9d9974990ec",
+    "src\\agent\\completion_contract.py": "81bd5f876822dba555ae4f703511d46ba5d2f11329cfbca4c2e078add963d9ba",
+    "src\\agent\\config.py": "29d18caeddc3b4efa5ef359dbd2a8fc3d017a647ed9bd945c202176f91ce46d0",
+    "src\\agent\\consistency_check.py": "dd07c72a5ef8d043f7989da394a4fbc4184f7f002dbffb24d5684ee107c2f729",
+    "src\\agent\\hmi_gen.py": "5081b7c8ed406091223bede3a1ae18ed1b9fae05deb209378da01ec4ce235905",
+    "src\\agent\\memory.py": "ca3f2e766e380ebe66dfab58ef3e35135e702159a81e86f53966d9eb71ed8d67",
+    "src\\agent\\orchestrator.py": "4b10b48f941cbdc3da48a00d37988ed0b4e99b656ac3d2aaf57b1c485c6b30f9",
+    "src\\agent\\patternlib.py": "1e9521d098a89256024ef330a4d9f3deccc3ec875c25dc005b42902b2aff934f",
+    "src\\agent\\pipeline.py": "544c5996f1edaf1f8d19a697e3b74084d64e60714fc2dfdbeebb4652e70622d5",
+    "src\\agent\\program_review.py": "e55968ddc75404bd9ba7d0e36b9547b66c9b969a756367c717fc67f38fe90c9d",
+    "src\\agent\\progress.py": "5afe9800502b251b7076fa475be634c1a8895deebc7ec06293ae0ac0d933d9e4",
+    "src\\agent\\requirement.py": "9779249588461b7711e550888769f5a7ccdedb5e550bb5bc165b1595c60a5d13",
+    "src\\agent\\run_metrics.py": "1ae68265fb29864837bb0794e86442d5bf730f64049090577a6ceb54c60be3e2",
+    "src\\agent\\scene_gen.py": "690596ab6658485e6776646c26a8cdb97a8c5e69b9880f07d2dc8b224c3de235",
+    "src\\agent\\spec_validator.py": "69f481253c859a5a6ab0591d688be2b689626a451fba65052f9ece1e6deb0d45",
+    "src\\agent\\stack_gen.py": "82d512d7903b874a13f565402a1ada822ba54dffff4c6e22696a91dfbd52e22b",
+    "src\\agent\\test_plan.py": "e92cd521076836bba65bb6f62425cc9086b1bc400bf9a53854df47aff948652e",
+    "src\\agent\\trajectory.py": "2607d5f456d243360e7438f30d027bb33547ab6a5ccb6e1c1115d706d6b7ead7",
+    "src\\agent\\__init__.py": "9a98653ce7047e90d171f444bb766ec0c02283b6c3e6b270c897db254675a9f4",
+    "src\\pipeline\\compiler_guard.py": "5fb65299fcf6d2357ad1fd55a718b8374fd54a8a2f08aefd4c33800ec74d5115",
+    "src\\pipeline\\condition_response.py": "4b159cda30bab6e85e14a0c8528de5885f7e42b7b8deb13e91ae35aba534e650",
+    "src\\pipeline\\modbus_io.py": "e650eca94a4d854e71f72da049cc86f1c748813447967e12eb7f658c977f03e1",
+    "src\\pipeline\\mujoco_verdict.py": "cf705b678e7f0ca53b70db1a84009b9662224274a50eb439aef6792b1da0ed76",
+    "src\\pipeline\\openplc_client.py": "d89dfaa00dc8edc1cd1ee2c60944e3be495d38928d69d144b0261001991024f0",
+    "src\\pipeline\\run_deploy.py": "7c97a58e1eef1d60adb411ec6524ff162565fecff126f400282dec9a1fa05a9c",
+    "src\\pipeline\\run_regression.py": "02113d8c81821398dfa081ddbcae355d0ee760b69a8e7da8101ffd003ee62138",
+    "src\\pipeline\\scenario_motion3axis.py": "0c0e4762b9fe6d47eb6defd014b60a35ebf0a00a1c736aff624df11216279209",
+    "src\\pipeline\\scenario_mujoco.py": "871cdf53c51da31f0fd8c2c8a80257235d9842ede94ab2faeee777a602f05d9b",
+    "src\\pipeline\\scenario_plotter3axis.py": "acb2a59a3c2105db35adce0d945822b07e806d96b8702cc75a0a831cb885634c",
+    "src\\pipeline\\scenario_plotter_circle.py": "8f921de83850d50a5b37f2ee6104f48dbab6ccd5fbfcf55890dcd7e003c8ef6f",
+    "src\\pipeline\\scenario_plotter_square_csp.py": "61c0014aea3a5770f31c456d187e39dc91d332ec25c52f37091d66cb3368f1ca",
+    "src\\pipeline\\serve.py": "0b365a3e9e852111f8d5f87e328cee5acd8a8bdb5a93f6ca46e4af8e46bac622",
+    "src\\pipeline\\stop_plc.py": "738c0a4d97337d57f4066de67c3e13fd7a33fd83bb91a3b77e8f68b5971e4636",
+    "src\\pipeline\\test_plan_runtime.py": "db6cf167d2835a1b76e774f4489931c18d7b838998fdb94356a1b078378265ee",
+    "src\\pipeline\\trace_query.py": "a1cdfd0bcc6a12095e078ab3d37ec6231567be6b16d5e8d99d47f3753625b9f2",
+    "src\\pipeline\\xml2st.py": "1206b6e9c08cf7d2be00be168ab1c1f0eb769a9ea2120391a3ff70956d24ec23",
+    "src\\agent\\knowledge\\patterns.json": "f050c4bba99771514dd6cd219bb34775fc0b7f9ce83534933ca6f92f6e9045a6",
+    "src\\agent\\knowledge\\pitfalls.json": "2326dcaf679587ccca98e1f686bc0c76473b91a15e9ddf104391dd8905ece904",
+    "src\\agent\\knowledge\\__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src\\agent\\prompts\\plcgen_csp_skill.md": "fa2a41004bd44a3dd50d57761b1ea28f0e6777fa55f3720ac6e90fca8ec6009e",
+    "src\\agent\\prompts\\plcgen_skill.md": "314947911901edf1808893978bf208c0bc789977ee65fcab3ac3a8921433bf7e",
+    "src\\agent\\prompts\\specgen_skill.md": "d9d64f0930265618c5ca1e5c7ba1dd1384e756d5a25a32882ca1b8cd92c9396a",
+    "src\\agent\\prompts\\testplan_skill.md": "2b05ed15bdfcdeff5bad1a72515cdd54419a7917db397b2baf54a0f2357c7149",
+    "src\\agent\\knowledge\\domain\\automationml.md": "303e4a213879179c18b0b23f3a9ed283aef6cd53031b3e71fd864521ad28168a",
+    "src\\agent\\knowledge\\domain\\loader.py": "8ddf14761ba63e5f15612c6c9dab316998f767655dc55482c32f629768d3ff97",
+    "src\\agent\\knowledge\\domain\\motion_control.md": "6e81fc47d5370f2328046dc6af1f8720fa22468f81e0d99a0e410bc47143c2bb",
+    "src\\agent\\knowledge\\domain\\plcopen_xml.md": "19e0aa3004e9d42d2a77319d1a594ac85dcebd9a6d17a60c1d2f1209033f1b51",
+    "src\\agent\\knowledge\\domain\\README.md": "fb8313286d282f99b2b662e5339b298ad68dbeaf684540e0ab3d54c40f0ac7a8",
+    "src\\agent\\knowledge\\domain\\st.md": "aba1adc7e822579b0f669bd30731e2ed791223c8620675c252ae7469529ef717",
+    "src\\agent\\knowledge\\domain\\__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "runtime\\acceptance.py": "9b1fe1c4a09c07ee7c226bce1d8e6f19cb1092aeb7bf43b421f35511d584064c",
+    "runtime\\csp_studio.py": "cbc87e1f24fd6d27b31dc71fd19b4b309634d355554985b32e4b94be7903b075",
+    "runtime\\frame_stream.py": "d1c388f51ba05458757b36e53cd34907edd074790cc61ef45e526b3dc0f8c6a0",
+    "runtime\\gantry_bridge.py": "c208635850ff3f251923cd34047673aedbf23708a61a7f8428cb4069ed2e8455",
+    "runtime\\gantry_jog_gui.py": "f09bc0cea0e4a74abae61ced0be6333029e012b74298d556e6cc7e3f8fd8890a",
+    "runtime\\isaac_jog_runtime.py": "1e1ae08af95e6e7665efc3e259c5c22f75a0dedc34994d88b7fe7fed45dd3b47",
+    "runtime\\isaac_modbus_server.py": "b02b1e322166bffdde15823a531d7046188002a6cd732c0e94564d118be73cda",
+    "runtime\\mujoco_build.py": "36eabaf4ca9f6ebf7a7ccf3bb75c84678b54247f839cff25cba1296c1441710f",
+    "runtime\\mujoco_jog_runtime.py": "4931ceb697f568bcf431c2f7d098dfed2b213c3fb42a518c2ed25cf736230e8d",
+    "runtime\\plc_binding.py": "c99185f694217979ecbc2f1b0a064426dbf3fa655122afa574ea728ced5d5910",
+    "runtime\\plc_link.py": "f695ec9af0053131e347b001181bf5c0dc139354af3edc3fbe763392d10e3f29",
+    "runtime\\README.md": "62b67733156ef0e6661c8954a80ae995aaec124be68c2866f856c5e74c801e30",
+    "runtime\\stage_link.py": "3822f680f69f17cab7d61f43355a328653b34453d236e72103b01047f7c15c09",
+    "runtime\\studio_backend.py": "2f18d351d83f5168eeb9404c2e6fb6b271df9054868c43bd690e84fca7efcbcb",
+    "runtime\\legacy_opcua\\gantry_jog_gui.py": "76301f5f306c6fa38ca4d0bc9a7761def3d91f390d2f23ceb353d99c81d95ed0",
+    "runtime\\legacy_opcua\\isaac_opcua_server.py": "a6c2cf981c45c0cbb467d7e1d9b23cf0079ac9c3ac1753fa4b5c042bcdf14781",
+    "runtime\\legacy_opcua\\README.md": "45bf14d768eef4811f01e29ec68ca0252cf9075d1e7a52c93c27bdfcb4ffc529",
+    "runtime\\legacy_opcua\\test_opcua_loop.py": "6e94c8ba92f5c57b7f8ca693866ad48c78b1b56b787177172374da18098cb9ae",
+    "runtime\\tests\\csp_square_demo.py": "cd1c16edb51255bd45249cfe189f04e70fe5a248b510bb363474358d1f6eab77",
+    "runtime\\tests\\test_initial_pose.py": "d0e8328cf0384895fc2c7c85116dd4824a695786dbdc1b56c00fd00f282a1d6a",
+    "runtime\\tests\\test_modbus_loop.py": "2288ce5f3e18aad7f27f1d33fff643fb802865cd64434c975b78a6ca9f21dff5",
+    "runtime\\tests\\test_mujoco_loop.py": "68f3542deb1b3b634cbfb83409b53d6c5dd2df247ccc46bd07b8c1810acb158b",
+    "runtime\\tests\\test_plc_link.py": "e6a2bfa34e1eec84f45a81e93eb2385484adb07996485b5d4438ac98f659afc5",
+    "runtime\\tests\\test_plotter_build.py": "300729d10f1172af474abf9f564ad1a52a6653e938b27612bf54cecfe5710e27",
+    "runtime\\tests\\test_stage_link.py": "266002ebec597099fed61e6bedce049c913945165252b12be0a0d78bfbaa9865",
+    "schemas\\device_model.schema.json": "c09c37bcdf452cb0a889c49cda51aa9e05572fd2b6801c19a4111f5bd1390a5a",
+    "schemas\\io_map.schema.json": "4c50ab52404ec0a055415683a741a59ebf249d9d174ef7ee749f6557bd97255a",
+    "schemas\\requirement_spec.schema.json": "0db9269a896139291654ddf68bc67bc34a357a874ecba5d5c58aa356e414be0e",
+    "schemas\\test_plan.schema.json": "2ab1520fdd4460e4984d2b9cf546aadb0779a261c35c96befc2ef971b3f1fe7c",
+    "examples\\aml\\motion3axis_station.aml": "0f59fa6f94eaa9b592fb3254bab9dcff7ecdf334a1b23ae2f3b25d11be28888c",
+    "examples\\aml\\plotter3axis_station.aml": "7a91b53bd098a5545da09b397673976cd3e32389be39f43ac8da6cd3117d0766",
+    "examples\\aml\\plotter_square_csp_station.aml": "1c81f1b76801c785456e4bc51a6696cae6274e25f2e99eb736de89ae5613bcfc"
+  },
+  "created_at": "2026-10-21T01:30:36.417842+00:00",
+  "generation": "fresh requirement + LLM plan + full XML; no manual repair",
+  "model_options": {
+    "LLM_THINKING": "enabled",
+    "LLM_REASONING_EFFORT": "low",
+    "LLM_MAX_OUTPUT_TOKENS": "32768"
+  },
+  "code_commit": "0dbf1ad6cdd19412d8639823498fff60d6f5c700",
+  "environment": {
+    "python": "3.12.0 (tags/v3.12.0:0fb18b0, Oct  2 2023, 13:03:39) [MSC v.1935 64 bit (AMD64)]",
+    "libraries": {
+      "requests": "2.34.2",
+      "numpy": "2.5.3",
+      "mujoco": "3.12.0",
+      "pymodbus": "3.8.6",
+      "PySide6": "6.11.2",
+      "jsonschema": "4.26.0"
+    }
+  },
+  "local_regression_passed": 426,
+  "local_native_compile_deselected": 1,
+  "diagnostic_predecessors": [
+    "bench_20261020_133352",
+    "bench_recovery_20261020_145607",
+    "bench_terminal_20261020_153148"
+  ],
+  "order_reason": "Prioritize scenarios previously unexecuted or not successful, then rerun the seven prior successes; all 20 are fresh tasks, never reuse their results.",
+  "changes": [
+    "canonical prompt JSON matches schema and explicit terminal marker",
+    "combined structural error feedback during plan repair",
+    "planning retry exhaustion produces planning_failed before PLC generation"
+  ],
+  "oracle": "Same independent requested-geometry oracle: ordered contact vertices, moving-contact corridor 2.9, safe final pose, contact truth <=40ms from source transition; safety strict.",
+  "comparison_limit": "Diagnostic predecessors are separate attempts and versions, never pooled into this success rate.",
+  "continuation_of": "bench_verified_20261020_161033",
+  "continuation_mode": "same-source and same-config remaining scenarios; all resumed scenarios freshly generated",
+  "prior_interruption": [
+    {
+      "case": "heptagon_r15",
+      "status": "interrupted",
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_verified_20261020_161033_heptagon_r15",
+      "requests_saved": 4,
+      "completed_call_timings": 3,
+      "requests_without_complete_response": [
+        "call_004.request.json"
+      ],
+      "recorded_call_duration_s": 75.0,
+      "total_duration_s": null,
+      "note": "No result or active process at audit. Full elapsed time and outcome of the in-flight request were not recorded; do not invent a duration or verdict."
+    }
+  ],
+  "original_protocol_sha256": "3a58e4e9df3aeb817e5e0ffb169b6089689471a3448f8a2c552f7fe00db9ac7e"
+}

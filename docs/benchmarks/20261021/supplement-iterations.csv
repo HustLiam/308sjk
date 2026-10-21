@@ -1,0 +1,9 @@
+﻿case,iteration,duration_s,model_calls,model_duration_s,passed,observed_passed,total,evaluated,request_passed,request_total,failed_gate,success
+rectangle_r15,1,96.328,0,0,0,0,9,0,0,4,deploy,True
+rectangle_r15,2,37.891,0,0,9,9,9,9,4,4,,True
+hexagon_r30,1,138.859,1,111.062,10,10,10,10,4,4,,True
+rectangle_r30,1,116.672,1,96.0,10,10,10,10,4,4,,True
+irregular_r30,1,158.875,1,101.265,9,9,9,9,4,4,,True
+ellipse_r15,1,124.765,2,103.282,8,8,9,9,4,4,acceptance,False
+ellipse_r15,2,150.953,2,126.562,8,8,9,9,4,4,acceptance,False
+ellipse_r15,3,81.547,2,59.797,8,8,9,9,4,4,acceptance,False

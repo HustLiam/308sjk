@@ -1,0 +1,21 @@
+﻿case,label,scale,batch,success,status,iteration_count,model_calls,duration_s,run_dir
+hexagon_r15,正六边形,15,首批完成,True,final,2,5,242.531,D:\Study\SIMENS PLC\runs\bench_verified_20261020_161033_hexagon_r15
+heptagon_r15,正七边形,15,恢复批次,True,final,1,4,204.547,D:\Study\SIMENS PLC\runs\bench_resume_20261021_093036_heptagon_r15
+heptagon_r30,正七边形,30,恢复批次,True,final,1,4,201.328,D:\Study\SIMENS PLC\runs\bench_resume_20261021_093036_heptagon_r30
+circle_r15,圆,15,恢复批次,True,final,2,5,268.625,D:\Study\SIMENS PLC\runs\bench_resume_20261021_093036_circle_r15
+circle_r30,圆,30,恢复批次,True,final,3,8,378.969,D:\Study\SIMENS PLC\runs\bench_resume_20261021_093036_circle_r30
+rectangle_r15,长方形,15,恢复批次,False,best_effort,4,10,430.453,D:\Study\SIMENS PLC\runs\bench_resume_20261021_093036_rectangle_r15
+rectangle_r30,长方形,30,恢复批次,True,final,1,4,183.64,D:\Study\SIMENS PLC\runs\bench_resume_20261021_093036_rectangle_r30
+irregular_r15,非正凸五边形,15,恢复批次,True,final,1,5,212.141,D:\Study\SIMENS PLC\runs\bench_resume_20261021_093036_irregular_r15
+irregular_r30,非正凸五边形,30,恢复批次,True,final,1,4,214.953,D:\Study\SIMENS PLC\runs\bench_resume_20261021_093036_irregular_r30
+concave_r15,凹六边形,15,恢复批次,True,final,1,4,195.422,D:\Study\SIMENS PLC\runs\bench_resume_20261021_093036_concave_r15
+concave_r30,凹六边形,30,恢复批次,True,final,2,6,315.781,D:\Study\SIMENS PLC\runs\bench_resume_20261021_093036_concave_r30
+ellipse_r15,椭圆,15,恢复批次,True,final,2,5,312.062,D:\Study\SIMENS PLC\runs\bench_resume_20261021_093036_ellipse_r15
+ellipse_r30,椭圆,30,恢复批次,True,final,1,5,331.157,D:\Study\SIMENS PLC\runs\bench_resume_20261021_093036_ellipse_r30
+triangle_r15,正三角形,15,恢复批次,True,final,1,4,180.938,D:\Study\SIMENS PLC\runs\bench_resume_20261021_093036_triangle_r15
+triangle_r30,正三角形,30,恢复批次,True,final,1,4,178.578,D:\Study\SIMENS PLC\runs\bench_resume_20261021_093036_triangle_r30
+square_r15,正方形,15,恢复批次,True,final,2,5,191.047,D:\Study\SIMENS PLC\runs\bench_resume_20261021_093036_square_r15
+square_r30,正方形,30,恢复批次,True,final,1,4,186.047,D:\Study\SIMENS PLC\runs\bench_resume_20261021_093036_square_r30
+pentagon_r15,正五边形,15,恢复批次,True,final,1,5,314.141,D:\Study\SIMENS PLC\runs\bench_resume_20261021_093036_pentagon_r15
+pentagon_r30,正五边形,30,恢复批次,True,final,2,6,240.187,D:\Study\SIMENS PLC\runs\bench_resume_20261021_093036_pentagon_r30
+hexagon_r30,正六边形,30,恢复批次,False,best_effort,4,11,618.813,D:\Study\SIMENS PLC\runs\bench_resume_20261021_093036_hexagon_r30

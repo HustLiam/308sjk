@@ -1,0 +1,6 @@
+﻿case,status,success,iteration_count,model_calls,duration_s,run_dir
+rectangle_r15,final,True,2,6,201.454,D:\Study\SIMENS PLC\runs\bench_region_20261021_105850_rectangle_r15
+hexagon_r30,final,True,1,4,201.937,D:\Study\SIMENS PLC\runs\bench_region_20261021_105850_hexagon_r30
+rectangle_r30,final,True,1,4,173.546,D:\Study\SIMENS PLC\runs\bench_region_20261021_105850_rectangle_r30
+irregular_r30,final,True,1,4,234.281,D:\Study\SIMENS PLC\runs\bench_region_20261021_105850_irregular_r30
+ellipse_r15,best_effort,False,3,9,422.671,D:\Study\SIMENS PLC\runs\bench_region_20261021_105850_ellipse_r15

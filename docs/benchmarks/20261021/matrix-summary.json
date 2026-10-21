@@ -1,0 +1,273 @@
+{
+  "planned_scenarios": 20,
+  "completed_scenarios": 20,
+  "successes": 18,
+  "complete": true,
+  "success_rate": 0.9,
+  "recorded_completed_task_duration_s": 5401.36,
+  "completed_task_model_calls": 108,
+  "first_outer_candidate_successes": 11,
+  "interrupted_attempts": [
+    {
+      "case": "heptagon_r15",
+      "status": "interrupted",
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_verified_20261020_161033_heptagon_r15",
+      "requests_saved": 4,
+      "completed_call_timings": 3,
+      "requests_without_complete_response": [
+        "call_004.request.json"
+      ],
+      "recorded_call_duration_s": 75.0,
+      "total_duration_s": null,
+      "note": "No result or active process at audit. Full elapsed time and outcome of the in-flight request were not recorded; do not invent a duration or verdict."
+    }
+  ],
+  "cases": [
+    {
+      "case": "hexagon_r15",
+      "label": "正六边形",
+      "scale": 15,
+      "batch": "首批完成",
+      "success": true,
+      "status": "final",
+      "iteration_count": 2,
+      "model_calls": 5,
+      "duration_s": 242.531,
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_verified_20261020_161033_hexagon_r15"
+    },
+    {
+      "case": "heptagon_r15",
+      "label": "正七边形",
+      "scale": 15,
+      "batch": "恢复批次",
+      "success": true,
+      "status": "final",
+      "iteration_count": 1,
+      "model_calls": 4,
+      "duration_s": 204.547,
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_resume_20261021_093036_heptagon_r15"
+    },
+    {
+      "case": "heptagon_r30",
+      "label": "正七边形",
+      "scale": 30,
+      "batch": "恢复批次",
+      "success": true,
+      "status": "final",
+      "iteration_count": 1,
+      "model_calls": 4,
+      "duration_s": 201.328,
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_resume_20261021_093036_heptagon_r30"
+    },
+    {
+      "case": "circle_r15",
+      "label": "圆",
+      "scale": 15,
+      "batch": "恢复批次",
+      "success": true,
+      "status": "final",
+      "iteration_count": 2,
+      "model_calls": 5,
+      "duration_s": 268.625,
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_resume_20261021_093036_circle_r15"
+    },
+    {
+      "case": "circle_r30",
+      "label": "圆",
+      "scale": 30,
+      "batch": "恢复批次",
+      "success": true,
+      "status": "final",
+      "iteration_count": 3,
+      "model_calls": 8,
+      "duration_s": 378.969,
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_resume_20261021_093036_circle_r30"
+    },
+    {
+      "case": "rectangle_r15",
+      "label": "长方形",
+      "scale": 15,
+      "batch": "恢复批次",
+      "success": false,
+      "status": "best_effort",
+      "iteration_count": 4,
+      "model_calls": 10,
+      "duration_s": 430.453,
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_resume_20261021_093036_rectangle_r15"
+    },
+    {
+      "case": "rectangle_r30",
+      "label": "长方形",
+      "scale": 30,
+      "batch": "恢复批次",
+      "success": true,
+      "status": "final",
+      "iteration_count": 1,
+      "model_calls": 4,
+      "duration_s": 183.64,
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_resume_20261021_093036_rectangle_r30"
+    },
+    {
+      "case": "irregular_r15",
+      "label": "非正凸五边形",
+      "scale": 15,
+      "batch": "恢复批次",
+      "success": true,
+      "status": "final",
+      "iteration_count": 1,
+      "model_calls": 5,
+      "duration_s": 212.141,
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_resume_20261021_093036_irregular_r15"
+    },
+    {
+      "case": "irregular_r30",
+      "label": "非正凸五边形",
+      "scale": 30,
+      "batch": "恢复批次",
+      "success": true,
+      "status": "final",
+      "iteration_count": 1,
+      "model_calls": 4,
+      "duration_s": 214.953,
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_resume_20261021_093036_irregular_r30"
+    },
+    {
+      "case": "concave_r15",
+      "label": "凹六边形",
+      "scale": 15,
+      "batch": "恢复批次",
+      "success": true,
+      "status": "final",
+      "iteration_count": 1,
+      "model_calls": 4,
+      "duration_s": 195.422,
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_resume_20261021_093036_concave_r15"
+    },
+    {
+      "case": "concave_r30",
+      "label": "凹六边形",
+      "scale": 30,
+      "batch": "恢复批次",
+      "success": true,
+      "status": "final",
+      "iteration_count": 2,
+      "model_calls": 6,
+      "duration_s": 315.781,
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_resume_20261021_093036_concave_r30"
+    },
+    {
+      "case": "ellipse_r15",
+      "label": "椭圆",
+      "scale": 15,
+      "batch": "恢复批次",
+      "success": true,
+      "status": "final",
+      "iteration_count": 2,
+      "model_calls": 5,
+      "duration_s": 312.062,
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_resume_20261021_093036_ellipse_r15"
+    },
+    {
+      "case": "ellipse_r30",
+      "label": "椭圆",
+      "scale": 30,
+      "batch": "恢复批次",
+      "success": true,
+      "status": "final",
+      "iteration_count": 1,
+      "model_calls": 5,
+      "duration_s": 331.157,
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_resume_20261021_093036_ellipse_r30"
+    },
+    {
+      "case": "triangle_r15",
+      "label": "正三角形",
+      "scale": 15,
+      "batch": "恢复批次",
+      "success": true,
+      "status": "final",
+      "iteration_count": 1,
+      "model_calls": 4,
+      "duration_s": 180.938,
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_resume_20261021_093036_triangle_r15"
+    },
+    {
+      "case": "triangle_r30",
+      "label": "正三角形",
+      "scale": 30,
+      "batch": "恢复批次",
+      "success": true,
+      "status": "final",
+      "iteration_count": 1,
+      "model_calls": 4,
+      "duration_s": 178.578,
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_resume_20261021_093036_triangle_r30"
+    },
+    {
+      "case": "square_r15",
+      "label": "正方形",
+      "scale": 15,
+      "batch": "恢复批次",
+      "success": true,
+      "status": "final",
+      "iteration_count": 2,
+      "model_calls": 5,
+      "duration_s": 191.047,
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_resume_20261021_093036_square_r15"
+    },
+    {
+      "case": "square_r30",
+      "label": "正方形",
+      "scale": 30,
+      "batch": "恢复批次",
+      "success": true,
+      "status": "final",
+      "iteration_count": 1,
+      "model_calls": 4,
+      "duration_s": 186.047,
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_resume_20261021_093036_square_r30"
+    },
+    {
+      "case": "pentagon_r15",
+      "label": "正五边形",
+      "scale": 15,
+      "batch": "恢复批次",
+      "success": true,
+      "status": "final",
+      "iteration_count": 1,
+      "model_calls": 5,
+      "duration_s": 314.141,
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_resume_20261021_093036_pentagon_r15"
+    },
+    {
+      "case": "pentagon_r30",
+      "label": "正五边形",
+      "scale": 30,
+      "batch": "恢复批次",
+      "success": true,
+      "status": "final",
+      "iteration_count": 2,
+      "model_calls": 6,
+      "duration_s": 240.187,
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_resume_20261021_093036_pentagon_r30"
+    },
+    {
+      "case": "hexagon_r30",
+      "label": "正六边形",
+      "scale": 30,
+      "batch": "恢复批次",
+      "success": false,
+      "status": "best_effort",
+      "iteration_count": 4,
+      "model_calls": 11,
+      "duration_s": 618.813,
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_resume_20261021_093036_hexagon_r30"
+    }
+  ],
+  "cohorts": [
+    "bench_verified_20261020_161033",
+    "bench_resume_20261021_093036"
+  ],
+  "source_commit": "0dbf1ad6cdd19412d8639823498fff60d6f5c700",
+  "note": "Complete matrix after explicit recovery; not an uninterrupted single-batch success rate. Extra interrupted work is retained and its total elapsed duration is unknown."
+}

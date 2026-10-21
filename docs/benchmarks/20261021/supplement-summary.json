@@ -1,0 +1,1890 @@
+{
+  "planned": 5,
+  "completed": 5,
+  "successes": 4,
+  "executed": 5,
+  "success_rate": 0.8,
+  "cases": [
+    {
+      "case": "rectangle_r15",
+      "status": "final",
+      "exit_code": 0,
+      "success": true,
+      "duration_s": 201.454,
+      "iteration_count": 2,
+      "model_calls": 6,
+      "iterations": [
+        {
+          "iter": 1,
+          "started_at": 1792551598.3154767,
+          "events": [
+            {
+              "event": "iter_start",
+              "elapsed_s": 0.0,
+              "payload": {
+                "iter": 1,
+                "hmi": true
+              }
+            },
+            {
+              "event": "deploy_start",
+              "elapsed_s": 91.594,
+              "payload": {
+                "iter": 1
+              }
+            },
+            {
+              "event": "candidate_selected",
+              "elapsed_s": 96.328,
+              "payload": {
+                "best_iter": 1,
+                "reasons": [
+                  "建立首个通过静态检查的修复基底"
+                ]
+              }
+            },
+            {
+              "event": "gate_failed",
+              "elapsed_s": 96.328,
+              "payload": {
+                "iter": 1,
+                "gate": "deploy"
+              }
+            }
+          ],
+          "failed_gate": "deploy",
+          "duration_s": 96.328,
+          "ended_at": 1792551694.6462474,
+          "acceptance": {
+            "passed": 0,
+            "observed_passed": 0,
+            "total": 9,
+            "evaluated": 0,
+            "not_evaluated": [
+              "AC1",
+              "AC2",
+              "AC3",
+              "AC4",
+              "AC5",
+              "AC6",
+              "AC7",
+              "EXECUTION",
+              "RECT_PATH"
+            ]
+          },
+          "model_calls": 0,
+          "model_duration_s": 0,
+          "request_oracle": [
+            {
+              "id": "REQUEST_PATH",
+              "pass": false,
+              "evaluated": false
+            },
+            {
+              "id": "REQUEST_CORRIDOR",
+              "pass": false,
+              "evaluated": false
+            },
+            {
+              "id": "REQUEST_FINISH",
+              "pass": false,
+              "evaluated": false
+            },
+            {
+              "id": "CONTACT_TRUTH",
+              "pass": false,
+              "evaluated": false
+            }
+          ]
+        },
+        {
+          "iter": 2,
+          "started_at": 1792551694.6782453,
+          "events": [
+            {
+              "event": "iter_start",
+              "elapsed_s": 0.0,
+              "payload": {
+                "iter": 2,
+                "hmi": true
+              }
+            },
+            {
+              "event": "deploy_start",
+              "elapsed_s": 12.672,
+              "payload": {
+                "iter": 2
+              }
+            },
+            {
+              "event": "deploy_done",
+              "elapsed_s": 19.578,
+              "payload": {
+                "iter": 2,
+                "state": "ok"
+              }
+            },
+            {
+              "event": "acceptance_start",
+              "elapsed_s": 19.594,
+              "payload": {
+                "iter": 2,
+                "scenario": "mujoco"
+              }
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 19.891,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 19.984,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 19.984,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 21.016,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 21.016,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 21.328,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 21.328,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 21.437,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 21.641,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 37.344,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 37.656,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 37.672,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 37.672,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 37.672,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 37.672,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 37.672,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 37.672,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 37.672,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 37.672,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 37.672,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 37.672,
+              "payload": null
+            },
+            {
+              "event": "final",
+              "elapsed_s": 37.891,
+              "payload": {
+                "iter": 2,
+                "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_region_20261021_105850_rectangle_r15"
+              }
+            }
+          ],
+          "duration_s": 37.891,
+          "ended_at": 1792551732.541248,
+          "acceptance": {
+            "passed": 9,
+            "observed_passed": 9,
+            "total": 9,
+            "evaluated": 9,
+            "not_evaluated": []
+          },
+          "model_calls": 0,
+          "model_duration_s": 0,
+          "request_oracle": [
+            {
+              "id": "REQUEST_PATH",
+              "pass": true,
+              "evaluated": true,
+              "reached": 5,
+              "total": 5
+            },
+            {
+              "id": "REQUEST_CORRIDOR",
+              "pass": true,
+              "evaluated": true,
+              "max_error": 0.5,
+              "tolerance": 2.9
+            },
+            {
+              "id": "REQUEST_FINISH",
+              "pass": true,
+              "evaluated": true,
+              "actual": [
+                50,
+                50,
+                9
+              ]
+            },
+            {
+              "id": "CONTACT_TRUTH",
+              "pass": true,
+              "evaluated": true,
+              "mismatch_samples": 1,
+              "longest_mismatch_samples": 1,
+              "max_observed_response_s": 0.016000000000000014,
+              "response_s": 0.04,
+              "unresolved": false
+            }
+          ]
+        }
+      ],
+      "request_oracle": [
+        {
+          "id": "REQUEST_PATH",
+          "pass": true,
+          "evaluated": true,
+          "reached": 5,
+          "total": 5
+        },
+        {
+          "id": "REQUEST_CORRIDOR",
+          "pass": true,
+          "evaluated": true,
+          "max_error": 0.5,
+          "tolerance": 2.9
+        },
+        {
+          "id": "REQUEST_FINISH",
+          "pass": true,
+          "evaluated": true,
+          "actual": [
+            50,
+            50,
+            9
+          ]
+        },
+        {
+          "id": "CONTACT_TRUTH",
+          "pass": true,
+          "evaluated": true,
+          "mismatch_samples": 1,
+          "longest_mismatch_samples": 1,
+          "max_observed_response_s": 0.016000000000000014,
+          "response_s": 0.04,
+          "unresolved": false
+        }
+      ],
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_region_20261021_105850_rectangle_r15",
+      "human_repair": false
+    },
+    {
+      "case": "hexagon_r30",
+      "status": "final",
+      "exit_code": 0,
+      "success": true,
+      "duration_s": 201.937,
+      "iteration_count": 1,
+      "model_calls": 4,
+      "iterations": [
+        {
+          "iter": 1,
+          "started_at": 1792551795.6422756,
+          "events": [
+            {
+              "event": "iter_start",
+              "elapsed_s": 0.0,
+              "payload": {
+                "iter": 1,
+                "hmi": true
+              }
+            },
+            {
+              "event": "deploy_start",
+              "elapsed_s": 111.328,
+              "payload": {
+                "iter": 1
+              }
+            },
+            {
+              "event": "deploy_done",
+              "elapsed_s": 119.078,
+              "payload": {
+                "iter": 1,
+                "state": "ok"
+              }
+            },
+            {
+              "event": "acceptance_start",
+              "elapsed_s": 119.078,
+              "payload": {
+                "iter": 1,
+                "scenario": "mujoco"
+              }
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 119.375,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 119.469,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 119.469,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 120.391,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 120.391,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 120.703,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 120.703,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 120.906,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 138.312,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 138.625,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 138.641,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 138.641,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 138.641,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 138.641,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 138.641,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 138.641,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 138.641,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 138.641,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 138.641,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 138.641,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 138.641,
+              "payload": null
+            },
+            {
+              "event": "final",
+              "elapsed_s": 138.859,
+              "payload": {
+                "iter": 1,
+                "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_region_20261021_105850_hexagon_r30"
+              }
+            }
+          ],
+          "duration_s": 138.859,
+          "ended_at": 1792551934.4990757,
+          "acceptance": {
+            "passed": 10,
+            "observed_passed": 10,
+            "total": 10,
+            "evaluated": 10,
+            "not_evaluated": []
+          },
+          "model_calls": 1,
+          "model_duration_s": 111.062,
+          "request_oracle": [
+            {
+              "id": "REQUEST_PATH",
+              "pass": true,
+              "evaluated": true,
+              "reached": 7,
+              "total": 7
+            },
+            {
+              "id": "REQUEST_CORRIDOR",
+              "pass": true,
+              "evaluated": true,
+              "max_error": 0.7416,
+              "tolerance": 2.9
+            },
+            {
+              "id": "REQUEST_FINISH",
+              "pass": true,
+              "evaluated": true,
+              "actual": [
+                50,
+                50,
+                9
+              ]
+            },
+            {
+              "id": "CONTACT_TRUTH",
+              "pass": true,
+              "evaluated": true,
+              "mismatch_samples": 3,
+              "longest_mismatch_samples": 1,
+              "max_observed_response_s": 0.03100000000000014,
+              "response_s": 0.04,
+              "unresolved": false
+            }
+          ]
+        }
+      ],
+      "request_oracle": [
+        {
+          "id": "REQUEST_PATH",
+          "pass": true,
+          "evaluated": true,
+          "reached": 7,
+          "total": 7
+        },
+        {
+          "id": "REQUEST_CORRIDOR",
+          "pass": true,
+          "evaluated": true,
+          "max_error": 0.7416,
+          "tolerance": 2.9
+        },
+        {
+          "id": "REQUEST_FINISH",
+          "pass": true,
+          "evaluated": true,
+          "actual": [
+            50,
+            50,
+            9
+          ]
+        },
+        {
+          "id": "CONTACT_TRUTH",
+          "pass": true,
+          "evaluated": true,
+          "mismatch_samples": 3,
+          "longest_mismatch_samples": 1,
+          "max_observed_response_s": 0.03100000000000014,
+          "response_s": 0.04,
+          "unresolved": false
+        }
+      ],
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_region_20261021_105850_hexagon_r30",
+      "human_repair": false
+    },
+    {
+      "case": "rectangle_r30",
+      "status": "final",
+      "exit_code": 0,
+      "success": true,
+      "duration_s": 173.546,
+      "iteration_count": 1,
+      "model_calls": 4,
+      "iterations": [
+        {
+          "iter": 1,
+          "started_at": 1792551991.399438,
+          "events": [
+            {
+              "event": "iter_start",
+              "elapsed_s": 0.0,
+              "payload": {
+                "iter": 1,
+                "hmi": true
+              }
+            },
+            {
+              "event": "deploy_start",
+              "elapsed_s": 96.328,
+              "payload": {
+                "iter": 1
+              }
+            },
+            {
+              "event": "deploy_done",
+              "elapsed_s": 104.219,
+              "payload": {
+                "iter": 1,
+                "state": "ok"
+              }
+            },
+            {
+              "event": "acceptance_start",
+              "elapsed_s": 104.219,
+              "payload": {
+                "iter": 1,
+                "scenario": "mujoco"
+              }
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 104.516,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 104.625,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 104.625,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 105.641,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 105.641,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 105.953,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 105.953,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 106.062,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 106.266,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 106.266,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 108.562,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 108.859,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 110.703,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 111.734,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 113.578,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 114.625,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 114.875,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 115.937,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 116.141,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 116.453,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 116.469,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 116.469,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 116.469,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 116.469,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 116.469,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 116.469,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 116.469,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 116.469,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 116.469,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 116.469,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 116.469,
+              "payload": null
+            },
+            {
+              "event": "final",
+              "elapsed_s": 116.672,
+              "payload": {
+                "iter": 1,
+                "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_region_20261021_105850_rectangle_r30"
+              }
+            }
+          ],
+          "duration_s": 116.672,
+          "ended_at": 1792552108.0699446,
+          "acceptance": {
+            "passed": 10,
+            "observed_passed": 10,
+            "total": 10,
+            "evaluated": 10,
+            "not_evaluated": []
+          },
+          "model_calls": 1,
+          "model_duration_s": 96.0,
+          "request_oracle": [
+            {
+              "id": "REQUEST_PATH",
+              "pass": true,
+              "evaluated": true,
+              "reached": 5,
+              "total": 5
+            },
+            {
+              "id": "REQUEST_CORRIDOR",
+              "pass": true,
+              "evaluated": true,
+              "max_error": 0.0,
+              "tolerance": 2.9
+            },
+            {
+              "id": "REQUEST_FINISH",
+              "pass": true,
+              "evaluated": true,
+              "actual": [
+                50,
+                50,
+                9
+              ]
+            },
+            {
+              "id": "CONTACT_TRUTH",
+              "pass": true,
+              "evaluated": true,
+              "mismatch_samples": 1,
+              "longest_mismatch_samples": 1,
+              "max_observed_response_s": 0.031000000000000028,
+              "response_s": 0.04,
+              "unresolved": false
+            }
+          ]
+        }
+      ],
+      "request_oracle": [
+        {
+          "id": "REQUEST_PATH",
+          "pass": true,
+          "evaluated": true,
+          "reached": 5,
+          "total": 5
+        },
+        {
+          "id": "REQUEST_CORRIDOR",
+          "pass": true,
+          "evaluated": true,
+          "max_error": 0.0,
+          "tolerance": 2.9
+        },
+        {
+          "id": "REQUEST_FINISH",
+          "pass": true,
+          "evaluated": true,
+          "actual": [
+            50,
+            50,
+            9
+          ]
+        },
+        {
+          "id": "CONTACT_TRUTH",
+          "pass": true,
+          "evaluated": true,
+          "mismatch_samples": 1,
+          "longest_mismatch_samples": 1,
+          "max_observed_response_s": 0.031000000000000028,
+          "response_s": 0.04,
+          "unresolved": false
+        }
+      ],
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_region_20261021_105850_rectangle_r30",
+      "human_repair": false
+    },
+    {
+      "case": "irregular_r30",
+      "status": "final",
+      "exit_code": 0,
+      "success": true,
+      "duration_s": 234.281,
+      "iteration_count": 1,
+      "model_calls": 4,
+      "iterations": [
+        {
+          "iter": 1,
+          "started_at": 1792552183.4796493,
+          "events": [
+            {
+              "event": "iter_start",
+              "elapsed_s": 0.0,
+              "payload": {
+                "iter": 1,
+                "hmi": true
+              }
+            },
+            {
+              "event": "deploy_start",
+              "elapsed_s": 101.531,
+              "payload": {
+                "iter": 1
+              }
+            },
+            {
+              "event": "deploy_done",
+              "elapsed_s": 109.328,
+              "payload": {
+                "iter": 1,
+                "state": "ok"
+              }
+            },
+            {
+              "event": "acceptance_start",
+              "elapsed_s": 109.328,
+              "payload": {
+                "iter": 1,
+                "scenario": "mujoco"
+              }
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 109.625,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 109.734,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 109.734,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 110.766,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 110.766,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 111.078,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 111.078,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 111.281,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 111.484,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 111.484,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 113.531,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 113.641,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 113.641,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 120.25,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 130.453,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 141.516,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 152.25,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 156.156,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 157.25,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 158.063,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 158.25,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 158.281,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 158.594,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 158.625,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 158.625,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 158.625,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 158.625,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 158.625,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 158.625,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 158.625,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 158.625,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 158.625,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 158.625,
+              "payload": null
+            },
+            {
+              "event": "final",
+              "elapsed_s": 158.875,
+              "payload": {
+                "iter": 1,
+                "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_region_20261021_105850_irregular_r30"
+              }
+            }
+          ],
+          "duration_s": 158.875,
+          "ended_at": 1792552342.3536985,
+          "acceptance": {
+            "passed": 9,
+            "observed_passed": 9,
+            "total": 9,
+            "evaluated": 9,
+            "not_evaluated": []
+          },
+          "model_calls": 1,
+          "model_duration_s": 101.265,
+          "request_oracle": [
+            {
+              "id": "REQUEST_PATH",
+              "pass": true,
+              "evaluated": true,
+              "reached": 6,
+              "total": 6
+            },
+            {
+              "id": "REQUEST_CORRIDOR",
+              "pass": true,
+              "evaluated": true,
+              "max_error": 1.5052,
+              "tolerance": 2.9
+            },
+            {
+              "id": "REQUEST_FINISH",
+              "pass": true,
+              "evaluated": true,
+              "actual": [
+                50,
+                50,
+                9
+              ]
+            },
+            {
+              "id": "CONTACT_TRUTH",
+              "pass": true,
+              "evaluated": true,
+              "mismatch_samples": 0,
+              "longest_mismatch_samples": 0,
+              "max_observed_response_s": 0,
+              "response_s": 0.04,
+              "unresolved": false
+            }
+          ]
+        }
+      ],
+      "request_oracle": [
+        {
+          "id": "REQUEST_PATH",
+          "pass": true,
+          "evaluated": true,
+          "reached": 6,
+          "total": 6
+        },
+        {
+          "id": "REQUEST_CORRIDOR",
+          "pass": true,
+          "evaluated": true,
+          "max_error": 1.5052,
+          "tolerance": 2.9
+        },
+        {
+          "id": "REQUEST_FINISH",
+          "pass": true,
+          "evaluated": true,
+          "actual": [
+            50,
+            50,
+            9
+          ]
+        },
+        {
+          "id": "CONTACT_TRUTH",
+          "pass": true,
+          "evaluated": true,
+          "mismatch_samples": 0,
+          "longest_mismatch_samples": 0,
+          "max_observed_response_s": 0,
+          "response_s": 0.04,
+          "unresolved": false
+        }
+      ],
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_region_20261021_105850_irregular_r30",
+      "human_repair": false
+    },
+    {
+      "case": "ellipse_r15",
+      "status": "best_effort",
+      "exit_code": 1,
+      "success": false,
+      "duration_s": 422.671,
+      "iteration_count": 3,
+      "model_calls": 9,
+      "iterations": [
+        {
+          "iter": 1,
+          "started_at": 1792552407.7950094,
+          "events": [
+            {
+              "event": "iter_start",
+              "elapsed_s": 0.0,
+              "payload": {
+                "iter": 1,
+                "hmi": true
+              }
+            },
+            {
+              "event": "deploy_start",
+              "elapsed_s": 98.343,
+              "payload": {
+                "iter": 1
+              }
+            },
+            {
+              "event": "deploy_done",
+              "elapsed_s": 106.156,
+              "payload": {
+                "iter": 1,
+                "state": "ok"
+              }
+            },
+            {
+              "event": "acceptance_start",
+              "elapsed_s": 106.156,
+              "payload": {
+                "iter": 1,
+                "scenario": "mujoco"
+              }
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 106.453,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 106.562,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 106.562,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 107.484,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 107.484,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 107.796,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 107.796,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 108.0,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 119.281,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 119.296,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 119.296,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 119.296,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 119.296,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 119.296,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 119.296,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 119.296,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 119.296,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 119.296,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 119.296,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 119.296,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 119.296,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 119.296,
+              "payload": null
+            },
+            {
+              "event": "candidate_selected",
+              "elapsed_s": 124.765,
+              "payload": {
+                "best_iter": 1,
+                "reasons": [
+                  "建立首个通过静态检查的修复基底"
+                ]
+              }
+            },
+            {
+              "event": "gate_failed",
+              "elapsed_s": 124.765,
+              "payload": {
+                "iter": 1,
+                "gate": "acceptance"
+              }
+            }
+          ],
+          "failed_gate": "acceptance",
+          "duration_s": 124.765,
+          "ended_at": 1792552532.5464149,
+          "acceptance": {
+            "passed": 8,
+            "observed_passed": 8,
+            "total": 9,
+            "evaluated": 9,
+            "not_evaluated": []
+          },
+          "model_calls": 2,
+          "model_duration_s": 103.282,
+          "request_oracle": [
+            {
+              "id": "REQUEST_PATH",
+              "pass": true,
+              "evaluated": true,
+              "reached": 37,
+              "total": 37
+            },
+            {
+              "id": "REQUEST_CORRIDOR",
+              "pass": true,
+              "evaluated": true,
+              "max_error": 2.5808,
+              "tolerance": 2.9
+            },
+            {
+              "id": "REQUEST_FINISH",
+              "pass": true,
+              "evaluated": true,
+              "actual": [
+                50,
+                50,
+                9
+              ]
+            },
+            {
+              "id": "CONTACT_TRUTH",
+              "pass": true,
+              "evaluated": true,
+              "mismatch_samples": 1,
+              "longest_mismatch_samples": 1,
+              "max_observed_response_s": 0.031000000000000028,
+              "response_s": 0.04,
+              "unresolved": false
+            }
+          ]
+        },
+        {
+          "iter": 2,
+          "started_at": 1792552532.5784307,
+          "events": [
+            {
+              "event": "iter_start",
+              "elapsed_s": 0.0,
+              "payload": {
+                "iter": 2,
+                "hmi": true
+              }
+            },
+            {
+              "event": "deploy_start",
+              "elapsed_s": 120.828,
+              "payload": {
+                "iter": 2
+              }
+            },
+            {
+              "event": "deploy_done",
+              "elapsed_s": 128.547,
+              "payload": {
+                "iter": 2,
+                "state": "ok"
+              }
+            },
+            {
+              "event": "acceptance_start",
+              "elapsed_s": 128.547,
+              "payload": {
+                "iter": 2,
+                "scenario": "mujoco"
+              }
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 128.844,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 128.938,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 128.938,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 129.86,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 129.86,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 130.172,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 130.172,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 130.375,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 145.047,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 145.063,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 145.063,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 145.063,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 145.063,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 145.063,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 145.063,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 145.063,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 145.063,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 145.063,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 145.063,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 145.063,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 145.063,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 145.063,
+              "payload": null
+            },
+            {
+              "event": "candidate_rejected",
+              "elapsed_s": 150.953,
+              "payload": {
+                "best_iter": 1,
+                "reasons": [
+                  "ELLIPSE_PATH 线段偏差变差"
+                ]
+              }
+            },
+            {
+              "event": "gate_failed",
+              "elapsed_s": 150.953,
+              "payload": {
+                "iter": 2,
+                "gate": "acceptance"
+              }
+            }
+          ],
+          "failed_gate": "acceptance",
+          "duration_s": 150.953,
+          "ended_at": 1792552683.507184,
+          "acceptance": {
+            "passed": 8,
+            "observed_passed": 8,
+            "total": 9,
+            "evaluated": 9,
+            "not_evaluated": []
+          },
+          "model_calls": 2,
+          "model_duration_s": 126.562,
+          "request_oracle": [
+            {
+              "id": "REQUEST_PATH",
+              "pass": true,
+              "evaluated": true,
+              "reached": 37,
+              "total": 37
+            },
+            {
+              "id": "REQUEST_CORRIDOR",
+              "pass": true,
+              "evaluated": true,
+              "max_error": 2.5808,
+              "tolerance": 2.9
+            },
+            {
+              "id": "REQUEST_FINISH",
+              "pass": true,
+              "evaluated": true,
+              "actual": [
+                50,
+                50,
+                9
+              ]
+            },
+            {
+              "id": "CONTACT_TRUTH",
+              "pass": true,
+              "evaluated": true,
+              "mismatch_samples": 1,
+              "longest_mismatch_samples": 1,
+              "max_observed_response_s": 0.03200000000000003,
+              "response_s": 0.04,
+              "unresolved": false
+            }
+          ]
+        },
+        {
+          "iter": 3,
+          "started_at": 1792552683.5221832,
+          "events": [
+            {
+              "event": "iter_start",
+              "elapsed_s": 0.0,
+              "payload": {
+                "iter": 3,
+                "hmi": true
+              }
+            },
+            {
+              "event": "deploy_start",
+              "elapsed_s": 54.797,
+              "payload": {
+                "iter": 3
+              }
+            },
+            {
+              "event": "deploy_done",
+              "elapsed_s": 62.532,
+              "payload": {
+                "iter": 3,
+                "state": "ok"
+              }
+            },
+            {
+              "event": "acceptance_start",
+              "elapsed_s": 62.532,
+              "payload": {
+                "iter": 3,
+                "scenario": "mujoco"
+              }
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 62.828,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 62.922,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 62.922,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 63.86,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 63.86,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 64.172,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 64.172,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 64.375,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 76.375,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 76.391,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 76.391,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 76.391,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 76.391,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 76.391,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 76.391,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 76.391,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 76.391,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 76.391,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 76.391,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 76.391,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 76.391,
+              "payload": null
+            },
+            {
+              "event": "acceptance_line",
+              "elapsed_s": 76.391,
+              "payload": null
+            },
+            {
+              "event": "candidate_rejected",
+              "elapsed_s": 81.532,
+              "payload": {
+                "best_iter": 1,
+                "reasons": [
+                  "ELLIPSE_PATH 线段偏差变差"
+                ]
+              }
+            },
+            {
+              "event": "gate_failed",
+              "elapsed_s": 81.532,
+              "payload": {
+                "iter": 3,
+                "gate": "acceptance"
+              }
+            },
+            {
+              "event": "no_progress",
+              "elapsed_s": 81.532,
+              "payload": {
+                "reason": "no_progress"
+              }
+            },
+            {
+              "event": "best_effort",
+              "elapsed_s": 81.547,
+              "payload": {
+                "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_region_20261021_105850_ellipse_r15"
+              }
+            }
+          ],
+          "failed_gate": "acceptance",
+          "duration_s": 81.547,
+          "ended_at": 1792552765.049347,
+          "acceptance": {
+            "passed": 8,
+            "observed_passed": 8,
+            "total": 9,
+            "evaluated": 9,
+            "not_evaluated": []
+          },
+          "model_calls": 2,
+          "model_duration_s": 59.797,
+          "request_oracle": [
+            {
+              "id": "REQUEST_PATH",
+              "pass": true,
+              "evaluated": true,
+              "reached": 37,
+              "total": 37
+            },
+            {
+              "id": "REQUEST_CORRIDOR",
+              "pass": true,
+              "evaluated": true,
+              "max_error": 2.5808,
+              "tolerance": 2.9
+            },
+            {
+              "id": "REQUEST_FINISH",
+              "pass": true,
+              "evaluated": true,
+              "actual": [
+                50,
+                50,
+                9
+              ]
+            },
+            {
+              "id": "CONTACT_TRUTH",
+              "pass": true,
+              "evaluated": true,
+              "mismatch_samples": 2,
+              "longest_mismatch_samples": 1,
+              "max_observed_response_s": 0.016000000000000014,
+              "response_s": 0.04,
+              "unresolved": false
+            }
+          ]
+        }
+      ],
+      "request_oracle": [
+        {
+          "id": "REQUEST_PATH",
+          "pass": true,
+          "evaluated": true,
+          "reached": 37,
+          "total": 37
+        },
+        {
+          "id": "REQUEST_CORRIDOR",
+          "pass": true,
+          "evaluated": true,
+          "max_error": 2.5808,
+          "tolerance": 2.9
+        },
+        {
+          "id": "REQUEST_FINISH",
+          "pass": true,
+          "evaluated": true,
+          "actual": [
+            50,
+            50,
+            9
+          ]
+        },
+        {
+          "id": "CONTACT_TRUTH",
+          "pass": true,
+          "evaluated": true,
+          "mismatch_samples": 1,
+          "longest_mismatch_samples": 1,
+          "max_observed_response_s": 0.031000000000000028,
+          "response_s": 0.04,
+          "unresolved": false
+        }
+      ],
+      "run_dir": "D:\\Study\\SIMENS PLC\\runs\\bench_region_20261021_105850_ellipse_r15",
+      "human_repair": false
+    }
+  ],
+  "complete": true,
+  "completed_case_duration_s": 1233.889
+}
