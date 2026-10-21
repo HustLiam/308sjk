@@ -102,6 +102,21 @@ def test_exhausted_planning_writes_explicit_failure_without_generating_plc(tmp_p
     assert manifest['status'] == 'planning_failed' and manifest['stage'] == 'test_plan'
 
 
+def test_requirement_failure_stops_before_planning(tmp_path, monkeypatch):
+    from agent import closed_loop
+    monkeypatch.setattr(closed_loop.sys.stdout, 'reconfigure', lambda **kwargs: None, raising=False)
+    monkeypatch.setattr(closed_loop, 'PROJECT_ROOT', tmp_path)
+    monkeypatch.setattr(closed_loop, 'get_api_key', lambda: 'unit-test')
+    monkeypatch.setattr(closed_loop, 'parse_aml', lambda _: ({}, []))
+    monkeypatch.setattr(closed_loop, 'RequirementUnderstander', lambda **kwargs: SimpleNamespace(
+        understand=lambda *a, **kw: {'report': {'problems': ['contradictory terminal regions']}, 'spec': None}))
+    monkeypatch.setattr(closed_loop, 'TestPlanGenerator', lambda *a, **kw: pytest.fail('Planning must not start'))
+    monkeypatch.setattr(sys, 'argv', ['closed_loop', '--task-id', 'requirement_failure'])
+    assert closed_loop.main() == 2
+    manifest = json.loads((tmp_path / 'runs/requirement_failure/manifest.json').read_text(encoding='utf-8'))
+    assert manifest['status'] == 'requirement_failed' and manifest['stage'] == 'requirement'
+
+
 def test_generation_unavailability_keeps_best_and_stops_repair(tmp_path, monkeypatch):
     class Generator:
         client = SimpleNamespace(blocked_error=None, blocked_status=None)

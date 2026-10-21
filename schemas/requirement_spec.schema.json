@@ -383,6 +383,7 @@
     },
     "ac_region_containment": {
       "type": "object",
+      "allOf": [{"if": {"not": {"required": ["signals"]}}, "then": {"properties": {"region_center": {"minItems": 3, "maxItems": 3}}}}],
       "required": [
         "id",
         "desc",
@@ -412,12 +413,17 @@
         },
         "region_center": {
           "type": "array",
-          "minItems": 3,
-          "maxItems": 3,
+          "minItems": 1,
+          "maxItems": 64,
           "items": {
             "type": "number"
           },
-          "description": "目标区域中心 [x, y, z]，米"
+          "description": "与signals逐项对应的反馈工程量目标；省略signals的旧格式固定三个分量，按旧反馈次序检查"
+        },
+        "signals": {
+          "type": "array", "minItems": 1, "maxItems": 64, "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
+          "description": "明确选择input INT反馈及其顺序；asset名不用于猜测单轴或数值分量"
         },
         "tolerance": {
           "type": "number",

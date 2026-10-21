@@ -31,6 +31,7 @@ def profile(iter_dir, iteration, gate, spec, plan, project_root, strict=False):
     context = {"spec": hashlib.sha256(json.dumps(spec, sort_keys=True).encode()).hexdigest(),
                "plan": hashlib.sha256(json.dumps(plan, sort_keys=True).encode()).hexdigest()}
     for relative in ("src/pipeline/mujoco_verdict.py", "src/pipeline/test_plan_runtime.py",
+                     "src/pipeline/region_contract.py",
                      "src/pipeline/trace_query.py",
                      "src/pipeline/condition_response.py",
                      "src/pipeline/scenario_mujoco.py", "src/pipeline/modbus_io.py", "src/pipeline/xml2st.py",

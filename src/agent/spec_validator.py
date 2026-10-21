@@ -31,6 +31,7 @@ requirement_spec 校验器（契约①的可执行权威，gc 拥有）。
 """
 
 import re
+import math
 
 SCHEMA_VERSION_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(-draft\.[0-9]+)?$")
 IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -203,11 +204,12 @@ def _check_acceptance(problems, item, idx, io_names):
         if not isinstance(item.get("asset"), str) or not item.get("asset"):
             _err(problems, path, "asset 必须是非空字符串（SceneSpec 资产名）")
         center = item.get("region_center")
-        if not (isinstance(center, (list, tuple)) and len(center) == 3
-                and all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in center)):
-            _err(problems, path, "region_center 必须是 [x,y,z] 三个数")
+        size = len(item['signals']) if isinstance(item.get('signals'), list) else 3
+        if not (isinstance(center, (list, tuple)) and len(center) == size and 1 <= size <= 64
+                and all(isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) for v in center)):
+            _err(problems, path, "region_center须与signals长度相等；旧格式须为[x,y,z]三个有限数")
         tol = item.get("tolerance")
-        if not isinstance(tol, (int, float)) or isinstance(tol, bool) or tol <= 0:
+        if not isinstance(tol, (int, float)) or isinstance(tol, bool) or not math.isfinite(tol) or tol <= 0:
             _err(problems, path, "tolerance 必须是 >0 的数")
         if item.get("check_at") != "end":
             _err(problems, path, "check_at v1 冻结为 'end'（扩展走 RFC），实际 %r" % (item.get("check_at"),))
@@ -398,6 +400,8 @@ def validate_requirement_spec(spec):
                 else:
                     seen_pos.add(tuple(pos))
 
+    from src.pipeline.region_contract import terminal_region_problems
+    problems.extend(terminal_region_problems(spec))
     return problems
 
 

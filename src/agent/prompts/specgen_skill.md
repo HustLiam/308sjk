@@ -46,7 +46,7 @@
 - `event_delay`：`{"from": {"signal","edge"}, "to": {"signal","edge"}, "op": "<=", "value": 秒, "unit": "s"}`
   —— signal 必须逐字存在于 io_list；时间阈值 ≥0.1s（通信时序下限）；
 - `forbidden_state`：`{"when": {"signal","equals"}, "forbid": {"signal","equals"}}`；
-- `region_containment`：`{"asset": "资产名", "region_center": [x,y,z], "tolerance": >0, "check_at": "end"}`；
+- `region_containment`：`{"asset":"资产名","signals":["position_fb"],"region_center":[50],"tolerance":2,"check_at":"end"}`；signals必须逐字引用input INT反馈，region_center按相同顺序填写工程量目标，不是固定米。单轴只写该轴一个反馈和一个目标，多轴写对应反馈列表与等长目标；asset名字不选择轴，禁止给未检查分量补0。所有新生成的区域均须显式signals。
 - `sim_health`：无类型专属字段（仿真无发散/行程未越界）；
 - 建议覆盖：使能时序（event_delay）、安全联锁（forbidden_state ×N）、
   终态定位（region_containment）、仿真健康（sim_health）各至少一条。

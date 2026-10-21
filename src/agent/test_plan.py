@@ -226,6 +226,10 @@ class TestPlanGenerator:
     def generate(self, request, spec, evidence):
         from .config import MODEL, generation_options
         from .requirement import extract_json
+        from src.pipeline.region_contract import terminal_region_problems
+        region_problems = terminal_region_problems(spec)
+        if region_problems:
+            raise PlanFeasibilityError('需求终态区域无可行解释，先修正规格：' + '；'.join(region_problems))
         prompt = Path(__file__).with_name("prompts").joinpath("testplan_skill.md").read_text(encoding="utf-8")
         messages = [{"role": "system", "content": prompt}, {"role": "user", "content":
             "原始用户需求：\n%s\n\n已校验设备与需求规格：\n%s" % (request, json.dumps(spec, ensure_ascii=False, indent=2))}]

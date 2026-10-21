@@ -26,6 +26,7 @@
   {"id","desc","type":"sim_health"}
 """
 import os
+import math
 import re
 import time
 
@@ -304,6 +305,21 @@ def evaluate(acceptance, trace, channels=None):
                 r["evidence"] = (f"未观测到真实的 {f} 边沿；首样本电平不代表边沿"
                                  if t0 is None else f"{to} 未在观测窗内置位（{f}@{t0}）")
         elif typ == "region_containment":
+            from src.pipeline.region_contract import explicit_region_targets
+            if "signals" in ac:
+                try:
+                    targets = explicit_region_targets(ac)
+                except ValueError as exc:
+                    r["evidence"] = "终态区域配置错误：%s" % exc
+                    out.append(r)
+                    continue
+                r["signals"] = list(ac["signals"])
+                r["pass"] = all(isinstance(end.get(n), (int, float)) and not isinstance(end[n], bool)
+                    and math.isfinite(end[n]) and abs(end[n]-target) <= tol for n, target, tol in targets)
+                r["evidence"] = "终态 %s；目标 %s（tol±%s）" % (
+                    {n: end.get(n) for n, _, _ in targets}, {n: target for n, target, _ in targets}, ac["tolerance"])
+                out.append(r)
+                continue
             c, tol = ac["region_center"], ac["tolerance"]
             fbs = _feedback_channels(channels)
             if not fbs:

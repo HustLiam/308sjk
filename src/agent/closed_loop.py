@@ -138,7 +138,12 @@ def main():
             raise
         (run / "requirement_report.json").write_text(json.dumps(result["report"], ensure_ascii=False, indent=2), encoding="utf-8")
         if result["spec"] is None:
-            raise ValueError("需求理解未通过: %s" % result["report"])
+            data = {"status": "requirement_failed", "stage": "requirement", "report": result["report"],
+                    "model": MODEL, "model_calls": client.calls, "seed_used": False, "generation_mode": "full_xml"}
+            (run / "manifest.json").write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+            narrate("requirement_failed", data)
+            print("RESULT: requirement_failed -> %s" % run, flush=True)
+            return 2
         spec = result["spec"]
     spec["task_id"], spec["prog_id"] = task, 4
     (run / "requirement_spec.model.json").write_text(

@@ -36,6 +36,15 @@ from .spec_validator import TASK_ID_RE, validate_requirement_spec
 SKILL_PATH = Path(__file__).resolve().parent / "prompts" / "specgen_skill.md"
 SCHEMA_VERSION = "1.0.0-draft.3"
 
+
+def _generated_region_problems(spec):
+    """New model-generated numeric regions must name their feedback components."""
+    if not isinstance(spec, dict) or not isinstance(spec.get('acceptance'), list):
+        return []
+    return ['acceptance[%s].signals: 新生成的终态区域必须显式绑定input INT反馈，region_center与signals逐项对应；asset不选择单轴，不给其他分量补0' % ac.get('id', '?')
+            for ac in spec['acceptance'] if isinstance(ac, dict)
+            and ac.get('type') == 'region_containment' and 'signals' not in ac]
+
 _FENCE_RE = re.compile(r"```(?:json)?\s*([\s\S]*?)```", re.IGNORECASE)
 
 
@@ -251,7 +260,7 @@ class RequirementUnderstander:
                 except ValueError as exc:
                     problems = ["[json] 解析失败: %s" % exc]
                 else:
-                    problems = validate_requirement_spec(spec)
+                    problems = validate_requirement_spec(spec) + _generated_region_problems(spec)
                     if io_items:
                         problems += ["[anchor] %s" % p for p in _anchor_problems(spec, io_items)]
                     if not problems:
@@ -307,7 +316,7 @@ class RequirementUnderstander:
                 except ValueError as exc:
                     problems = ["[json] 解析失败: %s" % exc]
                 else:
-                    problems = validate_requirement_spec(new_spec)
+                    problems = validate_requirement_spec(new_spec) + _generated_region_problems(new_spec)
                     if io_items:
                         problems += ["[anchor] %s" % p for p in _anchor_problems(new_spec, io_items)]
                     if not problems:

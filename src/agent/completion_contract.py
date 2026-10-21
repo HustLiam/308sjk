@@ -36,6 +36,11 @@ def validate_completion_contract(plan, spec):
         target = condition.get('equals', condition.get('target'))
         tolerance = condition.get('tolerance', 0)
         constrain(name, target - tolerance, target + tolerance, 'completion')
+    from src.pipeline.region_contract import explicit_region_targets
+    for criterion in spec.get('acceptance', []):
+        if criterion.get('type') == 'region_containment':
+            for name, target, tol in explicit_region_targets(criterion) or []:
+                constrain(name, target-tol, target+tol, criterion['id'] + ' 终态区域')
     for check in plan['path_checks']:
         if check.get('terminal') is True:
             end = check['points'][-1]
