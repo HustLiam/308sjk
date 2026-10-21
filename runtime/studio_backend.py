@@ -127,9 +127,13 @@ class RemoteCamera:
 
     def orbit(self, dx, dy):
         self.camera["azimuth"] -= 0.3 * dx
-        self.camera["elevation"] = max(-89, min(-5, self.camera["elevation"] + 0.3 * dy))
+        self.camera["elevation"] = max(-89, min(89, self.camera["elevation"] + 0.3 * dy))
         self._save()
 
     def zoom(self, dy):
         self.camera["distance"] = max(0.3, min(8.0, self.camera["distance"] * (1 + 0.1 * dy)))
+        self._save()
+
+    def reset_camera(self):
+        self.camera = {"azimuth": 135, "elevation": -40, "distance": 2.5}
         self._save()

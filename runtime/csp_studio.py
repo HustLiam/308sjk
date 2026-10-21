@@ -187,13 +187,50 @@ class SimThread(QThread):
 
     def zoom(self, dy):
         if hasattr(self, "cam"):
-            self.cam.distance = max(0.3, min(5.0, self.cam.distance * (1 + 0.1 * dy)))
+            self.cam.distance = max(0.3, min(8.0, self.cam.distance * (1 + 0.1 * dy)))
+
+    def reset_camera(self):
+        if hasattr(self, 'cam'):
+            self.cam.azimuth, self.cam.elevation, self.cam.distance = 135, -40, 2.5
+
+
+class SnapshotThread(QThread):
+    frame = Signal(object)
+    error = Signal(str)
+
+    def __init__(self, frame_path):
+        super().__init__()
+        self.frame_path, self._run = frame_path, True
+
+    def run(self):
+        renderer = None
+        try:
+            from frame_stream import SnapshotRenderer
+            renderer = SnapshotRenderer(self.frame_path)
+            camera_path, stamp = Path(self.frame_path).with_suffix('.camera.json'), object()
+            while self._run:
+                try:
+                    current = camera_path.stat().st_mtime_ns
+                except OSError:
+                    current = None
+                if current != stamp:
+                    self.frame.emit(renderer.render().copy())
+                    stamp = current
+                self.msleep(50)
+        except Exception as exc:
+            self.error.emit('结果视角查看失败：%s' % exc)
+        finally:
+            if renderer is not None:
+                renderer.close()
 
 
 class SimView(QWidget):
     def __init__(self):
         super().__init__()
         self.thread, self.img = None, None
+        self._drag = None
+        self.setCursor(Qt.OpenHandCursor)
+        self.setToolTip('左键拖动旋转 · 滚轮缩放 · 双击恢复视角')
         self.setMinimumSize(520, 520)
 
     def paintEvent(self, _):
@@ -210,10 +247,14 @@ class SimView(QWidget):
         p.end()
 
     def mousePressEvent(self, e):
-        self._drag = e.position()
+        if e.button() == Qt.LeftButton:
+            self._drag = e.position()
+            self.setCursor(Qt.ClosedHandCursor)
+            e.accept()
 
     def mouseReleaseEvent(self, e):
         self._drag = None
+        self.setCursor(Qt.OpenHandCursor)
 
     def mouseMoveEvent(self, e):
         if getattr(self, "_drag", None) is not None and self.thread:
@@ -222,8 +263,16 @@ class SimView(QWidget):
             self.thread.orbit(d.x(), d.y())
 
     def wheelEvent(self, e):
-        if self.thread:
+        if self.thread and e.angleDelta().y():
             self.thread.zoom(1 if e.angleDelta().y() < 0 else -1)
+            e.accept()
+
+    def mouseDoubleClickEvent(self, e):
+        if e.button() == Qt.LeftButton and self.thread:
+            self.thread.reset_camera()
+            self._drag = None
+            self.setCursor(Qt.OpenHandCursor)
+            e.accept()
 
 
 class PipelineWorker(QThread):
@@ -714,6 +763,7 @@ class MainWindow(QWidget):
         self.setWindowTitle("CSP Studio — 对话生成 × MuJoCo")
         self.resize(1360, 800)
         self.sim = None
+        self.inspector = None
         self.worker = None
         self.active_run = None
         self.frame_path = None
@@ -790,7 +840,12 @@ class MainWindow(QWidget):
         lw.setLayout(left)
         sp = QSplitter(Qt.Horizontal)
         sp.addWidget(lw)
-        sp.addWidget(self.view)
+        right = QWidget()
+        right_layout = QVBoxLayout(right)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.addWidget(self.view, 1)
+        right_layout.addWidget(QLabel('左键拖动旋转 · 滚轮缩放 · 双击恢复视角'))
+        sp.addWidget(right)
         sp.setStretchFactor(0, 0)
         sp.setStretchFactor(1, 1)
         sp.setSizes([420, 940])
@@ -816,6 +871,12 @@ class MainWindow(QWidget):
                                  (seconds // 60, seconds % 60, self.received_frames))
 
     def _stop_manual_sim(self):
+        if self.inspector is not None:
+            self.inspector._run = False
+            if not self.inspector.wait(5000):
+                self.log.appendPlainText('结果视角仍在停止，请稍后重试。')
+                return False
+            self.inspector = None
         self._hmi_timer.stop()
         self.hmi.setEnabled(False)
         self.hmi.disconnect()
@@ -899,11 +960,12 @@ class MainWindow(QWidget):
         self.results_button.setEnabled(self.active_run.is_dir())
         self._set_busy(False)
         self._read_live_frame()
+        self._start_inspection()
         self._update_elapsed()
         self.job_started = None
         if status == "final":
             self.status.setText("全部验收通过 · %s" % self.active_run.name)
-            self.log.appendPlainText("✓ 本次完整 XML、真实编译及物理验收全部通过。画面保留末帧，结果已保存。")
+            self.log.appendPlainText("✓ 本次完整 XML、真实编译及物理验收全部通过。结果已保存。")
             final = self.active_run / "final"
             self.scene_edit.setText(str(final / "scene.spec.json"))
             self.xml_edit.setText(str(final / "plcopen.xml"))
@@ -918,6 +980,26 @@ class MainWindow(QWidget):
         else:
             self.status.setText("闭环未通过 · 查看本次日志与 gate.json")
             self.log.appendPlainText("✗ 本次闭环未全部通过，失败证据已保留；未使用种子替代。")
+
+    def _start_inspection(self):
+        if not self.frame_path or not self.frame_path.with_suffix('.state.npz').is_file():
+            return
+        path = self.frame_path
+        self.frame_path = None
+        self.inspector = SnapshotThread(path)
+        current = self.inspector
+        self.inspector.frame.connect(lambda arr: self._frame(arr) if self.inspector is current else None)
+        self.inspector.error.connect(self.log.appendPlainText)
+        self.view.thread = RemoteCamera(path)
+        # 沿用本轮相机，避免任务结束时跳回默认视角。
+        camera_path = path.with_suffix('.camera.json')
+        if camera_path.is_file():
+            try:
+                self.view.thread.camera.update(json.loads(camera_path.read_text(encoding='utf-8')))
+            except (OSError, ValueError, TypeError):
+                pass
+        self.inspector.start()
+        self.log.appendPlainText('画面为本次实际状态，可拖动查看；只改变视角，不推进物理或操作PLC，HMI保持只读。')
 
     def _pick(self, edit, flt):
         p, _ = QFileDialog.getOpenFileName(self, "选择文件", REPO, flt + ";;All (*)")

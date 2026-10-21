@@ -72,6 +72,35 @@ def test_camera_does_not_precreate_strict_task_directory(tmp_path):
     assert path.with_suffix(".camera.json").is_file()
 
 
+def test_view_mouse_controls_live_camera_while_hmi_readonly(qt, tmp_path):
+    from PySide6.QtCore import Qt, QPoint, QPointF, QEvent
+    from PySide6.QtGui import QMouseEvent, QWheelEvent
+    from PySide6.QtTest import QTest
+    from runtime.csp_studio import MainWindow
+    window = MainWindow()
+    try:
+        window._set_busy(True)
+        view = window.view
+        view.thread = RemoteCamera(tmp_path / 'live_frame.npy')
+        view.show()
+        QTest.mousePress(view, Qt.LeftButton, pos=QPoint(30, 30))
+        event = QMouseEvent(QEvent.MouseMove, QPointF(120, 80), QPointF(120, 80),
+                            Qt.NoButton, Qt.LeftButton, Qt.NoModifier)
+        qt.sendEvent(view, event)
+        QTest.mouseRelease(view, Qt.LeftButton, pos=QPoint(120, 80))
+        assert view.thread.camera['azimuth'] == 108
+        assert view.thread.camera['elevation'] == -25
+        wheel = QWheelEvent(QPointF(120, 80), QPointF(120, 80), QPoint(), QPoint(0, 120),
+                            Qt.NoButton, Qt.NoModifier, Qt.NoScrollPhase, False)
+        qt.sendEvent(view, wheel)
+        assert view.thread.camera['distance'] == 2.25
+        QTest.mouseDClick(view, Qt.LeftButton, pos=QPoint(120, 80))
+        assert view.thread.camera == {'azimuth': 135, 'elevation': -40, 'distance': 2.5}
+        assert not window.hmi.isEnabled() and view.isEnabled()
+    finally:
+        window.close()
+
+
 @pytest.mark.parametrize("identity", [4, 99])
 def test_cancel_only_resets_inputs_of_matching_program(tmp_path, monkeypatch, identity):
     from types import SimpleNamespace
