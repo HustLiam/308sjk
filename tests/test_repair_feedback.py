@@ -81,7 +81,7 @@ def test_repeated_static_source_stops_outer_loop_without_diagnosis(tmp_path,monk
     calls=[]
     def call(*args,**kwargs):
         calls.append(1)
-        return '<project/>'
+        return '<project><ST>x := 1;</ST></project>'
     monkeypatch.setattr(generator,'_call',call)
     monkeypatch.setattr(generator,'gate',lambda *args:(False,['cannot AND']))
     orch=Orchestrator(runs_root=tmp_path,max_iters=6)
@@ -89,3 +89,34 @@ def test_repeated_static_source_stops_outer_loop_without_diagnosis(tmp_path,monk
     result=orch.solve(spec,generator)
     assert len(calls)==2 and result['stop_reason']=='no_progress'
     assert not (Path(result['run_dir'])/'final').exists()
+
+
+@pytest.mark.parametrize('mode',['generate','repair'])
+def test_truncated_outputs_have_bounded_output_failure_not_duplicate_source(tmp_path,mode):
+    calls=[]
+    class Client:
+        def chat_completions(self,payload,**kwargs):
+            calls.append(payload)
+            return {'choices':[{'finish_reason':'length','message':{'content':'<project><truncated>'}}]}
+    generator=PLCGenerator(Client(),no_cards=True,max_rounds=5)
+    generator.evidence_dir=tmp_path
+    with pytest.raises(GenerationStalled) as error:
+        if mode=='generate':generator.generate({'io_list':[]})
+        else:generator.repair('<project></project>',{'io_list':[]},'PATH failed')
+    assert error.value.reason=='output_limit' and generator.stop_reason=='output_limit'
+    assert len(calls)==2 and not generator._failed_candidates
+    record=json.loads((tmp_path/'call_002.feedback.json').read_text(encoding='utf-8'))
+    assert record['failure_kind']=='output_limit' and not record['repeated']
+    assert not record['pitfalls'] and record['source_signature'] is None
+
+
+@pytest.mark.parametrize('max_rounds',[1,5])
+def test_output_failure_stops_outer_loop_without_plc_attribution(tmp_path,monkeypatch,max_rounds):
+    spec=json.loads((ROOT/'examples/specs/motion3axis.spec.json').read_text(encoding='utf-8'))
+    generator=PLCGenerator(None,no_cards=True,max_rounds=max_rounds)
+    monkeypatch.setattr(generator,'_call',lambda *args,**kwargs:'[output_limit] truncated')
+    orch=Orchestrator(runs_root=tmp_path,max_iters=6)
+    monkeypatch.setattr(orch.attribution,'attribute',lambda *args,**kwargs:pytest.fail('output failure triggered PLC diagnosis'))
+    result=orch.solve(spec,generator)
+    assert result['stop_reason']=='output_limit'
+    assert len(json.loads((tmp_path/spec['task_id']/'iter_001/gate.json').read_text(encoding='utf-8'))['errors'])==1

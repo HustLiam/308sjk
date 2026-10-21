@@ -11,6 +11,10 @@ from .memory import MemoryStore, normalize_errors
 class GenerationStalled(RuntimeError):
     """Repeated evidence without a useful code change must not spend another call."""
 
+    def __init__(self,message,reason='no_progress'):
+        super().__init__(message)
+        self.reason=reason
+
 
 def source_signature(xml):
     """Ignore formatting/comments, retain declarations, instructions and literal values."""
@@ -46,20 +50,37 @@ def knowledge_feedback(errors, gate='generate', memory=None):
 
 
 def static_feedback(generator, errors, xml):
-    advice, hits = knowledge_feedback(errors, memory=getattr(generator, 'memory', None))
-    signature = (source_signature(xml or ''), normalize_errors(errors))
+    incomplete=not xml
+    output_limit=incomplete and any(e.startswith('[output_limit]') for e in errors)
+    if incomplete:
+        advice,hits='',{'pitfalls':[],'fixes':0,'lessons':0}
+        count=getattr(generator,'_incomplete_outputs',0)+1
+        generator._incomplete_outputs=count
+    else:
+        generator._incomplete_outputs=0
+        advice, hits = knowledge_feedback(errors, memory=getattr(generator, 'memory', None))
+    signature = (source_signature(xml) if xml else None, normalize_errors(errors))
     seen = getattr(generator, '_failed_candidates', set())
-    repeated = signature in seen
-    seen.add(signature)
+    repeated = not incomplete and signature in seen
+    if not incomplete:seen.add(signature)
     generator._failed_candidates = seen
-    record = dict(hits, errors=list(errors), repeated=repeated)
+    record = dict(hits, errors=list(errors), repeated=repeated,
+                  failure_kind='output_limit' if output_limit else 'extract' if incomplete else 'static')
     if generator.evidence_dir:
         path = Path(generator.evidence_dir) / ('call_%03d.feedback.json' % generator.call_count)
         path.parent.mkdir(parents=True, exist_ok=True)
         record.update(source_signature=signature[0], advice=advice)
         path.write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding='utf-8')
-    generator.report('修复知识检索：故障库 %s；历史修复 %d 条；经验 %d 条。' %
-                     (','.join(hits['pitfalls']) or '未命中', hits['fixes'], hits['lessons']))
+    if incomplete:
+        generator.report('模型回复未形成完整工程，按输出失败处理，不归因为PLC逻辑故障。')
+        if count>=2:
+            reason='output_limit' if output_limit else 'invalid_output'
+            generator.stop_reason=reason
+            raise GenerationStalled('连续两次未获得完整工程，停止自动调用并保留此前候选；'+
+                ('模型输出额度耗尽，请检查输出预算。' if output_limit else '回复未包含完整XML，请检查模型响应。'),reason=reason)
+    else:
+        generator.report('修复知识检索：故障库 %s；历史修复 %d 条；经验 %d 条。' %
+                         (','.join(hits['pitfalls']) or '未命中', hits['fixes'], hits['lessons']))
     if repeated:
         generator.stop_reason = 'no_progress'
         raise GenerationStalled('相同程序重复出现相同静态错误，停止自动调用；详见本轮 feedback.json')

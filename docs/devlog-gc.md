@@ -1,5 +1,23 @@
 # gc 本地开发日志（devlog-gc）
 
+## 2026-10-21 用户授权同步修复到 master 和 gc
+
+用户明确要求提交更新到master和gc。发布前fetch确认目标远端分别仍为b50ad03/fe4423c，与本地分支一致；本次只提交已验证的绘图扫描顺序/持续触发、语言绘图假完成与输出失败分类修复，以及对应回归和文档。根660项通过、零跳过，正方形真实编译部署与MuJoCo验收PASS，4个XML静态通过；无实现变更，不重复调用模型或部署PLC。保留原生成system/0.3采样。合入前按规则移除个人devlog，合入后在gc恢复；不重置、不强推。修改前12份文件备份在E:/chagpt/308sjk-master-gc-fix-publication-20261021/before-publication。
+
+## 2026-10-21 用户授权补全Qt依赖
+
+在当前E:/Anaconda/python.exe安装项目要求范围内的PySide6。首先下载的6.12无法导入QtCore/QtWidgets（WinError127），PE导入/导出比对确认Qt6Core依赖icuuc.dll的ucnv_open等无版本后缀符号，而Anaconda/Library/bin/icuuc.dll为ICU73带版本后缀导出；Windows/System32同名库具备所需导出，在独立解释器预加载该库后6.12正常导入，证实是DLL冲突。为避免修改Anaconda或系统共享DLL，使用已检查不导入icuuc.dll的PySide6 6.8.3，四个配套包同版安装；清理本次6.12新增的WebEngine/Pdf独立包。普通解释器无需任何预加载即可导入QtCore/Gui/Widgets/Test。项目声明PySide6>=6.8,<7未变；pymodbus3.9.2和MuJoCo3.3.1保持。
+
+当前环境复现安装：E:/Anaconda/python.exe -m pip install PySide6==6.8.3。下载过程仅对安装子进程绕过失效代理，未改全局代理。桌面模块19通过，含原先6项跳过；全量660通过、零跳过（46.47s）。安装报告、版本记录及JUnit报告保存在E:/chagpt/308sjk-qt-dependencies-20261021，临时缓存与测试目录已清理。此前PLC修复继续运行于8765/PID38392，本次未提交、未推送。
+
+## 2026-10-21 语言绘图仿真跳步与输出截断修复
+
+用户授权修复生成后仿真停滞。8ce9db36语言正方形iter_002的INTERP支持连续换目标，但PLC_PRG在首段Done后清go_*_exe，后续目标从未装载；完成判断又位于ix_x/y/z调用之前，旧Done配合150ms驻留一路跳到最终完成。两次仿真均只有起点、无笔迹。后续模型两次输出达16384上限，空候选被误当同源码重复导致no_progress。通信在本次诊断中正常，与此前Modbus超时是不同故障。
+
+position_control统一所有绘图来源检查，完整IF块覆盖复合Done条件，屏蔽注释并沿用非绘图分支判定。已识别顶层150ms驻留模板仅移动完整步进块到三轴插补之后，并将每轴完成清理限定NOT draw_active；原CASE坐标、定时器、FB、参数和急停逻辑逐字保留。未知模板、嵌套调用及XML结构无效时不自动改写，静态闸门处理；接入VerifiedPLCGenerator每次完整回复后的已知规范化，不替换旧生成system或温度。Motion对square/circle也拒绝无笔迹完成。输出不完整不加入源码指纹集合、不匹配PLC故障库，连续两次停止并设置output_limit/invalid_output；生成预算耗尽时同样禁止额外归因调用和外层重复生成，网页分别解释输出失败和程序重复。
+
+回归654通过、6Qt缺依赖跳过；4份场景XML静态校验通过；回退策略哈希测试通过。将原失败XML只作新副本修复，在E:/chagpt/308sjk-drawing-validation-repair-20261021执行全部闸门，未调用付费模型：matiec编译、OpenPLC部署启动、MuJoCo物理验收PASS，11.83秒/621笔迹/1385真实物理采样，8路点按序到达并抬笔回中心。XML回执23b527e0a69b80d55f11e69dcb7891e6339c01f6693ffd4fed5e1fec3b4aa571，原任务未改写。8765空闲时重启PID38392；本次未提交、未推送。
+
 ## 2026-10-21 master 发布完成
 
 master 已按用户授权发布为 b50ad03277594cc472394fb4248dc71b4a0df0e1；300个文件指纹与已验证源码清单一致，master树不含个人devlog。此前642通过、6Qt跳过，4份PLC XML静态校验通过。本次合入未修改已验证实现，当前目录保留gc。用户另行明确允许推送gc，个人日志在gc恢复后随该分支同步。

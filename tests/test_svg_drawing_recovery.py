@@ -101,9 +101,10 @@ def test_recovery_keeps_nested_waypoints_and_continuous_fire(generated_svg):
     with pytest.raises(ValueError,match='重复'):repair_generated_svg(fixed,model,trajectory)
 
 
-def test_done_without_ink_is_failure_not_drawing_completed(delivery):
+@pytest.mark.parametrize('shape',['svg','square','circle'])
+def test_done_without_ink_is_failure_not_drawing_completed(delivery,shape):
     app,ident,_,directory=delivery
-    (directory/'trajectory.json').write_text(json.dumps({'shape':'svg','pen_z':{'down':0,'up':10},'steps':[{'no':1,'to':[35,25,0]}]}))
+    (directory/'trajectory.json').write_text(json.dumps({'shape':shape,'pen_z':{'down':0,'up':10},'steps':[{'no':1,'to':[35,25,0]}]}))
     client=Client();motion=Motion(directory,ident,'unused',client=client);app.motion=motion
     motion.start();wait_until(lambda:motion.status()['status']=='running')
     client.bits[motion.bits['plot_done']]=True
@@ -173,3 +174,71 @@ def test_shared_inactive_guard_covers_all_axis_cleanup_and_not_else(generated_sv
     assert not svg_program_problems(ET.tostring(root,encoding='unicode'),trajectory)
     st.text='IF draw_active THEN x := 1; ELSE\n'+cleanup+'\nEND_IF;'
     assert not svg_program_problems(ET.tostring(root,encoding='unicode'),trajectory)
+
+
+@pytest.mark.parametrize('shape',['svg','square','circle'])
+def test_compound_done_cleanup_and_stale_done_are_checked_for_all_drawing(generated_svg,shape):
+    xml,_,trajectory=generated_svg
+    trajectory=copy.deepcopy(trajectory);trajectory['shape']=shape
+    root=ET.fromstring(xml);st=root.find('.//'+NS+'pou[@name="PLC_PRG"]//'+NS+'ST')[0]
+    st.text=st.text.replace('IF ix_x.Done OR ix_x.Aborted THEN',
+        'IF (go_x_exe OR hm_x_exe OR rel_x_exe) AND ix_x.Done AND NOT ix_x.Busy THEN')
+    errors=svg_program_problems(ET.tostring(root,encoding='unicode'),trajectory)
+    assert any('调用之前' in e for e in errors)
+    assert any('go_x_exe' in e and '打断连续跟踪' in e for e in errors)
+
+
+def test_recognized_dwell_sequence_is_fixed_without_changing_route_or_fbs(generated_svg):
+    from agent.position_control import repair_drawing_scan_order
+    from agent.workbench_validation import VerifiedPLCGenerator
+    xml,_,_=generated_svg
+    trajectory={'shape':'square','steps':[{'no':1,'to':[30,30,10]}]}
+    root=ET.fromstring(xml);prg=root.find('.//'+NS+'pou[@name="PLC_PRG"]')
+    local=ET.SubElement(prg.find(NS+'interface'),NS+'localVars')
+    for name,typ in [('hold_active','BOOL'),('hold_timer','TON')]:
+        var=ET.SubElement(local,NS+'variable',name=name);node=ET.SubElement(var,NS+'type')
+        ET.SubElement(node,NS+'derived',name=typ) if typ=='TON' else ET.SubElement(node,NS+typ)
+    route='CASE pl_step OF\n1: pl_tx := 30; pl_ty := 30; pl_tz := 10;\nEND_CASE;'
+    advance='''IF (pl_step <> 0) AND NOT ix_x.Busy AND NOT ix_y.Busy AND NOT ix_z.Busy
+AND ix_x.Done AND ix_y.Done AND ix_z.Done THEN
+    IF NOT hold_active THEN hold_active := TRUE;
+    ELSIF hold_timer.Q THEN
+        hold_active := FALSE;
+        IF pl_step = 8 THEN draw_active := FALSE; pl_step := 0;
+        ELSE pl_step := pl_step + 1; END_IF;
+    END_IF;
+ELSE hold_active := FALSE;
+END_IF;'''
+    st=prg.find('.//'+NS+'ST')[0]
+    st.text=route+'\nhold_timer(IN := hold_active, PT := T#150MS);\n'+advance+'\n'
+    st.text+='\n'.join('ix_'+a+'(fire := go_'+a+'_exe, pos_target := '+a+'_tgt);' for a in 'xyz')+'\n'
+    st.text+='\n'.join('IF (go_'+a+'_exe OR hm_'+a+'_exe OR rel_'+a+'_exe) AND ix_'+a+'.Done AND NOT ix_'+a+'.Busy THEN\n'+
+        'go_'+a+'_exe := FALSE; hm_'+a+'_exe := FALSE; rel_'+a+'_exe := FALSE;\nEND_IF;' for a in 'xyz')
+    xml=ET.tostring(root,encoding='unicode')
+    fixed,changed=repair_drawing_scan_order(xml,trajectory)
+    assert changed and not svg_program_problems(fixed,trajectory)
+    after=ET.fromstring(fixed);body=''.join(after.find('.//'+NS+'pou[@name="PLC_PRG"]//'+NS+'ST').itertext())
+    assert route in body and advance in body
+    assert body.index(advance)>body.index('ix_z(')
+    assert body.count('IF NOT draw_active THEN')==3
+    for pou in root.findall('.//'+NS+'pou'):
+        if pou.get('name')!='PLC_PRG':
+            assert ET.tostring(pou)==ET.tostring(after.find('.//'+NS+'pou[@name="'+pou.get('name')+'"]'))
+    assert repair_drawing_scan_order(fixed,trajectory)==(fixed,False)
+    unknown=xml.replace('T#150MS','T#300MS')
+    assert repair_drawing_scan_order(unknown,trajectory)==(unknown,False)
+    nested=xml.replace('ix_x(fire := go_x_exe, pos_target := x_tgt);',
+        'IF draw_active THEN ix_x(fire := go_x_exe, pos_target := x_tgt); END_IF;')
+    assert repair_drawing_scan_order(nested,trajectory)==(nested,False)
+    class Reply:
+        def chat_completions(self,*args,**kwargs):return {'choices':[{'message':{'content':xml}}]}
+    generator=VerifiedPLCGenerator(Reply(),position_mode=True,no_cards=True)
+    generator._trajectory=trajectory
+    assert 'DRAWING_SCAN_ORDER' in generator._call([])
+
+
+@pytest.mark.parametrize('xml',['<project><broken></project>',
+    '<project xmlns="http://www.plcopen.org/xml/tc6_0201"><pou name="PLC_PRG"/></project>'])
+def test_drawing_normalizer_leaves_invalid_structure_for_static_gate(xml):
+    from agent.position_control import repair_drawing_scan_order
+    assert repair_drawing_scan_order(xml,{'shape':'square','steps':[]})==(xml,False)

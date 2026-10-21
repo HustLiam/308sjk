@@ -122,7 +122,7 @@ class PLCGenerator:
         reply = data["choices"][0]["message"].get("content") or ""
         if data["choices"][0].get("finish_reason") == "length":
             self.report("模型输出达到额度上限，拒绝使用截断工程；后续允许的重试将为完整交付物保留输出空间。")
-            reply = "[output_limit] 上一回复因输出额度耗尽而截断，不是已确认的PLC逻辑错误；重新输出完整工程并保持全部原始工艺和验收要求。"
+            reply = "[output_limit] 回复因输出额度耗尽而截断。仅输出完整XML，省略解释、重复注释和多余空白；保留全部FB、原始工艺和验收要求，不得省略工程内容。"
         if evidence:
             (evidence / ("call_%03d.response.json" % self.call_count)).write_text(
                 json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -144,7 +144,9 @@ class PLCGenerator:
             from .position_control import position_program_problems
             errors += ['[CSP] '+p for p in position_program_problems(xml_text,self.address_table,self.prog_id,io_list)]
             from .position_control import svg_program_problems
-            errors += ['[SVG] '+p for p in svg_program_problems(xml_text,getattr(self,'_trajectory',None))]
+            trajectory=getattr(self,'_trajectory',None)
+            prefix='[SVG] ' if (trajectory or {}).get('shape')=='svg' else '[drawing] '
+            errors += [prefix+p for p in svg_program_problems(xml_text,trajectory)]
         return ok and not errors, errors
 
     @staticmethod
@@ -245,6 +247,7 @@ class PLCGenerator:
             self.report("模型回复完毕，正在提取工程并校验…")
             xml = extract_xml(reply)
             if xml is not None:
+                self._incomplete_outputs=0
                 xml, moved = normalize_program_io(xml)
                 if moved:
                     self.report("已修正 %d 个程序定位 IO 的声明分组，工艺逻辑保持原样。" % moved)
@@ -302,6 +305,7 @@ class PLCGenerator:
             self.report("修复稿收到，正在提取并校验…")
             xml = extract_xml(reply)
             if xml is not None:
+                self._incomplete_outputs=0
                 xml, moved = normalize_program_io(xml)
                 if moved:
                     self.report("已修正 %d 个程序定位 IO 的声明分组，工艺逻辑保持原样。" % moved)

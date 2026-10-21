@@ -42,6 +42,13 @@ class VerifiedPLCGenerator(PLCGenerator):
             fixed,count=normalize_pou_terminators(xml)
             if count:
                 self.report('已移除XML逻辑体重复的POU结束标记%d处，工艺语句不变。'%count)
+            if self.position_mode:
+                from .position_control import repair_drawing_scan_order
+                fixed,changed=repair_drawing_scan_order(fixed,getattr(self,'_trajectory',None))
+                if changed:
+                    self.report('已修正标准绘图轴栈的扫描顺序和完成清理；保留路点、驻留及FB，继续真实验收。')
+                count+=int(changed)
+            if count:
                 return fixed
         return reply
 
