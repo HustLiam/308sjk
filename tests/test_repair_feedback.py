@@ -120,3 +120,39 @@ def test_output_failure_stops_outer_loop_without_plc_attribution(tmp_path,monkey
     result=orch.solve(spec,generator)
     assert result['stop_reason']=='output_limit'
     assert len(json.loads((tmp_path/spec['task_id']/'iter_001/gate.json').read_text(encoding='utf-8'))['errors'])==1
+
+
+@pytest.mark.parametrize('mode',['generate','repair'])
+def test_static_exhaustion_keeps_parseable_candidate_and_its_own_errors(monkeypatch,mode):
+    replies=iter(['<project><ST>x := 1;</ST></project>','<project><broken></project>'])
+    generator=PLCGenerator(object(),no_cards=True,max_rounds=2)
+    monkeypatch.setattr(generator,'_call',lambda *args,**kwargs:next(replies))
+    monkeypatch.setattr(generator,'gate',lambda xml,*args:(False,['invalid '+xml]))
+    result=(generator.generate({'io_list':[]}) if mode=='generate' else
+            generator.repair('<project/>',{'io_list':[]},'previous failure',attempts=2))
+    assert not result['ok'] and result['xml'] is None
+    assert result['candidate_xml'].endswith('<project><ST>x := 1;</ST></project>')
+    assert result['candidate_errors']==['invalid '+result['candidate_xml']]
+    assert 'broken' in result['errors'][0]
+
+
+def test_outer_static_retry_repairs_preserved_candidate_before_any_deployment(tmp_path,monkeypatch):
+    spec=json.loads((ROOT/'examples/specs/motion3axis.spec.json').read_text(encoding='utf-8'))
+    xml=(ROOT/'src/plc/motion3axis.xml').read_text(encoding='utf-8')
+    calls=[];deployments=[]
+    class Generator:
+        client=object()
+        def generate(self,*args,**kwargs):
+            calls.append('fresh')
+            return {'ok':False,'xml':None,'errors':['last failure'],
+                    'candidate_xml':xml,'candidate_errors':['candidate failure: preserve me']}
+        def repair(self,previous,spec,feedback,**kwargs):
+            calls.append('repair')
+            assert previous==xml and 'candidate failure: preserve me' in feedback and 'last failure' in feedback
+            return {'ok':True,'xml':xml,'mode':'repair'}
+    orch=Orchestrator(runs_root=tmp_path,max_iters=2)
+    monkeypatch.setattr(orch,'deploy_gate',lambda path:(deployments.append(path.parent.name) or 'ok',{}))
+    result=orch.solve(spec,Generator(),deploy=True)
+    assert result['status']=='final' and calls==['fresh','repair'] and deployments==['iter_002']
+    assert (Path(result['run_dir'])/'iter_001/static-candidate.xml').read_text(encoding='utf-8')==xml
+    assert not (Path(result['run_dir'])/'iter_001/plcopen.xml').exists()

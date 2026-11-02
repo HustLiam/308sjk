@@ -1,9 +1,11 @@
 """BigModel(v4) OpenAI 兼容接口的轻量封装（框架沿用 308sjk_history/agent/client.py）。"""
 import json
+from contextlib import contextmanager
 
 import requests
 
 from .config import API_URL
+from .generation_control import GenerationCancelled
 
 
 class BigModelClient:
@@ -16,6 +18,7 @@ class BigModelClient:
         self.timeout = timeout
         self.blocked_error = None
         self.output_limited = False
+        self.control = None
         # Windows 系统代理（注册表）会掐断长生成连接（ProxyError/RemoteDisconnected）；
         # 默认直连。确需代理的环境显式传 trust_env=True。
         self.session = requests.Session()
@@ -33,6 +36,7 @@ class BigModelClient:
         （供上层实时播报生成进度）；prefer_stream=True 直接走流式（预期长
         输出的调用省去先超时再降级的两分钟）。
         """
+        self._check_cancelled()
         if self.blocked_error is not None:
             raise RuntimeError(self.blocked_error)
         payload = self.prepare_payload(payload)
@@ -42,12 +46,14 @@ class BigModelClient:
             try:
                 result = self._post_json(payload)
             except RuntimeError as exc:
+                self._check_cancelled()
                 text = str(exc)
                 if any(sig in text for sig in ("Read timed out", "SSLEOFError",
                                                "UNEXPECTED_EOF", "Connection reset")):
                     result = self._post_stream(payload, on_chunk=on_chunk)
                 else:
                     raise
+        self._check_cancelled()
         if (result.get("choices") or [{}])[0].get("finish_reason") == "length":
             self.output_limited = True
         return result
@@ -65,6 +71,23 @@ class BigModelClient:
         return prepared
 
     # ---------------- 内部：请求形态 ----------------
+    def _check_cancelled(self):
+        if self.control:
+            self.control.check()
+
+    @contextmanager
+    def _response(self, response):
+        if self.control:
+            with self.control.response(response):
+                yield response
+        else:
+            try:
+                yield response
+            finally:
+                close = getattr(response, 'close', None)
+                if close:
+                    close()
+
     def _headers(self):
         return {"Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json"}
@@ -79,12 +102,15 @@ class BigModelClient:
     def _post_json(self, payload: dict) -> dict:
         url = f"{self.base_url}/chat/completions"
         try:
+            self._check_cancelled()
             resp = self.session.post(url, headers=self._headers(), json=payload,
-                                     timeout=self.timeout)
+                                     timeout=(10, self.timeout), stream=True)
+            with self._response(resp):
+                self._check_status(resp)
+                return resp.json()
         except requests.RequestException as exc:
+            self._check_cancelled()
             raise RuntimeError(f"网络请求失败：{exc}") from exc
-        self._check_status(resp)
-        return resp.json()
 
     def _post_stream(self, payload: dict, on_chunk=None) -> dict:
         """SSE 流式请求；逐分片聚合为非流式同构响应。
@@ -95,15 +121,22 @@ class BigModelClient:
         body = dict(payload)
         body["stream"] = True
         try:
+            self._check_cancelled()
             resp = self.session.post(url, headers=self._headers(), json=body,
                                      timeout=(10, 90), stream=True)
         except requests.RequestException as exc:
+            self._check_cancelled()
             raise RuntimeError(f"网络请求失败（stream）：{exc}") from exc
+        with self._response(resp):
+            return self._read_stream(resp, on_chunk)
+
+    def _read_stream(self, resp, on_chunk):
         self._check_status(resp)
         parts, finish = [], None
         metadata, usage = {}, None
         try:
             for raw in resp.iter_lines(decode_unicode=True):
+                self._check_cancelled()
                 if not raw or not raw.startswith("data:"):
                     continue
                 data = raw[len("data:"):].strip()
@@ -126,10 +159,13 @@ class BigModelClient:
                     if on_chunk:
                         try:
                             on_chunk(piece, sum(len(p) for p in parts))
+                        except GenerationCancelled:
+                            raise
                         except Exception:
                             pass   # 播报异常不影响生成
                 finish = choice.get("finish_reason") or finish
         except requests.RequestException as exc:
+            self._check_cancelled()
             raise RuntimeError(f"流式响应中断，拒绝使用不完整生成结果：{exc}") from exc
         if finish is None:
             raise RuntimeError("流式响应未完整结束，拒绝使用不完整生成结果")

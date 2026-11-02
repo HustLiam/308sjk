@@ -96,6 +96,33 @@ def test_wrong_identity_never_sends_commands(delivery):
     assert not client.writes and not client.feedback
 
 
+@pytest.mark.parametrize('axis,raw',[(0,10001),(1,65535),(2,1001)])
+def test_invalid_raw_commands_stop_before_bridge_can_hide_overflow(delivery,axis,raw):
+    _,ident,_,directory=delivery
+    client=Client();client.registers[3+axis]=raw
+    motion=Motion(directory,ident,'unused',client=client);motion.start()
+    wait_until(lambda:not motion.alive)
+    status=motion.status()
+    assert status['status']=='failed' and 'PLC位置指令越界' in status['error']
+    assert 'xyz'[axis]+'_cmd='+str(raw) in status['error']
+    assert motion.trace[0]['xyz'[axis]+'_cmd']==raw
+    assert not client.bits[0] and client.bits[5]
+    assert not motion.ink and status['elapsed']<2
+
+
+def test_out_of_range_command_during_drawing_stops_without_waiting_for_timeout(delivery):
+    _,ident,_,directory=delivery
+    client=Client();motion=Motion(directory,ident,'unused',client=client)
+    motion.start();wait_until(lambda:motion.status()['status']=='running')
+    start=time.monotonic();client.registers[3]=10001
+    wait_until(lambda:not motion.alive)
+    assert time.monotonic()-start<2
+    assert '重复编码倍率' in motion.status()['error']
+    assert motion.verification['verdict']=='UNVERIFIED'
+    assert motion.verification['timing']['elapsed']==motion.status()['elapsed']
+    assert motion.verification['timing']['started_at']<motion.verification['timing']['finished_at']
+
+
 def test_communication_loss_ends_worker_and_reports_stop_failure(delivery):
     _,ident,_,directory=delivery
     client=Client();motion=Motion(directory,ident,'unused',client=client);motion.start()

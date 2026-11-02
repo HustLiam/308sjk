@@ -1,0 +1,8 @@
+{
+  "call": 1,
+  "duration_s": 12.25,
+  "stage": "requirement",
+  "started_at": 1793028533.421212,
+  "model": "deepseek-flash",
+  "max_tokens": 32768
+}

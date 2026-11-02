@@ -13,6 +13,7 @@ import os
 import re
 import secrets
 import threading
+import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -28,6 +29,7 @@ from .assets import AssetStore, read_json, validate_library, validate_pair
 from .presentation import process_summary
 from .position_control import position_io, make_position_aml, convert_position_program
 from .drawing_input import prepare_language_drawing, drawing_description
+from .generation_control import GenerationControl, GenerationCancelled, timestamp
 
 UI_DIR = Path(__file__).with_name("web_ui")
 DEFAULT_ROOT = Path("E:/chagpt/308sjk-svg-workbench")
@@ -58,21 +60,42 @@ class SVGWorkbench:
         self.sessions = {}
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="svg-agent")
         self.active = None
+        self.generation_control = None
         self.token = secrets.token_urlsafe(32)
         from .runtime_control import LXRuntime
         self.runtime = LXRuntime()
         self.motion = None
         self.scene_cache = {}
         self.motion_cache = {}
+        self._device_scenes = None
+
+    def device_scenes(self):
+        with self.lock:
+            if self._device_scenes is None:
+                from .scene_agent.web import SceneWorkbench, SceneWebError
+                def author(control):
+                    from .client import BigModelClient
+                    from .scene_agent.author import SceneGenerationAgent
+                    if not get_api_key():raise SceneWebError('尚未配置模型；可先加载分拣线参考示例。')
+                    client=BigModelClient(get_api_key());client.control=control
+                    return SceneGenerationAgent(client)
+                self._device_scenes=SceneWorkbench(self.root/'device-scenes',author_factory=author)
+            return self._device_scenes
 
     def close(self):
+        if self._device_scenes:self._device_scenes.close()
+        if self.generation_control:
+            self.generation_control.request()
         self.executor.shutdown(wait=True)
         if self.motion:
             self.motion.stop()
 
     def config(self):
+        reset=self.root/'device-scenes'/'cache_reset.json'
+        retired=json.loads(reset.read_text(encoding='utf-8')).get('retired_tasks',[]) if reset.is_file() else []
         return {"station": self.model["station"], "model": MODEL,
-                "model_ready": bool(get_api_key()), "token": self.token}
+                "model_ready": bool(get_api_key()), "token": self.token,
+                "retired_device_scene_tasks":retired}
 
     def create_session(self):
         with self.lock:
@@ -96,6 +119,8 @@ class SVGWorkbench:
         return self.root / "sessions" / ident
 
     def _save(self, state):
+        if state.get('busy'):
+            state['last_active_at']=timestamp()
         path = self._directory(state["id"]) / "session.json"
         temporary = path.with_suffix(".tmp")
         temporary.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -128,6 +153,10 @@ class SVGWorkbench:
                 for job in state["jobs"]:
                     if job["status"]=="running":
                         job["status"] = "failed"
+                        for record in [job.get('timing',{}).get('generation',{}),*job.get('timing',{}).get('simulation',[])]:
+                            if record.get('started_at') and not record.get('finished_at'):
+                                record.update(finished_at=state.get('last_active_at',record['started_at']),interrupted=True)
+                        if job.get('timing'):self._save_generation_timing(job)
                 state["messages"].append({"role": "agent", "text": "服务已重启，上一任务中断；可重新整理需求或生成。"})
             self.sessions[ident] = state
             self._upgrade_builtin_scene(state)
@@ -193,6 +222,9 @@ class SVGWorkbench:
     def state(self, ident):
         with self.lock:
             state = copy.deepcopy(self._session(ident))
+            state['can_stop_generation']=bool(self.active==ident and self.generation_control
+                and state['phase'] in ('generating','stopping'))
+            state['server_time']=timestamp()
             for job in state["jobs"]:
                 job["files"] = self._result_files(ident, job)
         state["model_ready"] = bool(get_api_key())
@@ -455,14 +487,49 @@ class SVGWorkbench:
         state.update(busy=True, phase=kind, logs=[])
         state.pop("workflow_error",None)
         self.active = state["id"]
+        self.generation_control = None
+        if kind=='generating':
+            job=state['jobs'][-1]
+            job['timing']={'generation':{'started_at':timestamp()},'simulation':[]}
+            self.generation_control=GenerationControl(
+                lambda name,record:self._generation_stage(state['id'],job['id'],name,record))
         self._save(state)
         self.executor.submit(self._work, state["id"], function)
 
     def _work(self, ident, function):
+        clock=time.monotonic()
         try:
             function()
+        except GenerationCancelled:
+            try:
+                if self.generation_control:self.generation_control.stop_runtime()
+            except Exception as exc:
+                with self.lock:
+                    state=self._session(ident)
+                    state['phase']='failed'
+                    state['jobs'][-1].update(status='failed',stop_reason='stop_failed')
+                    state['workflow_error']='已取消后续生成，但 Runtime 停止未确认：'+str(exc)
+                    state['messages'].append({'role':'agent','text':state['workflow_error']})
+                return
+            with self.lock:
+                state=self._session(ident)
+                state['phase']='cancelled'
+                for job in state['jobs']:
+                    if job['status']=='running':
+                        job.update(status='cancelled',stop_reason='user_cancelled',files=[],
+                                   validation={'status':'not_verified'})
+                        directory=self.root/job['id']
+                        # Preserve any completed writes while withdrawing delivery.
+                        if (directory/'final').exists():
+                            (directory/'final').rename(directory/'cancelled-final')
+                        (directory/'cancellation.json').write_text(json.dumps(
+                            {'reason':'user_cancelled','finished_at':timestamp()},indent=2),encoding='utf-8')
+                state['messages'].append({'role':'agent','text':'本次生成已停止，候选与日志已保留；可调整需求或重新生成。'})
+                self._log(ident,'本次生成已停止，不再调用模型或继续验收。')
         except Exception as exc:
             message = str(exc)
+            if self.generation_control and self.generation_control.cancelled.is_set():
+                message='已取消后续生成，但停止清理失败：'+message
             key = get_api_key()
             if key:
                 message = message.replace(key, "[hidden]")
@@ -479,9 +546,50 @@ class SVGWorkbench:
             with self.lock:
                 state = self._session(ident)
                 state["busy"] = False
+                if self.generation_control:
+                    job=state['jobs'][-1]
+                    if self.generation_control.cancelled.is_set() and (self.root/job['id']/'final').exists():
+                        (self.root/job['id']/'final').rename(self.root/job['id']/'cancelled-final')
+                    job['timing']['generation'].update(finished_at=timestamp(),
+                        elapsed_seconds=round(time.monotonic()-clock,3))
+                    self._save_generation_timing(job)
                 state["messages"] = state["messages"][-60:]
                 self.active = None
+                self.generation_control = None
                 self._save(state)
+
+    def _save_generation_timing(self, job):
+        (self.root/job['id']/'timing.json').write_text(
+            json.dumps(job['timing'],ensure_ascii=False,indent=2),encoding='utf-8')
+
+    def _generation_stage(self, ident, task, name, record):
+        with self.lock:
+            state=self._session(ident)
+            job=next(job for job in state['jobs'] if job['id']==task)
+            records=job['timing'][name]
+            if record.get('finished_at'):
+                records[-1]=record
+            else:
+                records.append(record)
+            self._save_generation_timing(job)
+            self._save(state)
+
+    def stop_generation(self, ident, task):
+        with self.lock:
+            state=self._session(ident)
+            job=state['jobs'][-1] if state['jobs'] else None
+            # Pin cancellation to a task, so a delayed click cannot cancel its successor.
+            if not job or job['id']!=task:
+                raise WorkbenchError('生成任务已变更，请刷新后重试',409)
+            if job['status']=='cancelled':return self.state(ident)
+            if self.active!=ident or not self.generation_control or state['phase'] not in ('generating','stopping'):
+                raise WorkbenchError('当前没有正在执行的 PLC 生成任务',409)
+            self.generation_control.request()
+            if state['phase']!='stopping':
+                state['phase']='stopping'
+                self._log(ident,'已请求停止：正在结束模型请求或仿真；如有编译部署在途，将等待返回并停止 Runtime。')
+            self._save(state)
+        return self.state(ident)
 
     def chat(self, ident, revision, message):
         if not isinstance(message, str) or not message.strip() or len(message) > 8000:
@@ -675,6 +783,11 @@ class SVGWorkbench:
         from .scene_gen import SceneSpecGenerator
         seed = directory/'position-source.xml' if snapshot.get('_position_seed') else None
         client = None if seed else BigModelClient(get_api_key())
+        control=self.generation_control
+        if client:client.control=control
+        def checked_log(text):
+            if control:control.check()
+            log(text)
         model = snapshot["device_model"]
         from .aml_parser import build_axes
         snapshot["spec"].setdefault("axes", build_axes(model))
@@ -688,17 +801,17 @@ class SVGWorkbench:
             initial_candidate=(directory/'repair-source.xml').read_text(encoding='utf-8') if retry else None,
             initial_feedback=retry['feedback'] if retry else None,
             resume_validation=bool(retry and retry.get('resume_validation')),
-            address_table={p["name"]:p["address"] for p in model["io_points"] if p.get("address")}, report=log,
+            address_table={p["name"]:p["address"] for p in model["io_points"] if p.get("address")}, report=checked_log,
             seed_xml=seed,position_mode=position_io(model),prog_id=snapshot['spec'].get('prog_id',2))
         def on_motion(motion):
             with self.lock:
                 self.motion=motion
         orchestrator = WorkbenchOrchestrator(directory=directory,session=snapshot['id'],
-            runtime=self.runtime,report=log,on_motion=on_motion,
+            runtime=self.runtime,report=checked_log,on_motion=on_motion,control=control,
             runs_root=directory.parent, max_iters=self.max_iters,
             attribution_engine=AttributionEngine(client=client))
         def echo(event, payload):
-            log(event+" · "+json.dumps(payload, ensure_ascii=False, default=str))
+            checked_log(event+" · "+json.dumps(payload, ensure_ascii=False, default=str))
         result=orchestrator.solve(snapshot["spec"], generator, deploy=True, acceptance='workbench',
             require_online=seed is None,
             trajectory=snapshot["prepared"]["trajectory"], device_model=model,
@@ -713,6 +826,12 @@ class SVGWorkbench:
 
     def _generate(self, ident, task_id, snapshot):
         directory = self.root/task_id
+        trajectory=snapshot['prepared']['trajectory']
+        params=trajectory.get('params',{})
+        self._log(ident,('SVG 已处理为轨迹：%s 条路径、%s 个路点，%s 个工艺步。' %
+            (params.get('path_count',0),params.get('point_count',0),len(trajectory['steps'])))
+            if trajectory.get('shape')=='svg' else '语言任务轨迹已冻结，包含 %s 个工艺步。'%len(trajectory['steps']))
+        self._log(ident,'Agent 将根据冻结轨迹点生成完整 PLCopen XML，再依次执行静态校验、场景一致性、真实编译部署和物理仿真验收。')
         result = self._solve(snapshot, directory, lambda text:self._log(ident, text))
         result['validation']=self._generation_validation(directory)
         if result['status']=='final' and result['validation'].get('status')!='passed':
@@ -720,6 +839,7 @@ class SVGWorkbench:
         with self.lock:
             state = self._session(ident)
             job = next(job for job in state["jobs"] if job["id"]==task_id)
+            if self.generation_control:self.generation_control.check()
             job["status"] = result["status"]
             job['stop_reason']=result.get('stop_reason')
             job['validation']=result.get('validation',{'status':'not_verified'})
@@ -1147,12 +1267,25 @@ def make_server(workbench, port=8765):
             try:
                 self._check_host()
                 parsed = urlsplit(self.path)
-                if parsed.path in ("/", "/app.js", "/style.css", "/scene_view.js"):
+                if parsed.path in ("/", "/app.js", "/style.css", "/scene_view.js", "/device_scene.js", "/device_scene.css", "/device_tree.js", "/device_scene_i18n.js"):
                     filename = "index.html" if parsed.path=="/" else parsed.path[1:]
-                    content_type = {"index.html":"text/html", "app.js":"text/javascript", "scene_view.js":"text/javascript", "style.css":"text/css"}[filename]
+                    content_type = {"index.html":"text/html", "app.js":"text/javascript", "scene_view.js":"text/javascript", "device_scene.js":"text/javascript", "device_tree.js":"text/javascript", "device_scene_i18n.js":"text/javascript", "style.css":"text/css", "device_scene.css":"text/css"}[filename]
                     self._send(200, (UI_DIR/filename).read_bytes(), content_type+"; charset=utf-8")
                 elif parsed.path=="/api/config":
                     self._send(200, workbench.config())
+                elif parsed.path=="/api/device-scenes":
+                    self._send(200,workbench.device_scenes().listing())
+                elif parsed.path in ('/api/device-scene/state','/api/device-scene/view'):
+                    query=parse_qs(parsed.query);ident=query.get('task',[''])[0];scenes=workbench.device_scenes()
+                    self._send(200,scenes.geometry(ident) if parsed.path.endswith('/view') else scenes.state(ident))
+                elif parsed.path=='/device-scene-file':
+                    query=parse_qs(parsed.query)
+                    path=workbench.device_scenes().file(query.get('task',[''])[0],query.get('path',[''])[0],query.get('type',[None])[0])
+                    png=path.suffix=='.png'
+                    self._send(200,path.read_bytes(),'image/png' if png else 'application/octet-stream',attachment=None if png else path.name)
+                elif parsed.path=='/device-scene-bundle':
+                    ident=parse_qs(parsed.query).get('task',[''])[0]
+                    self._send(200,workbench.device_scenes().bundle(ident),'application/zip',attachment='device-scene-'+ident[:8]+'.zip')
                 elif parsed.path=="/api/state":
                     self._send(200, workbench.state(parse_qs(parsed.query).get("session", [""])[0]))
                 elif parsed.path=="/api/runtime/status":
@@ -1213,7 +1346,18 @@ def make_server(workbench, port=8765):
                 if not isinstance(data, dict):
                     raise WorkbenchError("请求必须是对象")
                 route = urlsplit(self.path).path
-                if route=="/api/import":
+                if route.startswith('/api/device-scene/'):
+                    scenes=workbench.device_scenes();action=route.rsplit('/',1)[-1]
+                    if action=='create':result=scenes.create(data)
+                    elif action=='upload':result=scenes.upload(data)
+                    elif action=='edit':result=scenes.edit(data)
+                    elif action=='approve':result=scenes.approve(data)
+                    elif action=='operate':result=scenes.operate(data.get('task'),data.get('revision'),data.get('action'))
+                    elif action=='tests':result=scenes.run_tests(data)
+                    elif action=='delete-history':result=scenes.delete_history(data)
+                    elif action=='stop':result=scenes.stop(data.get('task'))
+                    else:raise WorkbenchError('未知设备场景操作',404)
+                elif route=="/api/import":
                     content = base64.b64decode(data.get("data", ""), validate=True)
                     result = workbench.import_svg(data.get("name", ""), content, data.get("session"), data.get("revision"))
                 elif route=="/api/session":
@@ -1242,6 +1386,8 @@ def make_server(workbench, port=8765):
                     result = workbench.enable_position(data.get('session'),data.get('revision'))
                 elif route=="/api/generate":
                     result = workbench.generate(data.get("session"), data.get("revision"))
+                elif route=="/api/generate/stop":
+                    result = workbench.stop_generation(data.get('session'),data.get('task'))
                 elif route=="/api/simulation/build":
                     result = workbench.build_simulation(data.get("session"), data.get("revision"), data.get("task"))
                 elif route=="/api/simulation/import":

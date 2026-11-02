@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CAEXFile FileName="hollow_support.aml" SchemaVersion="2.15">
+  <InstanceHierarchy Name="HollowSupportDemo">
+    <InternalElement ID="hollow-support-demo" Name="HollowSupport" RefBaseSystemUnitPath="Geometry/HollowSupport">
+      <RoleRequirements RefBaseRoleClassPath="Device/StaticFixture"/>
+      <Attribute Name="component_kind" AttributeDataType="xs:string"><Value>HollowSupport</Value></Attribute>
+      <Attribute Name="width_m" Unit="m" AttributeDataType="xs:double"><Value>0.3</Value></Attribute>
+      <Attribute Name="depth_m" Unit="m" AttributeDataType="xs:double"><Value>0.15</Value></Attribute>
+      <Attribute Name="height_m" Unit="m" AttributeDataType="xs:double"><Value>0.2</Value></Attribute>
+      <Attribute Name="wall_m" Unit="m" AttributeDataType="xs:double"><Value>0.01</Value></Attribute>
+      <Attribute Name="position_x_m" Unit="m" AttributeDataType="xs:double"><Value>0</Value></Attribute>
+      <Attribute Name="position_y_m" Unit="m" AttributeDataType="xs:double"><Value>0</Value></Attribute>
+      <Attribute Name="position_z_m" Unit="m" AttributeDataType="xs:double"><Value>0.2</Value></Attribute>
+    </InternalElement>
+  </InstanceHierarchy>
+</CAEXFile>

@@ -11,6 +11,18 @@ import time
 import xml.etree.ElementTree as ET
 import queue
 import secrets
+from .generation_control import timestamp
+
+
+def limit_command_step(previous, target, speed, dt):
+    """Limit one PLC command vector with a shared progress fraction.
+
+    Independent axis clamps distort diagonal commands when Modbus samples arrive
+    late. A common fraction retains the line while respecting every axis limit.
+    """
+    delta={axis:target[axis]-previous[axis] for axis in previous}
+    progress=min([1.0]+[speed[axis]*dt/abs(value) for axis,value in delta.items() if value])
+    return {axis:previous[axis]+value*progress for axis,value in delta.items()}
 
 
 class Motion:
@@ -109,6 +121,7 @@ class Motion:
         self.transforms = []
         self.qpos = self.data.qpos.tolist()
         self.started = time.monotonic()
+        self.info['started_at']=timestamp()
 
     @property
     def alive(self):
@@ -139,6 +152,12 @@ class Motion:
         with self.lock:
             self.values = values
             self.trace.append(dict(values, t=round(time.monotonic()-self.started, 6)))
+        # Check raw PLC words before the existing bridge's clamp can hide invalid commands.
+        for channel in self.link.out_chs:
+            name=channel['plc_var'];value=values.get(name)
+            if value is not None and not channel['lo_plc']<=value<=channel['hi_plc']:
+                raise RuntimeError('PLC位置指令越界：%s=%s，冻结AML编码范围%s..%s；已停止仿真，请检查位置单位和重复编码倍率'%
+                    (name,value,channel['lo_plc'],channel['hi_plc']))
         return values
 
     def trace_window(self):
@@ -311,10 +330,8 @@ class Motion:
                         if samples[i][0]>=at:
                             left,right=samples[i-1],samples[i];break
                     ratio=max(0,min(1,(at-left[0])/max(.000001,right[0]-left[0])))
-                    for axis in 'XYZ':
-                        target=left[1][axis]+ratio*(right[1][axis]-left[1][axis])
-                        delta = max(-self.speed[axis]/120,min(target-last_cmd[axis],self.speed[axis]/120))
-                        last_cmd[axis] += delta
+                    target={axis:left[1][axis]+ratio*(right[1][axis]-left[1][axis]) for axis in 'XYZ'}
+                    last_cmd=limit_command_step(last_cmd,target,self.speed,1/120)
                     servo.apply(last_cmd,1/120)
                     mujoco.mj_step(self.model,self.data)
                     if not all(math.isfinite(float(v)) for v in self.data.qpos):
@@ -363,12 +380,14 @@ class Motion:
                     error = (error+"；" if error else "")+"停止确认失败："+str(exc)
             self.link.client.close()
             with self.lock:
+                self.info.update(finished_at=timestamp(),elapsed=round(time.monotonic()-self.started,3))
                 self.info["status"] = "failed" if error else "completed" if self.info["status"]=="completed" else "stopped"
                 self.info["error"] = error
             try:
                 from .studio_web import save_verification
                 self.verification = save_verification(self.directory, self.run_id, self.spec, self.trace,
-                    self.info["status"], self.mode, error, self.physical_trace)
+                    self.info["status"], self.mode, error, self.physical_trace,
+                    timing={key:self.info[key] for key in ('started_at','finished_at','elapsed')})
             except Exception as exc:
                 self.info["verification_error"] = "验收记录保存失败："+str(exc)
             path=self.directory/'simulation/motion.json'

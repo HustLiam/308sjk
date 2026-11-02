@@ -1,5 +1,7 @@
 # SIMENS PLC — Agent 生成 61131-10 代码并闭环仿真（OpenPLC 运行时）
 
+离散设备场景 Agent（2026-10-27 草案）已接入网页的 **设备场景生成** 页：启动 `python -m src.agent.web --open` 后打开 `http://127.0.0.1:8765/?view=scenes`。支持 AML 上传、Agent 完整重生成、MuJoCo 三维预览、真实测试回放、局部修改、组件审批与模型包下载。前端每次生成均重新解析 AML，由 Agent 生成全部组件规则，并在新版本和新目录构建资产/装配/检查，不复用旧候选、已审批规则或场景；局部修改按明确范围保留未改动内容。参考规则只用于离线示例与测试夹具。CLI 仍为 `python -m src.agent.scene_agent --help`。运行和审批步骤见 [场景 Agent 说明](docs/RFC-场景生成Agent-DeviceIR.md)；原 PLC 生成链保持，组件审批与整机模型检查完成后才可冻结用于后续 PLC 验收。
+
 课题目标：开发一个 agent，理解用户工艺需求 → 生成 **IEC 61131-10（PLCopen XML）** 代码 →
 自动部署到软 PLC 运行 → 变量接入 MuJoCo 物理仿真 → 通过仿真反馈迭代优化代码。
 

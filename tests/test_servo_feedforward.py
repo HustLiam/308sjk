@@ -4,6 +4,36 @@ from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'src'))
 import mujoco
 from agent.servo_feedforward import PositionFeedforward
+from agent.motion import limit_command_step
+
+
+def test_delayed_plc_diagonal_keeps_its_geometry_under_speed_limits():
+    previous={'X':.5,'Y':.8,'Z':0.0}
+    target={'X':.7653,'Y':.5878,'Z':0.0}
+    speed={'X':.4,'Y':.4,'Z':.2}
+    start=dict(previous)
+    for _ in range(20):
+        result=limit_command_step(previous,target,speed,1/120)
+        # Independent clipping previously made both increments equal and
+        # produced up to 0.47 units of cross-track error in a real SVG run.
+        dx,dy=result['X']-start['X'],result['Y']-start['Y']
+        assert abs(dx*(target['Y']-start['Y'])-dy*(target['X']-start['X']))<1e-12
+        assert all(abs(result[a]-previous[a])<=speed[a]/120+1e-12 for a in speed)
+        assert result['Z']==0.0
+        previous=result
+    assert start=={'X':.5,'Y':.8,'Z':0.0} and target=={'X':.7653,'Y':.5878,'Z':0.0}
+
+
+def test_vector_limit_respects_slower_axis_and_finishes_without_overshoot():
+    previous={'X':0.0,'Y':0.0,'Z':0.0}
+    target={'X':.1,'Y':-.2,'Z':.05}
+    speed={'X':.4,'Y':.02,'Z':.2}
+    for _ in range(1201):
+        result=limit_command_step(previous,target,speed,1/120)
+        assert all(abs(result[a]-previous[a])<=speed[a]/120+1e-12 for a in speed)
+        assert all(min(0,target[a])-1e-12<=result[a]<=max(0,target[a])+1e-12 for a in speed)
+        previous=result
+    assert previous==target
 
 
 def test_physical_servo_tracks_acceleration_and_stop_without_corner_overshoot():

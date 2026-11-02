@@ -47,7 +47,7 @@ def panel(spec):
     return result
 
 
-def save_verification(directory, run_id, spec, trace, status, mode, error, physical_trace=None):
+def save_verification(directory, run_id, spec, trace, status, mode, error, physical_trace=None, timing=None):
     """仅复用实际采样；停止/失败/手动调试均不能报告验收通过。"""
     from src.pipeline.mujoco_verdict import build_channels, evaluate, attribute
     from src.pipeline.scenario_mujoco import verify_trajectory
@@ -78,6 +78,7 @@ def save_verification(directory, run_id, spec, trace, status, mode, error, physi
              "io_map":directory/"simulation/io_map.json"}.items()},
         "spec_sha256":hashlib.sha256(json.dumps(spec,sort_keys=True,ensure_ascii=False).encode()).hexdigest()}
     report = attribute(results, trace, channels, done) if trace and results and not passed else ""
+    if timing:verdict['timing']=dict(timing)
     target = directory/"simulation/verifications"/run_id
     target.mkdir(parents=True, exist_ok=True)
     for name, value in (("trace.json",trace),("verdict.json",verdict)):

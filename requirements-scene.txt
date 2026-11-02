@@ -1,0 +1,6 @@
+# Optional physical scene Agent and deterministic MuJoCo runtime.
+# Install separately: python -m pip install -r requirements-scene.txt
+-r requirements.txt
+mujoco==3.3.1
+numpy>=1.24,<3
+Pillow>=10,<13
