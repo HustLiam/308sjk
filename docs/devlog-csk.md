@@ -1,3 +1,36 @@
+## 2026-11-23 AmlDocument_io.aml：真实几何 + 标准 IO 层合流实例
+
+### 任务
+
+把项目契约格式的 IO 层注入官方教程 AmlDocument.aml（KUKA 机器人单元，193 组件/106
+COLLADA 几何引用），产出"真实几何 + IO"合流的 AML——此前仓库里"带几何的 AML"（教程包）
+与"带 IO 的 AML"（plotter3axis 等）是两个互不相干的世界。
+
+### 做法（tools/inject_io_into_aml.py，确定性脚本可重放）
+
+- 23 点 io_list 挂 Station 真实设备：030RB_100 机器人（MC 指令 4 布尔 + 六轴角度
+  反馈 INT16 定点 0.01°/LSB ±320°）、030GRF341 抓手、Foerdertechnik 输送（启停/带速
+  设定/到位/反馈）、Tore_A 门、Schutzzaun 围栏、Schaltschraenke_A 电气柜（estop/prog_id）；
+  位宽全对齐契约②：bool→%QX、INT16→%QW、prog_id AT %QW20、range 落 16 位域（契约① S2）；
+- 接口类用文件内已有的标准库 AutomationMLInterfaceClassLib（DigitalInput/Output、
+  AnalogInput/Output）——IEC 62714-4 信号建模；
+- Dummy_SPS（德语 SPS=PLC 占位组件）内加 DI/DO/AI 端子模块；端子用 PortInterface
+  （类名不含 input/output → 不被 ⓪ 收进 io_list，仅作接线端）+ channel 属性；
+- 23 条 InternalLink 电气接线挂 Station（两端共同祖先）。
+
+### 验证
+
+- 结构对照：组件 299→302（+3 端子模块）、几何 dae 106→106 零损失、原 15 链接保留；
+- gc ⓪ 解析器终验（parse_aml + build_io_list）：**io_list 23 条全预填成功、
+  pending 0、注入相关 problems 0**（15 条遗留 problems 均为原教程文件自带的
+  Attachment 端点问题，与注入无关）；robot_j1_pos range=[-320,320] 透传正确。
+
+### 注意
+
+- io_list 为按 AmlDocument 真实设备设计的机器人单元信号集（motion3axis 的 24 条
+  gantry 信号语义不匹配六轴机器人场景，故沿用其契约结构而非硬套内容）；
+- prog_id=8（robotcell_demo）为占位，若正式纳入场景需 lx 在契约② v1.1 编号表顺延登记。
+
 ## 2026-09-09 (2) 落笔 7mm 稳态根治：几何根因（球头半径未补偿）+ 判据语义提案
 
 ### 破案过程
