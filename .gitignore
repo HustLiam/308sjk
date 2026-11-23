@@ -25,5 +25,4 @@ Thumbs.db
 # Personal branch notes and runtime crash output
 docs/devlog-lx.md
 runtime/studio_crash.log
-
 MUJOCO_LOG.TXT

@@ -1,3 +1,229 @@
+## 2026-09-09 (2) 落笔 7mm 稳态根治：几何根因（球头半径未补偿）+ 判据语义提案
+
+### 破案过程
+
+e2e 落笔等待超时（Z 稳态 0.007 ≠ 0）→ 假设"限位/接触太软"做硬化实验（solreflimit
+0.02/0.01/0.005 × 120/240/360Hz）——**四种配置稳态全部 7.01mm**，排除约束软硬；
+真根因：MJCF 胶囊 `fromto` 定义的是**轴线端点**，胶囊几何向两端各延伸一个半径，
+球面最低点比轴线端点低 7.5mm（笔半径）——**笔在 qz=7.5mm 就触纸了**，q=0 落笔
+只是把球压进纸面 0.5mm（28N 下压力对接触刚度），7.01mm = 7.5 − 0.49。
+**是组装器几何缺陷，不是控制/整定问题。**
+
+### 根治三件套
+
+1. **几何补偿**（mujoco_build 龙门 + plotter 两处）：笔轴长 = pen_length − pen_radius，
+   q=0 时球面最低点恰在纸面。修复后落笔稳态 **<0.05mm**（接触穿透量级），压纸力
+   也从 28N 回落到 ~0.2N（笔自重）——物理上更合理；
+2. **poswin 消费**（runtime/acceptance.py 新增）：定位类目标验收容差从 spec 提取
+   （linear_axis.poswin×scale；gantry 缺省 0.005），客户端/测试禁止硬编码阈值；
+   plotter 测试改为 poswin 驱动（X/Y=20mm，Z=1mm）；
+3. **判据语义提案**（csk 文档 §7.1 增补 + 共同议题登记）：定位类
+   done=|fb−target|≤poswin；**接触类判"接触建立"**（接触带稳定/接触传感器/功能
+   量测），不判位置相等——伺服压紧的力平衡稳态下位置相等在任何柔性接触中都不成立。
+
+### 责任澄清
+
+与 gc 无关：spec 无动力学字段，误差由本侧组装器几何与库值决定；gc 的 poswin=1mm
+恰是验收钥匙。修复责任在 csk（组装器几何 + 测试容差硬编码）。
+
+### 验证
+
+- 新回归 `test_pen_down_press_settles_near_zero`（修复前 7.01mm 会红，修复后
+  <0.05mm 过）；poswin 单测 + plotter 测试 poswin 化；runtime 28/28 全绿；
+- 乌龙记录：实验脚本 f-string `solreflimit="{tc} 1"` 中 tc 已含 " 1"，拼出三值
+  报 "too much data"，排查两轮——教训：插值拼参数串先打印。
+
+## 2026-09-09 (1) example1：龙门模型反向导出 spec + io_map（契约包增补）
+
+### 做法
+
+只读 MJCF 模型文件提取：关节 range→travel、执行器 ctrlrange→io range、gantry_base
+pos→pose、option→physics_dt/gravity、floor/default→ground、axisSpeed 取自组装注释
+（运行时参数在模型数据面的唯一痕迹）。模型不携带的 8 个字段（scene_id/spec_version/
+units/solver/lighting/资产 id/script）取 schema 合法缺省并逐项标注——**模型→spec 存在
+信息损失边界，正方向才是无损的**。
+
+### 验证
+
+闸门通过（1 资产/6 IO）；规范化整文件往返 diff（忽略 model 名/注释）与原模型
+**完全一致**；正向三步命令复跑（validate→build-mjcf→viewer 落笔画方块墨迹完整）。
+
+## 2026-09-08 (3) 契约发布 v1.1 + 工作流机制化：纯命令完成「检查→创建→仿真」
+
+### 动机（对上轮的纠偏）
+
+plotter 实战暴露：gc 生成 spec 时没有组件契约可依（注册表只在 csk 代码里、无机器
+可读发布），导致"闸门拒绝→csk 顺手补库"的混流——库登记与组装规则实质是 csk 的
+即时设计而非契约产物。本轮把库沉淀为**正式契约包**发布给 gc，并把工作流固化成
+纯命令调用（无人工补写环节）。
+
+### 交付
+
+- `cli components`：注册表 → 机器可读契约 JSON / 人类可读表格（与闸门同源，
+  `MJCF_TYPES` 由组装器导出，后端支持列真实反映）；
+- `cli build-mjcf`：validate → io_map 地址分配 → MJCF 落盘一条命令；
+  **io_map 缺失直接拒绝**（实测对 gc 原始文件正确退出，不代拟）；
+- `contract/`（v1.1）：components.v1.1.json + 组件契约表.md + scene.spec.example.json
+  （参考 spec，io_map 为 csk 代拟范本待 gc 正式版）+ README.md（字段语义七条决议：
+  类型封闭/io_map 必填/米制/pose 语义/轴链声明序/paper_area 基准/动力学缺省）；
+- 推送 master（契约包，负责人指令）与 csk 分支。
+
+### 严格流程实走（发布树上，纯命令）
+
+① `cli validate contract/scene.spec.example.json` → OK（8 资产/6 IO）；
+② `cli build-mjcf … -o out/plotter_cell` → scene.xml + io_map 三件套 + 分配表；
+③ `mujoco_jog_runtime --scene --io-map` + 客户端方块闭环全绿；
+回归 runtime 21 + 根 106 + scenegen 20 全绿。
+
+## 2026-09-08 (2) plotter_cell 实战：gc master:scene.spec.json 走通 MuJoCo 工作流
+
+### 流程实录（组件库新增已标注；组装规则 R1-R4 见 mujoco_build 源码）
+
+- validate（gc 原始文件）FAIL——io_map 缺失（schema 必填）；
+- 组件库登记 6 类型（ground/work_table/linear_axis/tool_head/pen/hmi_panel）
+  + ParamSpec 扩 vec2/bool/str_list 形态（均【csk 2026-09-08 新增】标注）；
+- io_map 补三轴米制草案（工作副本），重验证 OK；
+- `_plotter_xml` 多资产装配 + mujoco_jog_runtime 通用化（travel/轴速从
+  linear_axis 推导 = stroke×scale / vmax×scale；墨迹笔尖/纸面动态化）；
+- `tests/test_plotter_build.py` 6 项（行程换算/纸面几何/qz=0 离纸 2mm/扫掠覆盖/
+  闭环/超程钳位）+ e2e 方块绘制全绿。
+
+### 回馈 gc 的发现（9 项，重点）
+
+io_map 缺失（请出正式版）；plot_head.parent=y_axis 与 z_axis 链语义冲突（按轴
+声明序成链）；轴 0 点语义（定为 pose=行程中心）；paper_area 基准（按 work_table
+尺寸）；hmi_panel 无 IO 通道（本轮未接入）；动力学参数缺失（沿用库值）；ground
+资产与顶层字段重复；参数形态扩展 3 种；spec_version 1.0 vs 1.1。
+
+### 技术坑
+
+fresh MjData 的 geom_xpos 全零（取几何前必须 mj_forward；龙门纸在世界原点碰巧
+绿，plotter 纸心 (0.5,0.5) 暴露）；静态件 pose z=0 按落位面解释（按中心则台体
+半埋、纸面低半台高）。
+
+## 2026-09-08 (1) aml_parser Linux 兼容最小补丁（跨模块，附带给 gc）
+
+### 现象与根因
+
+- 合并 origin/csk 后根目录 pytest 7 例 test_aml_parser 全挂 `OSError(36) ENAMETOOLONG`；
+- `parse_aml(source)` 用 `Path(source).is_file()` 探测"是文件还是 XML 文本"——内存
+  XML 字符串（8KB、含换行）被当路径 stat，Linux ext4 单文件名上限 255 字节 → 必炸；
+- **不是 Python 小版本差异**：实测 3.10.12 / 3.12.14 / 3.13.15（uv 独立构建）行为一致，
+  pathlib 的 `is_file` 只吞 ENOENT/ENOTDIR 等少数 errno 后重新抛出；是 **Windows/Linux
+  差异**（Windows 的 is_file 对非法名/超长名返回 False）——推测 gc 在 Windows 跑全绿。
+
+### 修复
+
+`_is_file_quiet()`：try/except OSError 包 `is_file`，异常按非文件处理走 `<memory>`
+分支（Windows 行为不变）。跨模块改动，看板 →gc 登记请复核合入。
+
+### 验证
+
+根目录 100/100 + toolchain 6 + runtime 15 + scenegen 20 全绿（本机 Python 3.10.12）。
+
+### 环境备忘
+
+- 为对照实验用 uv 另装了独立 Python 3.12.14 / 3.13.15（`~/.local/share/uv/python`，
+  系统 python3 未动）；日常工作继续系统 3.10，不需要迁移；
+  `uv python uninstall 3.12 3.13` 可清理。
+
+## 2026-09-07 (8) 实操反馈修复：工作区布局错位 + 落笔墨迹保留 + 原生视窗
+
+### 背景（示教器实操反馈两个问题）
+
+① GUI 画笔往右上走，MuJoCo 里笔尖出画板；往左下走，笔尖够不到纸——**坐标系错位**；
+② 落笔后看不到画过的轨迹，无法核对 GUI 画布 ↔ 仿真动作是否一致。
+
+### 根因（①）：纸张摆在根原点，笔尖行程却在 [pose, pose+travel]
+
+`mujoco_build.py` 沿用了 USD 场景的摆法：纸张/底板以 gantry 根 body 原点为参考摆放。
+但 spec 的 pose 语义是**笔尖行程原点**（左下角），三段滑动的扫掠区间是
+[pose, pose+travel]，行程中心在 pose + travel/2——于是纸只盖住行程左下四分之一，
+右上出纸、左下永远在纸外。**USD 场景同样存在此缺陷**（Isaac 6.x 从未跑起来过机构，
+所以一直没人看见；MuJoCo 首次让笔真的动起来后暴露）。
+
+### 改了什么
+
+- **布局修复**：纸/底板/导轨/立柱全部以行程中心（pose + travel/2）摆放，纸面尺寸
+  = travel 全行程（0.6×0.4）；GANTRY_CONST 中 x/y/z_offset 三个补正量删除
+  （布局对齐后不再需要）；
+- **墨迹（user_scn 渲染层，不进物理）**：笔尖离纸高度 < 12mm 时按 4mm 间距滴墨点
+  （`mjv_initGeom` 球体，深蓝 0.1/0.1/0.55），固定落在纸面上表面 +1.5mm；
+  环形缓冲 2000 点，抬笔自动断线。三个坑：`mat` 参数要 9 元旋转矩阵展平
+  （`np.eye(3).flatten()`）不是四元数；所有参数必须 numpy 数组且 rgba 要 float32；
+  落笔判断不能看 qz（伺服静差让 qz 停在 0.007，卡阈值）而要看**笔尖世界 z**；
+- **`--viewer` 原生视窗**：`mujoco.viewer.launch_passive` + 周期 `sync()`（每 2 物理帧），
+  首次 sync 后把相机设为 3/4 俯视（az 135° / el -42° / 距离 1.9m / 注视工作区中心），
+  可正常拖转缩放；无 GUI 环境自动回退无头模式（`--watch` 路径不变）。
+
+### 验证
+
+- 新增回归 `test_pen_sweep_covers_paper`：四角行程极值 (0,0)/(0.6,0)/(0,0.4)/(0.6,0.4)
+  各 mj_forward 后，z_carriage 的 xy 必须落在 paper geom 包围盒内——布局再错位
+  会直接红；
+- 6/6 全绿；根目录 75 项无回归；进程级：GUI 折线 (0.05,0.05)→(0.5,0.33)→(0.12,0.35)
+  经 Modbus 画完，视窗截图经视觉模型确认**深蓝轨迹线保留在纸面中部**。
+- 合并 origin/csk（链路A/分工对齐）后复跑：toolchain 6 + runtime 15（含本组 6）+
+  scenegen 20 全绿；根目录 93/100——7 例 test_aml_parser 为远端固有的 Python 3.10
+  pathlib 兼容问题（`Path(超长str).is_file()` 在 3.10 抛 OSError36、3.11+ 吞掉），
+  干净检出 origin/csk 同样复现，非合并引入，已反馈 gc。
+
+## 2026-09-07 (7) MuJoCo 轻量仿真面：Isaac 6.x 关节回归的备选后端
+
+### 背景（真机联调结论，Isaac 链路的现状）
+
+真机（RTX 4080SUPER / Isaac 6.0.0-rc.59 离线包与 6.0.1.0 pip 正式版双双实测）
+上龙门机构**不动**。经 tensor API（PhysX 真值）逐轴排查：同场景内自由刚体（探针
+立方体）下落/碰撞/静止全部正常，但棱柱关节链行为系统性错乱——X 轴驱动方向反转
+（目标 +0.3m 实际走到 -0.3m）、Y 轴被拖到限位外、Z 轴"冻结"实为反向驱动力被笔-
+纸接触挡住。交换 body0/body1、加 ArticulationRootAPI、静态基座、CPU dynamics
+（PhysxSceneAPI.EnableGPUDynamics=False）逐一对照均无效——**Isaac 6.x PhysX
+(110.1.11/110.1.13) 对 maximal-coordinate 棱柱关节链的解算回归**，非本侧代码或
+场景问题（USD 语义按 4.5 时代规范书写，自由刚体路径同一进程正常）。
+
+### 改了什么
+
+新增 MuJoCo 后端（`runtime/mujoco_build.py` + `mujoco_jog_runtime.py`），与
+Isaac 工作流 A 同构、与 USD 链路消费同一份 scene.spec.json：
+
+- **组装器**：gantry_xyz 组件 → MJCF（三段滑动关节链 base→x→y→z + position
+  执行器 + 行程限位）。质量 4/3/0.4kg、kp 6000/6000/4000、阻尼 250/250/80 与
+  USD DriveAPI 同源；关节 q=0=作者位姿、Z 0=落笔/travel=抬笔语义不变；
+- **运行时**：主循环 = 指令寄存器 →（axisSpeed 速率限制，与 StageLink 同语义）
+  → `data.ctrl`；`mj_step` 后 `data.qpos` → 反馈寄存器。Modbus 层完整复用
+  `gantry_bridge`（布局/钳位/开场抬笔约定不变），PLC 侧与示教器零改动；
+- **依赖**：`mujoco>=3.2`（pip 几 MB，无 GPU/许可证依赖），已登记
+  `runtime/requirements.txt`。
+
+### 技术坑（MJCF 组装的两处自碰撞顶死）
+
+- MuJoCo 只过滤**父子** body 间的碰撞，隔代（如 x_carriage 的 saddle ↔ z_carriage
+  的 slider）照样碰撞；而龙门几何本来就是"滑座骑导轨/滑块穿床头"的视觉互穿形态，
+  开场即 -15mm 穿深 → 600N 驱动力全被接触力顶死（acc=0、关节以 4mm/s 蠕动）。
+  排查法：`mjDSBL_CONTACT` 关接触对照 + 遍历 `data.contact` 打印几何对；
+- 修法：机构件（立柱/导轨/滑座/床头/滑块体）`contype=0 conaffinity=0`，只保留
+  **笔尖↔纸面**与整机↔地面两类功能接触——机构运动由关节限位约束，不靠碰撞。
+
+### 验证
+
+- `tests/test_mujoco_loop.py` 5 项全绿：MJCF 可编译且限位与 io_map 布局一致、
+  指令经斜坡驱动真实 qpos（非指令回声）、超程 9.9m 钳位到 0.6、开场 Z 0.4s 抬到
+  0.2、阶跃成斜坡（0.2s 时 X≈0.1）；
+- 进程级端到端：runtime 启动 ~4s（Isaac 20s~3min），spy 客户端拖 (0.3,0.2)+落笔
+  0.8s 到位、超程钳位 ✓；
+- 示教器全闭环：GUI 拖动 → Modbus → 斜坡 → MuJoCo → qpos 反馈 → 画笔回读，
+  读数栏显示真实位置（X=0.300 Y=0.200 Z=0.000）；
+- 根目录 pytest 75 项 + runtime 桥回环 6 + StageLink 3 全绿（无回归）。
+
+### 附带修复（真机联调期间发现，一并入库）
+
+- `gantry_jog_gui.py` 写失败路径两个 bug：① `except ... as exc` 的 `exc` 在块外
+  被 Python 删除而延迟 lambda 引用 → NameError，状态栏永远不显示"写入失败"；
+  ② 失败后未断开死连接，`connected` 仍 True，重连需点两次"连接"。修法：先捕获
+  `msg=str(exc)` 再调度 after 回调，失败时补 `client.disconnect()`；
+- `isaac_jog_runtime.py` import 双路兼容（离线包 `isaacsim.simulation_app` /
+  pip 元包 `isaacsim` 顶层导出）。
+
 ## 2026-09-07 (6) 第三次许可制合并走查（分工与场景对齐）
 
 - 合并内容：删除 scenegen/agent（分工越界自纠）+ 滚筒分拣线废弃场景；场景现役集 =
