@@ -295,6 +295,76 @@ def _if_blocks(body):
             yield start,end,condition,content
 
 
+def _sequence_condition(body,condition,offset):
+    """Resolve single-assignment flags and TON.Q to the sampled inputs, without executing ST."""
+    prefix=body[:offset];assignments={}
+    for match in re.finditer(r'\b(\w+)\s*:=\s*([^;]+);',prefix,re.I):
+        assignments.setdefault(match[1].lower(),[]).append(match[2])
+    aliases={name:values[0] for name,values in assignments.items() if len(values)==1}
+    for match in re.finditer(r'\b(\w+)\s*\(\s*IN\s*:=\s*([^,]+),\s*PT\s*:=',prefix,re.I):
+        aliases[match[1].lower()+'.q']=match[2]
+    def expand(text,seen=(),depth=0):
+        if depth>=8:return text
+        def replace(match):
+            name=match[0].lower()
+            return '('+expand(aliases[name],seen+(name,),depth+1)+')' if name in aliases and name not in seen else match[0]
+        return re.sub(r'\b\w+(?:\.\w+)?\b',replace,text)
+    return expand(condition)
+
+
+def _waypoint_latch_problems(body, trajectory):
+    """Recognize an outer-step-only segment latch in a nested waypoint sweep.
+
+    This is a diagnostic, not a general ST proof. Leave unfamiliar structures to
+    the remaining gates and physical verification; never rewrite their logic.
+    """
+    if not any(len(step.get('waypoints', [])) > 1 for step in trajectory.get('steps', [])):
+        return []
+    if not re.search(r'\bCASE\s+pl_k\s+OF\b', body, re.I):
+        return []
+    targets = {}
+    for axis in 'xy':
+        call = re.search(r'\bix_' + axis + r'\s*\(([\s\S]*?)\);', body, re.I)
+        target = re.search(r'\bpos_target\s*:=\s*(\w+)\s*(?:,|$)', call[1], re.I) if call else None
+        if not target:
+            return []
+        targets[axis] = target[1]
+    blocks = list(_if_blocks(body))
+    for start, end, condition, content in blocks:
+        guard = _sequence_condition(body, condition, start)
+        if not re.search(r'\bpl_step\s*<>|<>\s*pl_step\b', guard, re.I):
+            continue
+        if re.search(r'\bpl_k\b', guard, re.I):
+            continue
+        chunk = body[content:end]
+        latched = {}
+        for axis in 'xy':
+            target = re.search(r'\b(\w+)\s*:=\s*' + re.escape(targets[axis]) + r'\s*;', chunk, re.I)
+            if not target or not re.search(r'\b\w+\s*:=\s*ix_' + axis + r'\.pos\s*;', chunk, re.I):
+                break
+            latched[axis] = target[1]
+        if len(latched) != 2:
+            continue
+        if all(re.search(r'\b' + re.escape(target) + r'\b', guard, re.I) for target in targets.values()):
+            continue
+        # A separate target/index-change block can legitimately refresh the
+        # same endpoints. Do not flag an outer-step initialization in that case.
+        elsewhere = body[:start] + ' ' * (end-start) + body[end:]
+        if all(re.search(r'\b' + re.escape(name) + r'\s*:=\s*' + re.escape(targets[axis]) + r'\s*;', elsewhere, re.I)
+               for axis, name in latched.items()):
+            continue
+        if not re.search(r'\b\w+\s*:=\s*[^;]*\b\w+\s*/\s*\w+\s*;', body, re.I):
+            continue
+        line = body.count('\n', 0, start) + 1
+        return [f'PLC_PRG第{line}行的段起终点锁存仅由pl_step变化触发，但CASE pl_k会在同一工艺步切换多个路点，'
+            '轴同步比例将沿用首段，端点全部到达仍会画出折线。'
+            '每个内部waypoint都是新线段：用(pl_step,pl_k)共同变化或任一REAL目标坐标变化检测新段，'
+            '同时锁存三轴起点/终点并重算位移比例，段内保持锁存值不变；'
+            'MC调用后、INTERP前同比缩放速度/加速度/减速度。'
+            '不要每扫描用移动中的当前位置重算比例，也不要只改INTERP收尾或放宽容差。']
+    return []
+
+
 def svg_program_problems(xml, trajectory):
     """统一检查语言/SVG绘图；旧函数名保留给已有调用方。"""
     if not trajectory:
@@ -304,7 +374,42 @@ def svg_program_problems(xml, trajectory):
     if prg is None:return []
     body=''.join(prg.find('.//'+ns+'ST').itertext())
     body=re.sub(r'\(\*[\s\S]*?\*\)|//[^\n]*',lambda m:' '*len(m[0]),body)
-    problems=[]
+    problems=_waypoint_latch_problems(body, trajectory)
+    previous=None;unequal_diagonal=False
+    for step in trajectory.get('steps',[]):
+        for point in step.get('waypoints') or [step['to']]:
+            if step.get('waypoints') and previous:
+                dx,dy=abs(point[0]-previous[0]),abs(point[1]-previous[1])
+                unequal_diagonal |= dx>1e-9 and dy>1e-9 and abs(dx-dy)>1e-9
+            previous=point
+    calls={a:re.search(r'\bix_'+a+r'\s*\(([\s\S]*?)\);',body,re.I) for a in 'xy'}
+    go={a:re.search(r'\bgo_'+a+r'\s*\(([\s\S]*?)\);',body,re.I) for a in 'xy'}
+    if unequal_diagonal and all(calls.values()) and all(go.values()):
+        raw=all(re.search(r'\bvel_req\s*:=\s*'+a+r'_vel_bus\s*(?:,|$)',calls[a][1],re.I) for a in 'xy')
+        dynamics=[]
+        for a in 'xy':
+            dynamics.append([re.search(r'\b'+key+r'\s*:=\s*(\d+(?:\.\d+)?)\s*(?:,|$)',go[a][1],re.I)
+                             for key in ('Velocity','Acceleration','Deceleration')])
+        equal=all(all(row) for row in dynamics) and all(float(dynamics[0][i][1])==float(dynamics[1][i][1]) for i in range(3))
+        scaled=re.search(r'\b[xy]_(?:vel|acc|dec)_bus\s*:=',body,re.I)
+        if raw and equal and not scaled:
+            problems.append('SVG含X/Y位移不相等的斜线，但两轴INTERP直接使用相同未缩放动力学，斜线会变成折线。'
+                'MC实参保留AML默认值；在每段开始锁存起点/终点，用各轴位移除以最大轴位移得到比例，'
+                '在MC调用之后、INTERP之前同比缩放对应速度/加速度/减速度，使两轴共享进度；'
+                '不能每扫描用变化中的当前位置重算比例，不能改路点或容差。')
+        if raw:
+            for axis in 'xy':
+                bus=axis+'_vel_bus'
+                if not re.search(r'\bdyn_vel\s*:=\s*'+bus+r'\s*(?:,|$)',go[axis][1],re.I):continue
+                writes=list(re.finditer(r'\b'+bus+r'\s*:=\s*([^;]+);',body,re.I))
+                before=[m for m in writes if m.start()<go[axis].start() and re.search(r'[A-Za-z_]',m[1])
+                        and not _non_drawing_guard(body,m.start())]
+                after=[m for m in writes if go[axis].end()<m.start()<calls[axis].start()]
+                if before and not after:
+                    problems.append('轴'+axis.upper()+'同步参数在go_'+axis+'调用之前写入'+bus+
+                        '，随后被MC的dyn_vel/dyn_acc/dyn_dec输出覆盖，INTERP收到的仍是未同步动力学。'
+                        '保留MC实参的AML默认值，把锁存段比例的速度/加速度/减速度缩放放在全部MC调用之后、INTERP调用之前；'
+                        '或直接将缩放后的独立变量接入INTERP，不要仅在MC前写总线。')
     for match in re.finditer(r'\b(\w+)\s*:=\s*(\w+)\s+AND\s+NOT\s+\1\s*;',body,re.I):
         problems.append(match[1]+' 将边沿输出当作前值记忆，会在持续命令下反复触发；请用独立的上一扫描状态')
     if any(v.get('name','').lower() in ('draw_active','pl_step') for v in prg.iter(ns+'variable')):
@@ -317,8 +422,23 @@ def svg_program_problems(xml, trajectory):
                 if clear and not _non_drawing_guard(body,content+clear.start()):
                     problems.append('绘图期间单轴完成即清 go_'+axis+'_exe，会打断连续跟踪；清理须限定在非绘图期间')
     for start,end,condition,_ in _if_blocks(body):
-        if re.search(r'\b(?:pl_step|draw_active)\b',condition,re.I) and all(re.search(r'\bix_'+a+r'\.Done\b',condition,re.I) for a in 'xyz'):
-            if not re.search(r'\bpl_step\s*:=',body[start:end],re.I):continue
+        if re.search(r'\bpl_(?:step|k)\s*:=',body[start:end],re.I):
+            condition=_sequence_condition(body,condition,start)
+            # A shared TON/readiness flag may have one branch for pen-down and
+            # another that silently ignores Z during pen-up. Inspect each
+            # referenced assignment rather than assuming both branches are safe.
+            z_evidence=r'\bix_z\.(?:Done|Busy|posz?|Setpoint)\b|\bz_ready\b|\bz_fb(?:_i)?\b'
+            if not re.search(z_evidence,condition,re.I):
+                for assigned in re.finditer(r'\b(\w+)\s*:=\s*([^;]+);',body[:start],re.I):
+                    if not re.search(r'\b'+re.escape(assigned[1])+r'\b',condition,re.I):continue
+                    ready=_sequence_condition(body,assigned[2],assigned.start())
+                    if (all(re.search(r'\bix_'+a+r'\.(?:Done|Busy)\b',ready,re.I) for a in 'xy')
+                            and not re.search(z_evidence,ready,re.I)):
+                        problems.append('绘图换步的 '+assigned[1]+' 分支只检查XY而忽略Z到位，抬笔未完成即可跨路径横移。'
+                            '抬笔、落笔及定位均须等待三轴到位；去掉按z_tgt高度跳过z_ready的分支，'
+                            '统一等待x_ready AND y_ready AND z_ready后计时推进，不能放宽容差。')
+                        break
+            if not all(re.search(r'\bix_'+a+r'\.(?:Done|Busy)\b',condition,re.I) for a in 'xyz'):continue
             calls=[re.search(r'\bix_'+a+r'\s*\(',body,re.I) for a in 'xyz']
             if any(call and start<call.start() for call in calls):
                 problems.append('绘图步进在插补调用之前读取 Done，可能连续跳步；完成判断须移至三轴调用之后并确认新目标实际到位')
@@ -328,6 +448,14 @@ def svg_program_problems(xml, trajectory):
         for var in prg.findall('.//'+ns+'interface//'+ns+'variable'):
             if var.get('name') in ('pl_tx','pl_ty','pl_tz') and var.find(ns+'type/'+ns+'INT') is not None:
                 problems.append('绘图含小数路点，'+var.get('name')+' 必须使用 REAL，禁止将轨迹取整')
+        for axis in 'xyz':
+            values=[point['xyz'.index(axis)] for step in trajectory.get('steps',[])
+                for point in (step.get('waypoints') or [step['to']])]
+            if not any(not float(value).is_integer() for value in values):continue
+            instance=prg.find('.//'+ns+'variable[@name="ix_'+axis+'"]/'+ns+'type/'+ns+'derived')
+            pou=root.find('.//'+ns+'pou[@name="'+instance.get('name')+'"]') if instance is not None else None
+            if pou is not None and pou.find('.//'+ns+'variable[@name="pos_target"]/'+ns+'type/'+ns+'REAL') is None:
+                problems.append('ix_'+axis+' 的 pos_target 必须为 REAL 并接收未编码的原始小数坐标；INT 接口会丢失SVG路点，倍率仅用于最终cmd寄存器输出')
     return problems
 
 
@@ -440,10 +568,17 @@ def position_program_problems(xml, address_table, prog_id=2, io_list=None):
     if program is None:return ['位置指令程序必须包含 PLC_PRG']
     located={n.get('name'):n.get('address') for n in program.iter() if local(n)=='variable'}
     body='\n'.join(''.join(n.itertext()) for n in program.iter() if local(n)=='ST') if program is not None else ''
+    code=re.sub(r'\(\*[\s\S]*?\*\)|//[^\n]*','',body)
     problems=[]
     scales=position_scales(io_list or [])
     for axis in 'xyz':
         name=axis+'_cmd'
+        if scales[axis]>1:
+            factor=re.escape(str(scales[axis]))+r'(?:\.0+)?'
+            scaled=r'(?:pl_t'+axis+r'\s*\*\s*'+factor+'|'+factor+r'\s*\*\s*pl_t'+axis+')'
+            if re.search(r'\b'+axis+r'_tgt\s*:=\s*(?:REAL_TO_INT\(\s*)?'+scaled+r'\s*\)?\s*;',code,re.I):
+                problems.append(axis+'_tgt 将轨迹提前乘了编码倍率；插补目标和反馈必须保持AML原单位（如34.75），仅最终 '+name+
+                    ' 输出乘 '+str(scales[axis])+'。REAL目标应直接送入REAL pos_target；MC的INT形参可单独转换，不得用放大目标与未编码fb判断到位')
         if located.get(name)!=address_table.get(name) or not address_table.get(name):
             problems.append(name+' 必须绑定 AML 中的位置输出地址')
         try:

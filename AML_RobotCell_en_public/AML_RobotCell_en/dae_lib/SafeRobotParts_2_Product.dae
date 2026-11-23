@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<COLLADA version="1.5.0" xmlns="http://www.collada.org/2008/03/COLLADASchema">
+	<asset>
+		<contributor>
+			<author>AutomationML e.V.</author>
+			<author_website>www.automationml.org</author_website>
+			<authoring_tool>"Notepad++" "6.8.6" "6.8.6"</authoring_tool>
+		</contributor>
+		<created>2015-12-15T13:12:06.7153453+01:00</created>
+		<modified>2015-12-15T13:12:06.7153453+01:00</modified>
+		<unit meter="0.001" name="mm" />
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_nodes>
+		<node id="SafeRobotParts_2" name="SafeRobotParts_2">
+			<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+			<node id="SafeRobotParts_2_saferobotparts-Tool1.1" name="saferobotparts-Tool1_2">
+				<matrix>0.0784354 0.996919 5.29624e-007 33.8279 0.996919 -0.0784354 -1.30507e-007 -1220.51 -8.85639e-008 5.38228e-007 -1 1543.41 0 0 0 1</matrix>
+				<instance_node url="saferobotparts-Tool1_2_Product.dae#saferobotparts-Tool1_2_visual_scene_node" />
+			</node>
+		</node>
+	</library_nodes>
+	<library_visual_scenes>
+		<visual_scene id="SafeRobotParts_2_visual_scene">
+			<node id="SafeRobotParts_2_visual_scene_node" name="SafeRobotParts_2">
+				<instance_node url="#SafeRobotParts_2" />
+			</node>
+		</visual_scene>
+	</library_visual_scenes>
+	<scene>
+		<instance_visual_scene url="#SafeRobotParts_2_visual_scene" />
+	</scene>
+</COLLADA>

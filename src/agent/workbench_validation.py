@@ -56,13 +56,21 @@ class VerifiedPLCGenerator(PLCGenerator):
         if self.initial_candidate:
             candidate,self.initial_candidate=self.initial_candidate,None
             kwargs.pop('feedback',None)
+            from .xml_normalization import normalize_fb_type_references
+            candidate,references=normalize_fb_type_references(candidate)
+            self._trajectory=kwargs.get('trajectory')
+            ok,errors=self.gate(candidate,spec['io_list'])
+            if not ok:
+                self.initial_feedback=(self.initial_feedback or '')+'\n重新静态检查：\n'+'\n'.join(errors)
+            if references:
+                self.report('已修正旧候选 %d 个FB实例的XML类型引用，接口和ST逻辑保持原样。'%references)
+                if ok:
+                    self.report('原Agent候选修正XML引用格式后通过静态校验，直接继续全部编译和物理验收，不重复调用模型。')
+                    return self._finish({'ok':True,'xml':candidate,'rounds':0,'mode':'format_resume'},spec)
             if self.resume_validation:
-                self._trajectory=kwargs.get('trajectory')
-                ok,errors=self.gate(candidate,spec['io_list'])
                 if ok:
                     self.report('上次为通信或Runtime中断，直接重新验证同一候选；不调用模型，全部闸门重新执行。')
                     return {'ok':True,'xml':candidate,'rounds':0,'mode':'resume'}
-                self.initial_feedback=(self.initial_feedback or '')+'\n重新静态检查：\n'+'\n'.join(errors)
             self.report('沿用同一冻结输入的失败候选继续定向修复，全部闸门重新执行。')
             return self.repair(candidate,spec,self.initial_feedback or '重新核对全部工艺并完成实际编译及物理验收。',**kwargs)
         return self._finish(super().generate(spec,*args,**kwargs),spec)
@@ -109,6 +117,10 @@ class VerifiedPLCGenerator(PLCGenerator):
             '各段必须顺序走完；顶点切换前让物理位置完成跟随，必要时在目标保持至少150ms，'
             '但不得违反原需求时限。不能在目标刚变更的扫描读取旧Done推进；'
             '抬笔应先原地上升、到位后横移，独立轮廓之间不能连笔。'
+            '每个内部waypoint都是新线段：CASE pl_k中的pl_k变化时也必须锁存新的REAL段起终点并重算轴同步比例，'
+            '不能只用pl_step变化触发。推荐检测任一目标坐标变化，或同时比较pl_step与pl_k；'
+            '段内起终点及比例保持不变，不能每扫描以移动中的当前位置重算。'
+            '非零短轴也要保持同一缩放比例，不能对短轴速度或加速度单独设最低值而破坏同步。'
             '不要修改路点、笔态、原工艺要求或用写反馈变量来伪造到位。'
             '绘图活跃期间每扫描保持三轴go_*_exe为TRUE，不可只在步0启动一次后在单轴Done时清除；'
             '无draw_active变量时，以pl_step<>0表示绘图期间，结束清理限定pl_step=0。\n')
@@ -142,6 +154,20 @@ def physical_timing_hint(report):
         '实际Modbus/物理跟随有采样延迟，INTERP刚Done并不等于模型已到位。不要放宽容差或改验收。')
 
 
+def physical_geometry_hint(report):
+    rows={row.get('id'):row for row in report.get('details',[])}
+    if rows.get('SVG_GEOMETRY',{}).get('pass') is not False:return ''
+    reached=all(rows.get(key,{}).get('pass') is True for key in ('PATH','SVG_PATH'))
+    return (('基于实测：工艺步及全部展开路点均已到达，失败的是路点之间的真实笔迹几何。' if reached else
+             '基于实测：真实笔迹几何未通过，需同时核对未到达路点。')+
+        '先对比失败线段的PLC命令轨迹和物理笔尖：若命令自身偏离参考线，应修复轴同步进度；'
+        '若仅物理笔尖偏离，再检查跟随和换段稳定时间。'
+        '尤其检查CASE pl_k的每次内部路点变化是否重新锁存起终点并重算同步比例，不能仅检测pl_step；'
+        '段内保持锁存值，速度/加速度/减速度同比缩放。'
+        '端点到达不证明段内几何正确，不能无依据归因为INTERP目标附近振荡或要求保留未验证的同步逻辑；'
+        '原始路点、倍率和验收容差保持不变。')
+
+
 def failed_candidate(directory):
     """Reuse context on an explicit retry, never reuse an old delivery or verdict."""
     from .pipeline import extract_xml
@@ -168,7 +194,7 @@ def failed_candidate(directory):
         verdict=iteration/'verdict.json'
         physical=json.loads(verdict.read_text(encoding='utf-8')) if verdict.is_file() else {}
         passed=sum(row.get('pass') is True for row in physical.get('details',[]))
-        timing=physical_timing_hint(physical)
+        timing=physical_geometry_hint(physical) or physical_timing_hint(physical)
         if timing:
             errors=[error for error in errors if not error.startswith('排查建议')]
             advice+='\n'+timing
@@ -243,7 +269,7 @@ def validation_result(directory):
 
 
 class WorkbenchOrchestrator(Orchestrator):
-    def __init__(self, *, directory, session, runtime, report, on_motion=None, **kwargs):
+    def __init__(self, *, directory, session, runtime, report, on_motion=None, control=None, **kwargs):
         super().__init__(**kwargs)
         self.directory=Path(directory)
         self.session=session
@@ -253,10 +279,23 @@ class WorkbenchOrchestrator(Orchestrator):
         self.verified_iteration=None
         self.last_deployment=None
         self.best_physical=None
+        self.control=control
+        self.deployment_started=False
+
+    def _check_cancelled(self):
+        if self.control:self.control.check()
 
     def solve(self, *args, **kwargs):
         self.active_generator=args[1] if len(args)>1 else kwargs.get('generator')
-        result=super().solve(*args,**kwargs)
+        try:
+            self._check_cancelled()
+            result=super().solve(*args,**kwargs)
+            self._check_cancelled()
+        finally:
+            if self.control and self.control.cancelled.is_set() and self.deployment_started:
+                # A deploy request can still start PLC after it was cancelled.
+                # Wait for that request, then stop it before releasing the worker.
+                self.control.stop_runtime()
         result['validation']=validation_result(self.directory)
         result['deployment']=self.last_deployment
         return result
@@ -296,25 +335,36 @@ class WorkbenchOrchestrator(Orchestrator):
         return result
 
     def deploy_gate(self, xml_path):
+        self._check_cancelled()
         try:
             xml=deployment_preflight(Path(xml_path).parent)
         except RuntimeControlError as exc:
             return 'failed',{'status':'FAILED','errors':[str(exc)]}
         try:
             self.report('正在真实编译、部署并启动本轮 PLC…')
+            self._check_cancelled()
+            self.deployment_started=True
+            if self.control:self.control.cleanup=self._stop_runtime
             result=self.runtime.action('deploy',xml)
         except RuntimeControlError as exc:
             result=exc.result or {'status':'CONFIGURATION_ERROR','errors':[str(exc)]}
             return 'failed',self._compile_context(result,Path(xml_path).parent)
+        self._check_cancelled()
         if result.get('status')!='OK':
             return 'failed',self._compile_context(result,Path(xml_path).parent)
         self.last_deployment=result
         return 'ok',result
 
+    def _stop_runtime(self):
+        result=self.runtime.action('stop')
+        if result.get('status')!='OK':
+            raise RuntimeControlError('停止 Runtime 未确认：'+str(result))
+
     def acceptance_gate(self, scenario, runtime_expected=False):
         iteration=Path(self._acceptance_context['AGENT_EVIDENCE_DIR'])
         attempts=[]
         for attempt in range(1,3):
+            self._check_cancelled()
             state,detail=self._acceptance_attempt(scenario,runtime_expected)
             attempts.append({'attempt':attempt,'state':state,'detail':detail})
             write_json(iteration/'acceptance-attempts.json',attempts)
@@ -332,10 +382,18 @@ class WorkbenchOrchestrator(Orchestrator):
         return state,detail
 
     def _acceptance_attempt(self, scenario, runtime_expected=False):
+        if self.control:
+            with self.control.stage('simulation'):
+                return self._run_acceptance(scenario,runtime_expected)
+        return self._run_acceptance(scenario,runtime_expected)
+
+    def _run_acceptance(self, scenario, runtime_expected=False):
+        self._check_cancelled()
         iteration=Path(self._acceptance_context['AGENT_EVIDENCE_DIR'])
         xml=(iteration/'plcopen.xml').read_bytes()
         probe=self.status_probe()
         for _ in range(40):
+            self._check_cancelled()
             if (probe and probe.get('runtime',{}).get('status')!='BUSY'
                     and (probe.get('runtime',{}).get('status')!='RUNNING' or probe.get('prog_id') is not None)):
                 break
@@ -354,16 +412,19 @@ class WorkbenchOrchestrator(Orchestrator):
             motion=Motion(iteration,self.session,host,int(target.get('port') or 502),mode='verify',task=self.directory.name)
             self.on_motion(motion)
             self.report('正在对本轮 PLC 执行 MuJoCo 物理仿真与验收…')
+            self._check_cancelled()
             motion.start()
             deadline=time.monotonic()+self.acceptance_timeout
             progress=time.monotonic()
             while motion.alive and time.monotonic()<deadline:
+                self._check_cancelled()
                 motion.thread.join(.25)
                 if time.monotonic()-progress>15:
                     status=motion.status()
                     self.report('物理仿真 %ss，状态：%s，实际笔迹 %s 点' %
                         (status['elapsed'],status['status'],status['ink_count']))
                     progress=time.monotonic()
+            self._check_cancelled()
             if motion.alive:
                 motion.stop()
                 return 'failed',['本轮仿真超时；请修复步序、完成条件或运动停滞，不能修改验收容差']
@@ -397,7 +458,10 @@ class WorkbenchOrchestrator(Orchestrator):
                         'max':max(row[name] for row in recent if name in row)}
                         for name in names if any(name in row for row in recent)}
                     errors.append('末段真实PLC采样（cmd为AML编码后的精细位置，fb为INT粗反馈）：'+json.dumps(observed,ensure_ascii=False))
-                    errors.append(physical_timing_hint(report) or '排查建议（不改变原判据）：若INTERP在细POSWIN下目标附近反复越过，'
+                    unit_error='PLC位置指令越界' in (status.get('error') or '')
+                    errors.append(('位置量纲修法：轨迹目标与反馈保持AML原单位，小数目标用REAL传入插补器；'
+                        '编码倍率仅在最终cmd寄存器输出使用一次。核对目标/反馈比较、MC边界和插补pos_target类型，不能放宽AML范围。') if unit_error else
+                        physical_geometry_hint(report) or physical_timing_hint(report) or '排查建议（不改变原判据）：若INTERP在细POSWIN下目标附近反复越过，'
                         '检查离散积分跨越目标时是否正确钳位pos:=tgt并停速，不能只在速度恰为0且误差极小时置Done。'
                         '保持连续跟踪；不要改成单扫描边沿，不要将三轴AND条件仅换括号，也不要放宽POSWIN。')
                 score=sum(row.get('pass') is True for row in report.get('details',[]))
@@ -416,6 +480,10 @@ class WorkbenchOrchestrator(Orchestrator):
         finally:
             if motion and motion.alive:
                 motion.stop()
+            if motion and self.control and self.control.cancelled.is_set():
+                write_json(iteration/'trace.json',motion.trace)
+                write_json(iteration/'physical_trace.json',motion.physical_trace)
+                write_json(iteration/'cancelled-motion.json',motion.status())
 
     @staticmethod
     def _environment_error(error):
@@ -426,6 +494,7 @@ class WorkbenchOrchestrator(Orchestrator):
         return []
 
     def _finalize(self, run_dir, iter_dir, i, history):
+        self._check_cancelled()
         if self.verified_iteration!=Path(iter_dir) or validation_result(iter_dir)['status']!='passed':
             raise ValueError('本轮没有匹配源码的物理验收 PASS，禁止冻结 final')
         super()._finalize(run_dir,iter_dir,i,history)

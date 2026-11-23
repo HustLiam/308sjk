@@ -83,6 +83,107 @@ def test_new_generation_rejects_stale_done_and_integer_waypoints(generated_svg):
     assert not result['ok'] and any('[SVG]' in p for p in result['errors'])
 
 
+@pytest.mark.parametrize('include_z,advance_z',[(False,False),(True,False),(False,True)])
+def test_lift_step_cannot_advance_on_xy_only_timer_alias(generated_svg,include_z,advance_z):
+    xml,_,trajectory=generated_svg
+    root=ET.fromstring(xml);st=root.find('.//'+NS+'pou[@name="PLC_PRG"]//'+NS+'ST')[0]
+    body='''ix_x(fire := TRUE);ix_y(fire := TRUE);ix_z(fire := TRUE);
+x_ready := NOT ix_x.Busy AND ix_x.Done;
+y_ready := NOT ix_y.Busy AND ix_y.Done;
+z_ready := NOT ix_z.Busy AND ix_z.Done;
+IF z_tgt <= 0.5 THEN
+    ready := z_ready AND x_ready AND y_ready;
+ELSE
+    ready := x_ready AND y_ready;
+END_IF;
+hold_tmr(IN := (pl_step <> 0) AND ready, PT := T#150MS);
+hold_ok := hold_tmr.Q;
+IF pl_step <> 0 AND hold_ok THEN pl_step := pl_step + 1; END_IF;
+'''
+    if include_z:body=body.replace('ready := x_ready AND y_ready;','ready := x_ready AND y_ready AND z_ready;')
+    if advance_z:body=body.replace('AND hold_ok THEN','AND hold_ok AND z_ready THEN')
+    st.text=body
+    problems=svg_program_problems(ET.tostring(root,encoding='unicode'),trajectory)
+    assert any('忽略Z到位' in problem for problem in problems) is not (include_z or advance_z)
+
+
+@pytest.mark.parametrize('scaled',[False,True])
+def test_unequal_svg_diagonal_rejects_identical_raw_axis_dynamics(generated_svg,scaled):
+    xml,_,trajectory=generated_svg
+    trajectory=copy.deepcopy(trajectory)
+    trajectory['steps'][2]['waypoints']=[[45.31,70.25,0]]
+    root=ET.fromstring(xml);st=root.find('.//'+NS+'pou[@name="PLC_PRG"]//'+NS+'ST')[0]
+    st.text='''go_x(Velocity := 40.0, Acceleration := 80.0, Deceleration := 80.0);
+go_y(Velocity := 40.0, Acceleration := 80.0, Deceleration := 80.0);
+ix_x(vel_req := x_vel_bus, acc_req := x_acc_bus, dec_req := x_dec_bus);
+ix_y(vel_req := y_vel_bus, acc_req := y_acc_bus, dec_req := y_dec_bus);
+'''
+    if scaled:st.text=st.text.replace('ix_x(','x_vel_bus := x_vel_bus * ratio_x;\nix_x(')
+    problems=svg_program_problems(ET.tostring(root,encoding='unicode'),trajectory)
+    assert any('相同未缩放动力学' in problem for problem in problems) is not scaled
+
+
+@pytest.mark.parametrize('guard,extra,broken',[
+    ('pl_step <> seg_key','',True),
+    ('seg_key <> pl_step','',True),
+    ('new_segment','new_segment := pl_step <> seg_key;',True),
+    ('(pl_step <> seg_key) OR (pl_k <> old_k)','',False),
+    ('(pl_step <> seg_key) OR (x_tgt <> seg_end_x) OR (y_tgt <> seg_end_y)','',False),
+    ('segment_key <> last_key','segment_key := pl_step * 1201 + pl_k;',False),
+    ('new_segment','new_segment := (pl_step <> seg_key) OR (pl_k <> old_k);',False),
+])
+def test_inner_waypoints_refresh_latched_axis_synchronization(generated_svg,guard,extra,broken):
+    xml,_,trajectory=generated_svg
+    root=ET.fromstring(xml);st=root.find('.//'+NS+'pou[@name="PLC_PRG"]//'+NS+'ST')[0]
+    st.text='''CASE pl_step OF
+3: CASE pl_k OF 0: x_tgt := 40.15; y_tgt := 53.47;
+1: x_tgt := 45.31; y_tgt := 54.85; END_CASE;
+END_CASE;
+'''+extra+'''
+IF '''+guard+''' THEN
+    seg_key := pl_step;
+    seg_start_x := ix_x.pos; seg_start_y := ix_y.pos;
+    seg_end_x := x_tgt; seg_end_y := y_tgt;
+    seg_dx := ABS(seg_end_x - seg_start_x); seg_dy := ABS(seg_end_y - seg_start_y);
+    IF seg_max > 0.0001 THEN scale_x := seg_dx / seg_max; scale_y := seg_dy / seg_max; END_IF;
+END_IF;
+x_vel_eff := x_vel_bus * scale_x; y_vel_eff := y_vel_bus * scale_y;
+ix_x(pos_target := x_tgt, vel_req := x_vel_eff);
+ix_y(pos_target := y_tgt, vel_req := y_vel_eff);
+'''
+    errors=svg_program_problems(ET.tostring(root,encoding='unicode'),trajectory)
+    found=[e for e in errors if '锁存仅由pl_step' in e]
+    assert bool(found)==broken
+    if broken:
+        assert 'pl_k' in found[0] and '速度/加速度/减速度' in found[0]
+        single=copy.deepcopy(trajectory)
+        single['steps'][2]['waypoints']=single['steps'][2]['waypoints'][:1]
+        assert not any('锁存仅由pl_step' in e for e in svg_program_problems(ET.tostring(root,encoding='unicode'),single))
+        original=st.text
+        st.text='(* '+original+' *)'
+        assert not any('锁存仅由pl_step' in e for e in svg_program_problems(ET.tostring(root,encoding='unicode'),trajectory))
+        st.text=original
+        # A separate target-change refresh makes the outer initialization valid.
+        st.text+='''IF x_tgt <> seg_end_x OR y_tgt <> seg_end_y THEN
+seg_start_x := ix_x.pos; seg_start_y := ix_y.pos;
+seg_end_x := x_tgt; seg_end_y := y_tgt; END_IF;'''
+        assert not any('锁存仅由pl_step' in e for e in svg_program_problems(ET.tostring(root,encoding='unicode'),trajectory))
+
+
+@pytest.mark.parametrize('location',['before','after','direct'])
+def test_mc_outputs_cannot_overwrite_scaled_drawing_dynamics(generated_svg,location):
+    xml,_,trajectory=generated_svg
+    trajectory=copy.deepcopy(trajectory);trajectory['steps'][2]['waypoints']=[[40.15,54.0,0],[45.31,54.85,0]]
+    root=ET.fromstring(xml);st=root.find('.//'+NS+'pou[@name="PLC_PRG"]//'+NS+'ST')[0]
+    mc='\n'.join(f'go_{a}(Velocity := 40.0, Acceleration := 80.0, Deceleration := 80.0, dyn_vel := {a}_vel_bus);' for a in 'xy')
+    scale='\n'.join(f'{a}_vel_bus := {a}_vel_bus * ratio_{a};' for a in 'xy')
+    calls='\n'.join(f'ix_{a}(vel_req := {a}_vel_bus);' for a in 'xy')
+    st.text=(scale+'\n'+mc+'\n'+calls if location=='before' else mc+'\n'+scale+'\n'+calls)
+    if location=='direct':st.text=(scale+'\n'+mc+'\n'+calls).replace('vel_req := x_vel_bus','vel_req := x_vel_eff').replace('vel_req := y_vel_bus','vel_req := y_vel_eff')
+    errors=svg_program_problems(ET.tostring(root,encoding='unicode'),trajectory)
+    assert any('随后被MC' in e for e in errors)==(location=='before')
+
+
 def test_recovery_keeps_nested_waypoints_and_continuous_fire(generated_svg):
     xml,model,trajectory=generated_svg
     fixed=repair_generated_svg(xml,model,trajectory)
@@ -242,3 +343,43 @@ END_IF;'''
 def test_drawing_normalizer_leaves_invalid_structure_for_static_gate(xml):
     from agent.position_control import repair_drawing_scan_order
     assert repair_drawing_scan_order(xml,{'shape':'square','steps':[]})==(xml,False)
+
+
+@pytest.mark.parametrize('comment',[False,True])
+def test_encoded_targets_are_rejected_before_deployment(generated_svg,comment):
+    from agent.position_control import position_program_problems
+    xml,model,_=generated_svg
+    root=ET.fromstring(xml);st=root.find('.//'+NS+'pou[@name="PLC_PRG"]//'+NS+'ST')[0]
+    assignment='x_tgt := REAL_TO_INT(pl_tx * 100.0);'
+    st.text=('(* '+assignment+' *)' if comment else assignment)+'\n'+st.text
+    errors=position_program_problems(ET.tostring(root,encoding='unicode'),
+        {p['name']:p['address'] for p in model['io_points']},io_list=build_io_list(model)[0])
+    assert any('x_tgt' in e and '提前乘了编码倍率' in e for e in errors)==(not comment)
+
+
+def test_fractional_waypoints_require_real_interpolator_input(generated_svg):
+    xml,model,trajectory=generated_svg
+    fixed=repair_generated_svg(xml,model,trajectory)
+    assert not svg_program_problems(fixed,trajectory)
+    root=ET.fromstring(fixed)
+    typ=root.find('.//'+NS+'pou[@name="INTERP"]//'+NS+'variable[@name="pos_target"]/'+NS+'type')
+    typ.clear();ET.SubElement(typ,NS+'INT')
+    errors=svg_program_problems(ET.tostring(root,encoding='unicode'),trajectory)
+    assert any('ix_x' in e and 'pos_target 必须为 REAL' in e for e in errors)
+
+
+def test_aliased_timer_advance_cannot_read_busy_before_current_target(generated_svg):
+    xml,_,_=generated_svg
+    root=ET.fromstring(xml);st=root.find('.//'+NS+'pou[@name="PLC_PRG"]//'+NS+'ST')[0]
+    checks='''hold_tmr_in := (pl_step <> 0) AND NOT ix_x.Busy AND NOT ix_y.Busy AND NOT ix_z.Busy;
+hold_tmr(IN := hold_tmr_in, PT := T#150MS);
+hold_tmr_q := hold_tmr.Q;
+seq_adv := (pl_step <> 0) AND hold_tmr_q;
+IF seq_adv THEN pl_step := pl_step + 1; END_IF;
+'''
+    calls='\n'.join('ix_'+a+'(fire := go_'+a+'_exe);' for a in 'xyz')
+    trajectory={'shape':'svg','steps':[]}
+    st.text=checks+calls
+    assert any('调用之前' in e for e in svg_program_problems(ET.tostring(root,encoding='unicode'),trajectory))
+    st.text=calls+'\n'+checks
+    assert not svg_program_problems(ET.tostring(root,encoding='unicode'),trajectory)

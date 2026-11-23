@@ -1,0 +1,93 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<COLLADA version="1.5.0" xmlns="http://www.collada.org/2008/03/COLLADASchema">
+	<asset>
+		<contributor>
+			<author>AutomationML e.V.</author>
+			<author_website>www.automationml.org</author_website>
+			<authoring_tool>"Notepad++" "6.8.6" "6.8.6"</authoring_tool>
+		</contributor>
+		<created>2015-12-15T13:12:06.7153453+01:00</created>
+		<modified>2015-12-15T13:12:06.7153453+01:00</modified>
+		<unit meter="0.001" name="mm" />
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_nodes>
+		<node id="KR210R2700prime_dp6_4" name="KR210R2700prime_dp6_4">
+			<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+			<instance_geometry url="#KR210R2700prime_dp6_4_R255_G96_B0_A255">
+				<bind_material>
+					<technique_common>
+						<instance_material symbol="KR210R2700prime_dp6_4_MATERIAL_R255_G96_B0_A255" target="#KR210R2700prime_dp6_4_MATERIAL_R255_G96_B0_A255" />
+					</technique_common>
+				</bind_material>
+			</instance_geometry>
+		</node>
+	</library_nodes>
+	<library_visual_scenes>
+		<visual_scene id="KR210R2700prime_dp6_4_visual_scene">
+			<node id="KR210R2700prime_dp6_4_visual_scene_node" name="KR210R2700prime_dp6_4">
+				<instance_node url="#KR210R2700prime_dp6_4" />
+			</node>
+		</visual_scene>
+	</library_visual_scenes>
+	<library_effects>
+		<effect id="KR210R2700prime_dp6_4_EFFECT_R255_G96_B0_A255">
+			<profile_COMMON>
+				<technique sid="common">
+					<phong>
+						<diffuse>
+							<color>1 0.376471 0 1</color>
+						</diffuse>
+					</phong>
+				</technique>
+			</profile_COMMON>
+		</effect>
+	</library_effects>
+	<library_materials>
+		<material id="KR210R2700prime_dp6_4_MATERIAL_R255_G96_B0_A255">
+			<instance_effect url="#KR210R2700prime_dp6_4_EFFECT_R255_G96_B0_A255" />
+		</material>
+	</library_materials>
+	<library_geometries>
+		<geometry id="KR210R2700prime_dp6_4_R255_G96_B0_A255" name="KR210R2700prime_dp6_4_R255_G96_B0_A255">
+			<mesh>
+				<source id="KR210R2700prime_dp6_4_R255_G96_B0_A255_positions">
+					<float_array count="24" id="KR210R2700prime_dp6_4_R255_G96_B0_A255_positions_array">0.234376 0 0.1 0.334376 0 0.1 0.334376 0 0 0.234376 0 0 0.334376 0.1 0 0.234376 0.1 0 0.234376 0.1 0.1 0.334376 0.1 0.1</float_array>
+					<technique_common>
+						<accessor count="8" source="#KR210R2700prime_dp6_4_R255_G96_B0_A255_positions_array" stride="3">
+							<param name="X" type="float" />
+							<param name="Y" type="float" />
+							<param name="Z" type="float" />
+						</accessor>
+					</technique_common>
+				</source>
+				<source id="KR210R2700prime_dp6_4_R255_G96_B0_A255_normals">
+					<float_array count="18" id="KR210R2700prime_dp6_4_R255_G96_B0_A255_normals_array">0 -1 0 0 0 -1 -1 0 0 0 0 1 1 0 0 0 1 0</float_array>
+					<technique_common>
+						<accessor count="6" source="#KR210R2700prime_dp6_4_R255_G96_B0_A255_normals_array" stride="3">
+							<param name="X" type="float" />
+							<param name="Y" type="float" />
+							<param name="Z" type="float" />
+						</accessor>
+					</technique_common>
+				</source>
+				<vertices id="KR210R2700prime_dp6_4_R255_G96_B0_A255_vertices">
+					<input semantic="POSITION" source="#KR210R2700prime_dp6_4_R255_G96_B0_A255_positions" />
+				</vertices>
+				<trifans count="6" material="KR210R2700prime_dp6_4_MATERIAL_R255_G96_B0_A255">
+					<input offset="0" semantic="VERTEX" source="#KR210R2700prime_dp6_4_R255_G96_B0_A255_vertices" />
+					<input offset="1" semantic="NORMAL" source="#KR210R2700prime_dp6_4_R255_G96_B0_A255_normals" />
+					<p>4 5 5 5 6 5 7 5</p>
+					<p>2 4 4 4 7 4 1 4</p>
+					<p>0 3 1 3 7 3 6 3</p>
+					<p>5 2 3 2 0 2 6 2</p>
+					<p>3 1 5 1 4 1 2 1</p>
+					<p>3 0 2 0 1 0 0 0</p>
+				</trifans>
+			</mesh>
+		</geometry>
+	</library_geometries>
+	<scene>
+		<instance_visual_scene url="#KR210R2700prime_dp6_4_visual_scene" />
+	</scene>
+</COLLADA>

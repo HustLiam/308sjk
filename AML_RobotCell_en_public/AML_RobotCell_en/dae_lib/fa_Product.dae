@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<COLLADA version="1.5.0" xmlns="http://www.collada.org/2008/03/COLLADASchema">
+	<asset>
+		<contributor>
+			<author>AutomationML e.V.</author>
+			<author_website>www.automationml.org</author_website>
+			<authoring_tool>"Notepad++" "6.8.6" "6.8.6"</authoring_tool>
+		</contributor>
+		<created>2015-12-15T13:12:06.7153453+01:00</created>
+		<modified>2015-12-15T13:12:06.7153453+01:00</modified>
+		<unit meter="0.001" name="mm" />
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_nodes>
+		<node id="fa" name="fa">
+			<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+			<node id="fa_F197210000631025131_001_zb_hb_zangenstaender_31.1" name="F197210000631025131_001_zb_hb_zangenstaender_31">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F197210000631025131_001_zb_hb_zangenstaender_31_Rep.dae#F197210000631025131_001_zb_hb_zangenstaender_31_visual_scene_node" />
+			</node>
+			<node id="fa_F19721000063199800000_001_fussplatte_kpl.1" name="F19721000063199800000_001_fussplatte_kpl">
+				<matrix>0.683013 0.683013 -0.258816 2381.75 -0.183011 -0.18301 -0.965927 2217.87 -0.707107 0.707107 6.23847e-007 1293 0 0 0 1</matrix>
+				<instance_node url="F19721000063199800000_001_fussplatte_kpl_Rep.dae#F19721000063199800000_001_fussplatte_kpl_visual_scene_node" />
+			</node>
+		</node>
+	</library_nodes>
+	<library_visual_scenes>
+		<visual_scene id="fa_visual_scene">
+			<node id="fa_visual_scene_node" name="fa">
+				<instance_node url="#fa" />
+			</node>
+		</visual_scene>
+	</library_visual_scenes>
+	<scene>
+		<instance_visual_scene url="#fa_visual_scene" />
+	</scene>
+</COLLADA>

@@ -1,0 +1,110 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<COLLADA version="1.5.0" xmlns="http://www.collada.org/2008/03/COLLADASchema">
+	<asset>
+		<contributor>
+			<author>AutomationML e.V.</author>
+			<author_website>www.automationml.org</author_website>
+			<authoring_tool>"Notepad++" "6.8.6" "6.8.6"</authoring_tool>
+		</contributor>
+		<created>2015-12-15T13:12:06.7153453+01:00</created>
+		<modified>2015-12-15T13:12:06.7153453+01:00</modified>
+		<unit meter="0.001" name="mm" />
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_nodes>
+		<node id="F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2" name="F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2">
+			<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+			<instance_geometry url="#F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2_R210_G210_B255_A255">
+				<bind_material>
+					<technique_common>
+						<instance_material symbol="F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2_MATERIAL_R210_G210_B255_A255" target="#F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2_MATERIAL_R210_G210_B255_A255" />
+					</technique_common>
+				</bind_material>
+			</instance_geometry>
+		</node>
+	</library_nodes>
+	<library_visual_scenes>
+		<visual_scene id="F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2_visual_scene">
+			<node id="F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2_visual_scene_node" name="F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2">
+				<instance_node url="#F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2" />
+			</node>
+		</visual_scene>
+	</library_visual_scenes>
+	<library_effects>
+		<effect id="F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2_EFFECT_R210_G210_B255_A255">
+			<profile_COMMON>
+				<technique sid="common">
+					<phong>
+						<diffuse>
+							<color>0.823529 0.823529 1 1</color>
+						</diffuse>
+					</phong>
+				</technique>
+			</profile_COMMON>
+		</effect>
+	</library_effects>
+	<library_materials>
+		<material id="F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2_MATERIAL_R210_G210_B255_A255">
+			<instance_effect url="#F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2_EFFECT_R210_G210_B255_A255" />
+		</material>
+	</library_materials>
+	<library_geometries>
+		<geometry id="F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2_R210_G210_B255_A255" name="F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2_R210_G210_B255_A255">
+			<mesh>
+				<source id="F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2_R210_G210_B255_A255_positions">
+					<float_array count="300" id="F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2_R210_G210_B255_A255_positions_array">60 51.5 0 -440 51.5 0 60 52.2265 -5.98289 -440 52.2265 -5.98289 60 54.3636 -11.6181 -440 54.3636 -11.6181 60 57.7872 -16.5781 -440 57.7872 -16.5781 60 62.2984 -20.5746 -440 62.2984 -20.5746 60 67.6349 -23.3754 -440 67.6349 -23.3754 60 73.4866 -24.8177 -440 73.4866 -24.8177 60 79.5134 -24.8177 -440 79.5134 -24.8177 60 85.3651 -23.3754 -440 85.3651 -23.3754 60 90.7016 -20.5746 -440 90.7016 -20.5746 60 95.2128 -16.5781 -440 95.2128 -16.5781 60 98.6364 -11.6181 -440 98.6364 -11.6181 60 100.774 -5.98289 -440 100.774 -5.98289 60 101.5 0 -440 101.5 0 60 100.774 5.98289 -440 100.774 5.98289 60 98.6364 11.6181 -440 98.6364 11.6181 60 95.2128 16.5781 -440 95.2128 16.5781 60 90.7016 20.5746 -440 90.7016 20.5746 60 85.3651 23.3754 -440 85.3651 23.3754 60 79.5134 24.8177 -440 79.5134 24.8177 60 73.4866 24.8177 -440 73.4866 24.8177 60 67.6349 23.3754 -440 67.6349 23.3754 60 62.2984 20.5746 -440 62.2984 20.5746 60 57.7872 16.5781 -440 57.7872 16.5781 60 54.3636 11.6181 -440 54.3636 11.6181 60 52.2265 5.98289 -440 52.2265 5.98289 -440 97.5 0 60 97.5 0 -440 96.7844 5.4352 60 96.7844 5.4352 -440 94.6865 10.5 60 94.6865 10.5 -440 91.3492 14.8492 60 91.3492 14.8492 -440 87 18.1865 60 87 18.1865 -440 81.9352 20.2844 60 81.9352 20.2844 -440 76.5 21 60 76.5 21 -440 71.0648 20.2844 60 71.0648 20.2844 -440 66 18.1865 60 66 18.1865 -440 61.6508 14.8492 60 61.6508 14.8492 -440 58.3135 10.5 60 58.3135 10.5 -440 56.2156 5.4352 60 56.2156 5.4352 -440 55.5 0 60 55.5 0 -440 56.2156 -5.4352 60 56.2156 -5.4352 -440 58.3135 -10.5 60 58.3135 -10.5 -440 61.6508 -14.8492 60 61.6508 -14.8492 -440 66 -18.1865 60 66 -18.1865 -440 71.0648 -20.2844 60 71.0648 -20.2844 -440 76.5 -21 60 76.5 -21 -440 81.9352 -20.2844 60 81.9352 -20.2844 -440 87 -18.1865 60 87 -18.1865 -440 91.3492 -14.8492 60 91.3492 -14.8492 -440 94.6865 -10.5 60 94.6865 -10.5 -440 96.7844 -5.4352 60 96.7844 -5.4352</float_array>
+					<technique_common>
+						<accessor count="100" source="#F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2_R210_G210_B255_A255_positions_array" stride="3">
+							<param name="X" type="float" />
+							<param name="Y" type="float" />
+							<param name="Z" type="float" />
+						</accessor>
+					</technique_common>
+				</source>
+				<source id="F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2_R210_G210_B255_A255_normals">
+					<float_array count="150" id="F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2_R210_G210_B255_A255_normals_array">0 -1 0 0 -0.970947 -0.239296 0 -0.885465 -0.464705 0 -0.748525 -0.663106 0 -0.568041 -0.823 0 -0.354595 -0.93502 0 -0.120518 -0.992711 0 0.120518 -0.992711 0 0.354595 -0.93502 0 0.568041 -0.823 0 0.748525 -0.663106 0 0.885465 -0.464705 0 0.970947 -0.239296 0 1 0 0 0.970947 0.239296 0 0.885465 0.464705 0 0.748525 0.663106 0 0.568041 0.823 0 0.354595 0.93502 0 0.120518 0.992711 0 -0.120518 0.992711 0 -0.354595 0.93502 0 -0.568041 0.823 0 -0.748525 0.663106 0 -0.885465 0.464705 0 -0.970947 0.239296 0 -0.965932 -0.258797 0 -0.866034 -0.499985 0 -0.707083 -0.70713 0 -0.499985 -0.866034 0 -0.258797 -0.965932 0 0 -1 0 0.258797 -0.965932 0 0.499985 -0.866034 0 0.707083 -0.70713 0 0.866034 -0.499985 0 0.965932 -0.258797 0 0.965932 0.258797 0 0.866034 0.499985 0 0.707083 0.70713 0 0.499985 0.866034 0 0.258797 0.965932 0 0 1 0 -0.258797 0.965932 0 -0.499985 0.866034 0 -0.707083 0.70713 0 -0.866034 0.499985 0 -0.965932 0.258797 -1 0 0 1 0 0</float_array>
+					<technique_common>
+						<accessor count="50" source="#F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2_R210_G210_B255_A255_normals_array" stride="3">
+							<param name="X" type="float" />
+							<param name="Y" type="float" />
+							<param name="Z" type="float" />
+						</accessor>
+					</technique_common>
+				</source>
+				<vertices id="F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2_R210_G210_B255_A255_vertices">
+					<input semantic="POSITION" source="#F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2_R210_G210_B255_A255_positions" />
+				</vertices>
+				<triangles count="2" material="F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2_MATERIAL_R210_G210_B255_A255">
+					<input offset="0" semantic="VERTEX" source="#F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2_R210_G210_B255_A255_vertices" />
+					<input offset="1" semantic="NORMAL" source="#F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2_R210_G210_B255_A255_normals" />
+					<p>35 48 62 48 64 48 65 49 63 49 34 49</p>
+				</triangles>
+				<tristrips count="18" material="F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2_MATERIAL_R210_G210_B255_A255">
+					<input offset="0" semantic="VERTEX" source="#F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2_R210_G210_B255_A255_vertices" />
+					<input offset="1" semantic="NORMAL" source="#F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2_R210_G210_B255_A255_normals" />
+					<p>27 13 26 13 25 12 24 12 23 11 22 11 21 10 20 10 19 9 18 9 17 8 16 8 15 7 14 7 13 6 12 6 11 5 10 5 9 4 8 4 7 3 6 3 5 2 4 2 3 1 2 1 1 0 0 0</p>
+					<p>1 0 0 0 51 25 50 25 49 24 48 24 47 23 46 23 45 22 44 22 43 21 42 21 41 20 40 20 39 19 38 19 37 18 36 18 35 17 34 17 33 16 32 16 31 15 30 15 29 14 28 14 27 13 26 13</p>
+					<p>77 13 76 13 75 36 74 36 73 35 72 35 71 34 70 34 69 33 68 33 67 32 66 32 65 31 64 31 63 30 62 30 61 29 60 29 59 28 58 28 57 27 56 27 55 26 54 26 53 0 52 0</p>
+					<p>53 0 52 0 99 47 98 47 97 46 96 46 95 45 94 45 93 44 92 44 91 43 90 43 89 42 88 42 87 41 86 41 85 40 84 40 83 39 82 39 81 38 80 38 79 37 78 37 77 13 76 13</p>
+					<p>15 48 13 48 17 48 88 48 19 48 90 48 21 48 92 48 94 48</p>
+					<p>37 48 35 48 39 48 64 48 41 48 43 48</p>
+					<p>43 48 64 48 45 48 66 48 47 48 68 48 49 48 70 48 72 48</p>
+					<p>49 48 72 48 51 48 74 48 1 48 76 48 3 48 78 48 5 48 80 48 7 48 82 48 84 48</p>
+					<p>7 48 84 48 9 48 86 48 11 48 88 48 13 48</p>
+					<p>62 48 35 48 60 48 33 48 58 48 31 48 56 48</p>
+					<p>56 48 31 48 54 48 29 48 52 48 27 48 98 48 25 48 96 48 23 48 94 48 21 48</p>
+					<p>12 49 14 49 89 49 16 49 91 49 18 49 93 49 20 49 95 49</p>
+					<p>34 49 36 49 65 49 38 49 42 49 40 49</p>
+					<p>65 49 42 49 67 49 44 49 69 49 46 49 71 49 48 49 73 49</p>
+					<p>73 49 48 49 75 49 50 49 77 49 0 49 79 49 2 49 81 49 4 49 83 49 6 49 85 49</p>
+					<p>85 49 6 49 87 49 8 49 89 49 10 49 12 49</p>
+					<p>34 49 63 49 32 49 61 49 30 49 59 49 57 49</p>
+					<p>30 49 57 49 28 49 55 49 26 49 53 49 24 49 99 49 22 49 97 49 20 49 95 49</p>
+				</tristrips>
+			</mesh>
+		</geometry>
+	</library_geometries>
+	<scene>
+		<instance_visual_scene url="#F19721000063199800000_001_kreuzverbinder_KVRR50_Rose_Krieger_2_visual_scene" />
+	</scene>
+</COLLADA>

@@ -1,0 +1,261 @@
+<?xml version='1.0' encoding='utf-8'?>
+<project xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.plcopen.org/xml/tc6_0201" xsi:schemaLocation="http://www.plcopen.org/xml/tc6_0201 tc6_xml_v201.xsd">
+  <fileHeader companyName="AutomationML" productName="AutomationML" productVersion="AutomationML" creationDateTime="2017-02-14T12:09:57" companyURL="AutomationML" productRelease="AutomationML"/>
+  <contentHeader name="AutomationML" language="en-US" author="AutomationML" version="AutomationML" organization="AutomationML" modificationDateTime="2017-03-16T17:10:05">
+    <coordinateInfo>
+      <fbd>
+        <scaling x="0" y="0"/>
+      </fbd>
+      <ld>
+        <scaling x="0" y="0"/>
+      </ld>
+      <sfc>
+        <scaling x="0" y="0"/>
+      </sfc>
+    </coordinateInfo>
+    <addDataInfo>
+      <info name="http://www.automationml.org/IEC62714-4Ed1/AML_addData.xsd" vendor="AutomationML">
+        <description>
+          <xhtml:p>Schema to integrate logic model specific information required by AML.</xhtml:p>
+        </description>
+      </info>
+    </addDataInfo>
+  </contentHeader>
+  <types>
+    <dataTypes/>
+    <pous>
+      <pou name="Behaviour_Clamp_StateChart" pouType="program" globalId="UUID_001">
+        <actions/>
+        <transitions>
+          <transition name="transition_TRUE">
+            <body>
+              <ST>
+                <xhtml xmlns="http://www.w3.org/1999/xhtml">transition_TRUE:=TRUE;</xhtml>
+              </ST>
+            </body>
+          </transition>
+          <transition name="read_c-variables">
+            <body>
+              <ST>
+                <xhtml xmlns="http://www.w3.org/1999/xhtml">read_c-variables:=TRUE;</xhtml>
+              </ST>
+            </body>
+          </transition>
+          <transition name="set_c-variables">
+            <body>
+              <ST>
+                <xhtml xmlns="http://www.w3.org/1999/xhtml">set_c-variables:=TRUE;</xhtml>
+              </ST>
+            </body>
+          </transition>
+          <transition name="set_o-variables">
+            <body>
+              <ST>
+                <xhtml xmlns="http://www.w3.org/1999/xhtml">set_o-variables:=TRUE;</xhtml>
+              </ST>
+            </body>
+          </transition>
+          <transition name="read_o-variables">
+            <body>
+              <ST>
+                <xhtml xmlns="http://www.w3.org/1999/xhtml">read_o-variables:=TRUE;</xhtml>
+              </ST>
+            </body>
+          </transition>
+        </transitions>
+        <body>
+          <SFC>
+            <step localId="1" name="InitialStep_StateChart" initialStep="true" height="27" width="95" globalId="UUID_002">
+              <position x="560" y="27"/>
+              <connectionPointOut formalParameter="">
+                <relPosition x="47" y="27"/>
+              </connectionPointOut>
+            </step>
+            <step localId="5" name="closing" initialStep="false" height="23" width="213" globalId="UUID_006">
+              <position x="707" y="366"/>
+              <connectionPointIn>
+                <relPosition x="106" y="0"/>
+                <connection refLocalId="27">
+                  <position x="813" y="366"/>
+                  <position x="813" y="340"/>
+                  <position x="820" y="340"/>
+                  <position x="820" y="315"/>
+                </connection>
+              </connectionPointIn>
+              <connectionPointOut formalParameter="">
+                <relPosition x="106" y="23"/>
+              </connectionPointOut>
+            </step>
+            <step localId="7" name="open" initialStep="false" height="23" width="241" globalId="UUID_007">
+              <position x="678" y="228"/>
+              <connectionPointIn>
+                <relPosition x="120" y="0"/>
+                <connection refLocalId="30">
+                  <position x="798" y="228"/>
+                  <position x="798" y="186"/>
+                  <position x="608" y="186"/>
+                  <position x="608" y="144"/>
+                </connection>
+              </connectionPointIn>
+              <connectionPointOut formalParameter="">
+                <relPosition x="120" y="23"/>
+              </connectionPointOut>
+            </step>
+            <step localId="8" name="closed" initialStep="false" height="23" width="173" globalId="UUID_008">
+              <position x="546" y="525"/>
+              <connectionPointIn>
+                <relPosition x="86" y="0"/>
+                <connection refLocalId="22">
+                  <position x="632" y="525"/>
+                  <position x="632" y="498"/>
+                  <position x="635" y="498"/>
+                  <position x="635" y="480"/>
+                </connection>
+              </connectionPointIn>
+              <connectionPointOut formalParameter="">
+                <relPosition x="86" y="23"/>
+              </connectionPointOut>
+            </step>
+            <step localId="9" name="opening" initialStep="false" height="23" width="183" globalId="UUID_009">
+              <position x="527" y="632"/>
+              <connectionPointIn>
+                <relPosition x="91" y="0"/>
+                <connection refLocalId="28">
+                  <position x="618" y="632"/>
+                  <position x="618" y="610"/>
+                  <position x="626" y="610"/>
+                  <position x="626" y="589"/>
+                </connection>
+              </connectionPointIn>
+              <connectionPointOut formalParameter="">
+                <relPosition x="91" y="23"/>
+              </connectionPointOut>
+            </step>
+            <transition localId="10" height="2" width="20" globalId="UUID_010">
+              <position x="597" y="95"/>
+              <connectionPointIn>
+                <relPosition x="10" y="0"/>
+                <connection refLocalId="1">
+                  <position x="607" y="95"/>
+                  <position x="607" y="54"/>
+                </connection>
+              </connectionPointIn>
+              <connectionPointOut>
+                <relPosition x="10" y="2"/>
+              </connectionPointOut>
+              <condition>
+                <reference name="transition_TRUE"/>
+              </condition>
+            </transition>
+            <transition localId="22" height="2" width="20" executionOrderId="0" globalId="UUID_030">
+              <position x="625" y="478"/>
+              <connectionPointIn>
+                <relPosition x="10" y="0"/>
+                <connection refLocalId="5">
+                  <position x="635" y="478"/>
+                  <position x="635" y="433"/>
+                  <position x="813" y="433"/>
+                  <position x="813" y="389"/>
+                </connection>
+              </connectionPointIn>
+              <connectionPointOut>
+                <relPosition x="10" y="2"/>
+              </connectionPointOut>
+              <condition>
+                <reference name="read_c-variables"/>
+              </condition>
+            </transition>
+            <transition localId="27" height="2" width="20" globalId="UUID_035">
+              <position x="810" y="313"/>
+              <connectionPointIn>
+                <relPosition x="10" y="0"/>
+                <connection refLocalId="7">
+                  <position x="820" y="313"/>
+                  <position x="820" y="282"/>
+                  <position x="798" y="282"/>
+                  <position x="798" y="251"/>
+                </connection>
+              </connectionPointIn>
+              <connectionPointOut>
+                <relPosition x="10" y="2"/>
+              </connectionPointOut>
+              <condition>
+                <reference name="set_c-variables"/>
+              </condition>
+            </transition>
+            <transition localId="28" height="2" width="20" globalId="UUID_036">
+              <position x="616" y="587"/>
+              <connectionPointIn>
+                <relPosition x="10" y="0"/>
+                <connection refLocalId="8">
+                  <position x="626" y="587"/>
+                  <position x="626" y="567"/>
+                  <position x="632" y="567"/>
+                  <position x="632" y="548"/>
+                </connection>
+              </connectionPointIn>
+              <connectionPointOut>
+                <relPosition x="10" y="2"/>
+              </connectionPointOut>
+              <condition>
+                <reference name="set_o-variables"/>
+              </condition>
+            </transition>
+            <transition localId="29" height="2" width="20" globalId="UUID_037">
+              <position x="608" y="695"/>
+              <connectionPointIn>
+                <relPosition x="10" y="0"/>
+                <connection refLocalId="9">
+                  <position x="618" y="695"/>
+                  <position x="618" y="655"/>
+                </connection>
+              </connectionPointIn>
+              <connectionPointOut>
+                <relPosition x="10" y="2"/>
+              </connectionPointOut>
+              <condition>
+                <reference name="read_o-variables"/>
+              </condition>
+            </transition>
+            <simultaneousConvergence localId="30" height="3" width="40" globalId="UUID_201">
+              <position x="588" y="141"/>
+              <connectionPointIn>
+                <relPosition x="0" y="0"/>
+                <connection refLocalId="29">
+                  <position x="588" y="141"/>
+                  <position x="588" y="131"/>
+                  <position x="497" y="131"/>
+                  <position x="497" y="707"/>
+                  <position x="618" y="707"/>
+                  <position x="618" y="697"/>
+                </connection>
+              </connectionPointIn>
+              <connectionPointIn>
+                <relPosition x="40" y="0"/>
+                <connection refLocalId="10">
+                  <position x="628" y="141"/>
+                  <position x="628" y="119"/>
+                  <position x="607" y="119"/>
+                  <position x="607" y="97"/>
+                </connection>
+              </connectionPointIn>
+              <connectionPointOut>
+                <relPosition x="20" y="3"/>
+              </connectionPointOut>
+            </simultaneousConvergence>
+          </SFC>
+        </body>
+        <addData>
+          <data name="http://www.automationml.org/IEC62714-4Ed1/AML_addData.xsd" handleUnknown="implementation">
+            <AML>
+              <ChartType ChartType="StateChart" ID="UUID_101"/>
+            </AML>
+          </data>
+        </addData>
+      </pou>
+    </pous>
+  </types>
+  <instances>
+    <configurations/>
+  </instances>
+</project>

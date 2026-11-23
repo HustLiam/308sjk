@@ -1,0 +1,311 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<COLLADA version="1.5.0" xmlns="http://www.collada.org/2008/03/COLLADASchema">
+	<asset>
+		<contributor>
+			<author>AutomationML e.V.</author>
+			<author_website>www.automationml.org</author_website>
+			<authoring_tool>"Notepad++" "6.8.6" "6.8.6"</authoring_tool>
+		</contributor>
+		<created>2015-12-15T13:12:06.7153453+01:00</created>
+		<modified>2015-12-15T13:12:06.7153453+01:00</modified>
+		<unit meter="0.001" name="mm" />
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_nodes>
+		<node id="KR210R2700prime_dp3_3" name="KR210R2700prime_dp3_3">
+			<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+			<instance_geometry url="#KR210R2700prime_dp3_3_R255_G96_B0_A255">
+				<bind_material>
+					<technique_common>
+						<instance_material symbol="KR210R2700prime_dp3_3_MATERIAL_R255_G96_B0_A255" target="#KR210R2700prime_dp3_3_MATERIAL_R255_G96_B0_A255" />
+					</technique_common>
+				</bind_material>
+			</instance_geometry>
+			<instance_geometry url="#KR210R2700prime_dp3_3_R255_G0_B0_A255">
+				<bind_material>
+					<technique_common>
+						<instance_material symbol="KR210R2700prime_dp3_3_MATERIAL_R255_G0_B0_A255" target="#KR210R2700prime_dp3_3_MATERIAL_R255_G0_B0_A255" />
+					</technique_common>
+				</bind_material>
+			</instance_geometry>
+			<instance_geometry url="#KR210R2700prime_dp3_3_R0_G255_B0_A255">
+				<bind_material>
+					<technique_common>
+						<instance_material symbol="KR210R2700prime_dp3_3_MATERIAL_R0_G255_B0_A255" target="#KR210R2700prime_dp3_3_MATERIAL_R0_G255_B0_A255" />
+					</technique_common>
+				</bind_material>
+			</instance_geometry>
+			<instance_geometry url="#KR210R2700prime_dp3_3_R0_G0_B255_A255">
+				<bind_material>
+					<technique_common>
+						<instance_material symbol="KR210R2700prime_dp3_3_MATERIAL_R0_G0_B255_A255" target="#KR210R2700prime_dp3_3_MATERIAL_R0_G0_B255_A255" />
+					</technique_common>
+				</bind_material>
+			</instance_geometry>
+			<instance_geometry url="#KR210R2700prime_dp3_3_R255_G255_B0_A255">
+				<bind_material>
+					<technique_common>
+						<instance_material symbol="KR210R2700prime_dp3_3_MATERIAL_R255_G255_B0_A255" target="#KR210R2700prime_dp3_3_MATERIAL_R255_G255_B0_A255" />
+					</technique_common>
+				</bind_material>
+			</instance_geometry>
+		</node>
+	</library_nodes>
+	<library_visual_scenes>
+		<visual_scene id="KR210R2700prime_dp3_3_visual_scene">
+			<node id="KR210R2700prime_dp3_3_visual_scene_node" name="KR210R2700prime_dp3_3">
+				<instance_node url="#KR210R2700prime_dp3_3" />
+			</node>
+		</visual_scene>
+	</library_visual_scenes>
+	<library_effects>
+		<effect id="KR210R2700prime_dp3_3_EFFECT_R255_G96_B0_A255">
+			<profile_COMMON>
+				<technique sid="common">
+					<phong>
+						<diffuse>
+							<color>1 0.376471 0 1</color>
+						</diffuse>
+					</phong>
+				</technique>
+			</profile_COMMON>
+		</effect>
+		<effect id="KR210R2700prime_dp3_3_EFFECT_R255_G0_B0_A255">
+			<profile_COMMON>
+				<technique sid="common">
+					<phong>
+						<diffuse>
+							<color>1 0 0 1</color>
+						</diffuse>
+					</phong>
+				</technique>
+			</profile_COMMON>
+		</effect>
+		<effect id="KR210R2700prime_dp3_3_EFFECT_R0_G255_B0_A255">
+			<profile_COMMON>
+				<technique sid="common">
+					<phong>
+						<diffuse>
+							<color>0 1 0 1</color>
+						</diffuse>
+					</phong>
+				</technique>
+			</profile_COMMON>
+		</effect>
+		<effect id="KR210R2700prime_dp3_3_EFFECT_R0_G0_B255_A255">
+			<profile_COMMON>
+				<technique sid="common">
+					<phong>
+						<diffuse>
+							<color>0 0 1 1</color>
+						</diffuse>
+					</phong>
+				</technique>
+			</profile_COMMON>
+		</effect>
+		<effect id="KR210R2700prime_dp3_3_EFFECT_R255_G255_B0_A255">
+			<profile_COMMON>
+				<technique sid="common">
+					<phong>
+						<diffuse>
+							<color>1 1 0 1</color>
+						</diffuse>
+					</phong>
+				</technique>
+			</profile_COMMON>
+		</effect>
+	</library_effects>
+	<library_materials>
+		<material id="KR210R2700prime_dp3_3_MATERIAL_R255_G96_B0_A255">
+			<instance_effect url="#KR210R2700prime_dp3_3_EFFECT_R255_G96_B0_A255" />
+		</material>
+		<material id="KR210R2700prime_dp3_3_MATERIAL_R255_G0_B0_A255">
+			<instance_effect url="#KR210R2700prime_dp3_3_EFFECT_R255_G0_B0_A255" />
+		</material>
+		<material id="KR210R2700prime_dp3_3_MATERIAL_R0_G255_B0_A255">
+			<instance_effect url="#KR210R2700prime_dp3_3_EFFECT_R0_G255_B0_A255" />
+		</material>
+		<material id="KR210R2700prime_dp3_3_MATERIAL_R0_G0_B255_A255">
+			<instance_effect url="#KR210R2700prime_dp3_3_EFFECT_R0_G0_B255_A255" />
+		</material>
+		<material id="KR210R2700prime_dp3_3_MATERIAL_R255_G255_B0_A255">
+			<instance_effect url="#KR210R2700prime_dp3_3_EFFECT_R255_G255_B0_A255" />
+		</material>
+	</library_materials>
+	<library_geometries>
+		<geometry id="KR210R2700prime_dp3_3_R255_G96_B0_A255" name="KR210R2700prime_dp3_3_R255_G96_B0_A255">
+			<mesh>
+				<source id="KR210R2700prime_dp3_3_R255_G96_B0_A255_positions">
+					<float_array count="72" id="KR210R2700prime_dp3_3_R255_G96_B0_A255_positions_array">-0.479746 0.140866 1 -0.5 0 1 -0.5 0 0 -0.479746 0.140866 0 0.5 0 1 0.5 0 0 0.479746 0.140866 1 0.479746 0.140866 0 0.420627 0.27032 1 0.420627 0.27032 0 0.32743 0.377875 1 0.32743 0.377875 0 0.207707 0.454816 1 0.207707 0.454816 0 0.071157 0.494911 1 0.071157 0.494911 0 -0.071157 0.494911 1 -0.071157 0.494911 0 -0.207708 0.454816 1 -0.207708 0.454816 0 -0.32743 0.377875 1 -0.32743 0.377875 0 -0.420627 0.27032 1 -0.420627 0.27032 0</float_array>
+					<technique_common>
+						<accessor count="24" source="#KR210R2700prime_dp3_3_R255_G96_B0_A255_positions_array" stride="3">
+							<param name="X" type="float" />
+							<param name="Y" type="float" />
+							<param name="Z" type="float" />
+						</accessor>
+					</technique_common>
+				</source>
+				<source id="KR210R2700prime_dp3_3_R255_G96_B0_A255_normals">
+					<float_array count="39" id="KR210R2700prime_dp3_3_R255_G96_B0_A255_normals_array">-0.959498 0.281716 0 -0.989822 0.142308 0 0 -1 0 0.989822 0.142308 0 0.959498 0.281716 0 0.841257 0.540635 0 0.654836 0.755771 0 0.415387 0.909645 0 0.142308 0.989822 0 -0.142308 0.989822 0 -0.415387 0.909645 0 -0.654836 0.755771 0 -0.841257 0.540635 0</float_array>
+					<technique_common>
+						<accessor count="13" source="#KR210R2700prime_dp3_3_R255_G96_B0_A255_normals_array" stride="3">
+							<param name="X" type="float" />
+							<param name="Y" type="float" />
+							<param name="Z" type="float" />
+						</accessor>
+					</technique_common>
+				</source>
+				<vertices id="KR210R2700prime_dp3_3_R255_G96_B0_A255_vertices">
+					<input semantic="POSITION" source="#KR210R2700prime_dp3_3_R255_G96_B0_A255_positions" />
+				</vertices>
+				<trifans count="12" material="KR210R2700prime_dp3_3_MATERIAL_R255_G96_B0_A255">
+					<input offset="0" semantic="VERTEX" source="#KR210R2700prime_dp3_3_R255_G96_B0_A255_vertices" />
+					<input offset="1" semantic="NORMAL" source="#KR210R2700prime_dp3_3_R255_G96_B0_A255_normals" />
+					<p>23 12 3 0 0 0 22 12</p>
+					<p>21 11 23 12 22 12 20 11</p>
+					<p>19 10 21 11 20 11 18 10</p>
+					<p>17 9 19 10 18 10 16 9</p>
+					<p>15 8 17 9 16 9 14 8</p>
+					<p>13 7 15 8 14 8 12 7</p>
+					<p>11 6 13 7 12 7 10 6</p>
+					<p>9 5 11 6 10 6 8 5</p>
+					<p>7 4 9 5 8 5 6 4</p>
+					<p>5 3 7 4 6 4 4 3</p>
+					<p>2 2 5 2 4 2 1 2</p>
+					<p>3 0 2 1 1 1 0 0</p>
+				</trifans>
+			</mesh>
+		</geometry>
+		<geometry id="KR210R2700prime_dp3_3_R255_G0_B0_A255" name="KR210R2700prime_dp3_3_R255_G0_B0_A255">
+			<mesh>
+				<source id="KR210R2700prime_dp3_3_R255_G0_B0_A255_positions">
+					<float_array count="9" id="KR210R2700prime_dp3_3_R255_G0_B0_A255_positions_array">0 -0.01 0.347744 0.1875 -0.01 0.672503 0.375 -0.01 0.347744</float_array>
+					<technique_common>
+						<accessor count="3" source="#KR210R2700prime_dp3_3_R255_G0_B0_A255_positions_array" stride="3">
+							<param name="X" type="float" />
+							<param name="Y" type="float" />
+							<param name="Z" type="float" />
+						</accessor>
+					</technique_common>
+				</source>
+				<source id="KR210R2700prime_dp3_3_R255_G0_B0_A255_normals">
+					<float_array count="3" id="KR210R2700prime_dp3_3_R255_G0_B0_A255_normals_array">0 -1 0</float_array>
+					<technique_common>
+						<accessor count="1" source="#KR210R2700prime_dp3_3_R255_G0_B0_A255_normals_array" stride="3">
+							<param name="X" type="float" />
+							<param name="Y" type="float" />
+							<param name="Z" type="float" />
+						</accessor>
+					</technique_common>
+				</source>
+				<vertices id="KR210R2700prime_dp3_3_R255_G0_B0_A255_vertices">
+					<input semantic="POSITION" source="#KR210R2700prime_dp3_3_R255_G0_B0_A255_positions" />
+				</vertices>
+				<triangles count="1" material="KR210R2700prime_dp3_3_MATERIAL_R255_G0_B0_A255">
+					<input offset="0" semantic="VERTEX" source="#KR210R2700prime_dp3_3_R255_G0_B0_A255_vertices" />
+					<input offset="1" semantic="NORMAL" source="#KR210R2700prime_dp3_3_R255_G0_B0_A255_normals" />
+					<p>2 0 1 0 0 0</p>
+				</triangles>
+			</mesh>
+		</geometry>
+		<geometry id="KR210R2700prime_dp3_3_R0_G255_B0_A255" name="KR210R2700prime_dp3_3_R0_G255_B0_A255">
+			<mesh>
+				<source id="KR210R2700prime_dp3_3_R0_G255_B0_A255_positions">
+					<float_array count="9" id="KR210R2700prime_dp3_3_R0_G255_B0_A255_positions_array">-0.375 -0.01 0.347744 -0.1875 -0.01 0.672503 0 -0.01 0.347744</float_array>
+					<technique_common>
+						<accessor count="3" source="#KR210R2700prime_dp3_3_R0_G255_B0_A255_positions_array" stride="3">
+							<param name="X" type="float" />
+							<param name="Y" type="float" />
+							<param name="Z" type="float" />
+						</accessor>
+					</technique_common>
+				</source>
+				<source id="KR210R2700prime_dp3_3_R0_G255_B0_A255_normals">
+					<float_array count="3" id="KR210R2700prime_dp3_3_R0_G255_B0_A255_normals_array">0 -1 0</float_array>
+					<technique_common>
+						<accessor count="1" source="#KR210R2700prime_dp3_3_R0_G255_B0_A255_normals_array" stride="3">
+							<param name="X" type="float" />
+							<param name="Y" type="float" />
+							<param name="Z" type="float" />
+						</accessor>
+					</technique_common>
+				</source>
+				<vertices id="KR210R2700prime_dp3_3_R0_G255_B0_A255_vertices">
+					<input semantic="POSITION" source="#KR210R2700prime_dp3_3_R0_G255_B0_A255_positions" />
+				</vertices>
+				<triangles count="1" material="KR210R2700prime_dp3_3_MATERIAL_R0_G255_B0_A255">
+					<input offset="0" semantic="VERTEX" source="#KR210R2700prime_dp3_3_R0_G255_B0_A255_vertices" />
+					<input offset="1" semantic="NORMAL" source="#KR210R2700prime_dp3_3_R0_G255_B0_A255_normals" />
+					<p>2 0 1 0 0 0</p>
+				</triangles>
+			</mesh>
+		</geometry>
+		<geometry id="KR210R2700prime_dp3_3_R0_G0_B255_A255" name="KR210R2700prime_dp3_3_R0_G0_B255_A255">
+			<mesh>
+				<source id="KR210R2700prime_dp3_3_R0_G0_B255_A255_positions">
+					<float_array count="9" id="KR210R2700prime_dp3_3_R0_G0_B255_A255_positions_array">-0.1875 -0.01 0.672503 0 -0.01 0.997263 0.1875 -0.01 0.672503</float_array>
+					<technique_common>
+						<accessor count="3" source="#KR210R2700prime_dp3_3_R0_G0_B255_A255_positions_array" stride="3">
+							<param name="X" type="float" />
+							<param name="Y" type="float" />
+							<param name="Z" type="float" />
+						</accessor>
+					</technique_common>
+				</source>
+				<source id="KR210R2700prime_dp3_3_R0_G0_B255_A255_normals">
+					<float_array count="3" id="KR210R2700prime_dp3_3_R0_G0_B255_A255_normals_array">0 -1 0</float_array>
+					<technique_common>
+						<accessor count="1" source="#KR210R2700prime_dp3_3_R0_G0_B255_A255_normals_array" stride="3">
+							<param name="X" type="float" />
+							<param name="Y" type="float" />
+							<param name="Z" type="float" />
+						</accessor>
+					</technique_common>
+				</source>
+				<vertices id="KR210R2700prime_dp3_3_R0_G0_B255_A255_vertices">
+					<input semantic="POSITION" source="#KR210R2700prime_dp3_3_R0_G0_B255_A255_positions" />
+				</vertices>
+				<triangles count="1" material="KR210R2700prime_dp3_3_MATERIAL_R0_G0_B255_A255">
+					<input offset="0" semantic="VERTEX" source="#KR210R2700prime_dp3_3_R0_G0_B255_A255_vertices" />
+					<input offset="1" semantic="NORMAL" source="#KR210R2700prime_dp3_3_R0_G0_B255_A255_normals" />
+					<p>2 0 1 0 0 0</p>
+				</triangles>
+			</mesh>
+		</geometry>
+		<geometry id="KR210R2700prime_dp3_3_R255_G255_B0_A255" name="KR210R2700prime_dp3_3_R255_G255_B0_A255">
+			<mesh>
+				<source id="KR210R2700prime_dp3_3_R255_G255_B0_A255_positions">
+					<float_array count="9" id="KR210R2700prime_dp3_3_R255_G255_B0_A255_positions_array">-0.1875 -0.01 0.672503 0.1875 -0.01 0.672503 0 -0.01 0.347744</float_array>
+					<technique_common>
+						<accessor count="3" source="#KR210R2700prime_dp3_3_R255_G255_B0_A255_positions_array" stride="3">
+							<param name="X" type="float" />
+							<param name="Y" type="float" />
+							<param name="Z" type="float" />
+						</accessor>
+					</technique_common>
+				</source>
+				<source id="KR210R2700prime_dp3_3_R255_G255_B0_A255_normals">
+					<float_array count="3" id="KR210R2700prime_dp3_3_R255_G255_B0_A255_normals_array">0 -1 0</float_array>
+					<technique_common>
+						<accessor count="1" source="#KR210R2700prime_dp3_3_R255_G255_B0_A255_normals_array" stride="3">
+							<param name="X" type="float" />
+							<param name="Y" type="float" />
+							<param name="Z" type="float" />
+						</accessor>
+					</technique_common>
+				</source>
+				<vertices id="KR210R2700prime_dp3_3_R255_G255_B0_A255_vertices">
+					<input semantic="POSITION" source="#KR210R2700prime_dp3_3_R255_G255_B0_A255_positions" />
+				</vertices>
+				<triangles count="1" material="KR210R2700prime_dp3_3_MATERIAL_R255_G255_B0_A255">
+					<input offset="0" semantic="VERTEX" source="#KR210R2700prime_dp3_3_R255_G255_B0_A255_vertices" />
+					<input offset="1" semantic="NORMAL" source="#KR210R2700prime_dp3_3_R255_G255_B0_A255_normals" />
+					<p>2 0 1 0 0 0</p>
+				</triangles>
+			</mesh>
+		</geometry>
+	</library_geometries>
+	<scene>
+		<instance_visual_scene url="#KR210R2700prime_dp3_3_visual_scene" />
+	</scene>
+</COLLADA>

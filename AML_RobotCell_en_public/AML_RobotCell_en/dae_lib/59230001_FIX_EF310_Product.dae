@@ -1,0 +1,443 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<COLLADA version="1.5.0" xmlns="http://www.collada.org/2008/03/COLLADASchema">
+	<asset>
+		<contributor>
+			<author>AutomationML e.V.</author>
+			<author_website>www.automationml.org</author_website>
+			<authoring_tool>"Notepad++" "6.8.6" "6.8.6"</authoring_tool>
+		</contributor>
+		<created>2015-12-15T13:12:06.7153453+01:00</created>
+		<modified>2015-12-15T13:12:06.7153453+01:00</modified>
+		<unit meter="0.001" name="mm" />
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_nodes>
+		<node id="59230001_FIX_EF310" name="59230001_FIX_EF310">
+			<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+			<node id="59230001_FIX_EF310_staender.1" name="Product1">
+				<matrix>1 0 0 4.72937e-011 0 1 0 0 0 0 1 -1.18234e-011 0 0 0 1</matrix>
+				<instance_node url="Product1_Product.dae#Product1_visual_scene_node" />
+			</node>
+			<node id="59230001_FIX_EF310_schieben_spanbehaelter" name="schieben_spanbehaelter">
+				<matrix>1 0 0 4.72937e-011 0 1 0 0 0 0 1 -1.18234e-011 0 0 0 1</matrix>
+				<translate>85 0 85</translate>
+				<rotate>1 0 0 -90</rotate>
+				<rotate sid="t_spanbehaelter_axis">0 0 1 0</rotate>
+				<translate>-85 85 0</translate>
+				<rotate>1 0 0 90</rotate>
+				<instance_node url="schieben_spanbehaelter_Rep.dae#schieben_spanbehaelter_visual_scene_node" />
+			</node>
+			<node id="59230001_FIX_EF310_schieben_fraeser" name="schieben_fraeser">
+				<matrix>1 0 0 4.72937e-011 0 1 0 0 0 0 1 -1.18234e-011 0 0 0 1</matrix>
+				<translate>85 0 85</translate>
+				<rotate>1 0 0 -90</rotate>
+				<rotate sid="t_fraeser_axis">0 0 1 0</rotate>
+				<translate>-85 85 0</translate>
+				<rotate>1 0 0 90</rotate>
+				<instance_node url="schieben_fraeser_Rep.dae#schieben_fraeser_visual_scene_node" />
+			</node>
+			<node id="59230001_FIX_EF310_drehen_spanbehaelter" name="drehen_spanbehaelter">
+				<matrix>1 0 0 4.72937e-011 0 1 0 0 0 0 1 -1.18234e-011 0 0 0 1</matrix>
+				<translate>85 0 85</translate>
+				<rotate>1 0 0 -90</rotate>
+				<rotate sid="r_spanbehaelter_axis">0 0 1 0</rotate>
+				<translate>-85 85 0</translate>
+				<rotate>1 0 0 90</rotate>
+				<instance_node url="drehen_spanbehaelter_Product.dae#drehen_spanbehaelter_visual_scene_node" />
+			</node>
+			<node id="59230001_FIX_EF310_drehen_fraeser_vertikal" name="drehen_fraeser_vertikal">
+				<matrix>1 0 0 4.72937e-011 0 1 0 0 0 0 1 -1.18234e-011 0 0 0 1</matrix>
+				<translate>85 0 85</translate>
+				<rotate>1 0 0 -90</rotate>
+				<rotate sid="rv_fraeser_axis">0 0 1 0</rotate>
+				<translate>-85 85 0</translate>
+				<rotate>1 0 0 90</rotate>
+				<instance_node url="drehen_fraeser_vertikal_Product.dae#drehen_fraeser_vertikal_visual_scene_node" />
+			</node>
+			<node id="59230001_FIX_EF310_drehen_fraeser_horizontal" name="drehen_fraeser_horizontal">
+				<matrix>1 0 0 4.72937e-011 0 1 0 0 0 0 1 -1.18234e-011 0 0 0 1</matrix>
+				<translate>46 913 84.9996</translate>
+				<rotate>0.707107 -7.09223e-007 0.707107 -180</rotate>
+				<rotate sid="rh_fraeser_axis">0 0 1 0</rotate>
+				<translate>-84.9978 913 -46</translate>
+				<rotate>0.707107 -7.09223e-007 0.707107 180</rotate>
+				<instance_node url="drehen_fraeser_horizontal_Product.dae#drehen_fraeser_horizontal_visual_scene_node" />
+			</node>
+			<node name="AttachmentPoint_030RB_100_KAPPENFRAESEN" sid="59230001_FIX_EF310_AttachmentPoint_030RB_100_KAPPENFRAESEN">
+				<matrix>1 0 0 5598.68 0 1 0 0 0 0 1 6208.31 0 0 0 1</matrix>
+			</node>
+		</node>
+	</library_nodes>
+	<library_visual_scenes>
+		<visual_scene id="59230001_FIX_EF310_visual_scene">
+			<node id="59230001_FIX_EF310_visual_scene_node" name="59230001_FIX_EF310">
+				<instance_node url="#59230001_FIX_EF310" />
+			</node>
+		</visual_scene>
+	</library_visual_scenes>
+	<library_joints>
+		<joint id="59230001_FIX_EF310_Mechanism.1_t_spanbehaelter" name="t_spanbehaelter">
+			<prismatic sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>-100</min>
+					<max>100</max>
+				</limits>
+			</prismatic>
+		</joint>
+		<joint id="59230001_FIX_EF310_Mechanism.1_t_fraeser" name="t_fraeser">
+			<prismatic sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>0</min>
+					<max>400</max>
+				</limits>
+			</prismatic>
+		</joint>
+		<joint id="59230001_FIX_EF310_Mechanism.1_r_spanbehaelter" name="r_spanbehaelter">
+			<revolute sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>-360</min>
+					<max>360</max>
+				</limits>
+			</revolute>
+		</joint>
+		<joint id="59230001_FIX_EF310_Mechanism.1_rv_fraeser" name="rv_fraeser">
+			<revolute sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>-360</min>
+					<max>360</max>
+				</limits>
+			</revolute>
+		</joint>
+		<joint id="59230001_FIX_EF310_Mechanism.1_rh_fraeser" name="rh_fraeser">
+			<revolute sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>-360</min>
+					<max>360</max>
+				</limits>
+			</revolute>
+		</joint>
+	</library_joints>
+	<library_kinematics_models>
+		<kinematics_model id="59230001_FIX_EF310_kin_model.0" name="Mechanism.1">
+			<technique_common>
+				<instance_joint sid="t_spanbehaelter" url="#59230001_FIX_EF310_Mechanism.1_t_spanbehaelter" />
+				<instance_joint sid="t_fraeser" url="#59230001_FIX_EF310_Mechanism.1_t_fraeser" />
+				<instance_joint sid="r_spanbehaelter" url="#59230001_FIX_EF310_Mechanism.1_r_spanbehaelter" />
+				<instance_joint sid="rv_fraeser" url="#59230001_FIX_EF310_Mechanism.1_rv_fraeser" />
+				<instance_joint sid="rh_fraeser" url="#59230001_FIX_EF310_Mechanism.1_rh_fraeser" />
+				<link name="staender.1" sid="staender.1">
+					<translate>4.72937e-011 0 -1.18234e-011</translate>
+					<attachment_full joint="59230001_FIX_EF310_kin_model.0/t_spanbehaelter">
+						<translate>85 0 85</translate>
+						<rotate>1 0 0 -90</rotate>
+						<link name="schieben_spanbehaelter" sid="schieben_spanbehaelter">
+							<translate>-85 85 0</translate>
+							<rotate>1 0 0 90</rotate>
+							<attachment_full joint="59230001_FIX_EF310_kin_model.0/r_spanbehaelter">
+								<translate>85 0 85</translate>
+								<rotate>1 0 0 -90</rotate>
+								<link name="drehen_spanbehaelter" sid="drehen_spanbehaelter">
+									<translate>-85 85 0</translate>
+									<rotate>1 0 0 90</rotate>
+								</link>
+							</attachment_full>
+						</link>
+					</attachment_full>
+					<attachment_full joint="59230001_FIX_EF310_kin_model.0/t_fraeser">
+						<translate>85 0 85</translate>
+						<rotate>1 0 0 -90</rotate>
+						<link name="schieben_fraeser" sid="schieben_fraeser">
+							<translate>-85 85 0</translate>
+							<rotate>1 0 0 90</rotate>
+							<attachment_full joint="59230001_FIX_EF310_kin_model.0/rv_fraeser">
+								<translate>85 0 85</translate>
+								<rotate>1 0 0 -90</rotate>
+								<link name="drehen_fraeser_vertikal" sid="drehen_fraeser_vertikal">
+									<translate>-85 85 0</translate>
+									<rotate>1 0 0 90</rotate>
+									<attachment_full joint="59230001_FIX_EF310_kin_model.0/rh_fraeser">
+										<translate>46 913 84.9996</translate>
+										<rotate>0.707107 -7.09223e-007 0.707107 -180</rotate>
+										<link name="drehen_fraeser_horizontal" sid="drehen_fraeser_horizontal">
+											<translate>-84.9978 913 -46</translate>
+											<rotate>0.707107 -7.09223e-007 0.707107 180</rotate>
+										</link>
+									</attachment_full>
+								</link>
+							</attachment_full>
+						</link>
+					</attachment_full>
+				</link>
+			</technique_common>
+			<extra>
+				<technique profile="POSES">
+					<poses>
+						<pose count="5" name="FraesPos">
+							<pose_joint joint="59230001_FIX_EF310_kin_model.0/t_spanbehaelter">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="59230001_FIX_EF310_kin_model.0/t_fraeser">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="59230001_FIX_EF310_kin_model.0/r_spanbehaelter">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="59230001_FIX_EF310_kin_model.0/rv_fraeser">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="59230001_FIX_EF310_kin_model.0/rh_fraeser">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+						</pose>
+					</poses>
+				</technique>
+			</extra>
+		</kinematics_model>
+	</library_kinematics_models>
+	<library_articulated_systems>
+		<articulated_system id="59230001_FIX_EF310_art_system.0">
+			<kinematics>
+				<instance_kinematics_model sid="inst_59230001_FIX_EF310_kin_model.0" url="#59230001_FIX_EF310_kin_model.0">
+					<newparam sid="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0">
+						<SIDREF>59230001_FIX_EF310_art_system.0/inst_59230001_FIX_EF310_kin_model.0</SIDREF>
+					</newparam>
+					<newparam sid="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_t_spanbehaelter_axis">
+						<SIDREF>59230001_FIX_EF310_art_system.0/inst_59230001_FIX_EF310_kin_model.0/t_spanbehaelter/axis</SIDREF>
+					</newparam>
+					<newparam sid="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_t_spanbehaelter_axis_value">
+						<float>0</float>
+					</newparam>
+					<newparam sid="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_t_fraeser_axis">
+						<SIDREF>59230001_FIX_EF310_art_system.0/inst_59230001_FIX_EF310_kin_model.0/t_fraeser/axis</SIDREF>
+					</newparam>
+					<newparam sid="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_t_fraeser_axis_value">
+						<float>0</float>
+					</newparam>
+					<newparam sid="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_r_spanbehaelter_axis">
+						<SIDREF>59230001_FIX_EF310_art_system.0/inst_59230001_FIX_EF310_kin_model.0/r_spanbehaelter/axis</SIDREF>
+					</newparam>
+					<newparam sid="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_r_spanbehaelter_axis_value">
+						<float>0</float>
+					</newparam>
+					<newparam sid="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_rv_fraeser_axis">
+						<SIDREF>59230001_FIX_EF310_art_system.0/inst_59230001_FIX_EF310_kin_model.0/rv_fraeser/axis</SIDREF>
+					</newparam>
+					<newparam sid="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_rv_fraeser_axis_value">
+						<float>0</float>
+					</newparam>
+					<newparam sid="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_rh_fraeser_axis">
+						<SIDREF>59230001_FIX_EF310_art_system.0/inst_59230001_FIX_EF310_kin_model.0/rh_fraeser/axis</SIDREF>
+					</newparam>
+					<newparam sid="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_rh_fraeser_axis_value">
+						<float>0</float>
+					</newparam>
+				</instance_kinematics_model>
+				<technique_common>
+					<axis_info axis="59230001_FIX_EF310_art_system.0/inst_59230001_FIX_EF310_kin_model.0/t_spanbehaelter/axis" name="t_spanbehaelter" sid="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_t_spanbehaelter">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>1</int>
+						</index>
+						<limits>
+							<min>
+								<float>-100</float>
+							</min>
+							<max>
+								<float>100</float>
+							</max>
+						</limits>
+					</axis_info>
+					<axis_info axis="59230001_FIX_EF310_art_system.0/inst_59230001_FIX_EF310_kin_model.0/t_fraeser/axis" name="t_fraeser" sid="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_t_fraeser">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>2</int>
+						</index>
+						<limits>
+							<min>
+								<float>0</float>
+							</min>
+							<max>
+								<float>400</float>
+							</max>
+						</limits>
+					</axis_info>
+					<axis_info axis="59230001_FIX_EF310_art_system.0/inst_59230001_FIX_EF310_kin_model.0/r_spanbehaelter/axis" name="r_spanbehaelter" sid="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_r_spanbehaelter">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>3</int>
+						</index>
+						<limits>
+							<min>
+								<float>-360</float>
+							</min>
+							<max>
+								<float>360</float>
+							</max>
+						</limits>
+					</axis_info>
+					<axis_info axis="59230001_FIX_EF310_art_system.0/inst_59230001_FIX_EF310_kin_model.0/rv_fraeser/axis" name="rv_fraeser" sid="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_rv_fraeser">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>4</int>
+						</index>
+						<limits>
+							<min>
+								<float>-360</float>
+							</min>
+							<max>
+								<float>360</float>
+							</max>
+						</limits>
+					</axis_info>
+					<axis_info axis="59230001_FIX_EF310_art_system.0/inst_59230001_FIX_EF310_kin_model.0/rh_fraeser/axis" name="rh_fraeser" sid="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_rh_fraeser">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>5</int>
+						</index>
+						<limits>
+							<min>
+								<float>-360</float>
+							</min>
+							<max>
+								<float>360</float>
+							</max>
+						</limits>
+					</axis_info>
+					<frame_origin link="inst_59230001_FIX_EF310_kin_model.0/staender.1">
+						<translate>4.72937e-011 0 -1.18234e-011</translate>
+					</frame_origin>
+					<frame_tip link="inst_59230001_FIX_EF310_kin_model.0/drehen_fraeser_horizontal">
+						<translate>4.72937e-011 0 -1.18234e-011</translate>
+					</frame_tip>
+				</technique_common>
+			</kinematics>
+		</articulated_system>
+	</library_articulated_systems>
+	<library_kinematics_scenes>
+		<kinematics_scene id="59230001_FIX_EF310_kin_scene">
+			<instance_articulated_system sid="inst_59230001_FIX_EF310_art_system.0" url="#59230001_FIX_EF310_art_system.0">
+				<bind symbol="59230001_FIX_EF310_kin_scene_inst_59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0">
+					<param ref="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0" />
+				</bind>
+				<bind symbol="59230001_FIX_EF310_kin_scene_inst_59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_t_spanbehaelter_axis">
+					<param ref="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_t_spanbehaelter_axis" />
+				</bind>
+				<bind symbol="59230001_FIX_EF310_kin_scene_inst_59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_t_spanbehaelter_axis_value">
+					<param ref="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_t_spanbehaelter_axis_value" />
+				</bind>
+				<bind symbol="59230001_FIX_EF310_kin_scene_inst_59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_t_fraeser_axis">
+					<param ref="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_t_fraeser_axis" />
+				</bind>
+				<bind symbol="59230001_FIX_EF310_kin_scene_inst_59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_t_fraeser_axis_value">
+					<param ref="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_t_fraeser_axis_value" />
+				</bind>
+				<bind symbol="59230001_FIX_EF310_kin_scene_inst_59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_r_spanbehaelter_axis">
+					<param ref="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_r_spanbehaelter_axis" />
+				</bind>
+				<bind symbol="59230001_FIX_EF310_kin_scene_inst_59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_r_spanbehaelter_axis_value">
+					<param ref="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_r_spanbehaelter_axis_value" />
+				</bind>
+				<bind symbol="59230001_FIX_EF310_kin_scene_inst_59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_rv_fraeser_axis">
+					<param ref="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_rv_fraeser_axis" />
+				</bind>
+				<bind symbol="59230001_FIX_EF310_kin_scene_inst_59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_rv_fraeser_axis_value">
+					<param ref="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_rv_fraeser_axis_value" />
+				</bind>
+				<bind symbol="59230001_FIX_EF310_kin_scene_inst_59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_rh_fraeser_axis">
+					<param ref="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_rh_fraeser_axis" />
+				</bind>
+				<bind symbol="59230001_FIX_EF310_kin_scene_inst_59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_rh_fraeser_axis_value">
+					<param ref="59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_rh_fraeser_axis_value" />
+				</bind>
+			</instance_articulated_system>
+		</kinematics_scene>
+	</library_kinematics_scenes>
+	<scene>
+		<instance_visual_scene url="#59230001_FIX_EF310_visual_scene" />
+		<instance_kinematics_scene url="#59230001_FIX_EF310_kin_scene">
+			<bind_kinematics_model node="59230001_FIX_EF310_staender.1">
+				<param>59230001_FIX_EF310_kin_scene_inst_59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0</param>
+			</bind_kinematics_model>
+			<bind_joint_axis target="59230001_FIX_EF310_schieben_spanbehaelter/t_spanbehaelter_axis">
+				<axis>
+					<param>59230001_FIX_EF310_kin_scene_inst_59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_t_spanbehaelter_axis</param>
+				</axis>
+				<value>
+					<param>59230001_FIX_EF310_kin_scene_inst_59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_t_spanbehaelter_axis_value</param>
+				</value>
+			</bind_joint_axis>
+			<bind_joint_axis target="59230001_FIX_EF310_schieben_fraeser/t_fraeser_axis">
+				<axis>
+					<param>59230001_FIX_EF310_kin_scene_inst_59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_t_fraeser_axis</param>
+				</axis>
+				<value>
+					<param>59230001_FIX_EF310_kin_scene_inst_59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_t_fraeser_axis_value</param>
+				</value>
+			</bind_joint_axis>
+			<bind_joint_axis target="59230001_FIX_EF310_drehen_spanbehaelter/r_spanbehaelter_axis">
+				<axis>
+					<param>59230001_FIX_EF310_kin_scene_inst_59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_r_spanbehaelter_axis</param>
+				</axis>
+				<value>
+					<param>59230001_FIX_EF310_kin_scene_inst_59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_r_spanbehaelter_axis_value</param>
+				</value>
+			</bind_joint_axis>
+			<bind_joint_axis target="59230001_FIX_EF310_drehen_fraeser_vertikal/rv_fraeser_axis">
+				<axis>
+					<param>59230001_FIX_EF310_kin_scene_inst_59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_rv_fraeser_axis</param>
+				</axis>
+				<value>
+					<param>59230001_FIX_EF310_kin_scene_inst_59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_rv_fraeser_axis_value</param>
+				</value>
+			</bind_joint_axis>
+			<bind_joint_axis target="59230001_FIX_EF310_drehen_fraeser_horizontal/rh_fraeser_axis">
+				<axis>
+					<param>59230001_FIX_EF310_kin_scene_inst_59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_rh_fraeser_axis</param>
+				</axis>
+				<value>
+					<param>59230001_FIX_EF310_kin_scene_inst_59230001_FIX_EF310_art_system.0_inst_59230001_FIX_EF310_kin_model.0_rh_fraeser_axis_value</param>
+				</value>
+			</bind_joint_axis>
+		</instance_kinematics_scene>
+	</scene>
+</COLLADA>

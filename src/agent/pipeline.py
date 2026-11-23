@@ -14,6 +14,7 @@ PLC 代码生成器（② 的 LLM 本体，框架沿用 308sjk_history/agent/pip
 import json
 import re
 import time
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import sys
@@ -23,12 +24,12 @@ import xml2st  # noqa: E402
 from .consistency_check import consistency_check  # noqa: E402
 from .config import MODEL, generation_options
 from .patternlib import pattern_cards, render_cards  # noqa: E402
-from .xml_normalization import normalize_program_io
+from .xml_normalization import normalize_program_io, normalize_fb_type_references, xml_structure_advice
 
 SKILL_PATH = Path(__file__).resolve().parent / "prompts" / "plcgen_skill.md"
 
 _FENCE_RE = re.compile(r"```(?:xml)?\s*([\s\S]*?)```", re.IGNORECASE)
-_PROJECT_RE = re.compile(r"<project[\s\S]*?</project>")
+_PROJECT_RE = re.compile(r'<(?P<prefix>(?:[A-Za-z_][\w.-]*:)?)project(?=[\s>])[\s\S]*?</(?P=prefix)project\s*>')
 
 
 def extract_xml(text):
@@ -89,11 +90,11 @@ class PLCGenerator:
         payload = {
             "model": self.model,
             "messages": messages,
-            "max_tokens": 16384,
+            "max_tokens": 32768,
             "temperature": 0.3,   # 恢复远端更新前的 PLC 生成采样参数
             "thinking": {"type": "disabled"},  # 结构化代码生成不需要思考链
         }
-        payload.update(generation_options(16384))
+        payload.update(generation_options(32768))
         if hasattr(self.client, "prepare_payload"):
             payload = self.client.prepare_payload(payload)
         self.call_count += 1
@@ -133,6 +134,7 @@ class PLCGenerator:
         """闸门 a（xml2st 契约）+ 闸门 b（三方一致性）。返回 (ok, errors)。"""
         problems, _model = self._parse_text(xml_text)
         errors = ["[xml2st] %s" % p for p in problems]
+        errors += xml_structure_advice(xml_text)
         if errors:
             return False, errors
         ok, cproblems = consistency_check(xml_text, io_list)
@@ -177,6 +179,10 @@ class PLCGenerator:
             "2. 每条约束都体现在逻辑中；acceptance 的时序/联锁在逻辑上可达；\n"
             "3. constraints 中的时序值（如延时 300ms）用 TON 的 PT 落地。\n" % len(io_list)
         )
+        user += ('\n交付格式：仅输出一个完整XML代码块，包含全部FB和PLC_PRG。'
+            'types/pous下的每个程序块必须为<pou name="..." pouType="functionBlock或program">…</pou>；'
+            'pouType是属性，不是元素名。FB的inputVars/outputVars/inOutVars按system权威骨架分别声明，'
+            '不得全部放入localVars。紧凑输出，省略重复说明和注释，保留全部接口、逻辑和轨迹点。\n')
         if trajectory:
             from .trajectory import summarize_for_prompt
             user += ("\n" + summarize_for_prompt(trajectory)
@@ -199,6 +205,7 @@ class PLCGenerator:
                 'DRIVE402 的 v_cmd 仅保留状态/诊断，不经速度通道驱动仿真。'
                 'prog_id 必须为 AT %QW20 的 INT，每扫描写 '+str(self.prog_id)+'。\n')
             if any(v!=1 for v in scales.values()):
+                user+='\n单位检查：例如轨迹34.75必须以REAL 34.75进入插补器，x_fb仍为原单位；编码3475只可写入x_cmd。禁止x_tgt先乘100又将ix.pos乘100输出，禁止将3475与34的反馈比较。pos_target须支持当前SVG的小数精度；MC的INT形参单独转换，不可让其截断插补目标。\n'
                 user+='\n高精度编码优先于上述通用规则：'+str(scales)+'。cmd 输出必须直接取 ix_x.pos/ix_y.pos/ix_z.posz 的 REAL 状态乘倍率后 REAL_TO_INT，禁止先取已取整的 Setpoint。停止保持也须将 fb 乘倍率。SVG 目标与 pos_target 使用 REAL，保留全部小数路点。\n'
                 user+='首次 XY 定位前必须先原地抬笔，待 Z 到位再横移；空闲使能期间保持 fb，防旧插补状态拉回原点。XY 线段需共享进度，按各轴位移比例缩放速度与加减速；不能让短轴先到导致曲线偏折。遵守 AML 的 0.01 到位窗口，REAL 比较使用 100.0/0.0 等实数常量，与 MC 的 INT/IN_OUT 边界显式转换。\n'
         if test_plan is not None:
@@ -223,6 +230,15 @@ class PLCGenerator:
         return messages
 
     # ---------------- 主入口 ----------------
+    def generate_bound_motion(self, config, capability, plan):
+        """Validated bound-device plan -> PLCopen; reuse the existing static gates."""
+        from .scene_agent.motion_agent import compile_motion
+        result = compile_motion(config, capability, plan)
+        ok, errors = self.gate(result['xml'], result['io_list'])
+        if not ok:
+            raise ValueError('PLC 代码静态校验失败：' + '; '.join(errors))
+        return result
+
     def generate(self, spec, feedback=None, trajectory=None, experience_hint=None, test_plan=None):
         """生成并过闸。返回 {ok, xml, rounds, history, errors}。"""
         self._trajectory = trajectory if self.seed_xml is None else None
@@ -240,6 +256,7 @@ class PLCGenerator:
                 "\n\n## 历史经验要点（本站同类任务自动化学到的教训——生成时就遵守，"
                 "不要等问题出现再修）\n%s" % experience_hint)
         history, errors = [], []
+        candidate = {}
         for rnd in range(1, self.max_rounds + 1):
             self.report("正在联系模型%s生成完整 PLCopen 工程…"
                         % ("第 %d 次，" % rnd if rnd > 1 else ""))
@@ -248,6 +265,8 @@ class PLCGenerator:
             xml = extract_xml(reply)
             if xml is not None:
                 self._incomplete_outputs=0
+                xml,references=normalize_fb_type_references(xml)
+                if references:self.report('已修正 %d 个FB实例的XML类型引用，接口和ST逻辑保持原样。'%references)
                 xml, moved = normalize_program_io(xml)
                 if moved:
                     self.report("已修正 %d 个程序定位 IO 的声明分组，工艺逻辑保持原样。" % moved)
@@ -261,6 +280,11 @@ class PLCGenerator:
                     return {"ok": True, "xml": xml, "rounds": rnd, "history": history, "errors": []}
 
             history.append({"round": rnd, "ok": False, "errors": list(errors)})
+            if xml:
+                try:ET.fromstring(xml)
+                except ET.ParseError:pass
+                else:candidate = {"candidate_xml":xml,"candidate_errors":list(errors)}
+            self.report('静态校验未通过：'+'；'.join(errors[:3]))
             from .repair_feedback import static_feedback
             details = static_feedback(self, errors, xml)
             self.report("校验发现 %d 处问题，正在带错误清单让模型修复…" % len(errors))
@@ -272,7 +296,7 @@ class PLCGenerator:
             )})
 
         return {"ok": False, "xml": None, "rounds": self.max_rounds,
-                "history": history, "errors": errors}
+                "history": history, "errors": errors, **candidate}
 
     # ---------------- 定向修复（LLM 迭代默认策略） ----------------
     def repair(self, previous_xml, spec, feedback, attempts=None, trajectory=None,
@@ -298,6 +322,7 @@ class PLCGenerator:
             "修复后重新输出**完整**工程（单个 ```xml 代码块）。" % (feedback or "（未提供明细）"))})
 
         history, errors = [], ["（未获得模型输出）"]
+        candidate = {}
         for rnd in range(1, attempts + 1):
             self.report("正在让模型做定向修复%s（基于上一轮工程的最小修改）…"
                         % ("（第 %d 次）" % rnd if rnd > 1 else ""))
@@ -306,6 +331,8 @@ class PLCGenerator:
             xml = extract_xml(reply)
             if xml is not None:
                 self._incomplete_outputs=0
+                xml,references=normalize_fb_type_references(xml)
+                if references:self.report('已修正 %d 个FB实例的XML类型引用，接口和ST逻辑保持原样。'%references)
                 xml, moved = normalize_program_io(xml)
                 if moved:
                     self.report("已修正 %d 个程序定位 IO 的声明分组，工艺逻辑保持原样。" % moved)
@@ -319,6 +346,11 @@ class PLCGenerator:
                     return {"ok": True, "xml": xml, "rounds": rnd,
                             "history": history, "errors": [], "mode": "repair"}
             history.append({"round": rnd, "ok": False, "errors": list(errors)})
+            if xml:
+                try:ET.fromstring(xml)
+                except ET.ParseError:pass
+                else:candidate = {"candidate_xml":xml,"candidate_errors":list(errors)}
+            self.report('静态校验未通过：'+'；'.join(errors[:3]))
             from .repair_feedback import static_feedback
             details = static_feedback(self, errors, xml)
             self.report("修复稿仍有 %d 处问题，继续回灌…" % len(errors))
@@ -328,4 +360,4 @@ class PLCGenerator:
                 "请修复后重新输出完整工程（最小修改，其余保持不变）。"
                 % (len(errors), details))})
         return {"ok": False, "xml": None, "rounds": attempts,
-                "history": history, "errors": errors, "mode": "repair"}
+                "history": history, "errors": errors, "mode": "repair", **candidate}

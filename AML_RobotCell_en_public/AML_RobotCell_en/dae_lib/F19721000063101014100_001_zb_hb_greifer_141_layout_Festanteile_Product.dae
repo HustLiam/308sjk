@@ -1,0 +1,65 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<COLLADA version="1.5.0" xmlns="http://www.collada.org/2008/03/COLLADASchema">
+	<asset>
+		<contributor>
+			<author>AutomationML e.V.</author>
+			<author_website>www.automationml.org</author_website>
+			<authoring_tool>"Notepad++" "6.8.6" "6.8.6"</authoring_tool>
+		</contributor>
+		<created>2015-12-15T13:12:06.7153453+01:00</created>
+		<modified>2015-12-15T13:12:06.7153453+01:00</modified>
+		<unit meter="0.001" name="mm" />
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_nodes>
+		<node id="F19721000063101014100_001_zb_hb_greifer_141_layout_Festanteile" name="F19721000063101014100_001_zb_hb_greifer_141_layout_Festanteile">
+			<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+			<node id="F19721000063101014100_001_zb_hb_greifer_141_layout_Festanteile_F19721000063101014153_001_zb_ub_einweiser_53_fa.1" name="F19721000063101014153_001_zb_ub_einweiser_53_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063101014153_001_zb_ub_einweiser_53_fa_Rep.dae#F19721000063101014153_001_zb_ub_einweiser_53_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063101014100_001_zb_hb_greifer_141_layout_Festanteile_F19721000063101014101_001_zb_ub_rahmen_01_fa.1" name="F19721000063101014101_001_zb_ub_rahmen_01_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063101014101_001_zb_ub_rahmen_01_fa_Rep.dae#F19721000063101014101_001_zb_ub_rahmen_01_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063101014100_001_zb_hb_greifer_141_layout_Festanteile_F19721000063101014111_001_zb_ub_stift_11_fa.1" name="F19721000063101014111_001_zb_ub_stift_11_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063101014111_001_zb_ub_stift_11_fa_Rep.dae#F19721000063101014111_001_zb_ub_stift_11_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063101014100_001_zb_hb_greifer_141_layout_Festanteile_F19721000063101014112_001_zb_ub_stift_12_fa.1" name="F19721000063101014112_001_zb_ub_stift_12_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063101014112_001_zb_ub_stift_12_fa_Rep.dae#F19721000063101014112_001_zb_ub_stift_12_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063101014100_001_zb_hb_greifer_141_layout_Festanteile_F19721000063101014121_001_zb_ub_spanner_21_fa.1" name="F19721000063101014121_001_zb_ub_spanner_21_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063101014121_001_zb_ub_spanner_21_fa_Rep.dae#F19721000063101014121_001_zb_ub_spanner_21_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063101014100_001_zb_hb_greifer_141_layout_Festanteile_F19721000063101014122_001_zb_ub_spanner_22_fa.1" name="F19721000063101014122_001_zb_ub_spanner_22_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063101014122_001_zb_ub_spanner_22_fa_Rep.dae#F19721000063101014122_001_zb_ub_spanner_22_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063101014100_001_zb_hb_greifer_141_layout_Festanteile_F19721000063101014124_001_zb_ub_spanner_24_fa.1" name="F19721000063101014124_001_zb_ub_spanner_24_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063101014124_001_zb_ub_spanner_24_fa_Rep.dae#F19721000063101014124_001_zb_ub_spanner_24_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063101014100_001_zb_hb_greifer_141_layout_Festanteile_F19721000063101014125_001_zb_ub_spanner_25_fa.1" name="F19721000063101014125_001_zb_ub_spanner_25_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063101014125_001_zb_ub_spanner_25_fa_Rep.dae#F19721000063101014125_001_zb_ub_spanner_25_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063101014100_001_zb_hb_greifer_141_layout_Festanteile_F19721000063101014127_001_zb_ub_spanner_27_fa.1" name="F19721000063101014127_001_zb_ub_spanner_27_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063101014127_001_zb_ub_spanner_27_fa_Rep.dae#F19721000063101014127_001_zb_ub_spanner_27_fa_visual_scene_node" />
+			</node>
+		</node>
+	</library_nodes>
+	<library_visual_scenes>
+		<visual_scene id="F19721000063101014100_001_zb_hb_greifer_141_layout_Festanteile_visual_scene">
+			<node id="F19721000063101014100_001_zb_hb_greifer_141_layout_Festanteile_visual_scene_node" name="F19721000063101014100_001_zb_hb_greifer_141_layout_Festanteile">
+				<instance_node url="#F19721000063101014100_001_zb_hb_greifer_141_layout_Festanteile" />
+			</node>
+		</visual_scene>
+	</library_visual_scenes>
+	<scene>
+		<instance_visual_scene url="#F19721000063101014100_001_zb_hb_greifer_141_layout_Festanteile_visual_scene" />
+	</scene>
+</COLLADA>

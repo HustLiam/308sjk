@@ -1,0 +1,1 @@
+{"component_id":"AF138E59-0000-17AC-556E-B124000031B5","repeat":1,"steps":[{"duration_s":10,"hold_s":0,"targets":[{"variable":"rb100_j1_target","mode":"relative","value_deg":10}]}],"question":""}

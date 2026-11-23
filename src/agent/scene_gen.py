@@ -339,6 +339,12 @@ class SceneSpecGenerator:
 
     def generate(self, spec, device_model=None):
         io_list = spec.get("io_list", [])
+        # A known non-axis device must not silently become a default plotter.
+        # The new physical authoring path owns its approval lifecycle; it does
+        # not reinterpret the frozen v1.1 SceneSpec or alter PLC generation.
+        if (device_model or {}).get("devices") and not (device_model or {}).get("kinematics", {}).get("axes") and not spec.get("axes"):
+            raise ValueError("非伺服轴设备请使用 python -m src.agent.scene_agent prepare/build；"
+                             "须先完成 DeviceIR、组件审批与物理装配验证，禁止降级生成三轴龙门")
         # gantry 唯一路线（plotter 多资产遗留模块已移除，2026-09-09）：
         # 三轴信息缺项用库缺省行程补齐（_GANTRY_FALLBACK_TRAVEL）
         assets = [_gantry_asset(spec, device_model, io_list)]

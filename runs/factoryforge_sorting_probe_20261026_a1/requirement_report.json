@@ -1,0 +1,18 @@
+{
+  "mode": "llm",
+  "rounds": 2,
+  "history": [
+    {
+      "round": 1,
+      "ok": false,
+      "problems": [
+        "hmi: 必须是含非空 elements 数组的对象"
+      ]
+    },
+    {
+      "round": 2,
+      "ok": true
+    }
+  ],
+  "pending": []
+}

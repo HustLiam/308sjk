@@ -44,4 +44,6 @@ def finish_interpolators(xml, spec):
         body=re.sub(retarget,lambda m:m[1]+format(threshold,'.9g'),body)
         node.text=body;changed.append(name)
     if not changed:return xml,[]
+    ET.register_namespace('','http://www.plcopen.org/xml/tc6_0201')
+    ET.register_namespace('xhtml','http://www.w3.org/1999/xhtml')
     return '<?xml version="1.0" encoding="UTF-8"?>\n'+ET.tostring(root,encoding='unicode'),changed

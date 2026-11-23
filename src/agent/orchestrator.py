@@ -805,7 +805,18 @@ class Orchestrator:
                     self._dump_gate(iter_dir,'generate',ok=False,errors=errors)
                     notify('no_progress',{'iter':i,'reason':stop_reason,'errors':errors})
                     break
+                prior_feedback=feedback
                 feedback = fail(iter_dir, i, "generate", gen.get("errors", []), mode)
+                if gen.get('candidate_xml'):
+                    # An unverified candidate is only a repair context. It must
+                    # never enter conversion/deployment as a successful result.
+                    repair_base=gen['candidate_xml']
+                    (iter_dir/'static-candidate.xml').write_text(repair_base,encoding='utf-8')
+                    feedback=('沿用本轮最后一份完整可解析、但尚未通过静态闸门的工程继续修复。该基底的错误：\n'+
+                        '\n'.join(gen.get('candidate_errors',[]))+'\n本轮最后失败证据：\n'+feedback)
+                    if prior_feedback:
+                        feedback+='\n此前阶段的失败证据（保留已定位的问题，仍须修复并重新验收）：\n'+prior_feedback
+                    force_fresh=False
                 notify("gate_failed", {"iter": i, "gate": "generate", "mode": mode})
                 continue
             (iter_dir / "plcopen.xml").write_text(xml_text, encoding="utf-8")

@@ -1,0 +1,830 @@
+{
+  "rules": [
+    {
+      "format": "308sjk.component_rule/0.1-draft",
+      "component_type": "BeltConveyor",
+      "version": "0.2.0",
+      "parameter_bounds": {
+        "restitution": [
+          0,
+          0
+        ],
+        "carrying_surface_offset_z_m": [
+          0.06,
+          0.06
+        ],
+        "conveying_direction_z": [
+          0,
+          0
+        ],
+        "nominal_speed_m_s": [
+          0.5,
+          0.5
+        ],
+        "surface_friction": [
+          0.7,
+          0.7
+        ],
+        "thickness_m": [
+          0.12,
+          0.12
+        ],
+        "transfer_ramp_thickness_m": [
+          0.04,
+          0.04
+        ],
+        "transfer_ramp_run_m": [
+          0.1,
+          0.1
+        ],
+        "conveying_direction_x": [
+          1,
+          1
+        ],
+        "conveying_direction_y": [
+          0,
+          0
+        ],
+        "length_m": [
+          3,
+          3
+        ],
+        "width_m": [
+          0.5,
+          0.5
+        ],
+        "transfer_ramp_rise_m": [
+          0.05,
+          0.05
+        ]
+      },
+      "model": {
+        "geoms": [
+          {
+            "name": "belt",
+            "type": "box",
+            "size": [
+              "=length_m/2",
+              "=width_m/2",
+              "=thickness_m/2"
+            ],
+            "pos": [
+              0,
+              0,
+              0
+            ],
+            "friction": 0.01,
+            "priority": 1,
+            "rgba": [
+              0.18,
+              0.22,
+              0.27,
+              1
+            ]
+          }
+        ],
+        "behavior": "conveyor",
+        "interfaces": [],
+        "physical_parameters": {}
+      },
+      "assumptions": [
+        "输送表面采用实际接触触发的切向力近似，上限为 AML 的 mu*m*g，速度响应为 20 ms；碰撞体 friction=0.01 用于数值正则化，AML 摩擦系数用于切向力上限。"
+      ],
+      "unresolved": [],
+      "provenance": {
+        "kind": "curated_reference_candidate",
+        "validation_profile": "plc_executable_device/1",
+        "limitations": [
+          "用于输送、停机、接触和传感逻辑验证，不覆盖皮带弹性或电机转矩精度。"
+        ],
+        "source_commit": "57273ccde7064c818c507c638f7e92526bc5c436"
+      }
+    },
+    {
+      "format": "308sjk.component_rule/0.1-draft",
+      "component_type": "DiffusePhotoelectricSensor",
+      "version": "0.2.0",
+      "parameter_bounds": {
+        "range_m": [
+          0.75,
+          0.75
+        ],
+        "height_above_carrying_surface_m": [
+          0.04,
+          0.2
+        ],
+        "beam_direction_z": [
+          0,
+          0
+        ],
+        "beam_direction_x": [
+          0,
+          0
+        ],
+        "beam_origin_local_y_m": [
+          0,
+          0
+        ],
+        "beam_origin_local_z_m": [
+          0.1,
+          0.26
+        ],
+        "beam_direction_y": [
+          1,
+          1
+        ],
+        "beam_origin_local_x_m": [
+          0,
+          0
+        ]
+      },
+      "model": {
+        "geoms": [
+          {
+            "name": "post",
+            "type": "box",
+            "size": [
+              0.015,
+              0.015,
+              "=beam_origin_local_z_m/2"
+            ],
+            "pos": [
+              0,
+              0,
+              "=beam_origin_local_z_m/2"
+            ],
+            "collision": false,
+            "rgba": [
+              1,
+              0.7,
+              0.05,
+              1
+            ]
+          }
+        ],
+        "behavior": "ray",
+        "interfaces": [],
+        "physical_parameters": {}
+      },
+      "assumptions": [
+        "立柱仅为示意，检测射线的原点、方向和量程使用 AML 参数。"
+      ],
+      "unresolved": [],
+      "provenance": {
+        "kind": "curated_reference_candidate",
+        "validation_profile": "plc_executable_device/1",
+        "limitations": [
+          "不模拟传感器外壳细节；传感输出仍由实际射线检测计算。"
+        ],
+        "source_commit": "57273ccde7064c818c507c638f7e92526bc5c436"
+      }
+    },
+    {
+      "format": "308sjk.component_rule/0.1-draft",
+      "component_type": "FixedBody",
+      "version": "0.2.0",
+      "parameter_bounds": {
+        "geometry_center_x_m": [
+          0,
+          0
+        ],
+        "size_x_m": [
+          0.2,
+          0.2
+        ],
+        "size_y_m": [
+          0.3,
+          0.3
+        ],
+        "geometry_center_z_m": [
+          0.21,
+          0.21
+        ],
+        "geometry_center_y_m": [
+          0.15,
+          0.15
+        ],
+        "size_z_m": [
+          0.2,
+          0.2
+        ]
+      },
+      "model": {
+        "geoms": [
+          {
+            "name": "shape",
+            "type": "box",
+            "size": [
+              "=size_x_m/2",
+              "=size_y_m/2",
+              "=size_z_m/2"
+            ],
+            "pos": [
+              "$geometry_center_x_m",
+              "$geometry_center_y_m",
+              "$geometry_center_z_m"
+            ],
+            "collision": "$collision_enabled",
+            "rgba": [
+              0.18,
+              0.4,
+              0.75,
+              1
+            ]
+          }
+        ],
+        "behavior": "none",
+        "interfaces": [],
+        "physical_parameters": {}
+      },
+      "assumptions": [],
+      "unresolved": [],
+      "provenance": {
+        "kind": "curated_reference_candidate",
+        "validation_profile": "plc_executable_device/1",
+        "limitations": [],
+        "source_commit": "57273ccde7064c818c507c638f7e92526bc5c436"
+      }
+    },
+    {
+      "format": "308sjk.component_rule/0.1-draft",
+      "component_type": "GravityChute",
+      "version": "0.2.0",
+      "parameter_bounds": {
+        "downhill_direction_y": [
+          -0.866025403784,
+          -0.866025403784
+        ],
+        "downhill_direction_x": [
+          0,
+          0
+        ],
+        "ramp_length_m": [
+          0.8,
+          0.8
+        ],
+        "ramp_thickness_m": [
+          0.04,
+          0.04
+        ],
+        "surface_friction": [
+          0.15,
+          0.15
+        ],
+        "lip_setback_m": [
+          0.24,
+          0.24
+        ],
+        "downhill_direction_z": [
+          -0.5,
+          -0.5
+        ],
+        "incline_deg": [
+          0.5235987755982988,
+          0.5235987755982988
+        ],
+        "high_lip_local_y_m": [
+          0.24,
+          0.24
+        ],
+        "high_lip_local_z_m": [
+          0.045,
+          0.045
+        ],
+        "high_lip_local_x_m": [
+          0,
+          0
+        ],
+        "lip_drop_m": [
+          0.015,
+          0.015
+        ],
+        "ramp_width_m": [
+          0.5,
+          0.5
+        ]
+      },
+      "model": {
+        "geoms": [
+          {
+            "name": "ramp",
+            "type": "box",
+            "size": [
+              "=ramp_width_m/2",
+              "=ramp_length_m/2",
+              "=ramp_thickness_m/2"
+            ],
+            "pos": [
+              0,
+              "=high_lip_local_y_m-cos(incline_deg)*ramp_length_m/2+sin(incline_deg)*ramp_thickness_m/2",
+              "=high_lip_local_z_m-sin(incline_deg)*ramp_length_m/2-cos(incline_deg)*ramp_thickness_m/2"
+            ],
+            "rpy_rad": [
+              "$incline_deg",
+              0,
+              0
+            ],
+            "friction": "$surface_friction",
+            "rgba": [
+              0.5,
+              0.55,
+              0.6,
+              1
+            ]
+          }
+        ],
+        "behavior": "none",
+        "interfaces": [],
+        "physical_parameters": {}
+      },
+      "assumptions": [],
+      "unresolved": [],
+      "provenance": {
+        "kind": "curated_reference_candidate",
+        "validation_profile": "plc_executable_device/1",
+        "limitations": [],
+        "source_commit": "57273ccde7064c818c507c638f7e92526bc5c436"
+      }
+    },
+    {
+      "format": "308sjk.component_rule/0.1-draft",
+      "component_type": "HeightSortingLine",
+      "version": "0.2.0",
+      "parameter_bounds": {
+        "maximum_supported_count": [
+          32767,
+          32767
+        ]
+      },
+      "model": {
+        "geoms": [],
+        "behavior": "none",
+        "interfaces": [],
+        "physical_parameters": {}
+      },
+      "assumptions": [],
+      "unresolved": [],
+      "provenance": {
+        "kind": "curated_reference_candidate",
+        "validation_profile": "plc_executable_device/1",
+        "limitations": [],
+        "source_commit": "57273ccde7064c818c507c638f7e92526bc5c436"
+      }
+    },
+    {
+      "format": "308sjk.component_rule/0.1-draft",
+      "component_type": "KinematicBody",
+      "version": "0.2.0",
+      "parameter_bounds": {
+        "belt_clearance_m": [
+          0.01,
+          0.01
+        ],
+        "size_x_m": [
+          0.34,
+          0.34
+        ],
+        "size_y_m": [
+          0.05,
+          0.05
+        ],
+        "rest_visible_rod_m": [
+          0.06,
+          0.06
+        ],
+        "size_z_m": [
+          0.28,
+          0.28
+        ]
+      },
+      "model": {
+        "geoms": [
+          {
+            "name": "shape",
+            "type": "box",
+            "size": [
+              "=size_x_m/2",
+              "=size_y_m/2",
+              "=size_z_m/2"
+            ],
+            "pos": [
+              0,
+              0,
+              0
+            ],
+            "collision": "$collision_enabled",
+            "rgba": [
+              0.18,
+              0.4,
+              0.75,
+              1
+            ]
+          }
+        ],
+        "behavior": "none",
+        "interfaces": [],
+        "physical_parameters": {
+          "mass_kg": 1,
+          "position_kp": 50000,
+          "damping": 400
+        }
+      },
+      "assumptions": [
+        "推板使用 1 kg 等效质量、position_kp=50000、damping=400 近似运动响应；故障通过临时关节等式保持实际位置，到位反馈读取实际关节 q。"
+      ],
+      "unresolved": [],
+      "provenance": {
+        "kind": "curated_reference_candidate",
+        "validation_profile": "plc_executable_device/1",
+        "limitations": [
+          "不验证气压、耗气量或实测气动受力精度。"
+        ],
+        "source_commit": "57273ccde7064c818c507c638f7e92526bc5c436"
+      }
+    },
+    {
+      "format": "308sjk.component_rule/0.1-draft",
+      "component_type": "OperatorPanel",
+      "version": "0.2.0",
+      "parameter_bounds": {
+        "setpoint_max_s": [
+          1.8,
+          1.8
+        ],
+        "setpoint_initial_s": [
+          0.9,
+          0.9
+        ],
+        "momentary_minimum_high_s": [
+          0.2,
+          0.2
+        ],
+        "setpoint_min_s": [
+          0.3,
+          0.3
+        ],
+        "momentary_minimum_low_s": [
+          0.2,
+          0.2
+        ]
+      },
+      "model": {
+        "geoms": [],
+        "behavior": "panel",
+        "interfaces": [],
+        "physical_parameters": {}
+      },
+      "assumptions": [
+        "按 AML 映射操作员输入触点与设定值；PLC 工艺逻辑由独立需求定义，模型不内置分拣策略。"
+      ],
+      "unresolved": [],
+      "provenance": {
+        "kind": "curated_reference_candidate",
+        "validation_profile": "plc_executable_device/1",
+        "limitations": [
+          "未提供的面板外壳不建模；本次不验证按钮内部接线或急停电气回路。"
+        ],
+        "source_commit": "57273ccde7064c818c507c638f7e92526bc5c436"
+      }
+    },
+    {
+      "format": "308sjk.component_rule/0.1-draft",
+      "component_type": "PLCInterface",
+      "version": "0.2.0",
+      "parameter_bounds": {},
+      "model": {
+        "geoms": [],
+        "behavior": "none",
+        "interfaces": [],
+        "physical_parameters": {}
+      },
+      "assumptions": [],
+      "unresolved": [],
+      "provenance": {
+        "kind": "curated_reference_candidate",
+        "validation_profile": "plc_executable_device/1",
+        "limitations": [],
+        "source_commit": "57273ccde7064c818c507c638f7e92526bc5c436"
+      }
+    },
+    {
+      "format": "308sjk.component_rule/0.1-draft",
+      "component_type": "RigidCarton",
+      "version": "0.2.0",
+      "parameter_bounds": {
+        "restitution": [
+          0,
+          0
+        ],
+        "friction": [
+          0.55,
+          0.55
+        ],
+        "size_x_m": [
+          0.2,
+          0.2
+        ],
+        "mass_kg": [
+          0.72,
+          2.16
+        ],
+        "size_y_m": [
+          0.24,
+          0.24
+        ],
+        "density_kg_m3": [
+          150,
+          150
+        ],
+        "size_z_m": [
+          0.1,
+          0.3
+        ]
+      },
+      "model": {
+        "geoms": [
+          {
+            "name": "carton",
+            "type": "box",
+            "size": [
+              "=size_x_m/2",
+              "=size_y_m/2",
+              "=size_z_m/2"
+            ],
+            "pos": [
+              0,
+              0,
+              0
+            ],
+            "mass": "$mass_kg",
+            "friction": "$friction",
+            "rgba": [
+              0.65,
+              0.43,
+              0.22,
+              1
+            ]
+          }
+        ],
+        "behavior": "rigid",
+        "interfaces": [],
+        "physical_parameters": {}
+      },
+      "assumptions": [],
+      "unresolved": [],
+      "provenance": {
+        "kind": "curated_reference_candidate",
+        "validation_profile": "plc_executable_device/1",
+        "limitations": [],
+        "source_commit": "57273ccde7064c818c507c638f7e92526bc5c436"
+      }
+    },
+    {
+      "format": "308sjk.component_rule/0.1-draft",
+      "component_type": "SimulationSink",
+      "version": "0.2.0",
+      "parameter_bounds": {
+        "count_initial": [
+          0,
+          0
+        ],
+        "increment_per_item": [
+          1,
+          1
+        ],
+        "zone_size_y_m": [
+          0.6,
+          0.6
+        ],
+        "zone_size_x_m": [
+          0.5,
+          0.6
+        ],
+        "zone_size_z_m": [
+          0.4,
+          0.6
+        ]
+      },
+      "model": {
+        "geoms": [
+          {
+            "name": "zone",
+            "type": "box",
+            "size": [
+              "=zone_size_x_m/2",
+              "=zone_size_y_m/2",
+              "=zone_size_z_m/2"
+            ],
+            "pos": [
+              0,
+              0,
+              0
+            ],
+            "collision": false,
+            "rgba": [
+              0.2,
+              0.7,
+              0.4,
+              0.13
+            ]
+          }
+        ],
+        "behavior": "sink",
+        "interfaces": [],
+        "physical_parameters": {}
+      },
+      "assumptions": [
+        "出口进入判定依据实际变换后的工件碰撞盒与出口区 AABB 重叠。"
+      ],
+      "unresolved": [],
+      "provenance": {
+        "kind": "curated_reference_candidate",
+        "validation_profile": "plc_executable_device/1",
+        "limitations": [
+          "当前范围为示例箱体，不提供任意旋转、任意形状工件的精确相交判定。"
+        ],
+        "source_commit": "57273ccde7064c818c507c638f7e92526bc5c436"
+      }
+    },
+    {
+      "format": "308sjk.component_rule/0.1-draft",
+      "component_type": "SimulationSource",
+      "version": "0.2.0",
+      "parameter_bounds": {
+        "drop_clearance_m": [
+          0.002,
+          0.002
+        ]
+      },
+      "model": {
+        "geoms": [
+          {
+            "name": "marker",
+            "type": "box",
+            "size": [
+              0.025,
+              0.15,
+              0.025
+            ],
+            "pos": [
+              0,
+              0,
+              0
+            ],
+            "collision": false,
+            "rgba": [
+              0.1,
+              0.7,
+              0.35,
+              1
+            ]
+          }
+        ],
+        "behavior": "source",
+        "interfaces": [],
+        "physical_parameters": {}
+      },
+      "assumptions": [
+        "通过有限工件池实现生成与回收；容量不足时保留一个待处理触发沿，料源标记仅为示意。"
+      ],
+      "unresolved": [],
+      "provenance": {
+        "kind": "curated_reference_candidate",
+        "validation_profile": "plc_executable_device/1",
+        "limitations": [],
+        "source_commit": "57273ccde7064c818c507c638f7e92526bc5c436"
+      }
+    },
+    {
+      "format": "308sjk.component_rule/0.1-draft",
+      "component_type": "SingleCommandPusher",
+      "version": "0.2.0",
+      "parameter_bounds": {
+        "end_window_m": [
+          0.01,
+          0.01
+        ],
+        "retracted_threshold_m": [
+          0.01,
+          0.01
+        ],
+        "minimum_speed_factor": [
+          0.35,
+          0.35
+        ],
+        "uncushioned_travel_time_s": [
+          0.3,
+          0.3
+        ],
+        "extended_threshold_m": [
+          0.54,
+          0.54
+        ],
+        "command_true_target_m": [
+          0.55,
+          0.55
+        ],
+        "cushion_fraction": [
+          0.18,
+          0.18
+        ],
+        "initial_q_m": [
+          0,
+          0
+        ],
+        "minimum_cushion_m": [
+          0.01,
+          0.01
+        ],
+        "command_false_target_m": [
+          0,
+          0
+        ],
+        "nominal_speed_m_s": [
+          1.83333333333,
+          1.83333333333
+        ],
+        "travel_m": [
+          0.55,
+          0.55
+        ]
+      },
+      "model": {
+        "geoms": [],
+        "behavior": "binary_prismatic",
+        "interfaces": [],
+        "physical_parameters": {}
+      },
+      "assumptions": [],
+      "unresolved": [],
+      "provenance": {
+        "kind": "curated_reference_candidate",
+        "validation_profile": "plc_executable_device/1",
+        "limitations": [],
+        "source_commit": "57273ccde7064c818c507c638f7e92526bc5c436"
+      }
+    },
+    {
+      "format": "308sjk.component_rule/0.1-draft",
+      "component_type": "StackIndicator",
+      "version": "0.2.0",
+      "parameter_bounds": {},
+      "model": {
+        "geoms": [
+          {
+            "name": "lamp",
+            "type": "sphere",
+            "size": [
+              0.05
+            ],
+            "pos": [
+              0,
+              0,
+              0.2
+            ],
+            "collision": false,
+            "rgba": [
+              0.1,
+              0.8,
+              0.2,
+              1
+            ]
+          }
+        ],
+        "behavior": "indicator",
+        "interfaces": [],
+        "physical_parameters": {}
+      },
+      "assumptions": [
+        "指示灯外形尺寸为显示近似，不参与碰撞或检测。"
+      ],
+      "unresolved": [],
+      "provenance": {
+        "kind": "curated_reference_candidate",
+        "validation_profile": "plc_executable_device/1",
+        "limitations": [],
+        "source_commit": "57273ccde7064c818c507c638f7e92526bc5c436"
+      }
+    },
+    {
+      "format": "308sjk.component_rule/0.1-draft",
+      "component_type": "WorkpieceCatalog",
+      "version": "0.2.0",
+      "parameter_bounds": {},
+      "model": {
+        "geoms": [],
+        "behavior": "none",
+        "interfaces": [],
+        "physical_parameters": {}
+      },
+      "assumptions": [],
+      "unresolved": [],
+      "provenance": {
+        "kind": "curated_reference_candidate",
+        "validation_profile": "plc_executable_device/1",
+        "limitations": [],
+        "source_commit": "57273ccde7064c818c507c638f7e92526bc5c436"
+      }
+    }
+  ]
+}

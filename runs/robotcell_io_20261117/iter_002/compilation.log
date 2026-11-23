@@ -1,0 +1,63 @@
+Optimizing ST program...
+ST optimizer bypassed: preserve source semantics (agent-guard-v1)
+Generating C files...
+POUS.c
+POUS.h
+LOCATED_VARIABLES.h
+VARIABLES.csv
+Config0.c
+Config0.h
+Res0.c
+Moving Files...
+Compiling for Linux
+Generating object files...
+Generating glueVars...
+varName: __QW100	varType: INT
+varName: __QW101	varType: INT
+varName: __QW102	varType: INT
+varName: __QW103	varType: INT
+varName: __QW104	varType: INT
+varName: __QW105	varType: INT
+varName: __QW110	varType: INT
+varName: __QW111	varType: INT
+varName: __QW112	varType: INT
+varName: __QW113	varType: INT
+varName: __QW114	varType: INT
+varName: __QW115	varType: INT
+varName: __QW106	varType: INT
+varName: __QW116	varType: INT
+varName: __QW80	varType: WORD
+varName: __QW81	varType: WORD
+varName: __QW82	varType: WORD
+varName: __QW64	varType: WORD
+varName: __QW65	varType: WORD
+varName: __QW66	varType: WORD
+varName: __QW67	varType: WORD
+varName: __QW68	varType: WORD
+varName: __QW69	varType: WORD
+varName: __QW70	varType: WORD
+varName: __QW71	varType: WORD
+varName: __QW72	varType: WORD
+varName: __QW73	varType: WORD
+varName: __QW74	varType: WORD
+varName: __QW75	varType: WORD
+varName: __QW76	varType: WORD
+varName: __QW77	varType: WORD
+varName: __QW78	varType: WORD
+varName: __QW79	varType: WORD
+varName: __QW83	varType: WORD
+varName: __QW84	varType: WORD
+varName: __QW85	varType: WORD
+varName: __QW86	varType: WORD
+varName: __QW87	varType: WORD
+varName: __QW88	varType: WORD
+varName: __QW89	varType: WORD
+varName: __QW90	varType: WORD
+varName: __QW91	varType: WORD
+varName: __QW92	varType: WORD
+varName: __QW93	varType: WORD
+varName: __QW94	varType: WORD
+varName: __QW95	varType: WORD
+varName: __QW96	varType: WORD
+Compiling main program...
+Compilation finished successfully!

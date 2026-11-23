@@ -172,6 +172,15 @@ def test_regressed_physical_candidate_does_not_replace_better_repair_source(exec
     assert 'corner error' in e.generator.preferred_candidate[1]
 
 
+def test_command_range_failure_supplies_unit_fix_instead_of_overshoot_advice(execution,monkeypatch):
+    e=execution;e.orch.max_iters=1;e.outcomes[:]=[False]
+    monkeypatch.setattr(validation.Motion,'status',lambda self:{'status':'failed','error':'PLC位置指令越界：x_cmd=10001'})
+    assert solve(e)['status']!='final'
+    feedback=e.orch.best_physical[2]
+    assert '位置量纲修法' in feedback and '编码倍率仅在最终cmd' in feedback
+    assert '若INTERP在细POSWIN下' not in feedback
+
+
 def test_retry_selects_better_physical_candidate_across_failed_attempts(tmp_path):
     ancestor=tmp_path/('svg_web_'+'a'*32);ancestor.mkdir()
     latest=tmp_path/('svg_web_'+'b'*32);latest.mkdir()
@@ -270,3 +279,24 @@ def test_old_pymodbus_no_response_report_can_resume_without_rewriting(tmp_path):
     (tmp_path/'verdict.json').write_text(json.dumps({'error':error}),encoding='utf-8')
     assert validation.resumable_environment_failure(tmp_path/'plcopen.xml')
     assert validation.WorkbenchOrchestrator._environment_error(error)
+
+
+@pytest.mark.parametrize('geometry,path,expected',[(False,True,True),(False,False,True),(True,True,False),(True,False,False)])
+def test_geometry_failure_feedback_does_not_assume_endpoint_oscillation(geometry,path,expected):
+    from agent.workbench_validation import physical_geometry_hint
+    report={'details':[{'id':'SVG_GEOMETRY','pass':geometry},{'id':'PATH','pass':path},{'id':'SVG_PATH','pass':path}]}
+    hint=physical_geometry_hint(report)
+    assert bool(hint)==expected
+    if hint:
+        assert 'pl_k' in hint and '命令自身偏离' in hint
+        assert ('均已到达' in hint)==path
+
+
+def test_geometry_evidence_reaches_actual_repair_feedback(execution):
+    e=execution
+    e.outcomes[:]=[[{'id':key,'pass':key!='SVG_GEOMETRY','evidence':'reached' if key!='SVG_GEOMETRY' else '35.4263 times poswin'}
+        for key in ('PATH','SVG_PATH','SVG_GEOMETRY')],True]
+    assert solve(e)['status']=='final'
+    feedback=e.generator.feedback[0]
+    assert '35.4263' in feedback and 'pl_k' in feedback and '命令自身偏离' in feedback
+    assert '排查建议（不改变原判据）：若INTERP' not in feedback

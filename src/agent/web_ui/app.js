@@ -1,5 +1,22 @@
 'use strict';
 const $ = id => document.getElementById(id);
+const assetDialogs=['aml','library'].map(name=>$(name+'-dialog'));
+for(const name of ['aml','library']){
+  const dialog=$(name+'-dialog');
+  $('open-'+name+'-details').onclick=()=>{
+    dialog.showModal();dialog.querySelector('.asset-dialog-body').scrollTop=0;
+    document.documentElement.classList.add('asset-dialog-open');
+  };
+  dialog.querySelector('[data-asset-close]').onclick=()=>dialog.close();
+  dialog.addEventListener('close',()=>{
+    if(!assetDialogs.some(item=>item.open))document.documentElement.classList.remove('asset-dialog-open');
+  });
+  dialog.addEventListener('click',event=>{
+    if(event.target!==dialog)return;
+    const rect=dialog.getBoundingClientRect();
+    if(event.clientX<rect.left || event.clientX>rect.right || event.clientY<rect.top || event.clientY>rect.bottom)dialog.close();
+  });
+}
 const ns = 'http://www.w3.org/2000/svg';
 let state = null, config = null, working = false, selected = new Set(), timer = null, lastMessages = '', lastLogs = '';
 let planning = Promise.resolve();
@@ -8,6 +25,148 @@ const sceneViewers=new Map();
 let runtimeState=null,runtimeTimer=null,runtimeLoading=false;
 let motionTimer=null,motionLoading=false;
 let studioData=null,studioLoading=false,hmiKey='',recordKey='';
+let deviceSceneTask=null,deviceSceneRecord=null,pendingDeviceScene=null,deviceSyncVersion=0;
+const knownDeviceScenes=new Map();
+const deviceScenePrefix='device-scene:';
+function deviceSceneFile(record,path){return '/device-scene-file?'+new URLSearchParams({task:record.id,path:'scene/'+path});}
+function renderSimulationTasks(){
+  const select=$('simulation-task'),jobs=state?.jobs.filter(j=>j.status==='final')||[];
+  const key=JSON.stringify([jobs.map(j=>[j.id,j.source]),[...knownDeviceScenes],deviceSceneTask,deviceSceneRecord?.device_ir?.station]);
+  if(select.dataset.options!==key){
+    select.replaceChildren();
+    const devices=new Map(knownDeviceScenes);if(deviceSceneTask&&!devices.has(deviceSceneTask))devices.set(deviceSceneTask,deviceSceneRecord?.device_ir?.station||deviceSceneRecord?.name||deviceSceneTask.slice(-8));
+    for(const [id,name] of devices)select.append(new Option((id===deviceSceneTask&&!deviceSceneRecord?.model_frozen?'当前设备 · ':'冻结设备 · ')+name,deviceScenePrefix+id));
+    for(const job of [...jobs].reverse())select.append(new Option((job.source==='external'?'外部导入':'生成产物')+' · '+job.id.slice(-8),job.id));
+    select.dataset.options=key;
+  }
+  select.value=deviceSceneTask?deviceScenePrefix+deviceSceneTask:state?.workflow?.task||'';
+}
+function renderDeviceStudio(){
+  if(!deviceSceneTask)return;
+  const record=deviceSceneRecord,ready=!!record?.model_frozen,notice=$('studio-model-notice');
+  $('studio-runtime-metrics').hidden=true;$('runtime-connection').hidden=true;$('import-simulation').hidden=true;
+  const waiting=record?.device_ir?'当前 AML 已解析。请在设备场景页完成规则生成、实例化、装配、检查及冻结。':record?.parse_pending?'已更换 AML，正在重新解析设备描述。':'正在读取当前设备…';
+  notice.hidden=false;notice.textContent=record?.sync_error?'当前设备不可用：'+record.sync_error:ready?'已同步当前 AML 的冻结模型。PLC 尚未关联，当前显示模型预览。':waiting;
+  if(record?.source_sha256)notice.textContent=record.name+' · AML '+record.source_sha256.slice(0,8)+' · 设备版本 '+record.id.slice(-8)+'。'+notice.textContent;
+  $('scene-status').textContent=ready?'模型已冻结':record?.sync_error?'模型不可用':'等待当前设备冻结';
+  $('studio-view-title').textContent=ready?'冻结模型预览':'当前设备 · 待冻结';$('build-scene').textContent=ready?'已加载冻结模型':'请先生成并冻结设备';
+  if(!ready){$('runtime-viewport').hidden=true;$('scene-empty').hidden=false;$('scene-empty').textContent=record?.sync_error||waiting;$('studio-view-state').textContent=record?.sync_error?'加载失败':'待冻结';}
+  $('studio-task').textContent=(record?.device_ir?.station||record?.name||deviceSceneTask.slice(-8))+' · '+(ready?'冻结设备':'当前 AML');
+  $('runtime-status').textContent='未关联 PLC';$('hmi-status').textContent='设备 IO · 只读';
+  $('simulation-motion-state').textContent='未运行';$('studio-elapsed').textContent='运行时间 —';
+  $('motion-error').hidden=true;$('runtime-operation').hidden=true;$('runtime-checks').hidden=true;
+  $('runtime-logs').hidden=true;
+  $('scene-download').hidden=!ready;$('scene-source').hidden=!ready;$('scene-library').hidden=!ready;
+  if(ready){$('scene-download').href=deviceSceneFile(record,'scene.xml');$('scene-source').href=deviceSceneFile(record,'scene.physical.json');$('scene-library').href=deviceSceneFile(record,'model.freeze.json');}
+  $('scene-source').textContent='设备场景 JSON';$('scene-library').textContent='模型冻结清单';
+  $('scene-logs').hidden=false;$('scene-logs').textContent=(record?.logs||[]).map(row=>new Date(row.time*1000).toLocaleTimeString()+'  '+row.message).join('\n');
+  const key=JSON.stringify([deviceSceneTask,record?.model_xml_sha256,record?.device_ir?.facts_sha256,record?.sync_error]);
+  if(hmiKey!==key){
+    for(const id of ['hmi-buttons','hmi-lamps','hmi-gauges','trace-signal','trace-chart'])$(id).replaceChildren();
+    $('hmi-empty').hidden=!!record?.device_ir;$('hmi-empty').textContent='等待冻结设备 IO';
+    if(record?.device_ir)assetTable($('hmi-gauges'),['信号','方向','类型','地址'],record.device_ir.io.map(p=>[p.name,globalThis.DeviceSceneText.direction(p.dir),p.type,p.address]));
+    $('trace-chart').textContent='该设备尚无 PLC 采样数据';
+    $('studio-history').textContent='该设备尚无 PLC 运行记录';
+    renderVerification(null);$('verification-status').textContent='PLC 验收尚未运行';
+    $('verification-summary').textContent='';hmiKey=key;recordKey='';studioData=null;
+  }
+  renderSimulationTasks();
+}
+async function syncDeviceScene(task,{expectedHash=null,expectedSourceHash=null}={}){
+  if(!/^[0-9a-f]{32}$/.test(task||''))return;
+  if(working||state?.motion?.active||state?.motion?.occupied){
+    pendingDeviceScene={task,expectedHash,expectedSourceHash};$('studio-model-notice').hidden=false;
+    $('studio-model-notice').textContent='已选择新的设备版本；当前仍在运行旧设备，停止后切换到新设备。';return;
+  }
+  const version=++deviceSyncVersion;deviceSceneTask=task;deviceSceneRecord=null;
+  const view=sceneViewers.get('runtime-viewport');if(view)view.reset();
+  $('runtime-viewport').hidden=true;$('scene-empty').hidden=false;$('scene-empty').textContent='正在加载冻结设备模型…';
+  renderDeviceStudio();controls();
+  try{
+    let record=await api('/api/device-scene/state?'+new URLSearchParams({task}));
+    if(version!==deviceSyncVersion)return;
+    if(record.busy)record={...record,model_frozen:false};
+    if(expectedSourceHash&&record.source_sha256!==expectedSourceHash)throw Error('设备来源与当前 AML 不一致，请重新选择设备。');
+    if(record.model_frozen&&(!record.all_approved||!record.scene_ready||record.scene_kind!=='scene'||record.busy||record.error))throw Error('所选设备的冻结状态无效，请重新检查。');
+    if(expectedHash&&!record.model_frozen)throw Error('所选设备尚未完成有效冻结，请在设备场景页完成审批、检查及冻结。');
+    if(expectedHash&&expectedHash!==record.model_xml_sha256)throw Error('冻结模型版本已改变，请重新加载。');
+    deviceSceneRecord=record;if(record.model_frozen)knownDeviceScenes.set(task,record.device_ir.station);
+    localStorage.setItem('studio-device-scene',task);localStorage.removeItem('studio-frozen-scene');
+    if(record.model_frozen)localStorage.setItem('device-scene-last-frozen',task);
+    renderDeviceStudio();renderSceneViews();
+  }catch(exc){if(version!==deviceSyncVersion)return;deviceSceneRecord={id:task,sync_error:exc.message};renderDeviceStudio();$('studio-view-state').textContent='加载失败';$('scene-empty').textContent=exc.message;}
+  finally{if(version===deviceSyncVersion)controls();}
+}
+function leaveDeviceScene(){
+  deviceSyncVersion++;deviceSceneTask=null;deviceSceneRecord=null;pendingDeviceScene=null;hmiKey='';recordKey='';
+  localStorage.setItem('studio-device-scene','legacy');localStorage.removeItem('studio-frozen-scene');$('studio-model-notice').hidden=true;
+  $('studio-runtime-metrics').hidden=false;$('import-simulation').hidden=false;
+  $('scene-source').textContent='场景描述 JSON';$('scene-library').textContent='组件库';$('hmi-empty').textContent='生成 PLC 后加载操作面板';
+  $('studio-view-title').textContent='实时仿真';$('build-scene').textContent='生成仿真场景';
+}
+async function restoreDeviceScene(){
+  let selectedSource;try{selectedSource=JSON.parse(localStorage.getItem('device-scene-selection')||'null');}catch{}
+  // Migrate old browsers by preferring their current authoring task over an
+  // unrelated frozen model left by the previous verification-only UI.
+  const saved=localStorage.getItem('studio-device-scene')||(selectedSource?(selectedSource.task||'pending'):localStorage.getItem('device-scene-task'))||localStorage.getItem('studio-frozen-scene');
+  if(saved==='legacy'){
+    const last=localStorage.getItem('device-scene-last-frozen');
+    if(last)try{const record=await api('/api/device-scene/state?'+new URLSearchParams({task:last}));if(record.model_frozen&&record.all_approved)knownDeviceScenes.set(last,record.device_ir.station);renderSimulationTasks();}catch{}
+    return;
+  }
+  if(selectedSource&&(!saved||saved==='pending'||saved===selectedSource.task))return followDeviceSource(selectedSource);
+  const task=saved||localStorage.getItem('device-scene-task')||localStorage.getItem('device-scene-last-frozen');
+  if(!task)return;
+  await syncDeviceScene(task);
+}
+function followDeviceSource(source){
+  if(!source)return;
+  localStorage.setItem('studio-device-scene',source.task||'pending');
+  if(source.task)return syncDeviceScene(source.task,{expectedHash:source.model_frozen?source.model_xml_sha256:null,expectedSourceHash:source.source_sha256});
+  if(working||state?.motion?.active||state?.motion?.occupied){pendingDeviceScene={source};$('studio-model-notice').hidden=false;$('studio-model-notice').textContent='已更换 AML；当前仍在运行旧设备，停止后重新加载。';return;}
+  deviceSyncVersion++;deviceSceneTask='pending';deviceSceneRecord={name:source.name,parse_pending:true,sync_error:source.error||null};pendingDeviceScene=null;
+  sceneViewers.get('runtime-viewport')?.reset();hmiKey='';renderDeviceStudio();controls();
+}
+function applyPendingDeviceScene(){const pending=pendingDeviceScene;if(!pending)return;pendingDeviceScene=null;if(pending.source)followDeviceSource(pending.source);else syncDeviceScene(pending.task,pending);}
+window.addEventListener('device-scene-selected',event=>followDeviceSource(event.detail));
+window.addEventListener('device-scenes-retired',event=>{
+  const retired=new Set(event.detail?.task_ids||[]);for(const id of retired)knownDeviceScenes.delete(id);
+  if(retired.has(pendingDeviceScene?.task)||retired.has(pendingDeviceScene?.source?.task))pendingDeviceScene=null;
+  if(retired.has(deviceSceneTask)){
+    leaveDeviceScene();sceneViewers.get('runtime-viewport')?.reset();
+    if(studioData)renderStudio();
+    else{for(const id of ['hmi-buttons','hmi-lamps','hmi-gauges'])$(id).replaceChildren();$('hmi-empty').hidden=false;$('scene-empty').hidden=false;$('studio-task').textContent='尚未选择 PLC 场景';}
+    controls();
+  }
+  renderSimulationTasks();
+});
+window.addEventListener('device-scene-frozen',event=>{
+  let selectedSource;try{selectedSource=JSON.parse(localStorage.getItem('device-scene-selection')||'null');}catch{}
+  if(selectedSource?.task&&selectedSource.task!==event.detail?.task)return;
+  syncDeviceScene(event.detail?.task,{expectedHash:event.detail?.model_xml_sha256});
+});
+window.addEventListener('storage',event=>{if(event.key==='device-scene-selection'&&event.newValue){try{followDeviceSource(JSON.parse(event.newValue));}catch{}}});
+let clockOffset=0;
+function duration(seconds){
+  const total=Math.max(0,Math.floor(seconds||0));
+  return (total>=3600?String(Math.floor(total/3600)).padStart(2,'0')+':':'')+
+    String(Math.floor(total/60)%60).padStart(2,'0')+':'+String(total%60).padStart(2,'0');
+}
+function elapsed(record){
+  if(!record)return 0;
+  if(record.finished_at)return Number(record.elapsed_seconds??((Date.parse(record.finished_at)-Date.parse(record.started_at))/1000));
+  return Math.max(0,(Date.now()+clockOffset-Date.parse(record.started_at))/1000);
+}
+function renderTimers(){
+  const job=state?.jobs.filter(job=>job.source!=='external').at(-1),timing=job?.timing;
+  $('generation-timers').hidden=!timing;
+  if(timing){
+    $('generation-elapsed').textContent=duration(elapsed(timing.generation));
+    const attempts=timing.simulation||[];
+    $('acceptance-elapsed').textContent=attempts.length?duration(attempts.reduce((sum,row)=>sum+elapsed(row),0))+' · '+attempts.length+' 次':'未开始';
+  }
+}
+setInterval(renderTimers,250);
 function showStudioTab(name){
   for(const tab of ['result','trace','logs','history']){
     $('studio-'+tab+'-pane').hidden=tab!==name;
@@ -17,11 +176,12 @@ function showStudioTab(name){
 }
 for(const tab of ['result','trace','logs','history'])$('studio-'+tab+'-tab').onclick=()=>showStudioTab(tab);
 async function refreshStudio(){
+  if(deviceSceneTask){renderDeviceStudio();return;}
   if(!state || studioLoading || $('workflow-panel-2').hidden)return;
   const ident=state.id,task=state.workflow?.task;studioLoading=true;
   try{
     const data=await api('/api/studio/state?session='+encodeURIComponent(ident));
-    if(state.id!==ident || state.workflow?.task!==task)return;
+    if(deviceSceneTask || state.id!==ident || state.workflow?.task!==task)return;
     studioData=data;renderStudio();controls();
   }catch(exc){$('hmi-status').textContent='读取失败';$('verification-summary').textContent=exc.message;}
   finally{studioLoading=false;}
@@ -74,6 +234,7 @@ function renderStudio(){
     for(const record of data.history){
       const row=document.createElement('div');row.className='history-row';
       const label=document.createElement('span');label.textContent=new Date(record.created_at*1000).toLocaleString()+' · '+({manual:'手动调试',auto:'模型运行',verify:'验收'})[record.mode]+' · '+({PASS:'通过',FAIL:'未通过',UNVERIFIED:'未完成验收'})[record.verdict];
+      label.textContent+=' · 用时 '+duration(record.timing?.elapsed??record.duration_s);
       const button=document.createElement('button');button.textContent='查看结果';button.onclick=()=>{renderVerification(record);showStudioTab('result');};row.append(label,button);$('studio-history').append(row);
     }
     recordKey=recordsKey;
@@ -84,7 +245,7 @@ function renderVerification(record){
   $('verification-results').replaceChildren();$('verification-downloads').replaceChildren();
   $('verification-status').textContent=record?({PASS:'验收通过',FAIL:'验收未通过',UNVERIFIED:'未完成验收'})[record.verdict]:'暂无验收结果';
   $('verification-status').className=record?.verdict==='PASS'?'passed':record?.verdict==='FAIL'?'runtime-failure':'';
-  $('verification-summary').textContent=record?record.samples+' 个采样 · '+Number(record.duration_s).toFixed(2)+' s':'';
+  $('verification-summary').textContent=record?record.samples+' 个采样 · 仿真用时 '+duration(record.timing?.elapsed??record.duration_s):'';
   if(!record)return;
   for(const result of record.details){
     const row=document.createElement('details');row.className='verification-row';
@@ -112,6 +273,8 @@ $('trace-signal').onchange=renderTrace;
 function renderMotion(status){
   if(!state)return;
   state.motion=status;
+  if(pendingDeviceScene&&!status.active&&!status.occupied)applyPendingDeviceScene();
+  if(deviceSceneTask){renderDeviceStudio();controls();return;}
   const names={manual:'手动调试',not_started:'未启动',starting:'连接中',enabling:'使能中',running:'绘制中',stopped:'已停止',completed:'绘制完成',failed:'运动失败'};
   $('simulation-motion-state').textContent=status.occupied?'其他会话正在运行':(names[status.status]||'未启动');
   $('motion-error').hidden=!status.error;$('motion-error').textContent=status.error||'';
@@ -127,7 +290,7 @@ function renderMotion(status){
   controls();
 }
 async function refreshMotion(){
-  if(motionLoading || !state)return;
+  if(deviceSceneTask || motionLoading || !state)return;
   motionLoading=true;const ident=state.id;
   try{const result=await api('/api/motion/status?session='+encodeURIComponent(ident));if(state.id===ident){renderMotion(result);refreshStudio();}}
   catch(exc){$('motion-error').hidden=false;$('motion-error').textContent='运动状态读取失败：'+exc.message;}
@@ -135,7 +298,7 @@ async function refreshMotion(){
 }
 function scheduleMotion(){
   if(motionTimer)clearTimeout(motionTimer);motionTimer=null;
-  if(state && (state.motion?.active || state.motion?.occupied || !$('workflow-panel-2').hidden))motionTimer=setTimeout(refreshMotion,650);
+  if(!deviceSceneTask && state && (state.motion?.active || state.motion?.occupied || !$('workflow-panel-2').hidden))motionTimer=setTimeout(refreshMotion,650);
 }
 function showAgentTab(tab) {
   for(const name of ['chat','progress','artifacts']){
@@ -145,16 +308,18 @@ function showAgentTab(tab) {
 }
 for(const name of ['chat','progress','artifacts'])$('agent-'+name+'-tab').onclick=()=>showAgentTab(name);
 function showWorkflow(index) {
-  for(let i=1;i<=2;i++){
+  for(let i=1;i<=3;i++){
     $('workflow-panel-'+i).hidden=i!==index;
     $('workflow-tab-'+i).setAttribute('aria-selected',String(i===index));
   }
   renderSceneViews();
   if(runtimeTimer)clearTimeout(runtimeTimer);runtimeTimer=null;
   if(index===2 && state)refreshRuntime();
+  if(index===2 && deviceSceneTask)syncDeviceScene(deviceSceneTask,{expectedHash:deviceSceneRecord?.model_frozen?deviceSceneRecord.model_xml_sha256:null});
+  if(index===3)window.DeviceScenes?.activate();
   if(state){refreshMotion();refreshStudio();}
 }
-for(let i=1;i<=2;i++)$('workflow-tab-'+i).onclick=()=>showWorkflow(i);
+for(let i=1;i<=3;i++)$('workflow-tab-'+i).onclick=()=>showWorkflow(i);
 async function refreshRuntime() {
   if(!state || runtimeLoading)return;
   const ident=state.id;runtimeLoading=true;$('refresh-runtime').disabled=true;
@@ -165,7 +330,7 @@ async function refreshRuntime() {
     $('deploy-service-state').textContent=status.service==='online'?'在线':'离线';
     $('plc-runtime-state').textContent=({RUNNING:'运行中',STOPPED:'已停止',COMPILING:'编译中',BUSY:'操作中',UNREACHABLE:'不可达'})[status.runtime]||'未获取';
     $('plc-program-state').textContent=status.program?(status.program+(status.prog_id!==null?' · '+status.prog_id:'')):'—';
-    $('runtime-connection').hidden=status.service==='online' && !status.error && !status.deployment_error && status.control==='connected';
+    $('runtime-connection').hidden=!!deviceSceneTask||(status.service==='online' && !status.error && !status.deployment_error && status.control==='connected');
     $('runtime-connection').textContent=status.service!=='online'?'lx 部署服务离线':status.error?'OpenPLC Runtime 不可达':status.deployment_error|| (status.control!=='connected'?'部署服务需更新以支持启停与日志':'');
   }catch(exc){runtimeState=null;error('读取 Runtime 状态失败：'+exc.message);}
   finally{
@@ -205,6 +370,25 @@ async function controlRuntime(name){
   if(await action('/api/runtime/'+name,{task:state.workflow?.task}))refreshRuntime();
 }
 function renderSceneViews() {
+  if(deviceSceneTask){
+    const host=$('runtime-viewport'),record=deviceSceneRecord;
+    if(!record?.model_frozen){host.hidden=true;return;}
+    if($('workflow-panel-2').hidden)return;
+    let view=sceneViewers.get('runtime-viewport');
+    try{
+      if(!view){view=new SceneViewer(host);sceneViewers.set('runtime-viewport',view);}
+      const source='/api/device-scene/view?'+new URLSearchParams({task:record.id,v:record.model_xml_sha256});
+      view.active=false;view.live=null;view.onSelect=null;view.setSelection([]);
+      if(view.source!==source){host.hidden=true;$('scene-empty').hidden=false;$('scene-empty').textContent='正在加载冻结设备模型…';$('studio-view-state').textContent='加载中';view.camera=[120,-32,1.05,0,0];}
+      view.load(source).then(()=>{
+        if(deviceSceneTask!==record.id||deviceSceneRecord?.model_xml_sha256!==record.model_xml_sha256||view.source!==source)return;
+        const ready=!view.status.textContent&&!!view.current?.transforms?.length;
+        host.hidden=!ready;$('scene-empty').hidden=ready;$('studio-view-state').textContent=ready?'已加载冻结模型':view.status.textContent==='加载中…'?'加载中':'加载失败';
+        if(!ready)$('scene-empty').textContent=view.status.textContent||'模型没有可显示的几何';
+      });
+    }catch(exc){host.hidden=true;$('scene-empty').hidden=false;$('scene-empty').textContent=exc.message;$('studio-view-state').textContent='加载失败';}
+    return;
+  }
   const scene=state?.workflow?.simulation;
   for(const [id,panel] of [['runtime-viewport',2]]){
     const host=$(id);host.hidden=!scene;
@@ -282,9 +466,15 @@ function controls() {
   $('message').disabled=languageMode()?(!state || busy):(disabled || !selected.size);
   const trajectoryReady=!!state?.trajectory && (languageMode() || !!selected.size) && selectionMatches() && settingsMatch();
   $('generate').disabled=busy || !state?.spec || !trajectoryReady;
+  const stoppable=!!state?.can_stop_generation;
+  $('generate').hidden=stoppable;
+  $('stop-generation').hidden=!stoppable;
+  $('stop-generation').disabled=working || state?.phase==='stopping';
+  $('stop-generation').textContent=state?.phase==='stopping'?'停止中…':'停止生成';
   for(const id of ['language-source','svg-source','drawing-description','plan-language','square-example','circle-example'])$(id).disabled=!state || busy;
   $('file').disabled=busy;$('example').disabled=busy;
-  for(const id of ['aml-file','library-file','contract-file','physics-file','aml-file','library-file'])$(id).disabled=!state || busy;
+  for(const id of ['aml-file','library-file','contract-file','physics-file'])$(id).disabled=!state || busy;
+  $('aml-file').disabled ||= !!window.DeviceScenes?.isBusy();
   for(const input of $('parameters').querySelectorAll('input'))input.disabled=disabled;
   for(const input of $('paths').querySelectorAll('input'))input.disabled=disabled;
   $('preview-tab').disabled=!state?.preview_url || !trajectoryReady;
@@ -307,6 +497,11 @@ function controls() {
   $('import-simulation').disabled=busy || !state;
   $('simulation-task').disabled=busy;
   for(const button of $('hmi-buttons').querySelectorAll('button'))button.disabled=!studioData?.writable || working;
+  if(deviceSceneTask){
+    for(const id of ['build-scene','deploy-runtime','start-runtime','stop-runtime','read-runtime-logs','start-motion','manual-motion','verify-motion']){$(id).disabled=true;$(id).title=deviceSceneRecord?.model_frozen?'该冻结模型尚未关联 PLC 任务':'请先生成并冻结当前 AML 的设备模型';}
+    $('verify-motion').textContent=deviceSceneRecord?.model_frozen?'未关联 PLC':'待冻结当前设备';
+  }else for(const id of ['build-scene','deploy-runtime','start-runtime','stop-runtime','read-runtime-logs','start-motion','manual-motion','verify-motion'])$(id).removeAttribute('title');
+  if(pendingDeviceScene)for(const id of ['build-scene','deploy-runtime','start-runtime','start-motion','manual-motion','verify-motion'])$(id).disabled=true;
   for(const node of $('outlines').querySelectorAll('[data-path]')){
     const chosen=selected.has(Number(node.dataset.path));
     if(node.classList.contains('outline'))node.classList.toggle('selected',chosen);
@@ -345,6 +540,19 @@ function render(next, replaceSelection=false) {
   const svgChanged=state?.assets.svg?.id!==next.assets.svg?.id;
   const modeChanged=state?.drawing_mode!==next.drawing_mode;
   state=next;
+  clockOffset=state.server_time?Date.parse(state.server_time)-Date.now():0;
+  renderTimers();
+  const timedJobs=state.jobs.filter(job=>job.timing);
+  $('generation-history').hidden=!timedJobs.length;
+  $('generation-history-list').replaceChildren();
+  for(const job of timedJobs.slice(-20).reverse()){
+    const row=document.createElement('p');
+    const simulations=job.timing.simulation||[];
+    row.textContent=new Date(job.timing.generation.started_at).toLocaleString()+' · '+
+      ({running:'进行中',final:'验收通过',cancelled:'已停止',failed:'失败',best_effort:'未通过'})[job.status]+' · 生成 '+
+      duration(elapsed(job.timing.generation))+' · 仿真 '+(simulations.length?duration(simulations.reduce((sum,item)=>sum+elapsed(item),0)):'未开始');
+    $('generation-history-list').append(row);
+  }
   if(newFile){runtimeState=null;$('runtime-logs').hidden=true;$('runtime-logs').textContent='';}
   if(newFile || replaceSelection || modeChanged){selected=new Set(state.selected_paths);setSettings(state.settings);$('drawing-description').value=state.drawing_text||'';}
   if(newFile || svgChanged){drawCatalog();showTab(false);lastMessages='';lastLogs='';}
@@ -356,7 +564,7 @@ function render(next, replaceSelection=false) {
   $('language-summary').hidden=!languageMode() || !state.trajectory;
   $('language-summary').textContent=state.drawing_summary||'';
   $('message').placeholder=languageMode()?'例如：画一个正方形，边长40；按启动按钮绘制，完成后抬笔。':'输入工艺要求，或使用默认工艺';
-  const phases={draft:'待确认',understanding:'整理需求中',ready:'可生成',generating:'生成中',completed:'生成完成',failed:'需要调整',interrupted:'任务中断',building_scene:'构建场景中',scene_ready:'场景已生成',runtime_deploy:'部署中',runtime_start:'启动中',runtime_stop:'停止中',runtime_ready:'操作完成',runtime_failed:'操作失败',motion_start:'连接仿真中',motion_ready:'仿真已连接'};
+  const phases={draft:'待确认',understanding:'整理需求中',ready:'可生成',generating:'生成中',stopping:'停止中',cancelled:'已停止',completed:'生成完成',failed:'需要调整',interrupted:'任务中断',building_scene:'构建场景中',scene_ready:'场景已生成',runtime_deploy:'部署中',runtime_start:'启动中',runtime_stop:'停止中',runtime_ready:'操作完成',runtime_failed:'操作失败',motion_start:'连接仿真中',motion_ready:'仿真已连接'};
   $('phase').textContent=(languageMode() || state.assets.svg)?(state.phase==='completed' && state.jobs.at(-1)?.validation?.status==='passed'?'验收通过':languageMode() && !state.trajectory?'等待描述':phases[state.phase]||state.phase):'等待 SVG';
   const messagesKey=JSON.stringify(state.messages);
   if(messagesKey!==lastMessages){
@@ -368,7 +576,7 @@ function render(next, replaceSelection=false) {
   $('spec').textContent=state.spec?JSON.stringify(state.spec,null,2):'';
   $('progress-panel').hidden=!state.logs.length && !state.busy;
   $('progress-empty').hidden=!$('progress-panel').hidden;
-  $('busy-label').textContent=state.busy?'正在执行…':'本轮已结束';
+  $('busy-label').textContent=state.phase==='stopping'?'正在停止，请稍候…':state.busy?'正在执行…':state.phase==='cancelled'?'本轮已停止':'本轮已结束';
   const logsKey=JSON.stringify(state.logs);
   if(logsKey!==lastLogs){$('logs').replaceChildren();for(const entry of state.logs){const line=document.createElement('p');line.textContent=entry.text;$('logs').append(line);}$('logs').scrollTop=$('logs').scrollHeight;lastLogs=logsKey;}
   $('downloads').replaceChildren();
@@ -400,13 +608,7 @@ function render(next, replaceSelection=false) {
   $('scene-empty').hidden=!!scene;
   $('studio-view-state').textContent=scene?'已加载':'等待场景';
   $('studio-task').textContent=simulationJob?(simulationJob.source==='external'?'外部导入':'工作台产物')+' · '+simulationJob.id.slice(-8):'等待 PLC 生成';
-  const taskOptions=JSON.stringify(state.jobs.filter(j=>j.status==='final').map(j=>[j.id,j.source]));
-  if($('simulation-task').dataset.options!==taskOptions){
-    $('simulation-task').replaceChildren();
-    for(const job of state.jobs.filter(j=>j.status==='final').reverse()){const option=document.createElement('option');option.value=job.id;option.textContent=(job.source==='external'?'外部导入':'生成产物')+' · '+job.id.slice(-8);$('simulation-task').append(option);}
-    $('simulation-task').dataset.options=taskOptions;
-  }
-  $('simulation-task').value=state.workflow?.task||'';
+  renderSimulationTasks();
   renderSceneViews();
   refreshStudio();
   renderMotion(state.motion||{status:'not_started'});scheduleMotion();
@@ -426,7 +628,7 @@ async function action(route, extra={}, options={}) {
   working=true;controls();error();
   try{const result=await api(route,{session:state?.id,revision:state?.revision,...extra});render(result,options.replaceSelection);return true;}
   catch(exc){error(exc.message);return false;}
-  finally{working=false;controls();}
+  finally{working=false;controls();if(pendingDeviceScene&&!state?.motion?.active&&!state?.motion?.occupied)applyPendingDeviceScene();}
 }
 function togglePath(id) {
   if(working || state?.busy || state?.motion?.active || state?.motion?.occupied)return;
@@ -464,10 +666,12 @@ async function upload(file) {
 }
 async function uploadAsset(kind,part,file) {
   if(!file || working || state?.busy)return;
+  if(kind==='aml'&&window.DeviceScenes?.isBusy()){error('设备场景任务正在处理，请先完成或停止当前任务后再更换 AML');return;}
   const extension=kind==='aml'?'.aml':'.json';
   if(!file.name.toLowerCase().endsWith(extension) || !file.size || file.size>2*1024*1024){error('请选择非空且不超过 2 MiB 的 '+extension+' 文件');return;}
   const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let start=0;start<bytes.length;start+=8192)binary+=String.fromCharCode(...bytes.subarray(start,start+8192));
-  await action('/api/asset',{kind,part,name:file.name,data:btoa(binary)},{replaceSelection:true});
+  const changed=await action('/api/asset',{kind,part,name:file.name,data:btoa(binary)},{replaceSelection:true});
+  if(changed&&kind==='aml')await window.DeviceScenes?.useAml(file);
 }
 $('aml-file').onchange=event=>uploadAsset('aml',null,event.target.files[0]).finally(()=>event.target.value='');
 $('library-file').onchange=event=>uploadAsset('library',null,event.target.files[0]).finally(()=>event.target.value='');
@@ -502,10 +706,16 @@ $('chat-form').onsubmit=async event=>{
 };
 $('message').onkeydown=event=>{if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();$('chat-form').requestSubmit();}};
 $('generate').onclick=()=>{showAgentTab('progress');return action('/api/generate');};
+$('stop-generation').onclick=()=>{showAgentTab('progress');return action('/api/generate/stop',{task:state.jobs.at(-1)?.id});};
 $('clear-context').onclick=async()=>{if(await action('/api/context/clear')){$('message').value='';showAgentTab('chat');}};
 $('default-process').onclick=async()=>{if(!await queuePlan())return;if(await action('/api/process/default')){$('message').value='';showAgentTab('chat');}};
-$('build-scene').onclick=()=>{showStudioTab('logs');return action('/api/simulation/build',{task:state.workflow.task});};
-$('simulation-task').onchange=()=>action('/api/simulation/select',{task:$('simulation-task').value});
+$('build-scene').onclick=()=>{if(deviceSceneTask)return;showStudioTab('logs');return action('/api/simulation/build',{task:state.workflow.task});};
+$('simulation-task').onchange=async()=>{
+  const task=$('simulation-task').value;
+  if(task.startsWith(deviceScenePrefix))return syncDeviceScene(task.slice(deviceScenePrefix.length));
+  if(await action('/api/simulation/select',{task})){leaveDeviceScene();render(state);}
+  else renderSimulationTasks();
+};
 $('import-simulation').onclick=()=>{$('import-error').hidden=true;$('import-dialog').showModal();};
 $('close-import').onclick=()=>$('import-dialog').close();
 $('import-form').onsubmit=async event=>{
@@ -518,15 +728,15 @@ $('import-form').onsubmit=async event=>{
       files[key]={name:file.name,data:btoa(binary)};
     }
     const result=await api('/api/simulation/import',{session:state.id,revision:state.revision,files});
-    render(result);$('import-dialog').close();$('import-form').reset();refreshStudio();
+    leaveDeviceScene();render(result);$('import-dialog').close();$('import-form').reset();refreshStudio();
   }catch(exc){$('import-error').hidden=false;$('import-error').textContent=exc.message;}
   finally{$('confirm-import').disabled=false;}
 };
-$('refresh-runtime').onclick=()=>{refreshRuntime();refreshStudio();};
-$('manual-motion').onclick=()=>action('/api/motion/start',{task:state.workflow?.task,mode:'manual'});
-$('verify-motion').onclick=()=>{showStudioTab('result');return action('/api/motion/start',{task:state.workflow?.task,mode:'verify'});};
-for(const name of ['start','stop'])$(name+'-motion').onclick=async()=>{if(await action('/api/motion/'+name,{task:state.workflow?.task}))refreshMotion();};
-for(const name of ['deploy','start','stop'])$(name+'-runtime').onclick=()=>controlRuntime(name);
+$('refresh-runtime').onclick=()=>{refreshRuntime();if(deviceSceneTask)syncDeviceScene(deviceSceneTask,{expectedHash:deviceSceneRecord?.model_frozen?deviceSceneRecord.model_xml_sha256:null});else refreshStudio();};
+$('manual-motion').onclick=()=>{if(!deviceSceneTask)return action('/api/motion/start',{task:state.workflow?.task,mode:'manual'});};
+$('verify-motion').onclick=()=>{if(deviceSceneTask)return;showStudioTab('result');return action('/api/motion/start',{task:state.workflow?.task,mode:'verify'});};
+for(const name of ['start','stop'])$(name+'-motion').onclick=async()=>{if(deviceSceneTask)return;if(await action('/api/motion/'+name,{task:state.workflow?.task}))refreshMotion();};
+for(const name of ['deploy','start','stop'])$(name+'-runtime').onclick=()=>{if(!deviceSceneTask)return controlRuntime(name);};
 $('read-runtime-logs').onclick=async()=>{
   $('read-runtime-logs').disabled=true;
   try{const result=await api('/api/runtime/logs?session='+encodeURIComponent(state.id));$('runtime-logs').textContent=result.logs||'暂无日志';$('runtime-logs').hidden=false;}
@@ -536,10 +746,13 @@ for(const input of $('parameters').querySelectorAll('input'))input.addEventListe
 async function init() {
   try{
     config=await api('/api/config');
+    window.DeviceScenes?.configure(config);
     const ident=localStorage.getItem('svg-workbench-session');
     if(ident){try{render(await api('/api/state?session='+encodeURIComponent(ident)),true);}catch(exc){localStorage.removeItem('svg-workbench-session');error(exc.message);}}
     if(!state)render(await api('/api/session',{}),true);
+    await restoreDeviceScene();
   }catch(exc){error('无法连接工作台：'+exc.message);}
   controls();
+  if(new URLSearchParams(location.search).get('view')==='scenes')showWorkflow(3);
 }
 init();
