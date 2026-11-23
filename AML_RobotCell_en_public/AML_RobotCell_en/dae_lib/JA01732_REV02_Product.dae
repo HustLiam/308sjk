@@ -1,0 +1,168 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<COLLADA version="1.5.0" xmlns="http://www.collada.org/2008/03/COLLADASchema">
+	<asset>
+		<contributor>
+			<author>AutomationML e.V.</author>
+			<author_website>www.automationml.org</author_website>
+			<authoring_tool>"Notepad++" "6.8.6" "6.8.6"</authoring_tool>
+		</contributor>
+		<created>2015-12-15T13:12:06.7153453+01:00</created>
+		<modified>2015-12-15T13:12:06.7153453+01:00</modified>
+		<unit meter="0.001" name="mm" />
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_nodes>
+		<node id="JA01732_REV02" name="JA01732_REV02">
+			<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+			<node id="JA01732_REV02_JA01732_fester_Arm.1" name="JA01732_fester_Arm">
+				<matrix>1 0 0 1.27329e-011 0 1 0 -3.63798e-012 0 0 1 2.27374e-011 0 0 0 1</matrix>
+				<instance_node url="JA01732_fester_Arm_Rep.dae#JA01732_fester_Arm_visual_scene_node" />
+			</node>
+			<node id="JA01732_REV02_JA01732_bew_Arm.1" name="JA01732_bew_Arm">
+				<matrix>1 0 0 1.27329e-011 0 1 0 -3.63798e-012 0 0 1 2.27374e-011 0 0 0 1</matrix>
+				<translate>2.6869e-007 2.27881e-007 92</translate>
+				<rotate sid="zangenoeffnung_axis">0 0 1 0</rotate>
+				<translate>-2.6869e-007 -2.27881e-007 -92</translate>
+				<instance_node url="JA01732_bew_Arm_Rep.dae#JA01732_bew_Arm_visual_scene_node" />
+			</node>
+			<node name="FrameOfInterest_Base1" sid="JA01732_REV02_FrameOfInterest_Base1">
+				<matrix>0.707107 0 0.707107 -415.646 0 -1 0 -4.08686e-005 0.707107 0 -0.707107 947.177 0 0 0 1</matrix>
+			</node>
+			<node name="FrameOfInterest_Tool1" sid="JA01732_REV02_FrameOfInterest_Tool1">
+				<matrix>1 0 0 2.6869e-007 0 1 0 2.27881e-007 0 0 1 -1.81899e-012 0 0 0 1</matrix>
+			</node>
+			<node name="AttachmentPoint_030WZD111" sid="JA01732_REV02_AttachmentPoint_030WZD111">
+				<matrix>1 0 0 -411.965 0 1 0 -4.13223 0 0 1 952.347 0 0 0 1</matrix>
+			</node>
+		</node>
+	</library_nodes>
+	<library_visual_scenes>
+		<visual_scene id="JA01732_REV02_visual_scene">
+			<node id="JA01732_REV02_visual_scene_node" name="JA01732_REV02">
+				<instance_node url="#JA01732_REV02" />
+			</node>
+		</visual_scene>
+	</library_visual_scenes>
+	<library_joints>
+		<joint id="JA01732_REV02_JA01732_zangenoeffnung" name="zangenoeffnung">
+			<prismatic sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>-100</min>
+					<max>100</max>
+				</limits>
+			</prismatic>
+		</joint>
+	</library_joints>
+	<library_kinematics_models>
+		<kinematics_model id="JA01732_REV02_kin_model.0" name="JA01732">
+			<technique_common>
+				<instance_joint sid="zangenoeffnung" url="#JA01732_REV02_JA01732_zangenoeffnung" />
+				<link name="JA01732_fester_Arm.1" sid="JA01732_fester_Arm.1">
+					<translate>1.27329e-011 -3.63798e-012 2.27374e-011</translate>
+					<attachment_full joint="JA01732_REV02_kin_model.0/zangenoeffnung">
+						<translate>2.6869e-007 2.27881e-007 0</translate>
+						<link name="JA01732_bew_Arm.1" sid="JA01732_bew_Arm.1">
+							<translate>-2.6869e-007 -2.27881e-007 -92</translate>
+						</link>
+					</attachment_full>
+				</link>
+			</technique_common>
+			<extra>
+				<technique profile="POSES">
+					<poses>
+						<pose count="1" name="CLOSE">
+							<pose_joint joint="JA01732_REV02_kin_model.0/zangenoeffnung">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+						</pose>
+						<pose count="1" name="OPEN">
+							<pose_joint joint="JA01732_REV02_kin_model.0/zangenoeffnung">
+								<value>
+									<double>92</double>
+								</value>
+							</pose_joint>
+						</pose>
+					</poses>
+				</technique>
+			</extra>
+		</kinematics_model>
+	</library_kinematics_models>
+	<library_articulated_systems>
+		<articulated_system id="JA01732_REV02_art_system.0">
+			<kinematics>
+				<instance_kinematics_model sid="inst_JA01732_REV02_kin_model.0" url="#JA01732_REV02_kin_model.0">
+					<newparam sid="JA01732_REV02_art_system.0_inst_JA01732_REV02_kin_model.0">
+						<SIDREF>JA01732_REV02_art_system.0/inst_JA01732_REV02_kin_model.0</SIDREF>
+					</newparam>
+					<newparam sid="JA01732_REV02_art_system.0_inst_JA01732_REV02_kin_model.0_zangenoeffnung_axis">
+						<SIDREF>JA01732_REV02_art_system.0/inst_JA01732_REV02_kin_model.0/zangenoeffnung/axis</SIDREF>
+					</newparam>
+					<newparam sid="JA01732_REV02_art_system.0_inst_JA01732_REV02_kin_model.0_zangenoeffnung_axis_value">
+						<float>92</float>
+					</newparam>
+				</instance_kinematics_model>
+				<technique_common>
+					<axis_info axis="JA01732_REV02_art_system.0/inst_JA01732_REV02_kin_model.0/zangenoeffnung/axis" name="oeffnungsweite" sid="JA01732_REV02_art_system.0_inst_JA01732_REV02_kin_model.0_oeffnungsweite">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>1</int>
+						</index>
+						<limits>
+							<min>
+								<float>0</float>
+							</min>
+							<max>
+								<float>92</float>
+							</max>
+						</limits>
+					</axis_info>
+					<frame_origin link="inst_JA01732_REV02_kin_model.0/JA01732_fester_Arm.1">
+						<translate>1.27329e-011 -3.63798e-012 2.27374e-011</translate>
+					</frame_origin>
+					<frame_tip link="inst_JA01732_REV02_kin_model.0/JA01732_bew_Arm.1">
+						<translate>1.27329e-011 -3.63798e-012 2.27374e-011</translate>
+					</frame_tip>
+				</technique_common>
+			</kinematics>
+		</articulated_system>
+	</library_articulated_systems>
+	<library_kinematics_scenes>
+		<kinematics_scene id="JA01732_REV02_kin_scene">
+			<instance_articulated_system sid="inst_JA01732_REV02_art_system.0" url="#JA01732_REV02_art_system.0">
+				<bind symbol="JA01732_REV02_kin_scene_inst_JA01732_REV02_art_system.0_inst_JA01732_REV02_kin_model.0">
+					<param ref="JA01732_REV02_art_system.0_inst_JA01732_REV02_kin_model.0" />
+				</bind>
+				<bind symbol="JA01732_REV02_kin_scene_inst_JA01732_REV02_art_system.0_inst_JA01732_REV02_kin_model.0_zangenoeffnung_axis">
+					<param ref="JA01732_REV02_art_system.0_inst_JA01732_REV02_kin_model.0_zangenoeffnung_axis" />
+				</bind>
+				<bind symbol="JA01732_REV02_kin_scene_inst_JA01732_REV02_art_system.0_inst_JA01732_REV02_kin_model.0_zangenoeffnung_axis_value">
+					<param ref="JA01732_REV02_art_system.0_inst_JA01732_REV02_kin_model.0_zangenoeffnung_axis_value" />
+				</bind>
+			</instance_articulated_system>
+		</kinematics_scene>
+	</library_kinematics_scenes>
+	<scene>
+		<instance_visual_scene url="#JA01732_REV02_visual_scene" />
+		<instance_kinematics_scene url="#JA01732_REV02_kin_scene">
+			<bind_kinematics_model node="JA01732_REV02_JA01732_fester_Arm.1">
+				<param>JA01732_REV02_kin_scene_inst_JA01732_REV02_art_system.0_inst_JA01732_REV02_kin_model.0</param>
+			</bind_kinematics_model>
+			<bind_joint_axis target="JA01732_REV02_JA01732_bew_Arm.1/zangenoeffnung_axis">
+				<axis>
+					<param>JA01732_REV02_kin_scene_inst_JA01732_REV02_art_system.0_inst_JA01732_REV02_kin_model.0_zangenoeffnung_axis</param>
+				</axis>
+				<value>
+					<param>JA01732_REV02_kin_scene_inst_JA01732_REV02_art_system.0_inst_JA01732_REV02_kin_model.0_zangenoeffnung_axis_value</param>
+				</value>
+			</bind_joint_axis>
+		</instance_kinematics_scene>
+	</scene>
+</COLLADA>

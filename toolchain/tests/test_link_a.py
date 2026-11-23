@@ -43,16 +43,16 @@ def test_shim_golden():
     io_map = load_fixture()["entries"]
     c1, c2 = gen_shim_c(io_map), gen_shim_c(io_map)
     assert c1 == c2, "shim 生成必须确定（同 io_map 同源码）"
-    # extern 与符号规则
-    assert "extern BOOL __QX0_0;   /* run (input) */" in c1
-    assert "extern INT __QW0;   /* x_fb (input) */" in c1
-    assert "extern WORD __QW6;   /* x_sw (output) */" in c1
-    assert "extern INT __QW20;   /* prog_id (output) */" in c1
-    # 紧凑镜像排列：di=[run,cmd_home]，ai=[x_fb]，dq=[move_done]，aq=[x_sw,x_sp,prog_id]
-    assert "__QX0_0 = di[0];" in c1 and "__QX0_1 = di[1];" in c1
-    assert "__QW0 = ai[0];" in c1
-    assert "__QX1_1 = dq[0];" in c1
-    assert "__QW6 = aq[0];" in c1 and "__QW10 = aq[1];" in c1 and "__QW20 = aq[2];" in c1
+    # glue 定义与符号规则（指针语义：static 存储 + type* 符号，OpenPLC matiec 实测）
+    assert 'static BOOL st_QX0_0;  BOOL *__QX0_0 = &st_QX0_0;   /* run (input) */' in c1
+    assert 'static INT st_QW0;  INT *__QW0 = &st_QW0;   /* x_fb (input) */' in c1
+    assert 'static WORD st_QW6;  WORD *__QW6 = &st_QW6;   /* x_sw (output) */' in c1
+    assert 'static INT st_QW20;  INT *__QW20 = &st_QW20;   /* prog_id (output) */' in c1
+    # 紧凑镜像排列：di=[run,cmd_home]，ai=[x_fb]，dq=[move_done,echo]，aq=[x_sw,x_sp,prog_id]
+    assert "*__QX0_0 = di[0];" in c1 and "*__QX0_1 = di[1];" in c1
+    assert "*__QW0 = ai[0];" in c1
+    assert "dq[0] = *__QX1_1;" in c1 and "dq[1] = *__QX1_0;" in c1
+    assert "aq[0] = *__QW6;" in c1 and "aq[1] = *__QW10;" in c1 and "aq[2] = *__QW20;" in c1
     assert "void plc_write_image(const unsigned char* di, const short* ai);" in gen_shim_h(io_map)
     # 地址冲突拒绝
     bad = [dict(io_map[0]), dict(io_map[0])]
@@ -73,7 +73,7 @@ def test_shim_golden():
 def test_layout_and_scaling():
     io_map = load_fixture()["entries"]
     lo = IOLayout(io_map)
-    assert lo.sizes == {"di": 2, "ai": 1, "dq": 1, "aq": 3}
+    assert lo.sizes == {"di": 2, "ai": 1, "dq": 2, "aq": 3}
     # 定点换算：scale=0.1（0.1mm/LSB）→ 100mm = 1000 LSB；超程钳位 INT16
     assert lo.to_raw("x_fb", 100) == 1000
     assert lo.to_raw("x_fb", 99999) == 32767
@@ -87,8 +87,9 @@ def test_layout_and_scaling():
     assert list(di) == [1, 0]
     import struct
     assert struct.unpack("<h", ai) == (1000,)
-    out = lo.unpack_outputs(bytes([1]), struct.pack("<3h", 0x1234, 1234, 1))
+    out = lo.unpack_outputs(bytes([1, 0]), struct.pack("<3h", 0x1234, 1234, 1))
     assert out["move_done"] is True
+    assert out["echo"] is False
     assert out["x_sw"] == 0x1234 & 0xFFFF
     assert out["x_sp"] == 123.4
     assert out["prog_id"] == 1

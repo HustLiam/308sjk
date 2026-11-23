@@ -1,0 +1,49 @@
+<mujoco model="plotter_cell_square">
+  <!-- 由 scene.spec.json 组装（mujoco_build.py _plotter_xml，组装规则 R1-R4 见源码） -->
+  <option timestep="0.008333" gravity="0 0 -9.81"/>
+  <compiler angle="radian" autolimits="true"/>
+  <default>
+    <joint armature="0.01" frictionloss="0.1"/>
+    <geom friction="0.8 0.02 0.001" condim="3"/>
+  </default>
+  <worldbody>
+    <geom name="floor" type="plane" size="0.75 0.75 0.1" rgba="0.92 0.92 0.9 1"/>
+    <geom name="work_table" type="box" size="0.6 0.6 0.375"
+          pos="0.5 0.5 0.375" rgba="0.72 0.68 0.60 1"/>
+    <geom name="paper" type="box" size="0.36 0.36 0.001"
+          pos="0.5 0.5 0.751" rgba="0.97 0.97 0.94 1"/>
+    <geom name="hmi_panel" type="box" size="0.15 0.12 0.175"
+          pos="-0.35 0.5 0.175" contype="0" conaffinity="0"
+          rgba="0.25 0.28 0.32 1"/>   <!-- 库缺省外观（spec 未给尺寸） -->
+    <!-- 轴链锚点 = 行程起点（轴 pose 为行程中心，R2）；qz=0 笔尖距纸 2mm（R3） -->
+    <body name="gantry_base" pos="0 0 0.78">
+      <body name="x_carriage" pos="0 0 0">
+        <joint name="joint_x" type="slide" axis="1 0 0" range="0 1"
+               damping="250"/>
+        <geom name="saddle" type="box" size="0.05 0.05 0.02" mass="4"
+              contype="0" conaffinity="0" rgba="0.2 0.55 0.85 1"/>
+        <body name="y_carriage" pos="0 0 0">
+          <joint name="joint_y" type="slide" axis="0 1 0" range="0 1"
+                 damping="250"/>
+          <geom name="head" type="box" size="0.05 0.05 0.02" mass="3"
+                contype="0" conaffinity="0" rgba="0.2 0.55 0.85 1"/>
+          <body name="z_carriage" pos="0 0 0">
+            <joint name="joint_z" type="slide" axis="0 0 1" range="0 0.01"
+                   damping="80"/>
+            <geom name="slider" type="box" size="0.04 0.04 0.015" mass="0.4"
+                  pos="0 0 0.02" contype="0" conaffinity="0" rgba="0.16 0.42 0.66 1"/>
+            <!-- 笔（tool_head 载具为链尾滑块，R3）；笔尖有碰撞：任何故障下停在纸/台面 -->
+            <geom name="pen" type="capsule" fromto="0 0 -0.026 0 0 0"
+                  size="0.00025" mass="0.02" rgba="0.85 0.2 0.2 1"/>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+  <actuator>
+    <position name="drive_x" joint="joint_x" kp="6000" ctrlrange="0 1"/>
+    <position name="drive_y" joint="joint_y" kp="6000" ctrlrange="0 1"/>
+    <position name="drive_z" joint="joint_z" kp="4000" ctrlrange="0 0.01"/>
+  </actuator>
+</mujoco>
+

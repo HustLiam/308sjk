@@ -1,0 +1,151 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<COLLADA version="1.5.0" xmlns="http://www.collada.org/2008/03/COLLADASchema">
+	<asset>
+		<contributor>
+			<author>AutomationML e.V.</author>
+			<author_website>www.automationml.org</author_website>
+			<authoring_tool>"Notepad++" "6.8.6" "6.8.6"</authoring_tool>
+		</contributor>
+		<created>2015-12-15T13:12:06.7153453+01:00</created>
+		<modified>2015-12-15T13:12:06.7153453+01:00</modified>
+		<unit meter="0.001" name="mm" />
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_nodes>
+		<node id="fraeskopf_gelenk" name="fraeskopf_gelenk">
+			<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+			<instance_geometry url="#fraeskopf_gelenk_R255_G128_B128_A255">
+				<bind_material>
+					<technique_common>
+						<instance_material symbol="fraeskopf_gelenk_MATERIAL_R255_G128_B128_A255" target="#fraeskopf_gelenk_MATERIAL_R255_G128_B128_A255" />
+					</technique_common>
+				</bind_material>
+			</instance_geometry>
+		</node>
+	</library_nodes>
+	<library_visual_scenes>
+		<visual_scene id="fraeskopf_gelenk_visual_scene">
+			<node id="fraeskopf_gelenk_visual_scene_node" name="fraeskopf_gelenk">
+				<instance_node url="#fraeskopf_gelenk" />
+			</node>
+		</visual_scene>
+	</library_visual_scenes>
+	<library_effects>
+		<effect id="fraeskopf_gelenk_EFFECT_R255_G128_B128_A255">
+			<profile_COMMON>
+				<technique sid="common">
+					<phong>
+						<diffuse>
+							<color>1 0.501961 0.501961 1</color>
+						</diffuse>
+					</phong>
+				</technique>
+			</profile_COMMON>
+		</effect>
+	</library_effects>
+	<library_materials>
+		<material id="fraeskopf_gelenk_MATERIAL_R255_G128_B128_A255">
+			<instance_effect url="#fraeskopf_gelenk_EFFECT_R255_G128_B128_A255" />
+		</material>
+	</library_materials>
+	<library_geometries>
+		<geometry id="fraeskopf_gelenk_R255_G128_B128_A255" name="fraeskopf_gelenk_R255_G128_B128_A255">
+			<mesh>
+				<source id="fraeskopf_gelenk_R255_G128_B128_A255_positions">
+					<float_array count="264" id="fraeskopf_gelenk_R255_G128_B128_A255_positions_array">72 943 112.547 52 943 101 72 963 112.547 52 963 101 88.5 943 52.2568 117.5 943 69 88.5 963 52.2568 117.5 963 69 117.5 943 101 117.5 963 101 88.5 943 117.743 88.5 963 117.743 52 943 69 72 943 57.453 52 963 69 72 963 57.453 72 883 112.547 52 883 101 72 883 145 52 883 145 52 943 145 72 943 145 32 923 25 32 923 57.2872 32 963 25 32 942 68.2568 32 963 145 32 942 101.743 32 923 145 32 923 112.713 32 903 145 32 903 112.713 32 863 145 32 884 101.743 32 863 25 32 884 68.2568 32 903 25 32 903 57.2872 138.5 863 25 138.5 883 25 138.5 863 145 138.5 883 145 138.5 943 25 138.5 963 25 138.5 943 145 138.5 963 145 52 942 101.743 52 942 68.2568 52 923 112.713 52 884 101.743 52 903 112.713 52 884 68.2568 52 903 57.2872 52 923 57.2872 88.5 963 25 88.5 963 145 72 963 145 72 963 25 88.5 863 25 88.5 883 25 52 903 25 52 883 25 72 863 25 72 883 25 72 943 25 52 943 25 52 923 25 88.5 943 25 88.5 863 145 88.5 863 117.743 117.5 863 101 117.5 863 69 88.5 863 52.2568 72 863 57.453 52 863 69 52 863 101 72 863 145 72 863 112.547 88.5 943 145 52 923 145 52 903 145 88.5 883 145 52 883 69 72 883 57.453 88.5 883 117.743 117.5 883 101 117.5 883 69 88.5 883 52.2568</float_array>
+					<technique_common>
+						<accessor count="88" source="#fraeskopf_gelenk_R255_G128_B128_A255_positions_array" stride="3">
+							<param name="X" type="float" />
+							<param name="Y" type="float" />
+							<param name="Z" type="float" />
+						</accessor>
+					</technique_common>
+				</source>
+				<source id="fraeskopf_gelenk_R255_G128_B128_A255_normals">
+					<float_array count="42" id="fraeskopf_gelenk_R255_G128_B128_A255_normals_array">0.5 0 -0.866025 -0.5 0 0.866025 -1 0 0 -0.5 0 -0.866025 0.5 0 0.866025 0 1 0 0 -1 0 1 0 0 0 -0.5 -0.866025 0 0.5 -0.866025 0 0.5 0.866025 0 -0.5 0.866025 0 0 -1 0 0 1</float_array>
+					<technique_common>
+						<accessor count="14" source="#fraeskopf_gelenk_R255_G128_B128_A255_normals_array" stride="3">
+							<param name="X" type="float" />
+							<param name="Y" type="float" />
+							<param name="Z" type="float" />
+						</accessor>
+					</technique_common>
+				</source>
+				<vertices id="fraeskopf_gelenk_R255_G128_B128_A255_vertices">
+					<input semantic="POSITION" source="#fraeskopf_gelenk_R255_G128_B128_A255_positions" />
+				</vertices>
+				<triangles count="3" material="fraeskopf_gelenk_MATERIAL_R255_G128_B128_A255">
+					<input offset="0" semantic="VERTEX" source="#fraeskopf_gelenk_R255_G128_B128_A255_vertices" />
+					<input offset="1" semantic="NORMAL" source="#fraeskopf_gelenk_R255_G128_B128_A255_normals" />
+					<p>66 7 47 7 53 7 1 7 14 7 3 7 74 7 17 7 75 7</p>
+				</triangles>
+				<trifans count="1" material="fraeskopf_gelenk_MATERIAL_R255_G128_B128_A255">
+					<input offset="0" semantic="VERTEX" source="#fraeskopf_gelenk_R255_G128_B128_A255_vertices" />
+					<input offset="1" semantic="NORMAL" source="#fraeskopf_gelenk_R255_G128_B128_A255_normals" />
+					<p>49 7 50 7 80 7 19 7 17 7 74 7 82 7 51 7</p>
+				</trifans>
+				<tristrips count="54" material="fraeskopf_gelenk_MATERIAL_R255_G128_B128_A255">
+					<input offset="0" semantic="VERTEX" source="#fraeskopf_gelenk_R255_G128_B128_A255_vertices" />
+					<input offset="1" semantic="NORMAL" source="#fraeskopf_gelenk_R255_G128_B128_A255_normals" />
+					<p>3 0 2 0 1 0 0 0</p>
+					<p>7 1 6 1 5 1 4 1</p>
+					<p>9 2 7 2 8 2 5 2</p>
+					<p>11 3 9 3 10 3 8 3</p>
+					<p>15 4 14 4 13 4 12 4</p>
+					<p>19 5 18 5 17 5 16 5</p>
+					<p>21 6 20 6 0 6 1 6</p>
+					<p>29 2 28 2 27 2 26 2 25 2 24 2 23 2 22 2</p>
+					<p>37 2 36 2 35 2 34 2 33 2 32 2 31 2 30 2</p>
+					<p>41 7 40 7 39 7 38 7</p>
+					<p>45 7 44 7 43 7 42 7</p>
+					<p>47 6 46 6 25 6 27 6</p>
+					<p>46 8 48 8 27 8 29 8</p>
+					<p>50 9 49 9 31 9 33 9</p>
+					<p>49 5 51 5 33 5 35 5</p>
+					<p>51 10 52 10 35 10 37 10</p>
+					<p>53 11 47 11 23 11 25 11</p>
+					<p>11 5 55 5 9 5 45 5 7 5 43 5 6 5 54 5</p>
+					<p>15 5 57 5 14 5 24 5 3 5 26 5 2 5 56 5</p>
+					<p>39 12 38 12 59 12 58 12</p>
+					<p>63 12 62 12 61 12 34 12 60 12 36 12</p>
+					<p>66 12 22 12 65 12 24 12 64 12 57 12</p>
+					<p>43 12 42 12 54 12 67 12</p>
+					<p>72 6 58 6 71 6 38 6 70 6 40 6 69 6 68 6</p>
+					<p>77 6 76 6 75 6 32 6 74 6 34 6 73 6 62 6</p>
+					<p>44 13 45 13 78 13 55 13</p>
+					<p>21 13 56 13 20 13 26 13 79 13 28 13</p>
+					<p>80 13 30 13 19 13 32 13 18 13 76 13</p>
+					<p>40 13 41 13 68 13 81 13</p>
+					<p>66 7 65 7 47 7 12 7 46 7</p>
+					<p>12 7 14 7 46 7 1 7 20 7</p>
+					<p>20 7 79 7 46 7 48 7</p>
+					<p>60 7 52 7 61 7 51 7 82 7</p>
+					<p>82 5 83 5 61 5 63 5</p>
+					<p>59 5 87 5 39 5 86 5 41 5 85 5 81 5 84 5</p>
+					<p>78 6 10 6 44 6 8 6 42 6 5 6 67 6 4 6</p>
+					<p>13 6 12 6 64 6 65 6</p>
+					<p>30 5 80 5 31 5 50 5</p>
+					<p>37 5 52 5 36 5 60 5</p>
+					<p>53 6 23 6 66 6 22 6</p>
+					<p>79 6 28 6 48 6 29 6</p>
+					<p>64 7 57 7 13 7 15 7</p>
+					<p>4 2 6 2 67 2 54 2</p>
+					<p>62 7 63 7 73 7 83 7</p>
+					<p>83 4 82 4 73 4 74 4</p>
+					<p>17 0 16 0 75 0 77 0</p>
+					<p>84 3 85 3 69 3 70 3</p>
+					<p>85 2 86 2 70 2 71 2</p>
+					<p>86 1 87 1 71 1 72 1</p>
+					<p>72 2 87 2 58 2 59 2</p>
+					<p>78 2 55 2 10 2 11 2</p>
+					<p>68 2 81 2 69 2 84 2</p>
+					<p>77 7 16 7 76 7 18 7</p>
+					<p>0 7 2 7 21 7 56 7</p>
+				</tristrips>
+			</mesh>
+		</geometry>
+	</library_geometries>
+	<scene>
+		<instance_visual_scene url="#fraeskopf_gelenk_visual_scene" />
+	</scene>
+</COLLADA>

@@ -1,0 +1,158 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<COLLADA version="1.5.0" xmlns="http://www.collada.org/2008/03/COLLADASchema">
+	<asset>
+		<contributor>
+			<author>AutomationML e.V.</author>
+			<author_website>www.automationml.org</author_website>
+			<authoring_tool>"Notepad++" "6.8.6" "6.8.6"</authoring_tool>
+		</contributor>
+		<created>2015-12-15T13:12:06.7153453+01:00</created>
+		<modified>2015-12-15T13:12:06.7153453+01:00</modified>
+		<unit meter="0.001" name="mm" />
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_nodes>
+		<node id="KRC4_Robotersteuerschrank" name="KRC4_Robotersteuerschrank">
+			<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+			<node id="KRC4_Robotersteuerschrank_KRC4_Robotersteuerschrank_Base" name="KRC4_Robotersteuerschrank_Base">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="KRC4_Robotersteuerschrank_Base_Rep.dae#KRC4_Robotersteuerschrank_Base_visual_scene_node" />
+			</node>
+			<node id="KRC4_Robotersteuerschrank_KRC4_Robotersteuerschrank_Door" name="KRC4_Robotersteuerschrank_Door">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<translate>792 0 960</translate>
+				<rotate>0 0 1 90</rotate>
+				<rotate sid="Revolute.1_axis">0 0 1 0</rotate>
+				<translate>0 792 -960</translate>
+				<rotate>0 0 1 -90</rotate>
+				<instance_node url="KRC4_Robotersteuerschrank_Door_Rep.dae#KRC4_Robotersteuerschrank_Door_visual_scene_node" />
+			</node>
+		</node>
+	</library_nodes>
+	<library_visual_scenes>
+		<visual_scene id="KRC4_Robotersteuerschrank_visual_scene">
+			<node id="KRC4_Robotersteuerschrank_visual_scene_node" name="KRC4_Robotersteuerschrank">
+				<instance_node url="#KRC4_Robotersteuerschrank" />
+			</node>
+		</visual_scene>
+	</library_visual_scenes>
+	<library_joints>
+		<joint id="KRC4_Robotersteuerschrank_Mechanism.1_Revolute.1" name="Revolute.1">
+			<revolute sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>0</min>
+					<max>90</max>
+				</limits>
+			</revolute>
+		</joint>
+	</library_joints>
+	<library_kinematics_models>
+		<kinematics_model id="KRC4_Robotersteuerschrank_kin_model.0" name="Mechanism.1">
+			<technique_common>
+				<instance_joint sid="Revolute.1" url="#KRC4_Robotersteuerschrank_Mechanism.1_Revolute.1" />
+				<link name="KRC4_Robotersteuerschrank_Base" sid="KRC4_Robotersteuerschrank_Base">
+					<attachment_full joint="KRC4_Robotersteuerschrank_kin_model.0/Revolute.1">
+						<translate>792 0 960</translate>
+						<rotate>0 0 1 90</rotate>
+						<link name="KRC4_Robotersteuerschrank_Door" sid="KRC4_Robotersteuerschrank_Door">
+							<translate>0 792 -960</translate>
+							<rotate>0 0 1 -90</rotate>
+						</link>
+					</attachment_full>
+				</link>
+			</technique_common>
+			<extra>
+				<technique profile="POSES">
+					<poses>
+						<pose count="1" name="Geschlossen">
+							<pose_joint joint="KRC4_Robotersteuerschrank_kin_model.0/Revolute.1">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+						</pose>
+						<pose count="1" name="Geoeffnet">
+							<pose_joint joint="KRC4_Robotersteuerschrank_kin_model.0/Revolute.1">
+								<value>
+									<double>90</double>
+								</value>
+							</pose_joint>
+						</pose>
+					</poses>
+				</technique>
+			</extra>
+		</kinematics_model>
+	</library_kinematics_models>
+	<library_articulated_systems>
+		<articulated_system id="KRC4_Robotersteuerschrank_art_system.0">
+			<kinematics>
+				<instance_kinematics_model sid="inst_KRC4_Robotersteuerschrank_kin_model.0" url="#KRC4_Robotersteuerschrank_kin_model.0">
+					<newparam sid="KRC4_Robotersteuerschrank_art_system.0_inst_KRC4_Robotersteuerschrank_kin_model.0">
+						<SIDREF>KRC4_Robotersteuerschrank_art_system.0/inst_KRC4_Robotersteuerschrank_kin_model.0</SIDREF>
+					</newparam>
+					<newparam sid="KRC4_Robotersteuerschrank_art_system.0_inst_KRC4_Robotersteuerschrank_kin_model.0_Revolute.1_axis">
+						<SIDREF>KRC4_Robotersteuerschrank_art_system.0/inst_KRC4_Robotersteuerschrank_kin_model.0/Revolute.1/axis</SIDREF>
+					</newparam>
+					<newparam sid="KRC4_Robotersteuerschrank_art_system.0_inst_KRC4_Robotersteuerschrank_kin_model.0_Revolute.1_axis_value">
+						<float>0</float>
+					</newparam>
+				</instance_kinematics_model>
+				<technique_common>
+					<axis_info axis="KRC4_Robotersteuerschrank_art_system.0/inst_KRC4_Robotersteuerschrank_kin_model.0/Revolute.1/axis" name="Command.1" sid="KRC4_Robotersteuerschrank_art_system.0_inst_KRC4_Robotersteuerschrank_kin_model.0_Command.1">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>1</int>
+						</index>
+						<limits>
+							<min>
+								<float>0</float>
+							</min>
+							<max>
+								<float>90</float>
+							</max>
+						</limits>
+					</axis_info>
+					<frame_origin link="inst_KRC4_Robotersteuerschrank_kin_model.0/KRC4_Robotersteuerschrank_Base" />
+					<frame_tip link="inst_KRC4_Robotersteuerschrank_kin_model.0/KRC4_Robotersteuerschrank_Door" />
+				</technique_common>
+			</kinematics>
+		</articulated_system>
+	</library_articulated_systems>
+	<library_kinematics_scenes>
+		<kinematics_scene id="KRC4_Robotersteuerschrank_kin_scene">
+			<instance_articulated_system sid="inst_KRC4_Robotersteuerschrank_art_system.0" url="#KRC4_Robotersteuerschrank_art_system.0">
+				<bind symbol="KRC4_Robotersteuerschrank_kin_scene_inst_KRC4_Robotersteuerschrank_art_system.0_inst_KRC4_Robotersteuerschrank_kin_model.0">
+					<param ref="KRC4_Robotersteuerschrank_art_system.0_inst_KRC4_Robotersteuerschrank_kin_model.0" />
+				</bind>
+				<bind symbol="KRC4_Robotersteuerschrank_kin_scene_inst_KRC4_Robotersteuerschrank_art_system.0_inst_KRC4_Robotersteuerschrank_kin_model.0_Revolute.1_axis">
+					<param ref="KRC4_Robotersteuerschrank_art_system.0_inst_KRC4_Robotersteuerschrank_kin_model.0_Revolute.1_axis" />
+				</bind>
+				<bind symbol="KRC4_Robotersteuerschrank_kin_scene_inst_KRC4_Robotersteuerschrank_art_system.0_inst_KRC4_Robotersteuerschrank_kin_model.0_Revolute.1_axis_value">
+					<param ref="KRC4_Robotersteuerschrank_art_system.0_inst_KRC4_Robotersteuerschrank_kin_model.0_Revolute.1_axis_value" />
+				</bind>
+			</instance_articulated_system>
+		</kinematics_scene>
+	</library_kinematics_scenes>
+	<scene>
+		<instance_visual_scene url="#KRC4_Robotersteuerschrank_visual_scene" />
+		<instance_kinematics_scene url="#KRC4_Robotersteuerschrank_kin_scene">
+			<bind_kinematics_model node="KRC4_Robotersteuerschrank_KRC4_Robotersteuerschrank_Base">
+				<param>KRC4_Robotersteuerschrank_kin_scene_inst_KRC4_Robotersteuerschrank_art_system.0_inst_KRC4_Robotersteuerschrank_kin_model.0</param>
+			</bind_kinematics_model>
+			<bind_joint_axis target="KRC4_Robotersteuerschrank_KRC4_Robotersteuerschrank_Door/Revolute.1_axis">
+				<axis>
+					<param>KRC4_Robotersteuerschrank_kin_scene_inst_KRC4_Robotersteuerschrank_art_system.0_inst_KRC4_Robotersteuerschrank_kin_model.0_Revolute.1_axis</param>
+				</axis>
+				<value>
+					<param>KRC4_Robotersteuerschrank_kin_scene_inst_KRC4_Robotersteuerschrank_art_system.0_inst_KRC4_Robotersteuerschrank_kin_model.0_Revolute.1_axis_value</param>
+				</value>
+			</bind_joint_axis>
+		</instance_kinematics_scene>
+	</scene>
+</COLLADA>

@@ -1,0 +1,8 @@
+{
+  "call": 5,
+  "duration_s": 9.531,
+  "stage": "test_plan",
+  "started_at": 1793028570.681535,
+  "model": "deepseek-flash",
+  "max_tokens": 32768
+}

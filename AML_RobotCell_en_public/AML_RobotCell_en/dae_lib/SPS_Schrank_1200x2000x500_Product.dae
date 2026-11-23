@@ -1,0 +1,249 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<COLLADA version="1.5.0" xmlns="http://www.collada.org/2008/03/COLLADASchema">
+	<asset>
+		<contributor>
+			<author>AutomationML e.V.</author>
+			<author_website>www.automationml.org</author_website>
+			<authoring_tool>"Notepad++" "6.8.6" "6.8.6"</authoring_tool>
+		</contributor>
+		<created>2015-12-15T13:12:06.7153453+01:00</created>
+		<modified>2015-12-15T13:12:06.7153453+01:00</modified>
+		<unit meter="0.001" name="mm" />
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_nodes>
+		<node id="SPS_Schrank_1200x2000x500" name="SPS_Schrank_1200x2000x500">
+			<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+			<node id="SPS_Schrank_1200x2000x500_Schrank.2" name="Schrank">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="Schrank_Product.dae#Schrank_visual_scene_node" />
+			</node>
+			<node id="SPS_Schrank_1200x2000x500_Tuer_li.1" name="Tuer_li.1">
+				<matrix>0.707107 0.707107 0 2.07107 -0.707107 0.707107 0 -6.2132 0 0 1 0 0 0 0 1</matrix>
+				<translate>-6.46447 -5.6066 1990</translate>
+				<rotate>0.707107 0.707107 0 180</rotate>
+				<rotate sid="Revolute.1_axis">0 0 1 0</rotate>
+				<translate>5.6066 6.46447 1990</translate>
+				<rotate>0.707107 0.707107 0 180</rotate>
+				<instance_node url="Tuer_li.1_Product.dae#Tuer_li.1_visual_scene_node" />
+			</node>
+			<node id="SPS_Schrank_1200x2000x500_Tuer_re.1" name="Tuer_re.1">
+				<matrix>0.707107 -0.707107 0 345.614 0.707107 0.707107 0 -845.599 0 0 1 0 0 0 0 1</matrix>
+				<translate>1193.54 -5.6066 1990</translate>
+				<rotate>0 0 1 -90</rotate>
+				<rotate sid="Revolute.2_axis">0 0 1 0</rotate>
+				<translate>-5.6066 -1193.54 -1990</translate>
+				<rotate>0 0 1 90</rotate>
+				<instance_node url="Tuer_re.1_Product.dae#Tuer_re.1_visual_scene_node" />
+			</node>
+		</node>
+	</library_nodes>
+	<library_visual_scenes>
+		<visual_scene id="SPS_Schrank_1200x2000x500_visual_scene">
+			<node id="SPS_Schrank_1200x2000x500_visual_scene_node" name="SPS_Schrank_1200x2000x500">
+				<instance_node url="#SPS_Schrank_1200x2000x500" />
+			</node>
+		</visual_scene>
+	</library_visual_scenes>
+	<library_joints>
+		<joint id="SPS_Schrank_1200x2000x500_Mechanism.1_Revolute.1" name="Revolute.1">
+			<revolute sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>0</min>
+					<max>90</max>
+				</limits>
+			</revolute>
+		</joint>
+		<joint id="SPS_Schrank_1200x2000x500_Mechanism.1_Revolute.2" name="Revolute.2">
+			<revolute sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>0</min>
+					<max>90</max>
+				</limits>
+			</revolute>
+		</joint>
+	</library_joints>
+	<library_kinematics_models>
+		<kinematics_model id="SPS_Schrank_1200x2000x500_kin_model.0" name="Mechanism.1">
+			<technique_common>
+				<instance_joint sid="Revolute.1" url="#SPS_Schrank_1200x2000x500_Mechanism.1_Revolute.1" />
+				<instance_joint sid="Revolute.2" url="#SPS_Schrank_1200x2000x500_Mechanism.1_Revolute.2" />
+				<link name="Schrank.2" sid="Schrank.2">
+					<attachment_full joint="SPS_Schrank_1200x2000x500_kin_model.0/Revolute.1">
+						<translate>-6.46447 -5.6066 1990</translate>
+						<rotate>0.707107 0.707107 0 180</rotate>
+						<link name="Tuer_li.1" sid="Tuer_li.1">
+							<translate>5.6066 6.46447 1990</translate>
+							<rotate>0.707107 0.707107 0 180</rotate>
+						</link>
+					</attachment_full>
+					<attachment_full joint="SPS_Schrank_1200x2000x500_kin_model.0/Revolute.2">
+						<translate>1193.54 -5.6066 1990</translate>
+						<rotate>0 0 1 -90</rotate>
+						<link name="Tuer_re.1" sid="Tuer_re.1">
+							<translate>-5.6066 -1193.54 -1990</translate>
+							<rotate>0 0 1 90</rotate>
+						</link>
+					</attachment_full>
+				</link>
+			</technique_common>
+			<extra>
+				<technique profile="POSES">
+					<poses>
+						<pose count="2" name="Geschlossen">
+							<pose_joint joint="SPS_Schrank_1200x2000x500_kin_model.0/Revolute.1">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="SPS_Schrank_1200x2000x500_kin_model.0/Revolute.2">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+						</pose>
+						<pose count="2" name="Halb_geoeffnet">
+							<pose_joint joint="SPS_Schrank_1200x2000x500_kin_model.0/Revolute.1">
+								<value>
+									<double>45</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="SPS_Schrank_1200x2000x500_kin_model.0/Revolute.2">
+								<value>
+									<double>45</double>
+								</value>
+							</pose_joint>
+						</pose>
+						<pose count="2" name="Geoeffnet">
+							<pose_joint joint="SPS_Schrank_1200x2000x500_kin_model.0/Revolute.1">
+								<value>
+									<double>90</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="SPS_Schrank_1200x2000x500_kin_model.0/Revolute.2">
+								<value>
+									<double>90</double>
+								</value>
+							</pose_joint>
+						</pose>
+					</poses>
+				</technique>
+			</extra>
+		</kinematics_model>
+	</library_kinematics_models>
+	<library_articulated_systems>
+		<articulated_system id="SPS_Schrank_1200x2000x500_art_system.0">
+			<kinematics>
+				<instance_kinematics_model sid="inst_SPS_Schrank_1200x2000x500_kin_model.0" url="#SPS_Schrank_1200x2000x500_kin_model.0">
+					<newparam sid="SPS_Schrank_1200x2000x500_art_system.0_inst_SPS_Schrank_1200x2000x500_kin_model.0">
+						<SIDREF>SPS_Schrank_1200x2000x500_art_system.0/inst_SPS_Schrank_1200x2000x500_kin_model.0</SIDREF>
+					</newparam>
+					<newparam sid="SPS_Schrank_1200x2000x500_art_system.0_inst_SPS_Schrank_1200x2000x500_kin_model.0_Revolute.1_axis">
+						<SIDREF>SPS_Schrank_1200x2000x500_art_system.0/inst_SPS_Schrank_1200x2000x500_kin_model.0/Revolute.1/axis</SIDREF>
+					</newparam>
+					<newparam sid="SPS_Schrank_1200x2000x500_art_system.0_inst_SPS_Schrank_1200x2000x500_kin_model.0_Revolute.1_axis_value">
+						<float>45</float>
+					</newparam>
+					<newparam sid="SPS_Schrank_1200x2000x500_art_system.0_inst_SPS_Schrank_1200x2000x500_kin_model.0_Revolute.2_axis">
+						<SIDREF>SPS_Schrank_1200x2000x500_art_system.0/inst_SPS_Schrank_1200x2000x500_kin_model.0/Revolute.2/axis</SIDREF>
+					</newparam>
+					<newparam sid="SPS_Schrank_1200x2000x500_art_system.0_inst_SPS_Schrank_1200x2000x500_kin_model.0_Revolute.2_axis_value">
+						<float>45</float>
+					</newparam>
+				</instance_kinematics_model>
+				<technique_common>
+					<axis_info axis="SPS_Schrank_1200x2000x500_art_system.0/inst_SPS_Schrank_1200x2000x500_kin_model.0/Revolute.1/axis" name="Command.1" sid="SPS_Schrank_1200x2000x500_art_system.0_inst_SPS_Schrank_1200x2000x500_kin_model.0_Command.1">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>1</int>
+						</index>
+						<limits>
+							<min>
+								<float>0</float>
+							</min>
+							<max>
+								<float>90</float>
+							</max>
+						</limits>
+					</axis_info>
+					<axis_info axis="SPS_Schrank_1200x2000x500_art_system.0/inst_SPS_Schrank_1200x2000x500_kin_model.0/Revolute.2/axis" name="Command.2" sid="SPS_Schrank_1200x2000x500_art_system.0_inst_SPS_Schrank_1200x2000x500_kin_model.0_Command.2">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>2</int>
+						</index>
+						<limits>
+							<min>
+								<float>0</float>
+							</min>
+							<max>
+								<float>90</float>
+							</max>
+						</limits>
+					</axis_info>
+					<frame_origin link="inst_SPS_Schrank_1200x2000x500_kin_model.0/Schrank.2" />
+					<frame_tip link="inst_SPS_Schrank_1200x2000x500_kin_model.0/Tuer_re.1">
+						<translate>345.614 -845.599 0</translate>
+						<rotate>0 0 1 45</rotate>
+					</frame_tip>
+				</technique_common>
+			</kinematics>
+		</articulated_system>
+	</library_articulated_systems>
+	<library_kinematics_scenes>
+		<kinematics_scene id="SPS_Schrank_1200x2000x500_kin_scene">
+			<instance_articulated_system sid="inst_SPS_Schrank_1200x2000x500_art_system.0" url="#SPS_Schrank_1200x2000x500_art_system.0">
+				<bind symbol="SPS_Schrank_1200x2000x500_kin_scene_inst_SPS_Schrank_1200x2000x500_art_system.0_inst_SPS_Schrank_1200x2000x500_kin_model.0">
+					<param ref="SPS_Schrank_1200x2000x500_art_system.0_inst_SPS_Schrank_1200x2000x500_kin_model.0" />
+				</bind>
+				<bind symbol="SPS_Schrank_1200x2000x500_kin_scene_inst_SPS_Schrank_1200x2000x500_art_system.0_inst_SPS_Schrank_1200x2000x500_kin_model.0_Revolute.1_axis">
+					<param ref="SPS_Schrank_1200x2000x500_art_system.0_inst_SPS_Schrank_1200x2000x500_kin_model.0_Revolute.1_axis" />
+				</bind>
+				<bind symbol="SPS_Schrank_1200x2000x500_kin_scene_inst_SPS_Schrank_1200x2000x500_art_system.0_inst_SPS_Schrank_1200x2000x500_kin_model.0_Revolute.1_axis_value">
+					<param ref="SPS_Schrank_1200x2000x500_art_system.0_inst_SPS_Schrank_1200x2000x500_kin_model.0_Revolute.1_axis_value" />
+				</bind>
+				<bind symbol="SPS_Schrank_1200x2000x500_kin_scene_inst_SPS_Schrank_1200x2000x500_art_system.0_inst_SPS_Schrank_1200x2000x500_kin_model.0_Revolute.2_axis">
+					<param ref="SPS_Schrank_1200x2000x500_art_system.0_inst_SPS_Schrank_1200x2000x500_kin_model.0_Revolute.2_axis" />
+				</bind>
+				<bind symbol="SPS_Schrank_1200x2000x500_kin_scene_inst_SPS_Schrank_1200x2000x500_art_system.0_inst_SPS_Schrank_1200x2000x500_kin_model.0_Revolute.2_axis_value">
+					<param ref="SPS_Schrank_1200x2000x500_art_system.0_inst_SPS_Schrank_1200x2000x500_kin_model.0_Revolute.2_axis_value" />
+				</bind>
+			</instance_articulated_system>
+		</kinematics_scene>
+	</library_kinematics_scenes>
+	<scene>
+		<instance_visual_scene url="#SPS_Schrank_1200x2000x500_visual_scene" />
+		<instance_kinematics_scene url="#SPS_Schrank_1200x2000x500_kin_scene">
+			<bind_kinematics_model node="SPS_Schrank_1200x2000x500_Schrank.2">
+				<param>SPS_Schrank_1200x2000x500_kin_scene_inst_SPS_Schrank_1200x2000x500_art_system.0_inst_SPS_Schrank_1200x2000x500_kin_model.0</param>
+			</bind_kinematics_model>
+			<bind_joint_axis target="SPS_Schrank_1200x2000x500_Tuer_li.1/Revolute.1_axis">
+				<axis>
+					<param>SPS_Schrank_1200x2000x500_kin_scene_inst_SPS_Schrank_1200x2000x500_art_system.0_inst_SPS_Schrank_1200x2000x500_kin_model.0_Revolute.1_axis</param>
+				</axis>
+				<value>
+					<param>SPS_Schrank_1200x2000x500_kin_scene_inst_SPS_Schrank_1200x2000x500_art_system.0_inst_SPS_Schrank_1200x2000x500_kin_model.0_Revolute.1_axis_value</param>
+				</value>
+			</bind_joint_axis>
+			<bind_joint_axis target="SPS_Schrank_1200x2000x500_Tuer_re.1/Revolute.2_axis">
+				<axis>
+					<param>SPS_Schrank_1200x2000x500_kin_scene_inst_SPS_Schrank_1200x2000x500_art_system.0_inst_SPS_Schrank_1200x2000x500_kin_model.0_Revolute.2_axis</param>
+				</axis>
+				<value>
+					<param>SPS_Schrank_1200x2000x500_kin_scene_inst_SPS_Schrank_1200x2000x500_art_system.0_inst_SPS_Schrank_1200x2000x500_kin_model.0_Revolute.2_axis_value</param>
+				</value>
+			</bind_joint_axis>
+		</instance_kinematics_scene>
+	</scene>
+</COLLADA>

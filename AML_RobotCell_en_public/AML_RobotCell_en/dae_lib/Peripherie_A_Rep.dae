@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<COLLADA version="1.5.0" xmlns="http://www.collada.org/2008/03/COLLADASchema">
+	<asset>
+		<contributor>
+			<author>AutomationML e.V.</author>
+			<author_website>www.automationml.org</author_website>
+			<authoring_tool>"Notepad++" "6.8.6" "6.8.6"</authoring_tool>
+		</contributor>
+		<created>2015-12-15T13:12:06.7153453+01:00</created>
+		<modified>2015-12-15T13:12:06.7153453+01:00</modified>
+		<unit meter="0.001" name="mm" />
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_nodes>
+		<node id="Peripherie_A" name="Peripherie_A">
+			<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+		</node>
+	</library_nodes>
+	<library_visual_scenes>
+		<visual_scene id="Peripherie_A_visual_scene">
+			<node id="Peripherie_A_visual_scene_node" name="Peripherie_A">
+				<instance_node url="#Peripherie_A" />
+			</node>
+		</visual_scene>
+	</library_visual_scenes>
+	<library_effects />
+	<library_materials />
+	<library_geometries />
+	<scene>
+		<instance_visual_scene url="#Peripherie_A_visual_scene" />
+	</scene>
+</COLLADA>

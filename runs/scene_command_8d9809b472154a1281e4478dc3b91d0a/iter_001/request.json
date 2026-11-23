@@ -1,0 +1,76 @@
+{
+  "request": "010RB_100_KR240R2700prime_：Joint_1 和 Joint_2 同时相对增加2度，耗时1秒，停留0.2秒；随后同时相对减少2度，耗时1秒。该组合重复2次，其他关节不动。",
+  "capability": {
+    "component_id": "AF138E59-0000-17AC-556E-B124000031B5",
+    "component_name": "010RB_100_KR240R2700prime_",
+    "max_speed_deg_s": 30,
+    "joints": [
+      {
+        "variable": "rb100_j1_target",
+        "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_1",
+        "joint_id": 53,
+        "current_deg": 17.586,
+        "range_deg": [
+          -185.0000000000281,
+          185.0000000000281
+        ],
+        "deg_per_count": 0.02
+      },
+      {
+        "variable": "rb100_j2_target",
+        "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_2",
+        "joint_id": 54,
+        "current_deg": -134.388,
+        "range_deg": [
+          -139.9999999998819,
+          -4.999999999999056
+        ],
+        "deg_per_count": 0.02
+      },
+      {
+        "variable": "rb100_j3_target",
+        "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_3",
+        "joint_id": 55,
+        "current_deg": 103.596,
+        "range_deg": [
+          -119.99999999981692,
+          154.99999999993065
+        ],
+        "deg_per_count": 0.02
+      },
+      {
+        "variable": "rb100_j4_target",
+        "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_4",
+        "joint_id": 56,
+        "current_deg": 77.84,
+        "range_deg": [
+          -349.9999999999912,
+          349.9999999999912
+        ],
+        "deg_per_count": 0.02
+      },
+      {
+        "variable": "rb100_j5_target",
+        "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_5",
+        "joint_id": 57,
+        "current_deg": -66.737,
+        "range_deg": [
+          -122.49999999982504,
+          122.49999999982504
+        ],
+        "deg_per_count": 0.02
+      },
+      {
+        "variable": "rb100_j6_target",
+        "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_6",
+        "joint_id": 58,
+        "current_deg": 96.681,
+        "range_deg": [
+          -349.9999999999912,
+          349.9999999999912
+        ],
+        "deg_per_count": 0.02
+      }
+    ]
+  }
+}

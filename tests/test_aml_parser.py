@@ -12,6 +12,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import jsonschema
+
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
@@ -27,7 +29,7 @@ class TestBaseline:
         assert problems == []
         assert model["station"] == "Motion3AxisStation"
         assert len(model["devices"]) == 4          # gantry + 三轴
-        assert len(model["io_points"]) == 24
+        assert len(model["io_points"]) == 31   # 2026-09-23 删测试残留 inject_fault（-1）
         assert [a["axis"] for a in model["kinematics"]["axes"]] == ["x_axis", "y_axis", "z_axis"]
 
     def test_io_dir_type_counts_match_spec(self):
@@ -48,13 +50,48 @@ class TestBaseline:
                             "a": "Motion3AxisStation/gantry#x_mount",
                             "b": "Motion3AxisStation/gantry/x_axis#mech_flange"}
 
+    def test_device_model_schema_valid(self):
+        # device_model v1.1.0-draft.1：双基准 AML 解析产物须过 Schema
+        schema = json.loads((REPO / "schemas" / "device_model.schema.json").read_text(encoding="utf-8"))
+        for src in (AML, PLOTTER_AML):
+            model, _ = parse_aml(src)
+            jsonschema.validate(model, schema)
+
     def test_axis_params_match_plc_interp(self):
-        # 运动学参数取自 motion3axis.xml 的 INTERP 实例参数（VMAX/ACCEL/POSWIN）
-        model, _ = parse_aml(AML)
+        # 运动学参数取自 motion3axis.xml 的 v4.0 实例参数（limits/defaults/POSWIN，
+        # device_model v1.1 分层——生成方案 §6.1，2026-09-15 RFC）
+        model, problems = parse_aml(AML)
         x = model["kinematics"]["axes"][0]
         assert x["type"] == "linear" and x["stroke"] == [0.0, 100.0]
-        assert x["vmax"] == 40.0 and x["accel"] == 80.0 and x["poswin"] == 2.0
+        assert x["limits"] == {"vmax": 40.0, "accel": 80.0}
+        # AML 未显式声明 defaults → 回退 limits 同值（deceleration 回退 accel，
+        # 与种子 MC 调用 40/80/80 逐字吻合）
+        assert x["defaults"] == {"velocity": 40.0, "acceleration": 80.0, "deceleration": 80.0}
+        assert x["poswin"] == 2.0
+        assert x["io"] == {"fb": "x_fb", "sp": "x_sp", "sw": "x_sw", "v": "x_v",
+                           "rel_d": "rel_x_d", "err_id": "x_err_id"}
+        assert problems == []
         assert model["devices"][1]["electrical"] == {"voltage": 24.0, "power": 400.0}
+
+    def test_axis_io_roles_plotter_optional(self):
+        # plotter 基准：fb/sp/sw/v 必需角色齐备，rel_d/err_id 可选角色缺省省略
+        model, problems = parse_aml(PLOTTER_AML)
+        assert problems == []
+        z = {a["axis"]: a for a in model["kinematics"]["axes"]}["z_axis"]
+        assert z["io"] == {"fb": "z_fb", "sp": "z_sp", "sw": "z_sw", "v": "z_v"}
+        assert z["limits"] == {"vmax": 20.0, "accel": 60.0}
+        assert z["defaults"] == {"velocity": 20.0, "acceleration": 60.0, "deceleration": 60.0}
+
+    def test_axis_io_missing_required_role(self):
+        # 必需角色缺失 → problems 记录（不猜）+ io 置 None；可选角色缺失仅省略
+        aml = (REPO / "examples" / "aml" / "motion3axis_station.aml").read_text(encoding="utf-8")
+        broken = aml.replace('Name="x_fb"', 'Name="x_fbX"')  # fb 角色推断失败
+        model, problems = parse_aml(broken)
+        assert any("缺必需 io 通道 x_fb" in p and "role=fb" in p for p in problems)
+        x = {a["axis"]: a for a in model["kinematics"]["axes"]}["x_axis"]
+        assert x["io"] is None
+        y = {a["axis"]: a for a in model["kinematics"]["axes"]}["y_axis"]
+        assert y["io"]["fb"] == "y_fb"
 
 
 class TestIOListPrefill:
@@ -66,7 +103,7 @@ class TestIOListPrefill:
         io_items, pending = build_io_list(model)
         assert pending == []
         by_name = {i["name"]: i for i in io_items}
-        assert len(by_name) == len(SPEC["io_list"]) == 24
+        assert len(by_name) == len(SPEC["io_list"]) == 31
         for item in SPEC["io_list"]:
             got = by_name[item["name"]]
             assert got["dir"] == item["dir"] and got["type"] == item["type"]
@@ -77,9 +114,10 @@ class TestIOListPrefill:
     def test_int_without_range_goes_pending(self):
         # INT 缺量程：预填仍产出条目（range=None），pending 提示须补充——LLM/人工补全对象
         model, _ = parse_aml(AML)
-        model["io_points"][12]["range"] = None     # x_fb
+        idx_fb = next(i for i, p in enumerate(model["io_points"]) if p["name"] == "x_fb")
+        model["io_points"][idx_fb]["range"] = None
         io_items, pending = build_io_list(model)
-        assert io_items[12]["range"] is None
+        assert io_items[idx_fb]["range"] is None
         assert any("x_fb" in note and "量程" in note for note in pending)
 
 
@@ -193,4 +231,60 @@ class TestCLI:
             capture_output=True, text=True, encoding="utf-8", errors="replace")
         assert proc.returncode == 0, proc.stderr
         items = json.loads(proc.stdout)
-        assert len(items) == 24 and items[0]["name"] == "run"
+        assert len(items) == 31 and items[0]["name"] == "run"
+
+
+# ---------------- 三轴绘图仪示例（IEC 62714/CAEX 3.0 全结构） ----------------
+
+PLOTTER_AML = REPO / "examples" / "aml" / "plotter3axis_station.aml"
+PLOTTER_SPEC = json.loads((REPO / "examples" / "specs" / "plotter3axis.spec.json")
+                          .read_text(encoding="utf-8"))
+
+
+class TestPlotterStation:
+    """标准结构 AML：io_list 唯一来源 = PLC 通道接口；拓扑含电气接线。"""
+
+    def test_parse_clean(self):
+        model, problems = parse_aml(PLOTTER_AML)
+        assert problems == []
+        assert model["source"]["caex_schema_version"] == "3.0"
+        assert model["station"] == "PlotterCell"
+        assert len(model["io_points"]) == 26
+        assert all(p["address"] for p in model["io_points"])
+
+    def test_io_list_prefill_matches_frozen_spec(self):
+        """⓪→① 契约：预填与冻结 spec 的 io_list 逐字段等价（按名对齐）。"""
+        model, _ = parse_aml(PLOTTER_AML)
+        io_items, pending = build_io_list(model)
+        assert pending == []
+        by_name = {i["name"]: i for i in PLOTTER_SPEC["io_list"]}
+        assert len(by_name) == len(io_items) == 26
+        for item in io_items:
+            spec_item = by_name[item["name"]]
+            for key in ("dir", "type", "range"):
+                assert item[key] == spec_item[key], (item["name"], key)
+            assert item.get("unit") == spec_item.get("unit")
+
+    def test_kinematics_and_topology(self):
+        model, _ = parse_aml(PLOTTER_AML)
+        axes = {a["axis"]: a for a in model["kinematics"]["axes"]}
+        assert set(axes) == {"x_axis", "y_axis", "z_axis"}
+        assert axes["z_axis"]["stroke"] == [0.0, 10.0]      # 笔轴短行程
+        assert axes["z_axis"]["limits"]["vmax"] == 20.0
+        links = model["topology"]["links"]
+        elec = [l for l in links if l["name"].startswith("wire_")]
+        assert len(elec) == 26                               # 通道↔现场元件 全接线
+        mech = [l for l in links if l["name"].startswith("mount_")]
+        assert len(mech) == 4
+        # 电气接线两端必须分别是 PLC 通道与现场连接器
+        for l in elec:
+            a_plc = "ControlCabinet/PLC" in l["a"]
+            b_plc = "ControlCabinet/PLC" in l["b"]
+            assert a_plc ^ b_plc, l
+
+    def test_class_libraries_do_not_pollute_io(self):
+        """InterfaceClassLib/SystemUnitClassLib 定义不参与 io_list（仅通道接口计入）。"""
+        model, problems = parse_aml(PLOTTER_AML)
+        assert problems == []
+        names = {p["name"] for p in model["io_points"]}
+        assert "DigitalInput" not in names and "Flange" not in names

@@ -8,7 +8,8 @@ AutomationML（IEC 62714 / CAEX）解析器 —— 架构 v2.0 的 ⓪ 模块（
   2. ExternalInterface（RefBaseClassPath 含 input/output）→ IO 点位 → requirement_spec.io_list；
   3. SystemUnitClass（RefBaseSystemUnitPath）→ 设备类型；Attribute → 设备参数；
   4. 运动学属性（axis_type/stroke_min/stroke_max/vmax/accel/...）→ 轴对象
-     （linear / rotary_modulo / rotary_finite）；
+     （linear / rotary_modulo / rotary_finite）；v1.1 起 limits/defaults 分层 +
+     io 通道角色绑定（生成方案 §6.1，2026-09-15 RFC 通过）；
   5. device_model.json 是 ① 的结构化锚点——io_list 初始值由 build_io_list() 填充，
      LLM 只做校验与补充，不从零猜测设备结构。
 
@@ -34,7 +35,7 @@ from pathlib import Path
 
 from .spec_validator import IDENT_RE
 
-DEVICE_MODEL_VERSION = "1.0.0-draft.1"
+DEVICE_MODEL_VERSION = "1.1.0-draft.1"
 
 # 运动学轴类型封闭集（主方案 §3.0；与 lx《运动控制代码生成方案》的三类轴一致）
 AXIS_TYPES = {"linear", "rotary_modulo", "rotary_finite"}
@@ -240,9 +241,54 @@ def _resolve_links(ctx):
     return links
 
 
+# 轴 io 角色绑定（生成方案 §6.1，device_model v1.1）：role → 通道名模式。
+# rel_d 为 rel 前置命名（与 v4.0 已验收实名 rel_x_d/rel_y_d/rel_z_d 一致，
+# 2026-09-15 RFC 修订）；必需角色缺失记 problems 且 io 置 None（不猜）。
+AXIS_IO_ROLES = (
+    ("fb", "%s_fb", True),
+    ("sp", "%s_sp", True),
+    ("sw", "%s_sw", True),
+    ("v", "%s_v", True),
+    ("rel_d", "rel_%s_d", False),
+    ("err_id", "%s_err_id", False),
+)
+
+
+def _short_axis_name(name):
+    """设备名去 _axis 后缀得短名 a（§6.1 role 推断用）。"""
+    return name[:-len("_axis")] if name.endswith("_axis") else name
+
+
+def _bind_axis_io(axis_name, short, io_names, problems, drive_model="internal402"):
+    """按命名规则在 io_points 名集中绑定通道角色（确定性，非 LLM）。
+
+    返回 io dict；任一必需角色缺失时返回 None（problems 已记，展开器/②b
+    不得对该轴做轴派生生成），可选角色缺失仅省略该键。
+    """
+    io = {}
+    missing = False
+    roles = (("fb", "%s_fb", True), ("cmd", "%s_cmd", True),
+             ("sw", "%s_sw", False)) if drive_model == "csp" else AXIS_IO_ROLES
+    for role, fmt, required in roles:
+        var = fmt % short
+        if var in io_names:
+            io[role] = var
+        elif required:
+            missing = True
+            problems.append("axis[%s]: 缺必需 io 通道 %s（role=%s，生成方案 §6.1）"
+                            % (axis_name, var, role))
+    return None if missing else io
+
+
 def _extract_axes(ctx):
-    """运动学属性 → 轴对象（主方案 §3.0 要点 4）。axis_type 必须显式声明。"""
-    axes = []
+    """运动学属性 → 轴对象（生成方案 §6.1，device_model v1.1）。axis_type 必须显式声明。
+
+    v1.1 分层（RFC 2026-09-15 评审通过）：limits=物理限幅（展开期校验
+    defaults ≤ limits；v4.0 INTERP 为命令级动力学、无 VMAX，limits 不接线）；
+    defaults=MC 调用缺省动力学（AML 显式声明优先，未声明回退 limits 同值，
+    deceleration 回退 accel——确定性规则非猜测）；io=通道角色绑定。
+    """
+    axes, seen_short = [], {}
     for dev in ctx["devices"]:
         params = dev["params"]
         axis_type = params.get("axis_type")
@@ -262,14 +308,38 @@ def _extract_axes(ctx):
             ctx["problems"].append("axis[%s]: stroke_min/stroke_max 必须是 min<max 的数值"
                                    % dev["name"])
             stroke = None
+        short = _short_axis_name(dev["name"])
+        if short in seen_short:
+            ctx["problems"].append("axis[%s]: 短名 %r 与 %s 冲突（io 角色推断无法区分）"
+                                   % (dev["name"], short, seen_short[short]))
+            io = None
+        else:
+            seen_short[short] = dev["name"]
+            io = _bind_axis_io(dev["name"], short, ctx["io_names"], ctx["problems"],
+                               params.get("drive_model", "internal402"))
+        limits = {"vmax": params.get("vmax"), "accel": params.get("accel")}
+        defaults = {"velocity": params.get("velocity", limits["vmax"]),
+                    "acceleration": params.get("acceleration", limits["accel"]),
+                    "deceleration": params.get("deceleration", limits["accel"])}
         axes.append({"axis": dev["name"], "device": dev["path"], "type": axis_type,
                      "stroke": stroke, "unit": params.get("unit"),
-                     "vmax": params.get("vmax"), "accel": params.get("accel"),
-                     "poswin": params.get("poswin"), "wrap": params.get("wrap")})
+                     "limits": limits, "defaults": defaults,
+                     "poswin": params.get("poswin"), "wrap": params.get("wrap"),
+                     "io": io})
     return axes
 
 
 # ---------------- 对外入口 ----------------
+
+def _is_file_quiet(source) -> bool:
+    """Path.is_file() 的跨平台安全版：Linux pathlib 对超长字符串（内存 XML 被
+    误当路径探测）抛 OSError(ENAMETOOLONG)，Windows 则吞掉返回 False——统一按
+    非文件处理，走 <memory> 分支。"""
+    try:
+        return Path(source).is_file()
+    except OSError:
+        return False
+
 
 def parse_aml(source):
     """解析 AML 文件路径或 XML 文本。返回 (device_model, problems)。
@@ -277,7 +347,7 @@ def parse_aml(source):
     device_model 结构见 schemas/device_model.schema.json（gc 拥有）；problems 为空即
     通过，非空时模型仍尽量完整产出（best-effort），问题文本可直接进反馈包。
     """
-    if isinstance(source, (str, Path)) and Path(source).is_file():
+    if isinstance(source, (str, Path)) and _is_file_quiet(source):
         text = Path(source).read_text(encoding="utf-8")
         display = Path(source).name
         from_file = True
@@ -333,16 +403,33 @@ def build_io_list(model):
 
     返回 (io_items, pending)：io_items 可直接作为 spec 的 io_list 草稿（LLM 校验/
     补充的对象）；pending 列出尚不可通过契约校验、必须补充的条目（如 INT 缺量程）。
-    """
+    PLC 侧地址（%QXn.m/%QWn）随条目透传——spec 自足，②a 不回读 AML（分层，
+    2026-09-22 负责人指令）。"""
     io_items, pending = [], []
     for point in model.get("io_points", []):
         item = {"name": point["name"], "dir": point["dir"], "type": point["type"],
                 "range": point["range"],
                 "device": point["signal"] or "%s#%s" % (point["device"], point["name"])}
+        if point.get("address") is not None:
+            item["address"] = point["address"]
         if point.get("unit") is not None:
             item["unit"] = point["unit"]
         if point["type"] == "INT" and point["range"] is None:
-            pending.append("io[%s]: INT 缺量程 range（16 位寄存器域 [-32768,65535] 内，"
+            pending.append("io[%s]: INT 缺量程 range（须完整落入 [-32768,32767] 或 [0,65535] 之一，"
                            "供 io_map 定点换算）" % point["name"])
         io_items.append(item)
     return io_items, pending
+
+
+def build_axes(model):
+    """device_model.kinematics.axes → spec 顶层 axes 段（紧凑投影）。
+
+    生成 prompt 与 R8 对账同源消费——spec 自足（轴数/参数在合同里），
+    ① 组装后确定性注入，不依赖 LLM 抄写（分层，2026-09-22 负责人指令）。"""
+    out = []
+    for a in (model or {}).get("kinematics", {}).get("axes", []):
+        out.append({"axis": a.get("axis"), "type": a.get("type"),
+                    "stroke": a.get("stroke"), "unit": a.get("unit"),
+                    "limits": a.get("limits"), "defaults": a.get("defaults"),
+                    "poswin": a.get("poswin"), "io": a.get("io")})
+    return out

@@ -1,0 +1,29 @@
+{
+  "gate": "consistency",
+  "ok": false,
+  "errors": [
+    "R8: 轴 'z_axis' POSWIN 不一致——XML INTERP=2.0，AML=1.0（poswin 是 PLC 与判定引擎共用容差源，生成方案 §6.1）"
+  ],
+  "attribution": {
+    "gate": "consistency",
+    "errors": [
+      "R8: 轴 'z_axis' POSWIN 不一致——XML INTERP=2.0，AML=1.0（poswin 是 PLC 与判定引擎共用容差源，生成方案 §6.1）"
+    ],
+    "pitfalls": [],
+    "similar_fixes": [],
+    "repair_hints": [
+      "检查 z_axis POSWIN 的唯一配置来源，确认 §6.1 中定义的共用容差值后，将 XML INTERP 和 AML 同时改为该值。",
+      "修复生成逻辑，确保 POSWIN 这类共用容差参数不允许在 XML 和 AML 中独立赋值，必须从同一数据源派生。",
+      "在 consistency 闸门中补充跨文件校验规则：同一轴的 POSWIN/INTERP 值在 XML 与 AML 中必须完全一致，含单位和精度比较。"
+    ],
+    "llm_diagnosis": {
+      "root_cause": "代码问题：生成产物中 z_axis 的 POSWIN 在 XML 与 AML 两个文件里分别输出为 2.0 和 1.0，未按方案 §6.1 从 PLC 与判定引擎共用容差源统一取值。",
+      "repair_hints": [
+        "检查 z_axis POSWIN 的唯一配置来源，确认 §6.1 中定义的共用容差值后，将 XML INTERP 和 AML 同时改为该值。",
+        "修复生成逻辑，确保 POSWIN 这类共用容差参数不允许在 XML 和 AML 中独立赋值，必须从同一数据源派生。",
+        "在 consistency 闸门中补充跨文件校验规则：同一轴的 POSWIN/INTERP 值在 XML 与 AML 中必须完全一致，含单位和精度比较。"
+      ],
+      "advisory": true
+    }
+  }
+}

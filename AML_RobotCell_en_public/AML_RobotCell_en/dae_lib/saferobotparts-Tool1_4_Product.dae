@@ -1,0 +1,56 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<COLLADA version="1.5.0" xmlns="http://www.collada.org/2008/03/COLLADASchema">
+	<asset>
+		<contributor>
+			<author>AutomationML e.V.</author>
+			<author_website>www.automationml.org</author_website>
+			<authoring_tool>"Notepad++" "6.8.6" "6.8.6"</authoring_tool>
+		</contributor>
+		<created>2015-12-15T13:12:06.7153453+01:00</created>
+		<modified>2015-12-15T13:12:06.7153453+01:00</modified>
+		<unit meter="0.001" name="mm" />
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_nodes>
+		<node id="saferobotparts-Tool1_4" name="saferobotparts-Tool1_4">
+			<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+			<node id="saferobotparts-Tool1_4_Sphere1_1.1" name="Sphere1_1_4">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="Sphere1_1_4_Rep.dae#Sphere1_1_4_visual_scene_node" />
+			</node>
+			<node id="saferobotparts-Tool1_4_Sphere1_2.1" name="Sphere1_2_4">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="Sphere1_2_4_Rep.dae#Sphere1_2_4_visual_scene_node" />
+			</node>
+			<node id="saferobotparts-Tool1_4_Sphere1_3.1" name="Sphere1_3_4">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="Sphere1_3_4_Rep.dae#Sphere1_3_4_visual_scene_node" />
+			</node>
+			<node id="saferobotparts-Tool1_4_Sphere1_4.1" name="Sphere1_4_4">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="Sphere1_4_4_Rep.dae#Sphere1_4_4_visual_scene_node" />
+			</node>
+			<node id="saferobotparts-Tool1_4_Sphere1_5.1" name="Sphere1_5_4">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="Sphere1_5_4_Rep.dae#Sphere1_5_4_visual_scene_node" />
+			</node>
+			<node id="saferobotparts-Tool1_4_Sphere1_6.1" name="Sphere1_6_4">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="Sphere1_6_4_Rep.dae#Sphere1_6_4_visual_scene_node" />
+			</node>
+			<node name="AttachmentPoint_KRxxxRultra.6.1" sid="saferobotparts-Tool1_4_AttachmentPoint_KRxxxRultra.6.1">
+				<matrix>0 0 -1 -7.42772e-006 0 1 0 0.000218727 1 0 0 -10.0007 0 0 0 1</matrix>
+			</node>
+		</node>
+	</library_nodes>
+	<library_visual_scenes>
+		<visual_scene id="saferobotparts-Tool1_4_visual_scene">
+			<node id="saferobotparts-Tool1_4_visual_scene_node" name="saferobotparts-Tool1_4">
+				<instance_node url="#saferobotparts-Tool1_4" />
+			</node>
+		</visual_scene>
+	</library_visual_scenes>
+	<scene>
+		<instance_visual_scene url="#saferobotparts-Tool1_4_visual_scene" />
+	</scene>
+</COLLADA>

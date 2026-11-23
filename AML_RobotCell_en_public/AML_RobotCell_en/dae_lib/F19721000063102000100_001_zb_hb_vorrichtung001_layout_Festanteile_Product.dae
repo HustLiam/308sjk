@@ -1,0 +1,149 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<COLLADA version="1.5.0" xmlns="http://www.collada.org/2008/03/COLLADASchema">
+	<asset>
+		<contributor>
+			<author>AutomationML e.V.</author>
+			<author_website>www.automationml.org</author_website>
+			<authoring_tool>"Notepad++" "6.8.6" "6.8.6"</authoring_tool>
+		</contributor>
+		<created>2015-12-15T13:12:06.7153453+01:00</created>
+		<modified>2015-12-15T13:12:06.7153453+01:00</modified>
+		<unit meter="0.001" name="mm" />
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_nodes>
+		<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile" name="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile">
+			<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000154_001_zb_ub_verriegelung_54_fa.1" name="F19721000063102000154_001_zb_ub_verriegelung_54_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000154_001_zb_ub_verriegelung_54_fa_Rep.dae#F19721000063102000154_001_zb_ub_verriegelung_54_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000101_001_zb_hb_gestell_01_fa.1" name="F19721000063102000101_001_zb_hb_gestell_01_fa">
+				<matrix>1 0 0 -1365 0 1 0 0.000183105 0 0 1 -1795 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000101_001_zb_hb_gestell_01_fa_Rep.dae#F19721000063102000101_001_zb_hb_gestell_01_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000111_001_zb_ub_stiftzieher_11_fa.1" name="F19721000063102000111_001_zb_ub_stiftzieher_11_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000111_001_zb_ub_stiftzieher_11_fa_Rep.dae#F19721000063102000111_001_zb_ub_stiftzieher_11_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000112_001_sym_of_zb_ub_stiftzieher_11_fa.1" name="F19721000063102000112_001_sym_of_zb_ub_stiftzieher_11_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000112_001_sym_of_zb_ub_stiftzieher_11_fa_Rep.dae#F19721000063102000112_001_sym_of_zb_ub_stiftzieher_11_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000113_001_zb_ub_stiftzieher_13_fa.1" name="F19721000063102000113_001_zb_ub_stiftzieher_13_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000113_001_zb_ub_stiftzieher_13_fa_Rep.dae#F19721000063102000113_001_zb_ub_stiftzieher_13_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000115_001_zb_ub_stiftzieher_15_fa.1" name="F19721000063102000115_001_zb_ub_stiftzieher_15_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000115_001_zb_ub_stiftzieher_15_fa_Rep.dae#F19721000063102000115_001_zb_ub_stiftzieher_15_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000117_001_zb_ub_stiftzieher_17_fa.1" name="F19721000063102000117_001_zb_ub_stiftzieher_17_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000117_001_zb_ub_stiftzieher_17_fa_Rep.dae#F19721000063102000117_001_zb_ub_stiftzieher_17_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000121_001_zb_ub_auflage_21_fa.1" name="F19721000063102000121_001_zb_ub_auflage_21_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000121_001_zb_ub_auflage_21_fa_Rep.dae#F19721000063102000121_001_zb_ub_auflage_21_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000122_001_zb_ub_auflage_22_fa.1" name="F19721000063102000122_001_zb_ub_auflage_22_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000122_001_zb_ub_auflage_22_fa_Rep.dae#F19721000063102000122_001_zb_ub_auflage_22_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000123_001_zb_ub_auflage_23_fa.1" name="F19721000063102000123_001_zb_ub_auflage_23_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000123_001_zb_ub_auflage_23_fa_Rep.dae#F19721000063102000123_001_zb_ub_auflage_23_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000124_001_sym_of_zb_ub_auflage_23_fa.1" name="F19721000063102000124_001_sym_of_zb_ub_auflage_23_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000124_001_sym_of_zb_ub_auflage_23_fa_Rep.dae#F19721000063102000124_001_sym_of_zb_ub_auflage_23_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000125_001_zb_ub_auflage_25_fa.1" name="F19721000063102000125_001_zb_ub_auflage_25_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000125_001_zb_ub_auflage_25_fa_Rep.dae#F19721000063102000125_001_zb_ub_auflage_25_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000126_001_sym_of_zb_ub_auflage_25_fa.1" name="F19721000063102000126_001_sym_of_zb_ub_auflage_25_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000126_001_sym_of_zb_ub_auflage_25_fa_Rep.dae#F19721000063102000126_001_sym_of_zb_ub_auflage_25_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000127_001_zb_ub_auflage_27_fa.1" name="F19721000063102000127_001_zb_ub_auflage_27_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000127_001_zb_ub_auflage_27_fa_Rep.dae#F19721000063102000127_001_zb_ub_auflage_27_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000128_001_zb_ub_auflage_28_fa.1" name="F19721000063102000128_001_zb_ub_auflage_28_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000128_001_zb_ub_auflage_28_fa_Rep.dae#F19721000063102000128_001_zb_ub_auflage_28_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000129_001_zb_ub_auflage_29_fa.1" name="F19721000063102000129_001_zb_ub_auflage_29_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000129_001_zb_ub_auflage_29_fa_Rep.dae#F19721000063102000129_001_zb_ub_auflage_29_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000130_001_zb_ub_auflage_30_fa.1" name="F19721000063102000130_001_zb_ub_auflage_30_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000130_001_zb_ub_auflage_30_fa_Rep.dae#F19721000063102000130_001_zb_ub_auflage_30_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000131_001_zb_ub_auflage_31_fa.1" name="F19721000063102000131_001_zb_ub_auflage_31_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000131_001_zb_ub_auflage_31_fa_Rep.dae#F19721000063102000131_001_zb_ub_auflage_31_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000133_001_zb_ub_auflage_33_fa.1" name="F19721000063102000133_001_zb_ub_auflage_33_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000133_001_zb_ub_auflage_33_fa_Rep.dae#F19721000063102000133_001_zb_ub_auflage_33_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000134_001_sym_of_zb_ub_auflage_33_fa.1" name="F19721000063102000134_001_sym_of_zb_ub_auflage_33_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000134_001_sym_of_zb_ub_auflage_33_fa_Rep.dae#F19721000063102000134_001_sym_of_zb_ub_auflage_33_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000135_001_zb_ub_auflage_35_fa.1" name="F19721000063102000135_001_zb_ub_auflage_35_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000135_001_zb_ub_auflage_35_fa_Rep.dae#F19721000063102000135_001_zb_ub_auflage_35_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000136_001_zb_ub_auflage_36_fa.1" name="F19721000063102000136_001_zb_ub_auflage_36_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000136_001_zb_ub_auflage_36_fa_Rep.dae#F19721000063102000136_001_zb_ub_auflage_36_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000137_001_zb_ub_auflage_37_fa.1" name="F19721000063102000137_001_zb_ub_auflage_37_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000137_001_zb_ub_auflage_37_fa_Rep.dae#F19721000063102000137_001_zb_ub_auflage_37_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000138_001_sym_of_zb_ub_auflage_37_fa.1" name="F19721000063102000138_001_sym_of_zb_ub_auflage_37_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000138_001_sym_of_zb_ub_auflage_37_fa_Rep.dae#F19721000063102000138_001_sym_of_zb_ub_auflage_37_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000139_001_sym_of_zb_ub_auflage_39_fa.1" name="F19721000063102000139_001_sym_of_zb_ub_auflage_39_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000139_001_sym_of_zb_ub_auflage_39_fa_Rep.dae#F19721000063102000139_001_sym_of_zb_ub_auflage_39_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000139_001_zb_ub_auflage_39_fa.1" name="F19721000063102000139_001_zb_ub_auflage_39_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000139_001_zb_ub_auflage_39_fa_Rep.dae#F19721000063102000139_001_zb_ub_auflage_39_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000141_001_zb_ub_auflage_41_fa.1" name="F19721000063102000141_001_zb_ub_auflage_41_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000141_001_zb_ub_auflage_41_fa_Rep.dae#F19721000063102000141_001_zb_ub_auflage_41_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000142_001_zb_ub_auflage_42_fa.1" name="F19721000063102000142_001_zb_ub_auflage_42_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000142_001_zb_ub_auflage_42_fa_Rep.dae#F19721000063102000142_001_zb_ub_auflage_42_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000151_001_zb_hb_antrieb_51_fa.1" name="F19721000063102000151_001_zb_hb_antrieb_51_fa">
+				<matrix>1 0 0 -1365 0 1 0 0.000183105 0 0 1 -1795 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000151_001_zb_hb_antrieb_51_fa_Rep.dae#F19721000063102000151_001_zb_hb_antrieb_51_fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_F19721000063102000153_001_zb_ub_verriegelung_53_fa.1" name="F19721000063102000153_001_zb_ub_verriegelung_53_fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000153_001_zb_ub_verriegelung_53_fa_Rep.dae#F19721000063102000153_001_zb_ub_verriegelung_53_fa_visual_scene_node" />
+			</node>
+		</node>
+	</library_nodes>
+	<library_visual_scenes>
+		<visual_scene id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_visual_scene">
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_visual_scene_node" name="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile">
+				<instance_node url="#F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile" />
+			</node>
+		</visual_scene>
+	</library_visual_scenes>
+	<scene>
+		<instance_visual_scene url="#F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_visual_scene" />
+	</scene>
+</COLLADA>

@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<COLLADA version="1.5.0" xmlns="http://www.collada.org/2008/03/COLLADASchema">
+	<asset>
+		<contributor>
+			<author>AutomationML e.V.</author>
+			<author_website>www.automationml.org</author_website>
+			<authoring_tool>"Notepad++" "6.8.6" "6.8.6"</authoring_tool>
+		</contributor>
+		<created>2015-12-15T13:12:06.7153453+01:00</created>
+		<modified>2015-12-15T13:12:06.7153453+01:00</modified>
+		<unit meter="0.001" name="mm" />
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_nodes>
+		<node id="F19721000063102000115_001_zb_ub_stiftzieher_11" name="F19721000063102000115_001_zb_ub_stiftzieher_11">
+			<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+			<node id="F19721000063102000115_001_zb_ub_stiftzieher_11_F19721000063102000111_001_zb_ub_stiftzieher_11_ba.1" name="F19721000063102000111_001_zb_ub_stiftzieher_11_ba">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000111_001_zb_ub_stiftzieher_11_ba_Rep.dae#F19721000063102000111_001_zb_ub_stiftzieher_11_ba_visual_scene_node" />
+			</node>
+		</node>
+	</library_nodes>
+	<library_visual_scenes>
+		<visual_scene id="F19721000063102000115_001_zb_ub_stiftzieher_11_visual_scene">
+			<node id="F19721000063102000115_001_zb_ub_stiftzieher_11_visual_scene_node" name="F19721000063102000115_001_zb_ub_stiftzieher_11">
+				<instance_node url="#F19721000063102000115_001_zb_ub_stiftzieher_11" />
+			</node>
+		</visual_scene>
+	</library_visual_scenes>
+	<scene>
+		<instance_visual_scene url="#F19721000063102000115_001_zb_ub_stiftzieher_11_visual_scene" />
+	</scene>
+</COLLADA>

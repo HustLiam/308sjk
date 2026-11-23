@@ -1,0 +1,21 @@
+{
+  "format": "308sjk.component_rule/0.1-draft",
+  "component_type": "HollowBracket",
+  "version": "0.1.0",
+  "parameter_bounds": {"width_m": [0.2, 0.4], "depth_m": [0.1, 0.2], "height_m": [0.1, 0.3], "wall_m": [0.005, 0.02]},
+  "assumptions": ["Static bracket. Four box collision proxies preserve the through-channel; no material strength model."],
+  "unresolved": [],
+  "model": {
+    "behavior": "none",
+    "geoms": [
+      {"name": "left", "type": "box", "size": ["=wall_m/2", "=depth_m/2", "=height_m/2"], "pos": ["=-width_m/2+wall_m/2", 0, 0]},
+      {"name": "right", "type": "box", "size": ["=wall_m/2", "=depth_m/2", "=height_m/2"], "pos": ["=width_m/2-wall_m/2", 0, 0]},
+      {"name": "top", "type": "box", "size": ["=width_m/2-wall_m", "=depth_m/2", "=wall_m/2"], "pos": [0, 0, "=height_m/2-wall_m/2"]},
+      {"name": "bottom", "type": "box", "size": ["=width_m/2-wall_m", "=depth_m/2", "=wall_m/2"], "pos": [0, 0, "=-height_m/2+wall_m/2"]}
+    ],
+    "blender_bodies": [{"body": "root", "name": "visual", "type": "mesh", "mesh": "geometry/bodies/root.obj", "collision": false}],
+    "physical_parameters": {},
+    "interfaces": [{"name": "mount", "position_m": [0, 0, 0]}]
+  },
+  "blender_script": "def build(params, api):\n    w = params['width_m']\n    d = params['depth_m']\n    h = params['height_m']\n    t = params['wall_m']\n    outer = api.box('outer', [w, d, h])\n    cutter = api.box('channel', [w-2*t, d+0.02, h-2*t])\n    api.difference(outer, cutter)\n    api.body('root', [outer], [0,0,0], [\n        {'type':'box','size':[t/2,d/2,h/2],'pos':[-w/2+t/2,0,0]},\n        {'type':'box','size':[t/2,d/2,h/2],'pos':[w/2-t/2,0,0]},\n        {'type':'box','size':[w/2-t,d/2,t/2],'pos':[0,0,h/2-t/2]},\n        {'type':'box','size':[w/2-t,d/2,t/2],'pos':[0,0,-h/2+t/2]}])\n    api.clearance_probe('root', [0,0,0])\n"
+}

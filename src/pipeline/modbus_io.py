@@ -8,7 +8,7 @@ Modbus 安全 IO 层（OpenPLC 怪癖适配）。
 %QX0.3 会把 %QX1.0 的电机自锁打掉）。读-改-写整组线圈（fc15 覆盖完整跨度）
 则完全正常。
 
-本模块把这一怪癖封装掉：所有线圈写入一律 RMW 整组；未来的 Isaac Sim 桥接
+本模块把这一怪癖封装掉：所有线圈写入一律 RMW 整组；未来的仿真桥接
 必须经由此层访问线圈，禁止裸 write_coil/write_coils(窄范围)。
 """
 
@@ -34,7 +34,9 @@ class SafeCoilIO:
         base = (bit // self.span) * self.span
         cur = [bool(b) for b in self._read(base, self.span).bits[:self.span]]
         cur[bit - base] = bool(value)
-        self.c.write_coils(address=base, values=cur)
+        response = self.c.write_coils(address=base, values=cur)
+        if response is None or response.isError():
+            raise RuntimeError("Modbus 线圈写入失败：%s" % response)
 
     def pulse(self, bit, seconds=0.15):
         """打一个脉冲：置位 -> 保持 -> 复位（用于模拟按钮/光电信号）。"""
@@ -46,9 +48,12 @@ class SafeCoilIO:
 
     def _read(self, address, count=1):
         try:
-            return self.c.read_coils(address=address, count=count)
+            response = self.c.read_coils(address=address, count=count)
         except TypeError:  # pymodbus 2.x
-            return self.c.read_coils(address, count)
+            response = self.c.read_coils(address, count)
+        if response is None or response.isError():
+            raise RuntimeError("Modbus 线圈读取失败：%s" % response)
+        return response
 
 
 def read_reg(client, reg):
@@ -85,7 +90,13 @@ def zero_regs(client, *regs):
         client.write_register(address=r, value=0)
 
 
-def connect(host="127.0.0.1", port=502):
+def connect(host=None, port=None):
+    """连接 Modbus 服务端。缺省从环境变量 MODBUS_HOST/MODBUS_PORT 读取，
+    再缺省 127.0.0.1:502（与 serve.py 的 env 约定一致——运行时跑在
+    VM/远程机时无需改任何调用方）。"""
+    import os
+    host = host or os.environ.get("MODBUS_HOST", "127.0.0.1")
+    port = port or int(os.environ.get("MODBUS_PORT", "502"))
     c = ModbusTcpClient(host, port=port)
     if not c.connect():
         raise ConnectionError("无法连接 Modbus %s:%d" % (host, port))

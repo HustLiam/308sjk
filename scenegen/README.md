@@ -72,13 +72,13 @@ gc 侧生成器对接点：`scenegen/validate.py: validate(spec)` 返回结构�
 直线轴 + 笔针，q=0..travel，Z 行程末端笔尖触台面）/ `articular_arm`（引用外部 USD）
 
 > 现役场景只用 `gantry_xyz`（三轴绘图仪）；其余组件为 csk 文档 §4.3 首批清单的
-> 预置能力，按后续场景需要启用。
+> 预置功能，按后续场景需要启用。
 
 每个组件在 `components.py` 的 `REGISTRY` 注册四件事：quantity 清单（名称/方向/类型）、
 参数规则（区间与枚举）、USD 构建函数、局部包围盒。新增组件 = 新增一个注册项，
 Schema 的封闭枚举随即生效，校验器与构建器无需改动。
 
-## 与闭环其他模块的边界
+## 与系统内其他模块的边界
 
 - 输入：`requirement_spec.json`（①，io_list 为 IO 单一源头）→ gc 侧 LLM 生成
   `scene.spec.json`（②b LLM 本体，本侧评审）；

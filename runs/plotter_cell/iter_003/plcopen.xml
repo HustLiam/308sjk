@@ -1,0 +1,760 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0201" xmlns:html="http://www.w3.org/1999/xhtml">
+  <fileHeader companyName="" productName="PLCCodegen" productVersion="1.0" creationDateTime="2026-01-01T00:00:00" />
+  <contentHeader name="plotter_cell" modificationDateTime="2026-01-01T00:00:00" />
+  <types>
+    <dataTypes />
+    <pous>
+      <pou name="INTERP" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="fire"><type><BOOL /></type></variable>
+            <variable name="pos_target"><type><INT /></type></variable>
+            <variable name="hold_req"><type><BOOL /></type></variable>
+            <variable name="vel_req"><type><REAL /></type></variable>
+            <variable name="acc_req"><type><REAL /></type></variable>
+            <variable name="dec_req"><type><REAL /></type></variable>
+          </inputVars>
+          <outputVars>
+            <variable name="Setpoint"><type><INT /></type></variable>
+            <variable name="Busy"><type><BOOL /></type></variable>
+            <variable name="Done"><type><BOOL /></type></variable>
+            <variable name="Aborted"><type><BOOL /></type></variable>
+          </outputVars>
+          <localVars>
+            <variable name="edge_ir"><type><BOOL /></type></variable>
+            <variable name="pos"><type><REAL /></type><initialValue><simpleValue value="0.0" /></initialValue></variable>
+            <variable name="vel"><type><REAL /></type><initialValue><simpleValue value="0.0" /></initialValue></variable>
+            <variable name="tgt"><type><REAL /></type><initialValue><simpleValue value="0.0" /></initialValue></variable>
+            <variable name="dist"><type><REAL /></type><initialValue><simpleValue value="0.0" /></initialValue></variable>
+            <variable name="stop_d"><type><REAL /></type><initialValue><simpleValue value="0.0" /></initialValue></variable>
+            <variable name="SCAN_T"><type><REAL /></type><initialValue><simpleValue value="0.02" /></initialValue></variable>
+            <variable name="POSWIN"><type><REAL /></type><initialValue><simpleValue value="2.0" /></initialValue></variable>
+          </localVars>
+        </interface>
+        <body><ST><html:p>IF fire AND NOT edge_ir THEN
+    IF pos_target &gt; 100 OR pos_target &lt; 0 THEN
+        Done := TRUE;
+    ELSE
+        tgt := INT_TO_REAL(pos_target);
+        Busy := TRUE; Done := FALSE; Aborted := FALSE;
+    END_IF;
+ELSIF fire AND NOT Busy AND (ABS(INT_TO_REAL(pos_target) - tgt) &gt; 0.499) THEN
+    tgt := INT_TO_REAL(pos_target);
+    Busy := TRUE; Done := FALSE; Aborted := FALSE;
+END_IF;
+edge_ir := fire;
+
+IF hold_req THEN
+    IF vel &gt; 0.0 THEN vel := MAX(0.0, vel - dec_req * SCAN_T);
+    ELSIF vel &lt; 0.0 THEN vel := MIN(0.0, vel + dec_req * SCAN_T);
+    END_IF;
+    IF vel = 0.0 AND Busy THEN
+        Busy := FALSE; Done := FALSE; Aborted := TRUE;
+    END_IF;
+ELSIF Busy THEN
+    dist := tgt - pos;
+    stop_d := (vel * vel) / (2.0 * dec_req);
+    IF ABS(dist) &lt;= stop_d THEN
+        IF dist &gt;= 0.0 THEN vel := MAX(0.0, vel - dec_req * SCAN_T);
+        ELSE vel := MIN(0.0, vel + dec_req * SCAN_T);
+        END_IF;
+        IF vel = 0.0 AND ABS(dist) &lt;= POSWIN THEN
+            pos := tgt; Busy := FALSE; Done := TRUE; Aborted := FALSE;
+        END_IF;
+    ELSE
+        IF dist &gt; 0.0 THEN vel := MIN(vel_req, vel + acc_req * SCAN_T);
+        ELSE vel := MAX(-vel_req, vel - acc_req * SCAN_T);
+        END_IF;
+    END_IF;
+END_IF;
+
+pos := pos + vel * SCAN_T;
+Setpoint := REAL_TO_INT(pos);</html:p></ST></body>
+      </pou>
+      <pou name="INTERP_Z" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="fire"><type><BOOL /></type></variable>
+            <variable name="pos_target"><type><INT /></type></variable>
+            <variable name="hold_req"><type><BOOL /></type></variable>
+            <variable name="vel_req"><type><REAL /></type></variable>
+            <variable name="acc_req"><type><REAL /></type></variable>
+            <variable name="dec_req"><type><REAL /></type></variable>
+          </inputVars>
+          <outputVars>
+            <variable name="Setpoint"><type><INT /></type></variable>
+            <variable name="Busy"><type><BOOL /></type></variable>
+            <variable name="Done"><type><BOOL /></type></variable>
+            <variable name="Aborted"><type><BOOL /></type></variable>
+          </outputVars>
+          <localVars>
+            <variable name="edge_irz"><type><BOOL /></type></variable>
+            <variable name="posz"><type><REAL /></type><initialValue><simpleValue value="0.0" /></initialValue></variable>
+            <variable name="velz"><type><REAL /></type><initialValue><simpleValue value="0.0" /></initialValue></variable>
+            <variable name="tgtz"><type><REAL /></type><initialValue><simpleValue value="0.0" /></initialValue></variable>
+            <variable name="distz"><type><REAL /></type><initialValue><simpleValue value="0.0" /></initialValue></variable>
+            <variable name="stop_dz"><type><REAL /></type><initialValue><simpleValue value="0.0" /></initialValue></variable>
+            <variable name="SCAN_TZ"><type><REAL /></type><initialValue><simpleValue value="0.02" /></initialValue></variable>
+            <variable name="POSWINZ"><type><REAL /></type><initialValue><simpleValue value="1.0" /></initialValue></variable>
+          </localVars>
+        </interface>
+        <body><ST><html:p>IF fire AND NOT edge_irz THEN
+    IF pos_target &gt; 10 OR pos_target &lt; 0 THEN
+        Done := TRUE;
+    ELSE
+        tgtz := INT_TO_REAL(pos_target);
+        Busy := TRUE; Done := FALSE; Aborted := FALSE;
+    END_IF;
+ELSIF fire AND NOT Busy AND (ABS(INT_TO_REAL(pos_target) - tgtz) &gt; 0.499) THEN
+    tgtz := INT_TO_REAL(pos_target);
+    Busy := TRUE; Done := FALSE; Aborted := FALSE;
+END_IF;
+edge_irz := fire;
+
+IF hold_req THEN
+    IF velz &gt; 0.0 THEN velz := MAX(0.0, velz - dec_req * SCAN_TZ);
+    ELSIF velz &lt; 0.0 THEN velz := MIN(0.0, velz + dec_req * SCAN_TZ);
+    END_IF;
+    IF velz = 0.0 AND Busy THEN
+        Busy := FALSE; Done := FALSE; Aborted := TRUE;
+    END_IF;
+ELSIF Busy THEN
+    distz := tgtz - posz;
+    stop_dz := (velz * velz) / (2.0 * dec_req);
+    IF ABS(distz) &lt;= stop_dz THEN
+        IF distz &gt;= 0.0 THEN velz := MAX(0.0, velz - dec_req * SCAN_TZ);
+        ELSE velz := MIN(0.0, velz + dec_req * SCAN_TZ);
+        END_IF;
+        IF velz = 0.0 AND ABS(distz) &lt;= POSWINZ THEN
+            posz := tgtz; Busy := FALSE; Done := TRUE; Aborted := FALSE;
+        END_IF;
+    ELSE
+        IF distz &gt; 0.0 THEN velz := MIN(vel_req, velz + acc_req * SCAN_TZ);
+        ELSE velz := MAX(-vel_req, velz - acc_req * SCAN_TZ);
+        END_IF;
+    END_IF;
+END_IF;
+
+posz := posz + velz * SCAN_TZ;
+Setpoint := REAL_TO_INT(posz);</html:p></ST></body>
+      </pou>
+      <pou name="DRIVE402" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="cw"><type><WORD /></type></variable>
+            <variable name="Setpoint"><type><INT /></type></variable>
+            <variable name="pos_fb"><type><INT /></type></variable>
+          </inputVars>
+          <outputVars>
+            <variable name="sw"><type><WORD /></type></variable>
+            <variable name="v_cmd"><type><INT /></type></variable>
+          </outputVars>
+          <localVars>
+            <variable name="cmd"><type><WORD /></type></variable>
+            <variable name="state"><type><INT /></type><initialValue><simpleValue value="1" /></initialValue></variable>
+            <variable name="v_out"><type><REAL /></type><initialValue><simpleValue value="0.0" /></initialValue></variable>
+            <variable name="v_ff"><type><REAL /></type><initialValue><simpleValue value="0.0" /></initialValue></variable>
+            <variable name="pos_err"><type><REAL /></type><initialValue><simpleValue value="0.0" /></initialValue></variable>
+            <variable name="sp_prev"><type><INT /></type><initialValue><simpleValue value="0" /></initialValue></variable>
+            <variable name="KP"><type><REAL /></type><initialValue><simpleValue value="25.0" /></initialValue></variable>
+            <variable name="QS_DECEL"><type><REAL /></type><initialValue><simpleValue value="120.0" /></initialValue></variable>
+            <variable name="SCAN_T"><type><REAL /></type><initialValue><simpleValue value="0.02" /></initialValue></variable>
+          </localVars>
+        </interface>
+        <body><ST><html:p>cmd := cw AND 16#000F;
+
+IF state = 7 AND (cw AND 16#0080) &lt;&gt; 0 THEN
+    state := 1;
+END_IF;
+
+CASE state OF
+    1: IF cmd = 16#06 THEN state := 2; END_IF;
+    2: IF cmd = 16#07 THEN state := 3;
+       ELSIF cmd = 16#0F THEN state := 4;
+       ELSIF cmd = 16#00 THEN state := 1;
+       END_IF;
+    3: IF cmd = 16#0F THEN state := 4;
+       ELSIF cmd = 16#06 THEN state := 2;
+       ELSIF cmd = 16#00 THEN state := 1;
+       ELSIF cmd = 16#02 THEN state := 5;
+       END_IF;
+    4: IF cmd = 16#07 THEN state := 3;
+       ELSIF cmd = 16#06 THEN state := 2;
+       ELSIF cmd = 16#00 THEN state := 1;
+       ELSIF cmd = 16#02 THEN state := 5;
+       END_IF;
+    5: IF v_out = 0.0 THEN
+           IF cmd = 16#0F THEN state := 4;
+           ELSIF cmd = 16#06 THEN state := 2;
+           ELSIF cmd = 16#00 THEN state := 1;
+           END_IF;
+       END_IF;
+    6: IF v_out = 0.0 THEN state := 7; END_IF;
+END_CASE;
+
+IF state &gt;= 4 AND state &lt;= 6 THEN
+    v_ff := INT_TO_REAL(Setpoint - sp_prev) / SCAN_T;
+    pos_err := INT_TO_REAL(Setpoint) - INT_TO_REAL(pos_fb);
+    v_out := v_ff + KP * pos_err;
+    IF v_out &gt; 120.0 THEN v_out := 120.0; END_IF;
+    IF v_out &lt; -120.0 THEN v_out := -120.0; END_IF;
+    IF v_ff = 0.0 AND ABS(pos_err) &lt;= 1.5 THEN
+        v_out := 0.0;
+    END_IF;
+ELSIF state = 5 THEN
+    IF v_out &gt; 0.0 THEN v_out := MAX(0.0, v_out - QS_DECEL * SCAN_T);
+    ELSIF v_out &lt; 0.0 THEN v_out := MIN(0.0, v_out + QS_DECEL * SCAN_T);
+    END_IF;
+ELSE
+    v_out := 0.0;
+END_IF;
+
+sp_prev := Setpoint;
+v_cmd := REAL_TO_INT(v_out);
+
+sw := 0;
+CASE state OF
+    1: sw := 16#0040;
+    2: sw := 16#0031;
+    3: sw := 16#0033;
+    4: sw := 16#0037;
+    5: sw := 16#0014;
+    7: sw := 16#0018;
+END_CASE;
+IF state = 4 THEN
+    IF ABS(pos_err) &lt;= 2.0 AND v_ff = 0.0 THEN
+        sw := sw OR 16#0400;
+    END_IF;
+END_IF;</html:p></ST></body>
+      </pou>
+      <pou name="MC_POWER" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="Enable"><type><BOOL /></type></variable>
+            <variable name="EnablePositive"><type><BOOL /></type></variable>
+            <variable name="EnableNegative"><type><BOOL /></type></variable>
+          </inputVars>
+          <inOutVars>
+            <variable name="cw"><type><WORD /></type></variable>
+            <variable name="sw"><type><WORD /></type></variable>
+          </inOutVars>
+          <outputVars>
+            <variable name="Status"><type><BOOL /></type></variable>
+            <variable name="Busy"><type><BOOL /></type></variable>
+            <variable name="Error"><type><BOOL /></type></variable>
+          </outputVars>
+          <localVars>
+            <variable name="pstep"><type><INT /></type><initialValue><simpleValue value="0" /></initialValue></variable>
+          </localVars>
+        </interface>
+        <body><ST><html:p>IF Enable AND (EnablePositive OR EnableNegative) AND pstep = 4 AND (sw AND 16#0004) = 0 AND (sw AND 16#0008) = 0 THEN
+    pstep := 0;
+END_IF;
+IF Enable AND (EnablePositive OR EnableNegative) THEN
+    CASE pstep OF
+        0: cw := (cw AND 16#00F0) OR 16#0006;  pstep := 1;
+        1: IF (sw AND 16#0001) &lt;&gt; 0 THEN cw := (cw AND 16#00F0) OR 16#0007; pstep := 2; END_IF;
+        2: IF (sw AND 16#0002) &lt;&gt; 0 THEN cw := (cw AND 16#00F0) OR 16#000F; pstep := 3; END_IF;
+        3: IF (sw AND 16#0004) &lt;&gt; 0 THEN pstep := 4; END_IF;
+    END_CASE;
+ELSE
+    cw := (cw AND 16#00F0) OR 16#0006;
+    pstep := 0;
+END_IF;
+Status := (sw AND 16#0004) &lt;&gt; 0;
+Busy := Enable AND pstep &lt; 4;
+Error := (sw AND 16#0008) &lt;&gt; 0;</html:p></ST></body>
+      </pou>
+      <pou name="MC_MOVEABSOLUTE" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="fire"><type><BOOL /></type></variable>
+            <variable name="Position"><type><INT /></type></variable>
+            <variable name="Velocity"><type><REAL /></type></variable>
+            <variable name="Acceleration"><type><REAL /></type></variable>
+            <variable name="Deceleration"><type><REAL /></type></variable>
+            <variable name="sw"><type><WORD /></type></variable>
+            <variable name="abort_bus"><type><BOOL /></type></variable>
+          </inputVars>
+          <inOutVars>
+            <variable name="interp_exe"><type><BOOL /></type></variable>
+            <variable name="dyn_vel"><type><REAL /></type></variable>
+            <variable name="dyn_acc"><type><REAL /></type></variable>
+            <variable name="dyn_dec"><type><REAL /></type></variable>
+          </inOutVars>
+          <outputVars>
+            <variable name="Done"><type><BOOL /></type></variable>
+            <variable name="Busy"><type><BOOL /></type></variable>
+            <variable name="Active"><type><BOOL /></type></variable>
+            <variable name="CommandAborted"><type><BOOL /></type></variable>
+            <variable name="Error"><type><BOOL /></type></variable>
+            <variable name="ErrorID"><type><INT /></type></variable>
+          </outputVars>
+          <localVars>
+            <variable name="edge_ma"><type><BOOL /></type></variable>
+            <variable name="edge_ab"><type><BOOL /></type></variable>
+          </localVars>
+        </interface>
+        <body><ST><html:p>IF fire AND NOT edge_ma THEN
+    Error := FALSE; ErrorID := 0; CommandAborted := FALSE;
+    IF (sw AND 16#0008) &lt;&gt; 0 THEN
+        Error := TRUE; ErrorID := 2;
+    ELSIF (sw AND 16#0004) = 0 THEN
+        Error := TRUE; ErrorID := 3;
+    ELSIF Position &lt; 0 OR Position &gt; 100 THEN
+        Error := TRUE; ErrorID := 1;
+    ELSE
+        interp_exe := TRUE;
+        dyn_vel := Velocity; dyn_acc := Acceleration; dyn_dec := Deceleration;
+    END_IF;
+END_IF;
+edge_ma := fire;
+
+IF interp_exe AND abort_bus AND NOT edge_ab THEN
+    interp_exe := FALSE;
+    CommandAborted := TRUE;
+END_IF;
+edge_ab := abort_bus;
+Busy := interp_exe;
+Active := interp_exe;
+Done := NOT interp_exe AND NOT Error;</html:p></ST></body>
+      </pou>
+      <pou name="MC_HOME" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="fire"><type><BOOL /></type></variable>
+            <variable name="sw"><type><WORD /></type></variable>
+          </inputVars>
+          <inOutVars>
+            <variable name="home_exe"><type><BOOL /></type></variable>
+          </inOutVars>
+          <outputVars>
+            <variable name="Done"><type><BOOL /></type></variable>
+            <variable name="Busy"><type><BOOL /></type></variable>
+            <variable name="Error"><type><BOOL /></type></variable>
+          </outputVars>
+          <localVars>
+            <variable name="edge_hm"><type><BOOL /></type></variable>
+          </localVars>
+        </interface>
+        <body><ST><html:p>IF fire AND NOT edge_hm THEN
+    home_exe := TRUE;
+    Done := FALSE;
+END_IF;
+edge_hm := fire;
+IF home_exe AND (sw AND 16#0008) &lt;&gt; 0 THEN
+    home_exe := FALSE;
+END_IF;
+Busy := home_exe;
+Done := NOT home_exe;
+Error := (sw AND 16#0008) &lt;&gt; 0;</html:p></ST></body>
+      </pou>
+      <pou name="MC_HALT" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="fire"><type><BOOL /></type></variable>
+            <variable name="ax_busy"><type><BOOL /></type></variable>
+          </inputVars>
+          <outputVars>
+            <variable name="Stopping"><type><BOOL /></type></variable>
+            <variable name="Done"><type><BOOL /></type></variable>
+            <variable name="Busy"><type><BOOL /></type></variable>
+            <variable name="Error"><type><BOOL /></type></variable>
+          </outputVars>
+          <localVars>
+            <variable name="edge_hl"><type><BOOL /></type></variable>
+            <variable name="done_latch"><type><BOOL /></type></variable>
+          </localVars>
+        </interface>
+        <body><ST><html:p>IF fire AND NOT edge_hl THEN
+    done_latch := FALSE;
+    Stopping := TRUE;
+END_IF;
+edge_hl := fire;
+IF Stopping AND NOT ax_busy THEN
+    Stopping := FALSE;
+    done_latch := TRUE;
+END_IF;
+Busy := Stopping;
+Done := done_latch AND NOT Stopping;
+Error := FALSE;</html:p></ST></body>
+      </pou>
+      <pou name="MC_MOVEJOG" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="JogForward"><type><BOOL /></type></variable>
+            <variable name="JogBackward"><type><BOOL /></type></variable>
+            <variable name="Velocity"><type><REAL /></type></variable>
+            <variable name="cur_pos"><type><INT /></type></variable>
+            <variable name="sw"><type><WORD /></type></variable>
+          </inputVars>
+          <inOutVars>
+            <variable name="jog_pos"><type><INT /></type></variable>
+          </inOutVars>
+          <outputVars>
+            <variable name="Busy"><type><BOOL /></type></variable>
+            <variable name="Error"><type><BOOL /></type></variable>
+          </outputVars>
+        </interface>
+        <body><ST><html:p>IF (sw AND 16#0008) &lt;&gt; 0 THEN
+    Error := TRUE;
+ELSIF (sw AND 16#0004) = 0 THEN
+    Error := TRUE;
+ELSE
+    Error := FALSE;
+END_IF;
+Busy := (JogForward OR JogBackward) AND NOT Error;
+jog_pos := cur_pos;</html:p></ST></body>
+      </pou>
+      <pou name="MC_STOP" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="fire"><type><BOOL /></type></variable>
+            <variable name="v_act"><type><INT /></type></variable>
+          </inputVars>
+          <inOutVars>
+            <variable name="cw"><type><WORD /></type></variable>
+          </inOutVars>
+          <outputVars>
+            <variable name="Done"><type><BOOL /></type></variable>
+            <variable name="Busy"><type><BOOL /></type></variable>
+            <variable name="Error"><type><BOOL /></type></variable>
+          </outputVars>
+        </interface>
+        <body><ST><html:p>IF fire THEN
+    cw := cw OR 16#0002;
+ELSE
+    cw := cw AND 16#FFFD;
+END_IF;
+Busy := fire AND (v_act &lt;&gt; 0);
+Done := (v_act = 0);
+Error := FALSE;</html:p></ST></body>
+      </pou>
+      <pou name="MC_RESET" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="fire"><type><BOOL /></type></variable>
+          </inputVars>
+          <inOutVars>
+            <variable name="cw"><type><WORD /></type></variable>
+          </inOutVars>
+          <outputVars>
+            <variable name="Done"><type><BOOL /></type></variable>
+            <variable name="Busy"><type><BOOL /></type></variable>
+            <variable name="Error"><type><BOOL /></type></variable>
+          </outputVars>
+          <localVars>
+            <variable name="edge_rs"><type><BOOL /></type></variable>
+            <variable name="rst_pend"><type><BOOL /></type></variable>
+            <variable name="done_latch"><type><BOOL /></type></variable>
+          </localVars>
+        </interface>
+        <body><ST><html:p>IF fire AND NOT edge_rs THEN
+    cw := cw OR 16#0080;
+    rst_pend := TRUE;
+    done_latch := FALSE;
+END_IF;
+edge_rs := fire;
+IF rst_pend AND NOT fire THEN
+    rst_pend := FALSE;
+    done_latch := TRUE;
+END_IF;
+Done := done_latch;
+Busy := rst_pend;
+Error := FALSE;</html:p></ST></body>
+      </pou>
+      <pou name="MC_READSTATUS" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="Enable"><type><BOOL /></type></variable>
+            <variable name="sw"><type><WORD /></type></variable>
+            <variable name="interp_busy"><type><BOOL /></type></variable>
+            <variable name="v_act"><type><INT /></type></variable>
+          </inputVars>
+          <outputVars>
+            <variable name="Valid"><type><BOOL /></type></variable>
+            <variable name="Moving"><type><BOOL /></type></variable>
+            <variable name="StandStill"><type><BOOL /></type></variable>
+            <variable name="Disabled"><type><BOOL /></type></variable>
+            <variable name="ErrorStop"><type><BOOL /></type></variable>
+          </outputVars>
+        </interface>
+        <body><ST><html:p>Valid := Enable;
+Moving := interp_busy OR (v_act &lt;&gt; 0);
+StandStill := (NOT Moving) AND ((sw AND 16#0004) &lt;&gt; 0);
+Disabled := (sw AND 16#0004) = 0;
+ErrorStop := (sw AND 16#0008) &lt;&gt; 0;</html:p></ST></body>
+      </pou>
+      <pou name="MC_READACTUALPOSITION" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="Enable"><type><BOOL /></type></variable>
+            <variable name="ActualPosition"><type><INT /></type></variable>
+          </inputVars>
+          <outputVars>
+            <variable name="Valid"><type><BOOL /></type></variable>
+            <variable name="Position"><type><INT /></type></variable>
+          </outputVars>
+        </interface>
+        <body><ST><html:p>Valid := Enable;
+Position := ActualPosition;</html:p></ST></body>
+      </pou>
+      <pou name="PLC_PRG" pouType="program">
+        <interface>
+          <localVars>
+            <variable name="pl_step"><type><INT /></type><initialValue><simpleValue value="0" /></initialValue></variable>
+            <variable name="edge_dr"><type><BOOL /></type></variable>
+            <variable name="x_tgt"><type><INT /></type></variable>
+            <variable name="y_tgt"><type><INT /></type></variable>
+            <variable name="z_tgt"><type><INT /></type></variable>
+            <variable name="go_x_exe"><type><BOOL /></type></variable>
+            <variable name="go_y_exe"><type><BOOL /></type></variable>
+            <variable name="go_z_exe"><type><BOOL /></type></variable>
+            <variable name="hm_x_exe"><type><BOOL /></type></variable>
+            <variable name="hm_y_exe"><type><BOOL /></type></variable>
+            <variable name="hm_z_exe"><type><BOOL /></type></variable>
+            <variable name="x_vel_bus"><type><REAL /></type><initialValue><simpleValue value="40.0" /></initialValue></variable>
+            <variable name="x_acc_bus"><type><REAL /></type><initialValue><simpleValue value="80.0" /></initialValue></variable>
+            <variable name="x_dec_bus"><type><REAL /></type><initialValue><simpleValue value="80.0" /></initialValue></variable>
+            <variable name="y_vel_bus"><type><REAL /></type><initialValue><simpleValue value="40.0" /></initialValue></variable>
+            <variable name="y_acc_bus"><type><REAL /></type><initialValue><simpleValue value="80.0" /></initialValue></variable>
+            <variable name="y_dec_bus"><type><REAL /></type><initialValue><simpleValue value="80.0" /></initialValue></variable>
+            <variable name="z_vel_bus"><type><REAL /></type><initialValue><simpleValue value="20.0" /></initialValue></variable>
+            <variable name="z_acc_bus"><type><REAL /></type><initialValue><simpleValue value="60.0" /></initialValue></variable>
+            <variable name="z_dec_bus"><type><REAL /></type><initialValue><simpleValue value="60.0" /></initialValue></variable>
+            <variable name="x_cw"><type><WORD /></type></variable>
+            <variable name="y_cw"><type><WORD /></type></variable>
+            <variable name="z_cw"><type><WORD /></type></variable>
+            <variable name="x_swx"><type><WORD /></type></variable>
+            <variable name="y_swx"><type><WORD /></type></variable>
+            <variable name="z_swx"><type><WORD /></type></variable>
+            <variable name="x_jog_pos"><type><INT /></type></variable>
+            <variable name="y_jog_pos"><type><INT /></type></variable>
+            <variable name="z_jog_pos"><type><INT /></type></variable>
+            <variable name="go_x"><type><derived name="MC_MOVEABSOLUTE" /></type></variable>
+            <variable name="go_y"><type><derived name="MC_MOVEABSOLUTE" /></type></variable>
+            <variable name="go_z"><type><derived name="MC_MOVEABSOLUTE" /></type></variable>
+            <variable name="hm_x"><type><derived name="MC_HOME" /></type></variable>
+            <variable name="hm_y"><type><derived name="MC_HOME" /></type></variable>
+            <variable name="hm_z"><type><derived name="MC_HOME" /></type></variable>
+            <variable name="hlt_x"><type><derived name="MC_HALT" /></type></variable>
+            <variable name="hlt_y"><type><derived name="MC_HALT" /></type></variable>
+            <variable name="hlt_z"><type><derived name="MC_HALT" /></type></variable>
+            <variable name="jg_x"><type><derived name="MC_MOVEJOG" /></type></variable>
+            <variable name="jg_y"><type><derived name="MC_MOVEJOG" /></type></variable>
+            <variable name="jg_z"><type><derived name="MC_MOVEJOG" /></type></variable>
+            <variable name="rds_x"><type><derived name="MC_READSTATUS" /></type></variable>
+            <variable name="rds_y"><type><derived name="MC_READSTATUS" /></type></variable>
+            <variable name="rds_z"><type><derived name="MC_READSTATUS" /></type></variable>
+            <variable name="rap_x"><type><derived name="MC_READACTUALPOSITION" /></type></variable>
+            <variable name="rap_y"><type><derived name="MC_READACTUALPOSITION" /></type></variable>
+            <variable name="rap_z"><type><derived name="MC_READACTUALPOSITION" /></type></variable>
+            <variable name="ix_x"><type><derived name="INTERP" /></type></variable>
+            <variable name="ix_y"><type><derived name="INTERP" /></type></variable>
+            <variable name="ix_z"><type><derived name="INTERP_Z" /></type></variable>
+            <variable name="dv_x"><type><derived name="DRIVE402" /></type></variable>
+            <variable name="dv_y"><type><derived name="DRIVE402" /></type></variable>
+            <variable name="dv_z"><type><derived name="DRIVE402" /></type></variable>
+            <variable name="pwr_x"><type><derived name="MC_POWER" /></type></variable>
+            <variable name="pwr_y"><type><derived name="MC_POWER" /></type></variable>
+            <variable name="pwr_z"><type><derived name="MC_POWER" /></type></variable>
+            <variable name="rs_x"><type><derived name="MC_RESET" /></type></variable>
+            <variable name="rs_y"><type><derived name="MC_RESET" /></type></variable>
+            <variable name="rs_z"><type><derived name="MC_RESET" /></type></variable>
+          </localVars>
+          <localVars>
+            <variable name="run" address="%QX0.0"><type><BOOL /></type></variable>
+            <variable name="cmd_home" address="%QX0.1"><type><BOOL /></type></variable>
+            <variable name="cmd_go" address="%QX0.2"><type><BOOL /></type></variable>
+            <variable name="jog_fwd" address="%QX0.3"><type><BOOL /></type></variable>
+            <variable name="jog_rev" address="%QX0.4"><type><BOOL /></type></variable>
+            <variable name="quickstop" address="%QX0.5"><type><BOOL /></type></variable>
+            <variable name="cmd_reset" address="%QX0.7"><type><BOOL /></type></variable>
+            <variable name="cmd_draw" address="%QX2.0"><type><BOOL /></type></variable>
+            <variable name="all_oe" address="%QX1.0"><type><BOOL /></type></variable>
+            <variable name="move_done" address="%QX1.1"><type><BOOL /></type></variable>
+            <variable name="any_moving" address="%QX1.2"><type><BOOL /></type></variable>
+            <variable name="fault_any" address="%QX1.3"><type><BOOL /></type></variable>
+            <variable name="pen_down" address="%QX2.1"><type><BOOL /></type></variable>
+            <variable name="plot_done" address="%QX2.2"><type><BOOL /></type></variable>
+            <variable name="x_fb" address="%QW0"><type><INT /></type></variable>
+            <variable name="y_fb" address="%QW1"><type><INT /></type></variable>
+            <variable name="z_fb" address="%QW2"><type><INT /></type></variable>
+            <variable name="x_sp" address="%QW10"><type><INT /></type></variable>
+            <variable name="y_sp" address="%QW11"><type><INT /></type></variable>
+            <variable name="z_sp" address="%QW12"><type><INT /></type></variable>
+            <variable name="x_sw" address="%QW6"><type><INT /></type></variable>
+            <variable name="y_sw" address="%QW7"><type><INT /></type></variable>
+            <variable name="z_sw" address="%QW8"><type><INT /></type></variable>
+            <variable name="x_v" address="%QW13"><type><INT /></type></variable>
+            <variable name="y_v" address="%QW14"><type><INT /></type></variable>
+            <variable name="z_v" address="%QW15"><type><INT /></type></variable>
+            <variable name="prog_id" address="%QW20"><type><INT /></type><initialValue><simpleValue value="2" /></initialValue></variable>
+          </localVars>
+        </interface>
+        <body><ST><html:p>prog_id := 2;
+
+pen_down := (z_fb &lt;= 2);
+
+(* C4/C3: power handshake, run gating, quickstop de-energize path *)
+pwr_x(Enable := run AND NOT quickstop, EnablePositive := TRUE, EnableNegative := TRUE, cw := x_cw, sw := x_swx);
+pwr_y(Enable := run AND NOT quickstop, EnablePositive := TRUE, EnableNegative := TRUE, cw := y_cw, sw := y_swx);
+pwr_z(Enable := run AND NOT quickstop, EnablePositive := TRUE, EnableNegative := TRUE, cw := z_cw, sw := z_swx);
+
+rs_x(fire := cmd_reset, cw := x_cw);
+rs_y(fire := cmd_reset, cw := y_cw);
+rs_z(fire := cmd_reset, cw := z_cw);
+
+all_oe := pwr_x.Status AND pwr_y.Status AND pwr_z.Status;
+fault_any := ((x_swx AND 16#0008) &lt;&gt; 0) OR ((y_swx AND 16#0008) &lt;&gt; 0) OR ((z_swx AND 16#0008) &lt;&gt; 0);
+
+(* target bus default: NC setpoints when idle *)
+IF pl_step = 0 THEN
+    x_tgt := x_sp;
+    y_tgt := y_sp;
+    z_tgt := z_sp;
+END_IF;
+
+rap_x(Enable := TRUE, ActualPosition := x_fb);
+rap_y(Enable := TRUE, ActualPosition := y_fb);
+rap_z(Enable := TRUE, ActualPosition := z_fb);
+
+(* C1: manual X/Y positioning rejected while pen down *)
+go_x(fire := cmd_go AND NOT pen_down, Position := x_sp, Velocity := 40.0, Acceleration := 80.0, Deceleration := 80.0,
+     sw := x_swx, abort_bus := ix_x.Aborted,
+     interp_exe := go_x_exe, dyn_vel := x_vel_bus, dyn_acc := x_acc_bus, dyn_dec := x_dec_bus);
+go_y(fire := cmd_go AND NOT pen_down, Position := y_sp, Velocity := 40.0, Acceleration := 80.0, Deceleration := 80.0,
+     sw := y_swx, abort_bus := ix_y.Aborted,
+     interp_exe := go_y_exe, dyn_vel := y_vel_bus, dyn_acc := y_acc_bus, dyn_dec := y_dec_bus);
+go_z(fire := cmd_go, Position := z_sp, Velocity := 20.0, Acceleration := 60.0, Deceleration := 60.0,
+     sw := z_swx, abort_bus := ix_z.Aborted,
+     interp_exe := go_z_exe, dyn_vel := z_vel_bus, dyn_acc := z_acc_bus, dyn_dec := z_dec_bus);
+
+hm_x(fire := cmd_home, sw := x_swx, home_exe := hm_x_exe);
+hm_y(fire := cmd_home, sw := y_swx, home_exe := hm_y_exe);
+hm_z(fire := cmd_home, sw := z_swx, home_exe := hm_z_exe);
+
+(* home reference targets: X/Y -> 0, Z -> 10 (pen-up safe reference) *)
+IF hm_x_exe THEN x_tgt := 0; END_IF;
+IF hm_y_exe THEN y_tgt := 0; END_IF;
+IF hm_z_exe THEN z_tgt := 10; END_IF;
+
+(* C1: jog only while pen up *)
+jg_x(JogForward := jog_fwd AND NOT pen_down, JogBackward := jog_rev AND NOT pen_down, Velocity := 40.0, cur_pos := x_fb, sw := x_swx, jog_pos := x_jog_pos);
+jg_y(JogForward := FALSE, JogBackward := FALSE, Velocity := 40.0, cur_pos := y_fb, sw := y_swx, jog_pos := y_jog_pos);
+jg_z(JogForward := FALSE, JogBackward := FALSE, Velocity := 20.0, cur_pos := z_fb, sw := z_swx, jog_pos := z_jog_pos);
+
+(* C3: quickstop = controlled halt *)
+hlt_x(fire := quickstop OR (NOT run), ax_busy := ix_x.Busy);
+hlt_y(fire := quickstop OR (NOT run), ax_busy := ix_y.Busy);
+hlt_z(fire := quickstop OR (NOT run), ax_busy := ix_z.Busy);
+
+(* C6: start acceptance *)
+IF cmd_draw AND NOT edge_dr AND (pl_step = 0) AND run AND (NOT quickstop) AND (NOT fault_any) AND (NOT pen_down) THEN
+    pl_step := 1;
+    plot_done := FALSE;
+END_IF;
+edge_dr := cmd_draw;
+
+(* sequencer step table (continuous tracking) *)
+CASE pl_step OF
+    0: pl_step := pl_step;
+    1: x_tgt := 20; y_tgt := 20; z_tgt := 10;
+    2: x_tgt := 20; y_tgt := 20; z_tgt := 0;
+    3: x_tgt := 80; y_tgt := 20; z_tgt := 0;
+    4: x_tgt := 80; y_tgt := 80; z_tgt := 0;
+    5: x_tgt := 20; y_tgt := 80; z_tgt := 0;
+    6: x_tgt := 20; y_tgt := 20; z_tgt := 0;
+    7: x_tgt := 20; y_tgt := 20; z_tgt := 10;
+    8: x_tgt := 50; y_tgt := 50; z_tgt := 10;
+END_CASE;
+
+IF pl_step &lt;&gt; 0 THEN
+    go_x_exe := TRUE;
+    go_y_exe := TRUE;
+    go_z_exe := TRUE;
+END_IF;
+
+(* step advance: all axes at position and idle (C2: Z moves only when XY still) *)
+IF (pl_step &lt;&gt; 0) AND (NOT ix_x.Busy) AND (NOT ix_y.Busy) AND (NOT ix_z.Busy)
+   AND ix_x.Done AND ix_y.Done AND ix_z.Done AND (x_v = 0) AND (y_v = 0) THEN
+    IF pl_step = 8 THEN
+        plot_done := TRUE;
+        pl_step := 0;
+        go_x_exe := FALSE;
+        go_y_exe := FALSE;
+        go_z_exe := FALSE;
+    ELSE
+        pl_step := pl_step + 1;
+    END_IF;
+END_IF;
+
+(* C3/C4: abort sequence on quickstop / run off / fault *)
+IF quickstop OR (NOT run) OR fault_any THEN
+    pl_step := 0;
+    plot_done := FALSE;
+    go_x_exe := FALSE;
+    go_y_exe := FALSE;
+    go_z_exe := FALSE;
+    hm_x_exe := FALSE;
+    hm_y_exe := FALSE;
+    hm_z_exe := FALSE;
+END_IF;
+
+ix_x(fire := go_x_exe OR hm_x_exe, pos_target := x_tgt,
+     hold_req := hlt_x.Stopping, vel_req := x_vel_bus, acc_req := x_acc_bus, dec_req := x_dec_bus);
+ix_y(fire := go_y_exe OR hm_y_exe, pos_target := y_tgt,
+     hold_req := hlt_y.Stopping, vel_req := y_vel_bus, acc_req := y_acc_bus, dec_req := y_dec_bus);
+ix_z(fire := go_z_exe OR hm_z_exe, pos_target := z_tgt,
+     hold_req := hlt_z.Stopping, vel_req := z_vel_bus, acc_req := z_acc_bus, dec_req := z_dec_bus);
+
+dv_x(cw := x_cw, Setpoint := ix_x.Setpoint, pos_fb := x_fb);
+dv_y(cw := y_cw, Setpoint := ix_y.Setpoint, pos_fb := y_fb);
+dv_z(cw := z_cw, Setpoint := ix_z.Setpoint, pos_fb := z_fb);
+
+x_swx := dv_x.sw;  x_v := dv_x.v_cmd;
+y_swx := dv_y.sw;  y_v := dv_y.v_cmd;
+z_swx := dv_z.sw;  z_v := dv_z.v_cmd;
+
+(* C7: hard clamp on outputs (VMAX XY=40, Z=20) *)
+IF x_v &gt; 40 THEN x_v := 40; END_IF;
+IF x_v &lt; -40 THEN x_v := -40; END_IF;
+IF y_v &gt; 40 THEN y_v := 40; END_IF;
+IF y_v &lt; -40 THEN y_v := -40; END_IF;
+IF z_v &gt; 20 THEN z_v := 20; END_IF;
+IF z_v &lt; -20 THEN z_v := -20; END_IF;
+
+x_sw := WORD_TO_INT(x_swx);
+y_sw := WORD_TO_INT(y_swx);
+z_sw := WORD_TO_INT(z_swx);
+
+rds_x(Enable := TRUE, sw := x_swx, interp_busy := ix_x.Busy, v_act := x_v);
+rds_y(Enable := TRUE, sw := y_swx, interp_busy := ix_y.Busy, v_act := y_v);
+rds_z(Enable := TRUE, sw := z_swx, interp_busy := ix_z.Busy, v_act := z_v);
+
+IF (go_x_exe OR hm_x_exe) AND ix_x.Done AND (NOT ix_x.Busy) THEN
+    go_x_exe := FALSE;
+    hm_x_exe := FALSE;
+END_IF;
+IF (go_y_exe OR hm_y_exe) AND ix_y.Done AND (NOT ix_y.Busy) THEN
+    go_y_exe := FALSE;
+    hm_y_exe := FALSE;
+END_IF;
+IF (go_z_exe OR hm_z_exe) AND ix_z.Done AND (NOT ix_z.Busy) THEN
+    go_z_exe := FALSE;
+    hm_z_exe := FALSE;
+END_IF;
+IF ix_x.Aborted THEN go_x_exe := FALSE; hm_x_exe := FALSE; END_IF;
+IF ix_y.Aborted THEN go_y_exe := FALSE; hm_y_exe := FALSE; END_IF;
+IF ix_z.Aborted THEN go_z_exe := FALSE; hm_z_exe := FALSE; END_IF;
+
+move_done := (pl_step = 0) AND go_x.Done AND go_y.Done AND go_z.Done;
+any_moving := (x_v &lt;&gt; 0) OR (y_v &lt;&gt; 0) OR (z_v &lt;&gt; 0);</html:p></ST></body>
+      </pou>
+    </pous>
+  </types>
+  <instances>
+    <configurations />
+  </instances>
+</project>

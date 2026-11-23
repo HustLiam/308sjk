@@ -1,0 +1,756 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.plcopen.org/xml/tc6_0201" xsi:schemaLocation="http://www.plcopen.org/xml/tc6_0201 tc6_xml_v201.xsd">
+	<fileHeader companyName="AutomationML" productName="AutomationML" productVersion="AutomationML" creationDateTime="2017-02-14T12:09:57" companyURL="AutomationML" productRelease="AutomationML"/>
+	<contentHeader name="AutomationML" language="en-US" author="AutomationML" version="AutomationML" organization="AutomationML" modificationDateTime="2017-02-14T14:05:15">
+		<coordinateInfo>
+			<fbd>
+				<scaling x="0" y="0"/>
+			</fbd>
+			<ld>
+				<scaling x="0" y="0"/>
+			</ld>
+			<sfc>
+				<scaling x="0" y="0"/>
+			</sfc>
+		</coordinateInfo>
+		<addDataInfo>
+			<info name="http://www.automationml.org/IEC62714-4Ed1/AML_addData.xsd" vendor="AutomationML">
+				<description>
+					<xhtml:p>Schema to integrate logic model specific information required by AML.</xhtml:p>
+				</description>
+			</info>
+		</addDataInfo>
+	</contentHeader>
+	<types>
+		<dataTypes/>
+		<pous>
+			<pou name="Sequencing_Station_Gantt" pouType="program" globalId="UUID_001">
+				<actions>
+					<action name="DA_010RB_100_takes_over_good">
+						<body>
+							<ST>
+								<xhtml xmlns="http://www.w3.org/1999/xhtml"> </xhtml>
+							</ST>
+						</body>
+					</action>
+					<action name="TA_010RB_100_takes_over_good">
+						<body>
+							<ST>
+								<xhtml xmlns="http://www.w3.org/1999/xhtml"> </xhtml>
+							</ST>
+						</body>
+					</action>
+					<action name="DA_010RB_100_positions_good">
+						<body>
+							<ST>
+								<xhtml xmlns="http://www.w3.org/1999/xhtml"> </xhtml>
+							</ST>
+						</body>
+					</action>
+					<action name="TA_010RB_100_positions_good">
+						<body>
+							<ST>
+								<xhtml xmlns="http://www.w3.org/1999/xhtml"> </xhtml>
+							</ST>
+						</body>
+					</action>
+					<action name="DA_030GST100_clamps_good">
+						<body>
+							<ST>
+								<xhtml xmlns="http://www.w3.org/1999/xhtml"> </xhtml>
+							</ST>
+						</body>
+					</action>
+					<action name="TA_030GST100_clamps_good">
+						<body>
+							<ST>
+								<xhtml xmlns="http://www.w3.org/1999/xhtml"> </xhtml>
+							</ST>
+						</body>
+					</action>
+					<action name="DA_Execute_manufacturing_030RB_100">
+						<body>
+							<ST>
+								<xhtml xmlns="http://www.w3.org/1999/xhtml"> </xhtml>
+							</ST>
+						</body>
+					</action>
+					<action name="TA_Execute_manufacturing_030RB_100">
+						<body>
+							<ST>
+								<xhtml xmlns="http://www.w3.org/1999/xhtml"> </xhtml>
+							</ST>
+						</body>
+					</action>
+					<action name="DA_Execute_manufacturing_030RB_200">
+						<body>
+							<ST>
+								<xhtml xmlns="http://www.w3.org/1999/xhtml"> </xhtml>
+							</ST>
+						</body>
+					</action>
+					<action name="TA_Execute_manufacturing_030RB_200">
+						<body>
+							<ST>
+								<xhtml xmlns="http://www.w3.org/1999/xhtml"> </xhtml>
+							</ST>
+						</body>
+					</action>
+					<action name="DA_030GST100_declamps_good">
+						<body>
+							<ST>
+								<xhtml xmlns="http://www.w3.org/1999/xhtml"> </xhtml>
+							</ST>
+						</body>
+					</action>
+					<action name="TA_030GST100_declamps_good">
+						<body>
+							<ST>
+								<xhtml xmlns="http://www.w3.org/1999/xhtml"> </xhtml>
+							</ST>
+						</body>
+					</action>
+					<action name="DA_030RB_300_takes_over_good">
+						<body>
+							<ST>
+								<xhtml xmlns="http://www.w3.org/1999/xhtml"> </xhtml>
+							</ST>
+						</body>
+					</action>
+					<action name="TA_030RB_300_takes_over_good">
+						<body>
+							<ST>
+								<xhtml xmlns="http://www.w3.org/1999/xhtml"> </xhtml>
+							</ST>
+						</body>
+					</action>
+				</actions>
+				<transitions>
+					<transition name="transition_TRUE">
+						<body>
+							<ST>
+								<xhtml xmlns="http://www.w3.org/1999/xhtml">transition_TRUE:=TRUE;></xhtml>
+							</ST>
+						</body>
+					</transition>
+					<transition name="transition_TRUE2">
+						<body>
+							<ST>
+								<xhtml xmlns="http://www.w3.org/1999/xhtml">transition_TRUE2:=TRUE;</xhtml>
+							</ST>
+						</body>
+					</transition>
+					<transition name="T_010RB_100_takes_over_good">
+						<body>
+							<ST>
+								<xhtml xmlns="http://www.w3.org/1999/xhtml">IF (TA_010RB_100_takes_over_good)
+  THEN T_010RB_100_takes_over_good:=TRUE;
+	ELSE T_010RB_100_takes_over_good:=FALSE;
+END_IF;
+</xhtml>
+							</ST>
+						</body>
+					</transition>
+					<transition name="T_010RB_100_positions_good">
+						<body>
+							<ST>
+								<xhtml xmlns="http://www.w3.org/1999/xhtml">IF (TA_010RB_100_positions_good)
+  THEN T_010RB_100_positions_good:=TRUE;
+	ELSE T_010RB_100_positions_good:=FALSE;
+END_IF;</xhtml>
+							</ST>
+						</body>
+					</transition>
+					<transition name="T_030GST100_clamps_good">
+						<body>
+							<ST>
+								<xhtml xmlns="http://www.w3.org/1999/xhtml">IF (TA_030GST100_clamps_good)
+
+  THEN T_030GST100_clamps_good:=TRUE;
+
+	ELSE T_030GST100_clamps_good:=FALSE;
+
+END_IF;</xhtml>
+							</ST>
+						</body>
+					</transition>
+					<transition name="T_Execute_manufacturing_030RB_100">
+						<body>
+							<ST>
+								<xhtml xmlns="http://www.w3.org/1999/xhtml">IF (TA_Execute_manufacturing_030RB_100)
+
+  THEN T_Execute_manufacturing_030RB_100:=TRUE;
+
+	ELSE T_Execute_manufacturing_030RB_100:=FALSE;
+
+END_IF;</xhtml>
+							</ST>
+						</body>
+					</transition>
+					<transition name="T_Execute_manufacturing_030RB_200">
+						<body>
+							<ST>
+								<xhtml xmlns="http://www.w3.org/1999/xhtml">IF (TA_Execute_manufacturing_030RB_200)
+
+  THEN T_Execute_manufacturing_030RB_200:=TRUE;
+
+	ELSE T_Execute_manufacturing_030RB_200:=FALSE;
+
+END_IF;</xhtml>
+							</ST>
+						</body>
+					</transition>
+					<transition name="T_030GST100_declamps_good">
+						<body>
+							<ST>
+								<xhtml xmlns="http://www.w3.org/1999/xhtml">IF (TA_030GST100_declamps_good)
+
+  THEN T_030GST100_declamps_good:=TRUE;
+
+	ELSE T_030GST100_declamps_good:=FALSE;
+
+END_IF;</xhtml>
+							</ST>
+						</body>
+					</transition>
+					<transition name="T_030RB_300_takes_over_good">
+						<body>
+							<ST>
+								<xhtml xmlns="http://www.w3.org/1999/xhtml">IF (TA_030RB_300_takes_over_good)
+
+  THEN T_030RB_300_takes_over_good:=TRUE;
+
+	ELSE T_030RB_300_takes_over_good:=FALSE;
+
+END_IF;</xhtml>
+							</ST>
+						</body>
+					</transition>
+				</transitions>
+				<body>
+					<SFC>
+						<step localId="1" name="InitialStep_Gantt" initialStep="true" height="27" width="95" globalId="UUID_002">
+							<position x="560" y="27"/>
+							<connectionPointOut formalParameter="">
+								<relPosition x="47" y="27"/>
+							</connectionPointOut>
+						</step>
+						<step localId="2" name="Step_010RB_100_takes_over_good" initialStep="false" height="23" width="183" globalId="UUID_003">
+							<position x="516" y="126"/>
+							<connectionPointIn>
+								<relPosition x="91" y="0"/>
+								<connection refLocalId="10">
+									<position x="607" y="126"/>
+									<position x="607" y="97"/>
+								</connection>
+							</connectionPointIn>
+							<connectionPointOut formalParameter="">
+								<relPosition x="91" y="23"/>
+							</connectionPointOut>
+							<connectionPointOutAction formalParameter="">
+								<relPosition x="183" y="11"/>
+							</connectionPointOutAction>
+						</step>
+						<step localId="3" name="Step_010RB_100_positions_good" initialStep="false" height="23" width="171" globalId="UUID_004">
+							<position x="517" y="221"/>
+							<connectionPointIn>
+								<relPosition x="85" y="0"/>
+								<connection refLocalId="23">
+									<position x="602" y="221"/>
+									<position x="602" y="203"/>
+									<position x="607" y="203"/>
+									<position x="607" y="185"/>
+								</connection>
+							</connectionPointIn>
+							<connectionPointOut formalParameter="">
+								<relPosition x="85" y="23"/>
+							</connectionPointOut>
+							<connectionPointOutAction formalParameter="">
+								<relPosition x="171" y="11"/>
+							</connectionPointOutAction>
+						</step>
+						<step localId="4" name="Step_030GST100_clamps_good" initialStep="false" height="23" width="161" globalId="UUID_005">
+							<position x="519" y="306"/>
+							<connectionPointIn>
+								<relPosition x="80" y="0"/>
+								<connection refLocalId="24">
+									<position x="599" y="306"/>
+									<position x="599" y="290"/>
+									<position x="600" y="290"/>
+									<position x="600" y="274"/>
+								</connection>
+							</connectionPointIn>
+							<connectionPointOut formalParameter="">
+								<relPosition x="80" y="23"/>
+							</connectionPointOut>
+							<connectionPointOutAction formalParameter="">
+								<relPosition x="161" y="11"/>
+							</connectionPointOutAction>
+						</step>
+						<step localId="5" name="Step_Execute_manufacturing_030RB_100" initialStep="false" height="23" width="213" globalId="UUID_006">
+							<position x="158" y="447"/>
+							<connectionPointIn>
+								<relPosition x="106" y="0"/>
+								<connection refLocalId="18">
+									<position x="264" y="447"/>
+									<position x="264" y="421"/>
+									<position x="578" y="421"/>
+									<position x="578" y="395"/>
+								</connection>
+							</connectionPointIn>
+							<connectionPointOut formalParameter="">
+								<relPosition x="106" y="23"/>
+							</connectionPointOut>
+							<connectionPointOutAction formalParameter="">
+								<relPosition x="213" y="11"/>
+							</connectionPointOutAction>
+						</step>
+						<step localId="7" name="Step_Execute_manufacturing_030RB_200" initialStep="false" height="23" width="241" globalId="UUID_007">
+							<position x="670" y="452"/>
+							<connectionPointIn>
+								<relPosition x="120" y="0"/>
+								<connection refLocalId="18">
+									<position x="790" y="452"/>
+									<position x="790" y="423"/>
+									<position x="618" y="423"/>
+									<position x="618" y="395"/>
+								</connection>
+							</connectionPointIn>
+							<connectionPointOut formalParameter="">
+								<relPosition x="120" y="23"/>
+							</connectionPointOut>
+							<connectionPointOutAction formalParameter="">
+								<relPosition x="241" y="11"/>
+							</connectionPointOutAction>
+						</step>
+						<step localId="8" name="Step_030GST100_declamps_good" initialStep="false" height="23" width="173" globalId="UUID_008">
+							<position x="538" y="749"/>
+							<connectionPointIn>
+								<relPosition x="86" y="0"/>
+								<connection refLocalId="22">
+									<position x="624" y="749"/>
+									<position x="624" y="722"/>
+									<position x="627" y="722"/>
+									<position x="627" y="704"/>
+								</connection>
+							</connectionPointIn>
+							<connectionPointOut formalParameter="">
+								<relPosition x="86" y="23"/>
+							</connectionPointOut>
+							<connectionPointOutAction formalParameter="">
+								<relPosition x="173" y="11"/>
+							</connectionPointOutAction>
+						</step>
+						<step localId="9" name="Step_030RB_300_takes_over_good" initialStep="false" height="23" width="183" globalId="UUID_009">
+							<position x="519" y="856"/>
+							<connectionPointIn>
+								<relPosition x="91" y="0"/>
+								<connection refLocalId="28">
+									<position x="610" y="856"/>
+									<position x="610" y="834"/>
+									<position x="618" y="834"/>
+									<position x="618" y="813"/>
+								</connection>
+							</connectionPointIn>
+							<connectionPointOut formalParameter="">
+								<relPosition x="91" y="23"/>
+							</connectionPointOut>
+							<connectionPointOutAction formalParameter="">
+								<relPosition x="183" y="11"/>
+							</connectionPointOutAction>
+						</step>
+						<transition localId="10" height="2" width="20" globalId="UUID_010">
+							<position x="597" y="95"/>
+							<connectionPointIn>
+								<relPosition x="10" y="0"/>
+								<connection refLocalId="1">
+									<position x="607" y="95"/>
+									<position x="607" y="54"/>
+								</connection>
+							</connectionPointIn>
+							<connectionPointOut>
+								<relPosition x="10" y="2"/>
+							</connectionPointOut>
+							<condition>
+								<reference name="transition_TRUE"/>
+							</condition>
+						</transition>
+						<actionBlock localId="11" height="36" width="198">
+							<position x="771" y="122"/>
+							<connectionPointIn>
+								<relPosition x="0" y="15"/>
+								<connection refLocalId="2">
+									<position x="771" y="137"/>
+									<position x="699" y="137"/>
+								</connection>
+							</connectionPointIn>
+							<action localId="0" qualifier="D" duration="0" globalId="UUID_011">
+								<relPosition x="0" y="0"/>
+								<reference name="DA_010RB_100_takes_over_good"/>
+							</action>
+							<action localId="0" qualifier="SD" duration="3" globalId="UUID_012">
+								<relPosition x="0" y="0"/>
+								<reference name="TA_010RB_100_takes_over_good"/>
+							</action>
+						</actionBlock>
+						<actionBlock localId="6" height="36" width="186" executionOrderId="0">
+							<position x="786" y="216"/>
+							<connectionPointIn>
+								<relPosition x="0" y="15"/>
+								<connection refLocalId="3">
+									<position x="786" y="231"/>
+									<position x="734" y="231"/>
+									<position x="734" y="232"/>
+									<position x="688" y="232"/>
+								</connection>
+							</connectionPointIn>
+							<action localId="0" qualifier="D" duration="0" globalId="UUID_013">
+								<relPosition x="0" y="0"/>
+								<reference name="DA_010RB_100_positions_good"/>
+							</action>
+							<action localId="0" qualifier="SD" duration="4" globalId="UUID_014">
+								<relPosition x="0" y="0"/>
+								<reference name="TA_010RB_100_positions_good"/>
+							</action>
+						</actionBlock>
+						<actionBlock localId="12" height="36" width="176" executionOrderId="0">
+							<position x="774" y="303"/>
+							<connectionPointIn>
+								<relPosition x="0" y="15"/>
+								<connection refLocalId="4">
+									<position x="774" y="318"/>
+									<position x="727" y="318"/>
+									<position x="727" y="317"/>
+									<position x="680" y="317"/>
+								</connection>
+							</connectionPointIn>
+							<action localId="0" qualifier="D" duration="0" globalId="UUID_015">
+								<relPosition x="0" y="0"/>
+								<reference name="DA_030GST100_clamps_good"/>
+							</action>
+							<action localId="0" qualifier="SD" duration="1" globalId="UUID_016">
+								<relPosition x="0" y="0"/>
+								<reference name="TA_030GST100_clamps_good"/>
+							</action>
+						</actionBlock>
+						<actionBlock localId="13" height="36" width="188" executionOrderId="0">
+							<position x="790" y="747"/>
+							<connectionPointIn>
+								<relPosition x="0" y="15"/>
+								<connection refLocalId="8">
+									<position x="790" y="762"/>
+									<position x="750" y="762"/>
+									<position x="750" y="760"/>
+									<position x="711" y="760"/>
+								</connection>
+							</connectionPointIn>
+							<action localId="0" qualifier="D" duration="0" globalId="UUID_017">
+								<relPosition x="0" y="0"/>
+								<reference name="DA_030GST100_declamps_good"/>
+							</action>
+							<action localId="0" qualifier="SD" duration="1" globalId="UUID_018">
+								<relPosition x="0" y="0"/>
+								<reference name="TA_030GST100_declamps_good"/>
+							</action>
+						</actionBlock>
+						<actionBlock localId="14" height="36" width="228" executionOrderId="0">
+							<position x="953" y="447"/>
+							<connectionPointIn>
+								<relPosition x="0" y="15"/>
+								<connection refLocalId="7">
+									<position x="953" y="462"/>
+									<position x="922" y="462"/>
+									<position x="922" y="463"/>
+									<position x="911" y="463"/>
+								</connection>
+							</connectionPointIn>
+							<action localId="0" qualifier="D" duration="0" globalId="UUID_019">
+								<relPosition x="0" y="0"/>
+								<reference name="DA_Execute_manufacturing_030RB_200"/>
+							</action>
+							<action localId="0" qualifier="SD" duration="8" globalId="UUID_020">
+								<relPosition x="0" y="0"/>
+								<reference name="TA_Execute_manufacturing_030RB_200"/>
+							</action>
+						</actionBlock>
+						<actionBlock localId="15" height="36" width="228" executionOrderId="0">
+							<position x="397" y="443"/>
+							<connectionPointIn>
+								<relPosition x="0" y="15"/>
+								<connection refLocalId="5">
+									<position x="397" y="458"/>
+									<position x="371" y="458"/>
+								</connection>
+							</connectionPointIn>
+							<action localId="0" qualifier="D" duration="0" globalId="UUID_021">
+								<relPosition x="0" y="0"/>
+								<reference name="DA_Execute_manufacturing_030RB_100"/>
+							</action>
+							<action localId="0" qualifier="SD" duration="10" globalId="UUID_022">
+								<relPosition x="0" y="0"/>
+								<reference name="TA_Execute_manufacturing_030RB_100"/>
+							</action>
+						</actionBlock>
+						<actionBlock localId="16" height="36" width="198" executionOrderId="0">
+							<position x="778" y="851"/>
+							<connectionPointIn>
+								<relPosition x="0" y="15"/>
+								<connection refLocalId="9">
+									<position x="778" y="866"/>
+									<position x="739" y="866"/>
+									<position x="739" y="867"/>
+									<position x="702" y="867"/>
+								</connection>
+							</connectionPointIn>
+							<action localId="0" qualifier="D" duration="0" globalId="UUID_023">
+								<relPosition x="0" y="0"/>
+								<reference name="DA_030RB_300_takes_over_good"/>
+							</action>
+							<action localId="0" qualifier="SD" duration="3" globalId="UUID_024">
+								<relPosition x="0" y="0"/>
+								<reference name="TA_030RB_300_takes_over_good"/>
+							</action>
+						</actionBlock>
+						<step localId="17" name="TerminalStep" initialStep="false" height="23" width="72" globalId="UUID_025">
+							<position x="574" y="963"/>
+							<connectionPointIn>
+								<relPosition x="36" y="0"/>
+								<connection refLocalId="29">
+									<position x="610" y="963"/>
+									<position x="610" y="921"/>
+								</connection>
+							</connectionPointIn>
+							<addData>
+								<data name="http://www.automationml.org/IEC62714-4Ed1/AML_addData.xsd" handleUnknown="implementation">
+									<AML>
+										<StateStatus Current="false" ID="UUID_102" Terminal="true"/>
+									</AML>
+								</data>
+							</addData>
+						</step>
+						<simultaneousDivergence localId="18" height="3" width="40" globalId="UUID_026">
+							<position x="578" y="392"/>
+							<connectionPointIn>
+								<relPosition x="20" y="0"/>
+								<connection refLocalId="25">
+									<position x="598" y="392"/>
+									<position x="598" y="361"/>
+								</connection>
+							</connectionPointIn>
+							<connectionPointOut formalParameter="">
+								<relPosition x="0" y="3"/>
+							</connectionPointOut>
+							<connectionPointOut formalParameter="">
+								<relPosition x="40" y="3"/>
+							</connectionPointOut>
+						</simultaneousDivergence>
+						<step localId="19" name="Sys_Step_030GST100_declamps_good1" initialStep="false" height="23" width="202" globalId="UUID_027">
+							<position x="246" y="566"/>
+							<connectionPointIn>
+								<relPosition x="101" y="0"/>
+								<connection refLocalId="26">
+									<position x="347" y="566"/>
+									<position x="347" y="546"/>
+									<position x="342" y="546"/>
+									<position x="342" y="526"/>
+								</connection>
+							</connectionPointIn>
+							<connectionPointOut formalParameter="">
+								<relPosition x="101" y="23"/>
+							</connectionPointOut>
+						</step>
+						<step localId="20" name="Sys_Step_030GST100_declamps_good1" initialStep="false" height="23" width="202" globalId="UUID_028">
+							<position x="697" y="578"/>
+							<connectionPointIn>
+								<relPosition x="101" y="0"/>
+								<connection refLocalId="27">
+									<position x="798" y="578"/>
+									<position x="798" y="558"/>
+									<position x="812" y="558"/>
+									<position x="812" y="539"/>
+								</connection>
+							</connectionPointIn>
+							<connectionPointOut formalParameter="">
+								<relPosition x="101" y="23"/>
+							</connectionPointOut>
+						</step>
+						<simultaneousConvergence localId="21" height="3" width="40" globalId="UUID_029">
+							<position x="608" y="661"/>
+							<connectionPointIn>
+								<relPosition x="0" y="0"/>
+								<connection refLocalId="19">
+									<position x="608" y="661"/>
+									<position x="608" y="625"/>
+									<position x="347" y="625"/>
+									<position x="347" y="589"/>
+								</connection>
+							</connectionPointIn>
+							<connectionPointIn>
+								<relPosition x="40" y="0"/>
+								<connection refLocalId="20">
+									<position x="648" y="661"/>
+									<position x="648" y="631"/>
+									<position x="798" y="631"/>
+									<position x="798" y="601"/>
+								</connection>
+							</connectionPointIn>
+							<connectionPointOut>
+								<relPosition x="20" y="3"/>
+							</connectionPointOut>
+						</simultaneousConvergence>
+						<transition localId="22" height="2" width="20" executionOrderId="0" globalId="UUID_030">
+							<position x="617" y="702"/>
+							<connectionPointIn>
+								<relPosition x="10" y="0"/>
+								<connection refLocalId="21">
+									<position x="627" y="702"/>
+									<position x="627" y="683"/>
+									<position x="628" y="683"/>
+									<position x="628" y="664"/>
+								</connection>
+							</connectionPointIn>
+							<connectionPointOut>
+								<relPosition x="10" y="2"/>
+							</connectionPointOut>
+							<condition>
+								<reference name="transition_TRUE2"/>
+							</condition>
+						</transition>
+						<transition localId="23" height="2" width="20" globalId="UUID_031">
+							<position x="597" y="183"/>
+							<connectionPointIn>
+								<relPosition x="10" y="0"/>
+								<connection refLocalId="2">
+									<position x="607" y="183"/>
+									<position x="607" y="149"/>
+								</connection>
+							</connectionPointIn>
+							<connectionPointOut>
+								<relPosition x="10" y="2"/>
+							</connectionPointOut>
+							<condition>
+								<reference name="T_010RB_100_takes_over_good"/>
+							</condition>
+						</transition>
+						<transition localId="24" height="2" width="20" globalId="UUID_032">
+							<position x="590" y="272"/>
+							<connectionPointIn>
+								<relPosition x="10" y="0"/>
+								<connection refLocalId="3">
+									<position x="600" y="272"/>
+									<position x="600" y="257"/>
+									<position x="602" y="257"/>
+									<position x="602" y="244"/>
+								</connection>
+							</connectionPointIn>
+							<connectionPointOut>
+								<relPosition x="10" y="2"/>
+							</connectionPointOut>
+							<condition>
+								<reference name="T_010RB_100_positions_good"/>
+							</condition>
+						</transition>
+						<transition localId="25" height="2" width="20" globalId="UUID_033">
+							<position x="588" y="359"/>
+							<connectionPointIn>
+								<relPosition x="10" y="0"/>
+								<connection refLocalId="4">
+									<position x="598" y="359"/>
+									<position x="598" y="344"/>
+									<position x="599" y="344"/>
+									<position x="599" y="329"/>
+								</connection>
+							</connectionPointIn>
+							<connectionPointOut>
+								<relPosition x="10" y="2"/>
+							</connectionPointOut>
+							<condition>
+								<reference name="T_030GST100_clamps_good"/>
+							</condition>
+						</transition>
+						<transition localId="26" height="2" width="20" globalId="UUID_034">
+							<position x="332" y="524"/>
+							<connectionPointIn>
+								<relPosition x="10" y="0"/>
+								<connection refLocalId="5">
+									<position x="342" y="524"/>
+									<position x="342" y="497"/>
+									<position x="264" y="497"/>
+									<position x="264" y="470"/>
+								</connection>
+							</connectionPointIn>
+							<connectionPointOut>
+								<relPosition x="10" y="2"/>
+							</connectionPointOut>
+							<condition>
+								<reference name="T_Execute_manufacturing_030RB_100"/>
+							</condition>
+						</transition>
+						<transition localId="27" height="2" width="20" globalId="UUID_035">
+							<position x="802" y="537"/>
+							<connectionPointIn>
+								<relPosition x="10" y="0"/>
+								<connection refLocalId="7">
+									<position x="812" y="537"/>
+									<position x="812" y="506"/>
+									<position x="790" y="506"/>
+									<position x="790" y="475"/>
+								</connection>
+							</connectionPointIn>
+							<connectionPointOut>
+								<relPosition x="10" y="2"/>
+							</connectionPointOut>
+							<condition>
+								<reference name="T_Execute_manufacturing_030RB_200"/>
+							</condition>
+						</transition>
+						<transition localId="28" height="2" width="20" globalId="UUID_036">
+							<position x="608" y="811"/>
+							<connectionPointIn>
+								<relPosition x="10" y="0"/>
+								<connection refLocalId="8">
+									<position x="618" y="811"/>
+									<position x="618" y="791"/>
+									<position x="624" y="791"/>
+									<position x="624" y="772"/>
+								</connection>
+							</connectionPointIn>
+							<connectionPointOut>
+								<relPosition x="10" y="2"/>
+							</connectionPointOut>
+							<condition>
+								<reference name="T_030GST100_declamps_good"/>
+							</condition>
+						</transition>
+						<transition localId="29" height="2" width="20" globalId="UUID_037">
+							<position x="600" y="919"/>
+							<connectionPointIn>
+								<relPosition x="10" y="0"/>
+								<connection refLocalId="9">
+									<position x="610" y="919"/>
+									<position x="610" y="879"/>
+								</connection>
+							</connectionPointIn>
+							<connectionPointOut>
+								<relPosition x="10" y="2"/>
+							</connectionPointOut>
+							<condition>
+								<reference name="T_030RB_300_takes_over_good"/>
+							</condition>
+						</transition>
+					</SFC>
+				</body>
+				<addData>
+					<data name="http://www.automationml.org/IEC62714-4Ed1/AML_addData.xsd" handleUnknown="implementation">
+						<AML>
+							<ChartType ChartType="GanttChart" ID="UUID_101"/>
+						</AML>
+					</data>
+				</addData>
+			</pou>
+		</pous>
+	</types>
+	<instances>
+		<configurations/>
+	</instances>
+</project>

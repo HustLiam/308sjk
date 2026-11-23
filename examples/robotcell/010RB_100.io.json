@@ -1,0 +1,152 @@
+{
+  "io_list": [
+    {
+      "name": "rb100_j1_target",
+      "role": "target",
+      "dir": "output",
+      "type": "INT",
+      "address": "%QW100",
+      "deg_per_count": 0.02,
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5",
+      "source_file": "dae_lib/KR240R2700prime_Product.dae",
+      "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_1"
+    },
+    {
+      "name": "rb100_j2_target",
+      "role": "target",
+      "dir": "output",
+      "type": "INT",
+      "address": "%QW101",
+      "deg_per_count": 0.02,
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5",
+      "source_file": "dae_lib/KR240R2700prime_Product.dae",
+      "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_2"
+    },
+    {
+      "name": "rb100_j3_target",
+      "role": "target",
+      "dir": "output",
+      "type": "INT",
+      "address": "%QW102",
+      "deg_per_count": 0.02,
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5",
+      "source_file": "dae_lib/KR240R2700prime_Product.dae",
+      "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_3"
+    },
+    {
+      "name": "rb100_j4_target",
+      "role": "target",
+      "dir": "output",
+      "type": "INT",
+      "address": "%QW103",
+      "deg_per_count": 0.02,
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5",
+      "source_file": "dae_lib/KR240R2700prime_Product.dae",
+      "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_4"
+    },
+    {
+      "name": "rb100_j5_target",
+      "role": "target",
+      "dir": "output",
+      "type": "INT",
+      "address": "%QW104",
+      "deg_per_count": 0.02,
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5",
+      "source_file": "dae_lib/KR240R2700prime_Product.dae",
+      "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_5"
+    },
+    {
+      "name": "rb100_j6_target",
+      "role": "target",
+      "dir": "output",
+      "type": "INT",
+      "address": "%QW105",
+      "deg_per_count": 0.02,
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5",
+      "source_file": "dae_lib/KR240R2700prime_Product.dae",
+      "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_6"
+    },
+    {
+      "name": "rb100_j1_actual",
+      "role": "actual",
+      "dir": "input",
+      "type": "INT",
+      "address": "%QW110",
+      "deg_per_count": 0.02,
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5",
+      "source_file": "dae_lib/KR240R2700prime_Product.dae",
+      "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_1"
+    },
+    {
+      "name": "rb100_j2_actual",
+      "role": "actual",
+      "dir": "input",
+      "type": "INT",
+      "address": "%QW111",
+      "deg_per_count": 0.02,
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5",
+      "source_file": "dae_lib/KR240R2700prime_Product.dae",
+      "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_2"
+    },
+    {
+      "name": "rb100_j3_actual",
+      "role": "actual",
+      "dir": "input",
+      "type": "INT",
+      "address": "%QW112",
+      "deg_per_count": 0.02,
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5",
+      "source_file": "dae_lib/KR240R2700prime_Product.dae",
+      "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_3"
+    },
+    {
+      "name": "rb100_j4_actual",
+      "role": "actual",
+      "dir": "input",
+      "type": "INT",
+      "address": "%QW113",
+      "deg_per_count": 0.02,
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5",
+      "source_file": "dae_lib/KR240R2700prime_Product.dae",
+      "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_4"
+    },
+    {
+      "name": "rb100_j5_actual",
+      "role": "actual",
+      "dir": "input",
+      "type": "INT",
+      "address": "%QW114",
+      "deg_per_count": 0.02,
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5",
+      "source_file": "dae_lib/KR240R2700prime_Product.dae",
+      "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_5"
+    },
+    {
+      "name": "rb100_j6_actual",
+      "role": "actual",
+      "dir": "input",
+      "type": "INT",
+      "address": "%QW115",
+      "deg_per_count": 0.02,
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5",
+      "source_file": "dae_lib/KR240R2700prime_Product.dae",
+      "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_6"
+    },
+    {
+      "name": "rb100_enable",
+      "role": "enable",
+      "dir": "output",
+      "type": "INT",
+      "address": "%QW106",
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5"
+    },
+    {
+      "name": "rb100_feedback_seq",
+      "role": "feedback_sequence",
+      "dir": "input",
+      "type": "INT",
+      "address": "%QW116",
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5"
+    }
+  ]
+}

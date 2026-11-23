@@ -1,0 +1,17 @@
+{
+ "patterns": [
+  {
+   "key": "plotter_square_csp",
+   "file": "plotter_square_csp.xml",
+   "summary": "三轴绘图机在 XY 平面绘制边长 60（坐标区间 20..80）的正方形并闭合：抬笔定位起点 → 落笔沿四边 → 抬笔回中心。CSP 形态：PLC 输出插补位置",
+   "tags": [
+    "三轴",
+    "绘图",
+    "定位",
+    "轴",
+    "笔"
+   ],
+   "provenance": "orchestrator-final"
+  }
+ ]
+}

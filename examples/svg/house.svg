@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120mm" height="120mm" viewBox="0 0 120 120">
+  <title>多路径绘图示例：房屋、窗、拱门与贝塞尔曲线</title>
+  <g transform="translate(10 8)" fill="none" stroke="#147d92" stroke-width="1.5">
+    <path d="M5 40 L45 8 L85 40 V85 H5 Z"/>
+    <rect x="20" y="48" width="20" height="20" rx="2"/>
+    <path d="M58 85 v-28 a10 10 0 0 1 20 0 v28"/>
+    <path d="M5 95 C30 83 60 107 85 95"/>
+  </g>
+</svg>

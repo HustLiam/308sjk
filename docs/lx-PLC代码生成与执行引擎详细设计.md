@@ -1,8 +1,20 @@
 # PLC 代码生成与执行引擎详细设计（lx 负责部分）
 
+2026-11-05：标准 RobotCell 包的 PLCopen 行为引用目前仅解析、留存，不作为可部署 PLC 程序；缺少 io_list 地址和物理绑定时不进入 OpenPLC IO 校验。资源导入与后续接入边界见 [AML 资源导入与装配](AML资源导入与装配.md)，原生产 PLC 链路保持。
+
+2026-11-03 独立场景增量：新增测试专用 `io_test.xml`、程序身份/请求/提交/扫描确认和 PLC 实际输入观测通路，用于冻结前的候选模型双向 IO 校验；先部署至独立 Runtime，再从新前端入口连接。它不部署或替换现有 PLC 程序，不改变生产 PLC 静态→编译→在线验收链；真实 Runtime 联调未完成。权威定义见 [固定模型与 IO 校验规范](模型生成与固定IO校验规范.md)。
+
+2026-10-28 后续：独立六轴模型可执行 PLC 原始角计数到关节目标的换算、实测角反馈与使能/复位固定检查；只完成空载模型测试，仍为 PLC 验收 not_run。历史批量清理仅触及用户所选设备任务，不删共享库和 PLC 会话，见 [AML 仿真验证配置](AML-仿真验证配置.md)。
+
+2026-10-28：网页设备场景生成页可独立运行 AML 机械/IO 测试模块并查看实际回放；这类模型测试保持 `plc_acceptance=not_run`，不部署/运行 PLC，不替代原静态→一致性→编译→在线验收链。独立草案见 [AML 仿真验证配置](AML-仿真验证配置.md)。
+
+2026-10-27 前端增量：网页新增独立的设备场景生成/审批/冻结入口；“PLC 代码生成”和“PLC 仿真与验证”保留原流程。新页不生成、部署或启动 PLC，不将设备测试回放标记为 PLC 验收。接入边界及操作见 [场景 Agent 草案 §6](RFC-场景生成Agent-DeviceIR.md)。
+
+2026-10-27 待评审增量：[场景 Agent 的 DeviceIR 草案](RFC-场景生成Agent-DeviceIR.md) 新增独立物理设备构建和冻结模型 Modbus 适配，保持 AML 原始 BOOL/INT/%Q 地址，每周期校验 `%QW20`，复用 `SafeCoilIO`。本次未修改 PLC 生成器、源码格式、部署或验收判据；正式离散设备 PLC 验收适配待 lx/csk 评审，原闸门顺序继续适用。组件模型检查通过不得标记 PLC 验收通过。
+
 > 本文档是《总体实施方案》中 **②a PLC 代码生成模块（生成契约与闸门）**、**③a PLC 执行引擎（链路 B）**与 **④ 验证模块的 PLC 侧行为验收**的详细设计与实施记录，负责人 **lx**。
 >
-> 与仿真验证侧（csk，《csk-仿真环境与IO闭环详细设计》，负责 ③b（USD 构建/组件库/Isaac/trace）、④（判定引擎）及链路 A 构建，兼 ②b 场景描述评审）的衔接方式：**同一份 PLCopen XML + io_map.json**。链路 A（matiec 编译为 C 库、Isaac Sim 进程内 lockstep）与链路 B（OpenPLC 软 PLC + Modbus TCP）跑同一份代码，本文档负责其中的代码契约与链路 B 的全部实现。
+> 与仿真验证侧（csk，《csk-仿真环境与IO闭环详细设计》，负责 ③b（MJCF 构建/组件库/MuJoCo 运行时/trace）、④（判定引擎）及链路 A 构建，兼 ②b 场景描述评审）的衔接方式：**同一份 PLCopen XML + io_map.json**。链路 A（matiec 编译为 C 库、MuJoCo 进程内 lockstep）与链路 B（OpenPLC 软 PLC + Modbus TCP）跑同一份代码，本文档负责其中的代码契约与链路 B 的全部实现。
 
 ---
 
@@ -23,7 +35,7 @@
         ▼
 ②a 代码生成（agent 产出 plc_project.xml —— 唯一源码，强制 61131-10）
         │
-        ├──► 【链路 A · 仿真侧负责】matiec iec2c → plc_logic.dll → Isaac 进程内 lockstep
+        ├──► 【链路 A · 仿真侧负责】matiec iec2c → plc_logic.dll → MuJoCo 进程内 lockstep
         │
         ▼    【链路 B · 本侧负责】
 xml2st 静态校验 + XML→ST ──► OpenPLC v3（Docker）：上传 / matiec 编译 / 启动
@@ -34,20 +46,20 @@ workspace/program.st       Modbus TCP :502
                     SafeCoilIO / scenario_motion3axis（行为验收）
 ```
 
-两链路分工（总体方案 §3.4）：**A 做开发/CI 闭环**（lockstep、无通信抖动、归因可排除通信因素），**B 做工业代表性验收**（真实软 PLC 运行时）。本侧的 xml2st 契约即"matiec 可编译子集"，保证同一份 XML 两条链路都能编译。
+两链路分工（总体方案 §3.4）：**A 做开发/CI 迭代循环**（lockstep、无通信抖动、归因可排除通信因素），**B 做工业代表性验收**（真实软 PLC 运行时）。本侧的 xml2st 契约即"matiec 可编译子集"，保证同一份 XML 两条链路都能编译。
 
 ## 2. 设计原则（agent 生成契约的四条红线）
 
 1. **XML 是唯一源码**：agent 只产出 PLCopen XML；可执行 `.st` 由 xml2st 机械推导，人不手改、不直接编辑；
 2. **ST 本体子集**：POU 一律 ST 语言本体，类型限 PROGRAM / FUNCTION_BLOCK / FUNCTION；LD/FBD/SFC 图形本体不支持；
 3. **防信息丢失**：未支持的构造（自定义 DUT、action/method、persistentVars、configuration 内容等）一律**显式拒绝并逐条报错**，绝不静默丢弃——错误信息直接回喂 agent；
-4. **全链路纯 API**：校验、上传、编译、启动、验证全部脚本化 / HTTP 化，零 GUI、零许可证限制（CODESYS 版因 Script Engine + 演示版时长限制废弃，保留于 git 历史作标准符合性参考）。
+4. **全链路纯 API**：校验、上传、编译、启动、验证全部脚本化 / HTTP 化，零 GUI、零许可证限制。
 
 对外接口约定：**带 `AT` 地址的定位变量即对外接口**——`%QX`/`%QW` 映射 Modbus 线圈/保持寄存器；不带 AT 的变量是 POU 内部状态，不对外发布。
 
 ## 3. PLCopen XML 校验与转换（xml2st.py）
 
-纯标准库实现（`re` + `xml.etree`），无需运行时即可跑，是部署流水线的第一道闸门。
+纯标准库实现（`re` + `xml.etree`），无需运行时即可跑，是部署流水线的第一道静态检查（闸门 1）。
 
 ### 3.1 生成契约（agent 必须遵守，超出即拒）
 
@@ -79,6 +91,7 @@ workspace/program.st       Modbus TCP :502
 - **定位变量独立分块**：同一个 VAR 块内，FB 实例等普通声明与带 AT 的定位声明混放，matiec 报 `invalid variable(s) declaration`——转换器自动拆为两个 VAR 块；
 - **结束符统一 `END_VAR`**：matiec 无 `END_VAR_INPUT` 等变体；
 - 声明渲染为 `名称 AT 地址 : 类型 := 初值;`，初值取自 `<initialValue><simpleValue value="...">`。
+- `variable initialValue="..."` 属性及无值/未支持的初值结构直接拒绝，避免静默丢失初值后坐标、速度或高度变成0。初值必须由模型按标准子元素生成，转换器不自动重写模型XML。
 
 ### 3.3 ST 装配（to_st）
 
@@ -126,7 +139,7 @@ python src/pipeline/xml2st.py <file.xml> --out workspace/program.st
 | 状态 | GET /dashboard | RUNNING / STOPPED / COMPILING |
 | 日志 | GET /runtime-logs | 归因素材 |
 
-### 4.3 serve.py：部署服务化（agent 闭环对接点）
+### 4.3 serve.py：部署服务化（agent 循环对接点）
 
 ```
 POST /deploy    body 为 PLCopen XML 内容（应以 <?xml 开头，否则 400 REJECTED）
@@ -142,7 +155,7 @@ curl http://127.0.0.1:8600/status
 
 成功返回 200 + deploy_result 同构 JSON；校验/编译失败返回 500 + errors——上层编排器据此走"回喂重生成"分支，不进仿真。
 
-`/status` 返回 `{runtime: {url, status}, prog_id, program}`：Web 状态腿走 OpenPLC dashboard（RUNNING/STOPPED/COMPILING，自动重登录），程序身份腿经 Modbus 读 %QW20（契约② v1.1 prog_id 约定；STOPPED 下 %Q 缓冲保持仍可读）；任一腿失败不 500，如实报字段（UNREACHABLE / null + error）。prog_id→场景名映射表在 serve.py 顶部 `PROG_NAMES`（新场景在此顺延登记）。
+`/status` 返回 `{runtime: {url, status}, prog_id, program}`：Web 状态来源走 OpenPLC dashboard（RUNNING/STOPPED/COMPILING，自动重登录），程序身份来源经 Modbus 读 %QW20（契约② v1.1 prog_id 约定；STOPPED 下 %Q 缓冲保持仍可读）；任一来源失败不 500，如实报字段（UNREACHABLE / null + error）。prog_id→场景名映射表在 serve.py 顶部 `PROG_NAMES`（新场景在此顺延登记）。
 
 ### 4.4 运行时形态
 
@@ -152,7 +165,11 @@ docker run -d --name openplc -p 8080:8080 -p 502:502 fdamador/openplc
 
 Web API :8080、Modbus TCP :502；URL 与账号可经环境变量 `OPENPLC_URL / OPENPLC_USER / OPENPLC_PASS` 覆盖。
 
-### 4.5 一键回归（run_regression.py，主方案 §8.4 CI 门禁实体）
+### 4.5 一键回归（run_regression.py，主方案 §8.4 CI 校验实体）
+
+> 2026-10-19 增补：`src/agent/closed_loop.py` 为完整 XML 生成的严格闭环入口，已以 DeepSeek V4 Pro high 推理完成“编译失败→反馈修复→MuJoCo 验收通过”，并复跑通过；新增地址子元素拒绝报文，OpenPLC 客户端默认直连。运行与证据见《lx-完整XML生成闭环运行指南》。
+
+> 同日自动化更新：严格入口在生成 XML 前调用 `TestPlanGenerator`，输出并校验声明式 `test_plan.json`，将启动、复位、使能、脉冲、采样及物理路径传给 PLC 生成器。PLC 修复只改完整 XML，各轮使用同一计划；规划元数据失败在生成 PLC 前处理。新 CLI/GUI 不调用固定画方规划器。计划结构见 `schemas/test_plan.schema.json`，设备引用及写入限制由 `src/agent/test_plan.py` 校验。
 
 三层按序执行，前置层失败即止（便宜层拦截原则，见协作指南 §3.2）：
 
@@ -163,7 +180,7 @@ L3 在线验收   逐场景 run_deploy 部署 + scenario_<场景>.py 验收（�
 ```
 
 - 场景自动发现：`src/plc/<name>.xml` × `src/pipeline/scenario_<name>.py` 配对，缺验收脚本记 SKIP 并提示；
-- 运行时不可达时 L3 整层 SKIP（exit 0）；`--require-online` 把 SKIP 视为失败（exit 1，完整合入门禁用）；`--skip-online` 只跑本地两层；
+- 运行时不可达时 L3 整层 SKIP（exit 0）；`--require-online` 把 SKIP 视为失败（exit 1，供合入检查用）；`--skip-online` 只跑本地两层；
 - 结果写 `workspace/regression_result.json`（`{status, layers{static,pytest,online}, errors, duration_sec}`）供 CI 消费；
 - 基准：motion3axis 三层全绿约 25~30s。
 
@@ -182,22 +199,22 @@ L3 在线验收   逐场景 run_deploy 部署 + scenario_<场景>.py 验收（�
 
 实测怪癖：OpenPLC 的 Modbus 服务端在**窄范围线圈写入**（fc05 单线圈 / 少量 fc15）时会破坏同缓冲区的相邻位——例如写 %QX0.3 会把 %QX1.0 的电机自锁打掉。读-改-写整组线圈（fc15 覆盖完整 16 位跨度）则完全正常。
 
-封装约定：所有线圈写入一律"读整组 → 改一位 → 整组写回"；提供 `pulse()` 模拟按钮/光电信号。**未来 Isaac Sim 桥接若走链路 B，线圈访问必须经由此层，禁止裸 write_coil / 窄范围 write_coils。**
+封装约定：所有线圈写入一律"读整组 → 改一位 → 整组写回"；提供 `pulse()` 模拟按钮/光电信号。**未来 仿真桥接若走链路 B，线圈访问必须经由此层，禁止裸 write_coil / 窄范围 write_coils。**
 
 ### 5.3 冒烟验证与场景验收
 
 - 场景脚本模式：`run_deploy --xml 场景.xml` 部署 → 脚本先过**程序身份校验**（`require_program`，读 %QW20 的 prog_id，不匹配立即终止并提示部署哪个场景）→ 注入激励 → `check()` 逐条断言，PASS/FAIL 打印、退出码汇总；
 - **身份约定（生成契约 v1.1 增补，向后兼容）**：每个场景程序声明 `prog_id AT %QW20 : INT` 常量并在 ST 本体每周期写入自己的编号（motion3axis=1，新场景从 2 顺延）——验收脚本与未来 gc 编排器据此确认运行时当前加载的程序；
 - **幂等性**：motion3axis 失能即安全态（伺服环零输出、状态机回 SOD/RTSO），脚本伺服从编码器寄存器重建，**同一程序可重复运行验收**；主站时序注意：目标寄存器先于指令上升沿建立（≥1 扫描周期），否则驱动锁存旧值；
-- 停止扫描：`python src/pipeline/stop_plc.py`（逻辑停跑、定时器冻结；Modbus/Web 服务与 %Q 缓冲保持，仍可读）。
+- 停止扫描：`python src/pipeline/stop_plc.py`（逻辑停跑、定时器停在当前值；Modbus/Web 服务与 %Q 缓冲保持，仍可读）。
 
 **已验收场景清单**（经链路 B 实测通过；2026-09-03 按负责人指令精简为 motion3axis 单场景，被删场景与历史验收记录见 git）：
 
 | 场景 | XML | 轴配置 | 考察点 | 结果 |
 |---|---|---|---|---|
-| 三轴运动控制（CSP 完整版） | motion3axis.xml | 3× 直线 | CSP 四层：INTERP→DRIVE402(CiA 402 状态机+位置环)→MC API→应用层 | 35/35 |
+| 三轴运动控制（CSP 完整版 + PLCopen MC 对齐 v4.0） | motion3axis.xml | 3× 直线 | 四层：INTERP（可变动力学+中止）→DRIVE402(CiA 402 状态机+位置环)→**MC API（PLCopen MC Part 1 单轴对齐：Power/Reset/Stop/Halt/MoveAbsolute/MoveRelative/MoveJog/Home/ReadStatus/ReadActualPosition，含 ErrorID/CommandAborted 全状态组）**→应用层 | 47/47（连续 6 轮复验绿） |
 
-验收脚本 `scenario_motion3axis.py` 一身两角——CiA 402 主站（应用指令+读状态字位）+ 三轴电机仿真（按速度指令积分编码器），覆盖 8 组 35 项（CSP 语义：越程由插补层安全拒绝）：上电 RTSO → MC_Power 使能序列（bit0→bit1→bit2）→ 三轴并发定位 → 仅 Z 轴运动 → 快停 QSA 受控减速+释放重使能+重发指令 → 点动按住移动/松开停止 → 故障注入 FRA/FA+MC_Reset 复位+重使能 → 回零+失能。
+验收脚本 `scenario_motion3axis.py` 一身两角——PLCopen MC / CiA 402 主站（应用指令+目标/距离寄存器+读状态字与 ErrorID）+ 三轴电机仿真（按速度指令积分编码器），覆盖 11 组 47 项（CSP 语义：越程由 MC 层拒绝报 ErrorID=1）：上电 RTSO → MC_Power 使能序列 → 三轴并发定位 → 仅 Z 轴运动 → 快停 QSA 受控减速+释放重使能+重发指令 → 点动按住前进/松开停止（起跳锚定实际位置）→ **越程 MC 层拒绝（err_id=1，轴不动不失能）** → **MC_Halt 受控暂停（减速停不失能+重发恢复）** → **MC_MoveRelative 相对定位（实际位置+距离）与越程拒绝** → 回零+失能 → 全程不变量。
 
 **场景覆盖度**：当前场景库为 motion3axis 单场景（三轴运动控制 CSP 完整栈，作为双链路联调基准）。其余运动场景（axis_osc / xy_pick / z_lift / mixed_lin_rot）与非运动场景（分拣/液位/交通/PID）均按决策移除，历史见 git；《运动控制代码生成方案》与 `tools/gen_scenarios.py` 生成器保留，场景可按需再生。prog_id 分配：motion3axis=1，新场景从 2 顺延。
 
@@ -208,11 +225,68 @@ L3 在线验收   逐场景 run_deploy 部署 + scenario_<场景>.py 验收（�
 3. **模拟量统一约定**：双链路统一用 **INT @ %QW + 定点换算**（不用 `REAL` 与 `%I` 区——仅链路 A 技术上可行，为保证两链路跑同一份代码而统一弃用），换算系数在 io_map 中声明；
 4. **线圈访问红线**：仿真侧桥接若走链路 B，线圈写必须经 `modbus_io.SafeCoilIO`（§5.2）。
 
+### 6.1 链路 A L3 工具链 Docker recipe（2026-09-09 lx 实测，Windows 无 WSL/Linux 机可用）
+
+L3（真 iec2c+gcc 编译回环）不需要专用 Linux 机器——用 OpenPLC 镜像里的 matiec + python 官方镜像即可：
+
+```bash
+# ① 从 openplc 容器提取 matiec（iec2c 二进制 + lib/ 标准库，~8MB，落 workspace/ 不入库）：
+mkdir -p workspace/matiec_toolchain
+docker cp openplc:/workdir/utils/matiec_src/iec2c workspace/matiec_toolchain/iec2c
+docker cp openplc:/workdir/utils/matiec_src/lib   workspace/matiec_toolchain/lib
+
+# ② python 容器内跑 L3（注意：-v 源路径用正斜杠；gcc 须连带 libc6-dev，slim 镜像不带）：
+docker run --rm \
+  -v "D:/<repo>:/repo" \
+  -v "D:/<repo>/workspace/matiec_toolchain:/workdir/utils/matiec_src" \
+  --entrypoint bash python:3.12-slim -c "
+    apt-get update -qq && apt-get install -y -qq --no-install-recommends gcc libc6-dev &&
+    pip install -q jsonschema;
+    export MATEC=/workdir/utils/matiec_src/iec2c CC=gcc MATEC_ROOT=/workdir/utils/matiec_src &&
+    cd /repo && python3 toolchain/tests/test_link_a.py"
+```
+
+坑三条（均已踩过）：`fdamador/openplc` 的 entrypoint 直接起 webserver（**必须 `--entrypoint bash`** 否则命令被吞、容器悬挂）；镜像是 Debian 9（EOL，apt 源失效，别指望在里面装包）；Windows 挂载源路径**正斜杠**才可靠（反斜杠第二块挂载会静默变空目录）。该 matiec 的关键版本特性（shim_gen 已适配）：定位变量外部引用为 `type*` 指针语义（shim 充当 glue）；`POUS.c` 被资源 `.c` 文本包含（unity build，勿单独编译）；头文件在 `lib/C/`；`iec2c -I <root>/lib` 指定标准库目录；入口符号恒为 `config_init__/config_run__`（配置头文件名随 CONFIGURATION 名变）。
+
+### 6.2 OpenPLC↔仿真桥接线 recipe（2026-09-15 定稿版，负责人授权 lx 拍板）
+
+**裁决**（对应看板共同议题"float32/INT16 换算归属"与"%IW 地址区冲突"）：
+
+1. **换算归桥**：桥按 io_map 的 scale 做 float32 工程量 ↔ INT16 定点换算（主方案 §3.3 原文语义），PLC 侧保持 16 位整数域、不引入 REAL 位重组；
+2. **传感注入统一 %QW**：桥不使用 %IW（契约②"%I 区禁用"）；契约③ `modbus.plc_addr` pattern 收紧为 `^%Q[XW]`（2026-09-09 lx 评审意见落地）；csk build-mjcf 的地址分配同步修改。
+
+**接线拓扑（定稿）**：仿真侧为 **Modbus 客户端**轮询 OpenPLC（:502）——复用 §5.1 已实测的"外部直接写 %Q"通道，与验收脚本同一机制；**不动 OpenPLC 的 modbus_client 轮询配置**（其 FC03 读固定落 %IW，与契约②冲突，不采用）：
+
+```
+OpenPLC 容器（:502，Modbus 服务端，%Q 区即 io_map 地址表）
+   ▲ FC03 读 %QW 指令变量（桥按 scale 换算→工程量→sim 关节驱动目标）
+   │ FC16 写 %QW 反馈变量（sim 关节位置按 scale 量化←桥）
+   │ %QX 命令位：fc15 整组读-改-写（SafeCoilIO 纪律，§5.2 红线）
+桥（runtime，Modbus 客户端，轮询周期建议 10~20ms，与 PLC 扫描 8.3ms 错峰）
+   ▼
+仿真运行时（mujoco_jog_runtime / MuJoCo，物理步 1/120s）
+```
+
+**配置一页**（桥定型即抄）：
+
+| 项 | 值 | 依据 |
+|---|---|---|
+| 对端 | `tcp://127.0.0.1:502`（OpenPLC Modbus 服务端） | 运行时形态 §4.4 |
+| 读指令 | FC03 保持寄存器，地址 = io_map `modbus.plc_addr` 换算（%QW0→40001 起），长度 = 指令通道数 | io_map 地址表 |
+| 写反馈 | FC16 保持寄存器，同上（反馈变量地址），值 = sim 工程量 ÷ scale 量化 INT16 | 裁决 1 |
+| 命令位 | %QX 一律 fc15 整组写（覆盖完整 16 位跨度），禁止 fc05 单线圈 | §5.2 实测红线 |
+| 轮询周期 | 10~20ms（≥2× PLC 扫描周期），时间阈值类验收 ≥100ms 不受影响 | 主方案 §3.4.2 |
+| 验证 | 桥起后 `curl :8600/status` 看 prog_id；示教器/JogGUI 断连不影响桥 | §4.3 |
+
+csk 落地路径（已表态）：随 RFC 同步改 `iomap.py`（地址区全 %Q）+ `gantry_bridge.py`（换算归桥），桥布局合入后本表寄存器清单按最终 io_map 对表即可。
+
+> **实施状态（2026-09-15，lx 代 csk 落地——负责人授权 lx 全权负责桥接部分）**：① `scenegen/scenegen/iomap.py`——PLC 面全通道统一 %Q 区（float → %QW 1 寄存器 int16 定点、bool → %QX），仿真面 float32 布局原样保留，`modbus_summary` 换 `plc_loop` 段，ST 声明改 INT；components 依赖延迟导入（无 pxr 环境可用）；② 新增 `runtime/plc_link.py`——桥作客户端轮询 OpenPLC %Q 区（FC03 读指令 / FC16 写反馈 / FC15 整组线圈 / 15ms 周期 / 工程量↔米换算，兼容 gantry 与 linear_axis 两种绑定风格）；③ `mujoco_jog_runtime.py` 增 `--plc` 模式；④ `out/` 三处产物重生成；⑤ 测试：runtime 27 项（新增 plc_link 4 项：换算 round-trip/钳位/%Q 面地址/回环集成）+ 根 215 全绿。**语义边界**：plc_link 按位置指令通道接线（plotter_cell 形态）；CSP 速度指令型程序（motion3axis x_v）需驱动器积分模型（stage_link 语义），待后续接线。
+
 ## 7. 待办（按优先级）
 
-1. **双链路联调**：同一场景 A/B 双跑、trace 比对行为一致性（总体方案风险表"双链路行为不一致"的应对；**依赖 csk 链路 A 就绪**，已在协作看板提请求）；
-2. **场景库扩充**：2026-09-03 按指令精简为 motion3axis 单场景（三轴运动控制基线）；后续场景（运动扩展与其余应用域）按 gc 模式库需求重建，prog_id 从 2 顺延；
-3. **配合事项**（非本侧实现）：三方一致性检查器归 gc（复用本侧 `xml2st.parse()`，见其文档 §5）；模拟量 INT 定点换算的量程字段随 io_map 契约定稿（主方案 §3.3，csk 落地），本侧参与评审。
+1. **双链路联调**：同一场景 A/B 双跑、trace 比对行为一致性（总体方案风险表"双链路行为不一致"的应对）。**链路 A L3 回环已于 2026-09-09 lx 实测通过**（Docker recipe 见 §6.1；含 csk 侧 toolchain 四处版本适配修正，待 csk 复核）——下一步 motion3axis A/B trace 比对，等 csk 判定引擎/trace 口径；
+2. **场景库扩充**：2026-09-03 按指令精简为 motion3axis 单场景（三轴运动控制基线）；后续场景（运动扩展与其余应用域）按 gc 模式库需求重建，prog_id 从 2 顺延——gc 分支已新增 plotter3axis(=2)/plotter_circle(=3)，编号合规（2026-09-09 lx 复核）；
+3. **配合事项**（非本侧实现）：三方一致性检查器归 gc（复用本侧 `xml2st.parse()`，见其文档 §5）；模拟量 INT 定点换算的量程字段随 io_map 契约定稿（主方案 §3.3，csk 落地）——**契约③ draft.1 lx 评审已回**（2026-09-09，结论见看板：结构 ✅ + %IW pattern 收紧意见）。
 
 ## 8. 仓库实现索引与快速开始
 
@@ -235,5 +309,7 @@ pip install -r requirements.txt
 python -m pytest tests/ -v                                            # ① 转换器单测
 python src/pipeline/run_deploy.py                                     # ② 部署（需运行时，默认 motion3axis）
 python src/pipeline/scenario_motion3axis.py                           # ③ 场景验收
-python src/pipeline/run_regression.py                                 # ④ 一键回归（①~③ 全含，CI 门禁）
+python src/pipeline/run_regression.py                                 # ④ 一键回归（①~③ 全含，CI 检查）
 ```
+
+2026-11-05 资源补全流程：已确认用户逐件选择导入/临时生成、临时组件仅当前任务、明确版本与适用范围后单独入库，以及内联/外部机械定义归一化。实现范围、扩展格式和验收边界见 [AML 资源导入与装配](AML资源导入与装配.md) §5–6；四份冻结契约不变。

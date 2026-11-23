@@ -1,0 +1,71 @@
+{
+  "gate": "all",
+  "ok": true,
+  "gates": {
+    "xml2st": true,
+    "consistency": [
+      "SKIP: R8 POSWIN 比对——AML 各轴 poswin 异构 [1.0, 2.0]，共享 FB 类型级初值无满足值（待 lx 参数化为 INTERP 实例参数，RFC 已登记）",
+      "SKIP: R8 XML 侧行程比对——多轴行程不一，越程界限现为 FB 体内共享常量（lx 参数化后逐轴比对）；scene 侧仍比对",
+      "SKIP: io_map 未提供（仿真侧尚未产出）——仅对账 XML ↔ io_list 两方"
+    ],
+    "scene": {
+      "ok": true,
+      "assets": 1,
+      "io_map_vars": 6,
+      "r5": "active"
+    },
+    "deploy": {
+      "state": "ok",
+      "detail": {
+        "status": "OK",
+        "steps": [
+          {
+            "step": "validate & convert XML",
+            "ok": true,
+            "detail": "deploy_iqxhmjdw.xml -> 757 行 ST"
+          },
+          {
+            "step": "write program.st",
+            "ok": true,
+            "detail": "E:\\codenew\\308sjk\\workspace\\program.st"
+          },
+          {
+            "step": "login runtime",
+            "ok": true,
+            "detail": "http://192.168.12.131:8080"
+          },
+          {
+            "step": "upload & trigger compile",
+            "ok": true,
+            "detail": "377642.st"
+          },
+          {
+            "step": "compile (matiec)",
+            "ok": true,
+            "detail": ""
+          },
+          {
+            "step": "start PLC",
+            "ok": true,
+            "detail": "Modbus TCP :502 已随运行时开启"
+          }
+        ],
+        "errors": [],
+        "runtime_status": {
+          "serve": "ok",
+          "runtime": {
+            "url": "http://192.168.12.131:8080",
+            "status": "RUNNING"
+          },
+          "prog_id": null,
+          "program": null,
+          "modbus_error": "无法连接 Modbus 127.0.0.1:502"
+        }
+      }
+    },
+    "acceptance": {
+      "state": "ok",
+      "detail": "场景验收: 全部通过 ✅"
+    }
+  }
+}

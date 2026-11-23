@@ -1,0 +1,165 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<COLLADA version="1.5.0" xmlns="http://www.collada.org/2008/03/COLLADASchema">
+	<asset>
+		<contributor>
+			<author>AutomationML e.V.</author>
+			<author_website>www.automationml.org</author_website>
+			<authoring_tool>"Notepad++" "6.8.6" "6.8.6"</authoring_tool>
+		</contributor>
+		<created>2015-12-15T13:12:06.7153453+01:00</created>
+		<modified>2015-12-15T13:12:06.7153453+01:00</modified>
+		<unit meter="0.001" name="mm" />
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_nodes>
+		<node id="Schutzgittertuer" name="Schutzgittertuer">
+			<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+			<node id="Schutzgittertuer_fa" name="fester_Anteil">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="fester_Anteil_Product.dae#fester_Anteil_visual_scene_node" />
+			</node>
+			<node id="Schutzgittertuer_ba" name="beweglicher_Anteil">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<translate>0 31.9394 1930.39</translate>
+				<rotate>0 0 1 90</rotate>
+				<rotate sid="Revolute.1_axis">0 0 1 0</rotate>
+				<translate>-31.9394 0 -1930.39</translate>
+				<rotate>0 0 1 -90</rotate>
+				<instance_node url="beweglicher_Anteil_Product.dae#beweglicher_Anteil_visual_scene_node" />
+			</node>
+		</node>
+	</library_nodes>
+	<library_visual_scenes>
+		<visual_scene id="Schutzgittertuer_visual_scene">
+			<node id="Schutzgittertuer_visual_scene_node" name="Schutzgittertuer">
+				<instance_node url="#Schutzgittertuer" />
+			</node>
+		</visual_scene>
+	</library_visual_scenes>
+	<library_joints>
+		<joint id="Schutzgittertuer_Mechanism.1_Revolute.1" name="Revolute.1">
+			<revolute sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>-360</min>
+					<max>360</max>
+				</limits>
+			</revolute>
+		</joint>
+	</library_joints>
+	<library_kinematics_models>
+		<kinematics_model id="Schutzgittertuer_kin_model.0" name="Mechanism.1">
+			<technique_common>
+				<instance_joint sid="Revolute.1" url="#Schutzgittertuer_Mechanism.1_Revolute.1" />
+				<link name="fa" sid="fa">
+					<attachment_full joint="Schutzgittertuer_kin_model.0/Revolute.1">
+						<translate>0 31.9394 1930.39</translate>
+						<rotate>0 0 1 90</rotate>
+						<link name="ba" sid="ba">
+							<translate>-31.9394 0 -1930.39</translate>
+							<rotate>0 0 1 -90</rotate>
+						</link>
+					</attachment_full>
+				</link>
+			</technique_common>
+			<extra>
+				<technique profile="POSES">
+					<poses>
+						<pose count="1" name="Zu">
+							<pose_joint joint="Schutzgittertuer_kin_model.0/Revolute.1">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+						</pose>
+						<pose count="1" name="Offen_90_">
+							<pose_joint joint="Schutzgittertuer_kin_model.0/Revolute.1">
+								<value>
+									<double>90</double>
+								</value>
+							</pose_joint>
+						</pose>
+						<pose count="1" name="Offen_-90_">
+							<pose_joint joint="Schutzgittertuer_kin_model.0/Revolute.1">
+								<value>
+									<double>-90</double>
+								</value>
+							</pose_joint>
+						</pose>
+					</poses>
+				</technique>
+			</extra>
+		</kinematics_model>
+	</library_kinematics_models>
+	<library_articulated_systems>
+		<articulated_system id="Schutzgittertuer_art_system.0">
+			<kinematics>
+				<instance_kinematics_model sid="inst_Schutzgittertuer_kin_model.0" url="#Schutzgittertuer_kin_model.0">
+					<newparam sid="Schutzgittertuer_art_system.0_inst_Schutzgittertuer_kin_model.0">
+						<SIDREF>Schutzgittertuer_art_system.0/inst_Schutzgittertuer_kin_model.0</SIDREF>
+					</newparam>
+					<newparam sid="Schutzgittertuer_art_system.0_inst_Schutzgittertuer_kin_model.0_Revolute.1_axis">
+						<SIDREF>Schutzgittertuer_art_system.0/inst_Schutzgittertuer_kin_model.0/Revolute.1/axis</SIDREF>
+					</newparam>
+					<newparam sid="Schutzgittertuer_art_system.0_inst_Schutzgittertuer_kin_model.0_Revolute.1_axis_value">
+						<float>0</float>
+					</newparam>
+				</instance_kinematics_model>
+				<technique_common>
+					<axis_info axis="Schutzgittertuer_art_system.0/inst_Schutzgittertuer_kin_model.0/Revolute.1/axis" name="Command.1" sid="Schutzgittertuer_art_system.0_inst_Schutzgittertuer_kin_model.0_Command.1">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>1</int>
+						</index>
+						<limits>
+							<min>
+								<float>-360</float>
+							</min>
+							<max>
+								<float>360</float>
+							</max>
+						</limits>
+					</axis_info>
+					<frame_origin link="inst_Schutzgittertuer_kin_model.0/fa" />
+					<frame_tip link="inst_Schutzgittertuer_kin_model.0/ba" />
+				</technique_common>
+			</kinematics>
+		</articulated_system>
+	</library_articulated_systems>
+	<library_kinematics_scenes>
+		<kinematics_scene id="Schutzgittertuer_kin_scene">
+			<instance_articulated_system sid="inst_Schutzgittertuer_art_system.0" url="#Schutzgittertuer_art_system.0">
+				<bind symbol="Schutzgittertuer_kin_scene_inst_Schutzgittertuer_art_system.0_inst_Schutzgittertuer_kin_model.0">
+					<param ref="Schutzgittertuer_art_system.0_inst_Schutzgittertuer_kin_model.0" />
+				</bind>
+				<bind symbol="Schutzgittertuer_kin_scene_inst_Schutzgittertuer_art_system.0_inst_Schutzgittertuer_kin_model.0_Revolute.1_axis">
+					<param ref="Schutzgittertuer_art_system.0_inst_Schutzgittertuer_kin_model.0_Revolute.1_axis" />
+				</bind>
+				<bind symbol="Schutzgittertuer_kin_scene_inst_Schutzgittertuer_art_system.0_inst_Schutzgittertuer_kin_model.0_Revolute.1_axis_value">
+					<param ref="Schutzgittertuer_art_system.0_inst_Schutzgittertuer_kin_model.0_Revolute.1_axis_value" />
+				</bind>
+			</instance_articulated_system>
+		</kinematics_scene>
+	</library_kinematics_scenes>
+	<scene>
+		<instance_visual_scene url="#Schutzgittertuer_visual_scene" />
+		<instance_kinematics_scene url="#Schutzgittertuer_kin_scene">
+			<bind_kinematics_model node="Schutzgittertuer_fa">
+				<param>Schutzgittertuer_kin_scene_inst_Schutzgittertuer_art_system.0_inst_Schutzgittertuer_kin_model.0</param>
+			</bind_kinematics_model>
+			<bind_joint_axis target="Schutzgittertuer_ba/Revolute.1_axis">
+				<axis>
+					<param>Schutzgittertuer_kin_scene_inst_Schutzgittertuer_art_system.0_inst_Schutzgittertuer_kin_model.0_Revolute.1_axis</param>
+				</axis>
+				<value>
+					<param>Schutzgittertuer_kin_scene_inst_Schutzgittertuer_art_system.0_inst_Schutzgittertuer_kin_model.0_Revolute.1_axis_value</param>
+				</value>
+			</bind_joint_axis>
+		</instance_kinematics_scene>
+	</scene>
+</COLLADA>

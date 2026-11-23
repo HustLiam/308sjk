@@ -1,0 +1,68 @@
+{
+  "gate": "all",
+  "ok": true,
+  "gates": {
+    "xml2st": true,
+    "consistency": [
+      "SKIP: io_map 未提供（仿真侧尚未产出）——仅对账 XML ↔ io_list 两方"
+    ],
+    "scene": {
+      "ok": true,
+      "assets": 1,
+      "io_map_vars": 6,
+      "r5": "active"
+    },
+    "deploy": {
+      "state": "ok",
+      "detail": {
+        "status": "OK",
+        "steps": [
+          {
+            "step": "validate & convert XML",
+            "ok": true,
+            "detail": "deploy_opytcdp6.xml -> 110 行 ST"
+          },
+          {
+            "step": "write program.st",
+            "ok": true,
+            "detail": "D:\\Study\\SIMENS PLC\\workspace\\program.st"
+          },
+          {
+            "step": "login runtime",
+            "ok": true,
+            "detail": "http://127.0.0.1:8080"
+          },
+          {
+            "step": "upload & trigger compile",
+            "ok": true,
+            "detail": "409347.st"
+          },
+          {
+            "step": "compile (matiec)",
+            "ok": true,
+            "detail": ""
+          },
+          {
+            "step": "start PLC",
+            "ok": true,
+            "detail": "Modbus TCP :502 已随运行时开启"
+          }
+        ],
+        "errors": [],
+        "runtime_status": {
+          "serve": "ok",
+          "runtime": {
+            "url": "http://127.0.0.1:8080",
+            "status": "RUNNING"
+          },
+          "prog_id": 4,
+          "program": "unknown(prog_id=4)"
+        }
+      }
+    },
+    "acceptance": {
+      "state": "ok",
+      "detail": "场景验收: 全部通过 ✅"
+    }
+  }
+}

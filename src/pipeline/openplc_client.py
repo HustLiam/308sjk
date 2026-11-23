@@ -11,7 +11,7 @@ OpenPLC v3 运行时 HTTP 客户端。
   compile_status       GET  /compilation-logs     SUCCESS / FAILED / COMPILING
   start / stop         GET  /start_plc /stop_plc
   status               GET  /dashboard            Running / Stopped / Compiling
-  runtime_logs         GET  /runtime-logs
+  runtime_logs         GET  /runtime_logs
 
 会话有效期约 5 分钟，超时自动重登录一次。
 """
@@ -32,12 +32,13 @@ INPUT_RE = re.compile(r"<input[^>]*name=[\"']([^\"']+)[\"'][^>]*value=[\"']([^\"
 
 class OpenPLCClient:
     def __init__(self, base_url="http://127.0.0.1:8080",
-                 username="openplc", password="openplc", timeout=30):
+                 username="openplc", password="openplc", timeout=30, trust_env=False):
         self.base = base_url.rstrip("/")
         self.username = username
         self.password = password
         self.timeout = timeout
         self.session = requests.Session()
+        self.session.trust_env = trust_env
 
     # ------------------------------------------------------------------ 内部
     def _request(self, method, path, **kwargs):
@@ -163,4 +164,7 @@ class OpenPLCClient:
         return "UNKNOWN"
 
     def runtime_logs(self):
-        return self._request("GET", "/runtime-logs").text
+        response = self._request("GET", "/runtime_logs")
+        if response.status_code != 200:
+            raise OpenPLCError("读取 Runtime 日志失败 HTTP %d" % response.status_code)
+        return response.text

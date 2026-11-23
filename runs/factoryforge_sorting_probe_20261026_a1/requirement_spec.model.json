@@ -1,0 +1,409 @@
+{
+  "schema_version": "1.0.0-draft.3",
+  "task_id": "factoryforge_sorting_probe_20261026_a1",
+  "task_goal": "按高度分拣线：面板Start启动后输送带运行、发射器按节拍供料；工件经过测量工位时由sensor_low_detect与sensor_high_detect两只实际光电判定高度——高纸箱（仅高位光电触发）由推料机构伸出推入侧面滑槽经chute从outlet_tall出口离开，矮纸箱（低位光电触发）沿直行从outlet_short出口离开。推料动作以pusher_extend驱动、以pusher_extended/pusher_retracted实际到位反馈确认伸缩完成，出口以counter_tall/counter_short实际计数确认。Stop停止；NC急停panel_estop_ok断开立即停止并禁止自动重启，急停释放后需Reset清除锁存方可重新启动。conveyor_fault或pusher_fault（卡缸/输送故障）时停止并点亮报警。时间旋钮panel_delay_ms（INT毫秒，300~1800ms）设定推料保持/供料节拍延时。",
+  "io_list": [
+    {
+      "name": "conveyor_run",
+      "dir": "output",
+      "type": "BOOL",
+      "range": null,
+      "device": "Run conveyor carrying surface",
+      "address": "%QX0.0"
+    },
+    {
+      "name": "emitter_emit",
+      "dir": "output",
+      "type": "BOOL",
+      "range": null,
+      "device": "Request one workpiece on rising edge",
+      "address": "%QX0.1"
+    },
+    {
+      "name": "pusher_extend",
+      "dir": "output",
+      "type": "BOOL",
+      "range": null,
+      "device": "True extend, false retract",
+      "address": "%QX0.2"
+    },
+    {
+      "name": "stack_green",
+      "dir": "output",
+      "type": "BOOL",
+      "range": null,
+      "device": "Stack light green",
+      "address": "%QX0.3"
+    },
+    {
+      "name": "panel_green",
+      "dir": "output",
+      "type": "BOOL",
+      "range": null,
+      "device": "Panel green lamp",
+      "address": "%QX0.4"
+    },
+    {
+      "name": "panel_red",
+      "dir": "output",
+      "type": "BOOL",
+      "range": null,
+      "device": "Panel red lamp",
+      "address": "%QX0.5"
+    },
+    {
+      "name": "sensor_low_detect",
+      "dir": "input",
+      "type": "BOOL",
+      "range": null,
+      "device": "Low beam hit",
+      "address": "%QX1.0"
+    },
+    {
+      "name": "sensor_high_detect",
+      "dir": "input",
+      "type": "BOOL",
+      "range": null,
+      "device": "High beam hit",
+      "address": "%QX1.1"
+    },
+    {
+      "name": "pusher_extended",
+      "dir": "input",
+      "type": "BOOL",
+      "range": null,
+      "device": "Actual slide q >= 0.54 m",
+      "address": "%QX1.2"
+    },
+    {
+      "name": "pusher_retracted",
+      "dir": "input",
+      "type": "BOOL",
+      "range": null,
+      "device": "Actual slide q <= 0.01 m",
+      "address": "%QX1.3"
+    },
+    {
+      "name": "conveyor_fault",
+      "dir": "input",
+      "type": "BOOL",
+      "range": null,
+      "device": "Injected drive fault state read by PLC",
+      "address": "%QX1.4"
+    },
+    {
+      "name": "pusher_fault",
+      "dir": "input",
+      "type": "BOOL",
+      "range": null,
+      "device": "Injected pusher jam state read by PLC",
+      "address": "%QX1.5"
+    },
+    {
+      "name": "panel_start",
+      "dir": "input",
+      "type": "BOOL",
+      "range": null,
+      "device": "Normally open momentary Start",
+      "address": "%QX1.6"
+    },
+    {
+      "name": "panel_stop",
+      "dir": "input",
+      "type": "BOOL",
+      "range": null,
+      "device": "Normally open momentary Stop",
+      "address": "%QX1.7"
+    },
+    {
+      "name": "panel_reset",
+      "dir": "input",
+      "type": "BOOL",
+      "range": null,
+      "device": "Normally open momentary Reset",
+      "address": "%QX2.0"
+    },
+    {
+      "name": "panel_estop_ok",
+      "dir": "input",
+      "type": "BOOL",
+      "range": null,
+      "device": "Healthy NC E-stop circuit true; pressed false",
+      "address": "%QX2.1"
+    },
+    {
+      "name": "counter_tall",
+      "dir": "input",
+      "type": "INT",
+      "range": [
+        0,
+        32767
+      ],
+      "device": "Tall outlet actual entry count",
+      "address": "%QW30",
+      "unit": "count"
+    },
+    {
+      "name": "counter_short",
+      "dir": "input",
+      "type": "INT",
+      "range": [
+        0,
+        32767
+      ],
+      "device": "Short outlet actual entry count",
+      "address": "%QW31",
+      "unit": "count"
+    },
+    {
+      "name": "panel_delay_ms",
+      "dir": "input",
+      "type": "INT",
+      "range": [
+        300,
+        1800
+      ],
+      "device": "Operator delay setting; proposed INT milliseconds encoding of source Float seconds",
+      "address": "%QW32",
+      "unit": "ms"
+    }
+  ],
+  "constraints": [
+    {
+      "id": "C1",
+      "kind": "timing",
+      "desc": "启动握手：panel_start上升沿且panel_estop_ok为真、无故障锁存时，置conveyor_run=1并点亮panel_green/stack_green；从Start上升沿到conveyor_run上升沿不超过0.5s。"
+    },
+    {
+      "id": "C2",
+      "kind": "timing",
+      "desc": "供料节拍：运行中按panel_delay_ms设定的毫秒延时周期性给emitter_emit一个上升沿请求单件供料，延时值取自panel_delay_ms（300~1800ms）。"
+    },
+    {
+      "id": "C3",
+      "kind": "timing",
+      "desc": "推料时序：高件判定（sensor_high_detect触发且sensor_low_detect未触发）后置pusher_extend=1，等待pusher_extended实际到位；保持panel_delay_ms延时后置pusher_extend=0，等待pusher_retracted实际到位，完成一次推料循环。"
+    },
+    {
+      "id": "C4",
+      "kind": "interlock",
+      "desc": "急停联锁：panel_estop_ok为假（NC回路断开）期间，conveyor_run、emitter_emit、pusher_extend全部强制为0，立即停止，并锁存急停状态禁止自动重启。"
+    },
+    {
+      "id": "C5",
+      "kind": "interlock",
+      "desc": "复位门控：急停释放（panel_estop_ok恢复为真）后，必须由panel_reset上升沿清除急停锁存，之后panel_start方可重新启动；未复位前禁止启动。"
+    },
+    {
+      "id": "C6",
+      "kind": "interlock",
+      "desc": "故障联锁：conveyor_fault或pusher_fault为真期间，停止conveyor_run、emitter_emit、pusher_extend并点亮panel_red报警；故障条件消失且重新使能后可直接重新启动。"
+    },
+    {
+      "id": "C7",
+      "kind": "exception",
+      "desc": "卡缸/输送故障处理：pusher_fault有效期间受控停止推料并中止当前分拣序列；conveyor_fault有效期间停止输送；异常条件消失且重新使能后可直接重新启动，无需额外复位命令。"
+    },
+    {
+      "id": "C8",
+      "kind": "interlock",
+      "desc": "推料安全：pusher_extend=1期间不得同时要求反向动作；仅在pusher_retracted为真（q<=0.01m）时才允许下一次伸出，避免机构冲突。"
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "AC1",
+      "desc": "启动后输送带运行：panel_start上升沿到conveyor_run上升沿的响应不超过0.5s。",
+      "type": "event_delay",
+      "from": {
+        "signal": "panel_start",
+        "edge": "rising"
+      },
+      "to": {
+        "signal": "conveyor_run",
+        "edge": "rising"
+      },
+      "op": "<=",
+      "value": 0.5,
+      "unit": "s"
+    },
+    {
+      "id": "AC2",
+      "desc": "高件分流：sensor_high_detect触发后推料机构伸出，pusher_extend上升沿到pusher_extended上升沿不超过2.0s（含伺服滞后与通信延迟裕量）。",
+      "type": "event_delay",
+      "from": {
+        "signal": "pusher_extend",
+        "edge": "rising"
+      },
+      "to": {
+        "signal": "pusher_extended",
+        "edge": "rising"
+      },
+      "op": "<=",
+      "value": 2.0,
+      "unit": "s"
+    },
+    {
+      "id": "AC3",
+      "desc": "推料回收：pusher_extend下降沿到pusher_retracted上升沿不超过2.0s。",
+      "type": "event_delay",
+      "from": {
+        "signal": "pusher_extend",
+        "edge": "falling"
+      },
+      "to": {
+        "signal": "pusher_retracted",
+        "edge": "rising"
+      },
+      "op": "<=",
+      "value": 2.0,
+      "unit": "s"
+    },
+    {
+      "id": "AC4",
+      "desc": "急停安全：panel_estop_ok为假期间禁止输送带运行。",
+      "type": "forbidden_state",
+      "when": {
+        "signal": "panel_estop_ok",
+        "equals": false
+      },
+      "forbid": {
+        "signal": "conveyor_run",
+        "equals": true
+      }
+    },
+    {
+      "id": "AC5",
+      "desc": "急停安全：panel_estop_ok为假期间禁止推料伸出。",
+      "type": "forbidden_state",
+      "when": {
+        "signal": "panel_estop_ok",
+        "equals": false
+      },
+      "forbid": {
+        "signal": "pusher_extend",
+        "equals": true
+      }
+    },
+    {
+      "id": "AC6",
+      "desc": "输送故障安全：conveyor_fault为真期间禁止输送带运行。",
+      "type": "forbidden_state",
+      "when": {
+        "signal": "conveyor_fault",
+        "equals": true
+      },
+      "forbid": {
+        "signal": "conveyor_run",
+        "equals": true
+      }
+    },
+    {
+      "id": "AC7",
+      "desc": "推料故障安全：pusher_fault为真期间禁止推料伸出。",
+      "type": "forbidden_state",
+      "when": {
+        "signal": "pusher_fault",
+        "equals": true
+      },
+      "forbid": {
+        "signal": "pusher_extend",
+        "equals": true
+      }
+    },
+    {
+      "id": "AC8",
+      "desc": "仿真健康：本轮从启动到完成无发散、无行程越界，机构与出口计数行为一致。",
+      "type": "sim_health"
+    }
+  ],
+  "hmi": {
+    "elements": [
+      {
+        "kind": "BUTTON",
+        "type": "trigger",
+        "signal": "panel_start",
+        "label": "启动",
+        "pos": [
+          0,
+          0
+        ]
+      },
+      {
+        "kind": "BUTTON",
+        "type": "trigger",
+        "signal": "panel_stop",
+        "label": "停止",
+        "pos": [
+          0,
+          1
+        ]
+      },
+      {
+        "kind": "BUTTON",
+        "type": "trigger",
+        "signal": "panel_reset",
+        "label": "复位",
+        "pos": [
+          0,
+          2
+        ]
+      },
+      {
+        "kind": "LAMP",
+        "signal": "panel_green",
+        "label": "运行指示",
+        "pos": [
+          1,
+          0
+        ]
+      },
+      {
+        "kind": "LAMP",
+        "signal": "panel_red",
+        "label": "报警",
+        "pos": [
+          1,
+          1
+        ]
+      },
+      {
+        "kind": "LAMP",
+        "signal": "stack_green",
+        "label": "堆叠绿灯",
+        "pos": [
+          1,
+          2
+        ]
+      },
+      {
+        "kind": "GAUGE",
+        "signal": "counter_tall",
+        "label": "高件计数",
+        "pos": [
+          2,
+          0
+        ]
+      },
+      {
+        "kind": "GAUGE",
+        "signal": "counter_short",
+        "label": "矮件计数",
+        "pos": [
+          2,
+          1
+        ]
+      },
+      {
+        "kind": "GAUGE",
+        "signal": "panel_delay_ms",
+        "label": "延时设定(ms)",
+        "pos": [
+          2,
+          2
+        ]
+      }
+    ]
+  },
+  "prog_id": 4
+}

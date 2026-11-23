@@ -11,15 +11,14 @@
         0.6
       ]
     },
-    "usd_prim": "/World/gantry_1/joint_x",
     "modbus": {
       "area": "holding_registers",
       "address": 0,
       "plc_addr": "%QW0",
       "length": 2,
-      "encoding": "float32_be"
-    },
-    "_asset_type": "gantry_xyz"
+      "encoding": "float32_be",
+      "plc_encoding": "int16_scaled"
+    }
   },
   {
     "plc_var": "AxisY_cmd",
@@ -33,15 +32,14 @@
         0.4
       ]
     },
-    "usd_prim": "/World/gantry_1/joint_y",
     "modbus": {
       "area": "holding_registers",
       "address": 2,
-      "plc_addr": "%QW2",
+      "plc_addr": "%QW1",
       "length": 2,
-      "encoding": "float32_be"
-    },
-    "_asset_type": "gantry_xyz"
+      "encoding": "float32_be",
+      "plc_encoding": "int16_scaled"
+    }
   },
   {
     "plc_var": "AxisZ_cmd",
@@ -55,15 +53,14 @@
         0.2
       ]
     },
-    "usd_prim": "/World/gantry_1/joint_z",
     "modbus": {
       "area": "holding_registers",
       "address": 4,
-      "plc_addr": "%QW4",
+      "plc_addr": "%QW2",
       "length": 2,
-      "encoding": "float32_be"
-    },
-    "_asset_type": "gantry_xyz"
+      "encoding": "float32_be",
+      "plc_encoding": "int16_scaled"
+    }
   },
   {
     "plc_var": "AxisX_pos",
@@ -77,15 +74,14 @@
         0.6
       ]
     },
-    "usd_prim": "/World/gantry_1/joint_x",
     "modbus": {
       "area": "sensor_block",
       "server_register": 0,
-      "plc_addr": "%IW0",
+      "plc_addr": "%QW3",
       "length": 2,
-      "encoding": "float32_be"
-    },
-    "_asset_type": "gantry_xyz"
+      "encoding": "float32_be",
+      "plc_encoding": "int16_scaled"
+    }
   },
   {
     "plc_var": "AxisY_pos",
@@ -99,15 +95,14 @@
         0.4
       ]
     },
-    "usd_prim": "/World/gantry_1/joint_y",
     "modbus": {
       "area": "sensor_block",
       "server_register": 2,
-      "plc_addr": "%IW2",
+      "plc_addr": "%QW4",
       "length": 2,
-      "encoding": "float32_be"
-    },
-    "_asset_type": "gantry_xyz"
+      "encoding": "float32_be",
+      "plc_encoding": "int16_scaled"
+    }
   },
   {
     "plc_var": "AxisZ_pos",
@@ -121,14 +116,13 @@
         0.2
       ]
     },
-    "usd_prim": "/World/gantry_1/joint_z",
     "modbus": {
       "area": "sensor_block",
       "server_register": 4,
-      "plc_addr": "%IW4",
+      "plc_addr": "%QW5",
       "length": 2,
-      "encoding": "float32_be"
-    },
-    "_asset_type": "gantry_xyz"
+      "encoding": "float32_be",
+      "plc_encoding": "int16_scaled"
+    }
   }
 ]

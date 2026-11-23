@@ -13,32 +13,34 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
+from agent.aml_parser import parse_aml  # noqa: E402
 from agent.consistency_check import consistency_check, extract_located_vars  # noqa: E402
+from agent.scene_gen import SceneSpecGenerator  # noqa: E402
 
 MOTION_XML = REPO / "src" / "plc" / "motion3axis.xml"
 SPEC = json.loads((REPO / "examples" / "specs" / "motion3axis.spec.json").read_text(encoding="utf-8"))
 IO_LIST = SPEC["io_list"]
 
 
-def io_map_from(io_list, **overrides):
-    """按主方案 §3.3 结构生成一份与 io_list 对齐的 io_map。"""
-    mappings = [
-        {"plc_var": p["name"], "io_channel": "ch%d" % idx,
-         "bind": {"prim": "/World/%s" % p["name"], "quantity": "state"},
-         "dir": p["dir"], "type": p["type"]}
+def io_entries_from(io_list, **overrides):
+    """按契约 v1.1 ioEntry 生成与 io_list 对齐的条目（bind 为占位，R5 不查注册表）。"""
+    tmap = {"BOOL": "bool", "INT": "float"}
+    entries = [
+        {"plc_var": p["name"], "dir": p["dir"], "type": tmap.get(p["type"], "float"),
+         "bind": {"asset": "a_%d" % idx, "quantity": "q"}}
         for idx, p in enumerate(io_list)
     ]
     for idx, patch in overrides.get("patches", []):
-        mappings[idx].update(patch)
+        entries[idx].update(patch)
     if "drop" in overrides:
-        mappings = [m for i, m in enumerate(mappings) if i != overrides["drop"]]
-    return {"mappings": mappings}
+        entries = [e for i, e in enumerate(entries) if i != overrides["drop"]]
+    return entries
 
 
 class TestExtractLocatedVars:
-    def test_motion3axis_has_24_external_vars(self):
+    def test_motion3axis_has_31_external_vars(self):
         located = extract_located_vars(MOTION_XML)
-        assert len(located) == 24  # 25 个定位变量 - prog_id（契约 v1.1 元信息豁免）
+        assert len(located) == 31  # 33 个定位变量 - prog_id（契约 v1.1 元信息豁免）；2026-09-09 PLCopen MC 对齐 +8
         by_name = {v["name"]: v for v in located}
         assert by_name["run"] == {"name": "run", "addr": "%QX0.0", "type": "BOOL"}
         assert by_name["x_fb"] == {"name": "x_fb", "addr": "%QW0", "type": "INT"}
@@ -89,28 +91,240 @@ class TestTwoPartyCheck:
 
 
 class TestIoMapLeg:
-    def test_aligned_io_map_passes(self):
-        ok, problems = consistency_check(MOTION_XML, IO_LIST, io_map_from(IO_LIST))
+    """R5：契约 v1.1 ioEntry（子集覆盖语义——io_map ⊆ io_list，按钮/灯等非物理通道不在其列）。"""
+
+    def test_aligned_entries_pass(self):
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, io_entries_from(IO_LIST))
         assert ok, problems
         assert not any(p.startswith("SKIP") for p in problems)
 
-    def test_r5_missing_binding(self):
-        io_map = io_map_from(IO_LIST, drop=14)  # x_sw 无绑定
-        ok, problems = consistency_check(MOTION_XML, IO_LIST, io_map)
-        assert not ok and any("R5" in p and "x_sw" in p for p in problems)
+    def test_subset_coverage_is_legal(self):
+        """io_map 只含物理通道子集是合法形态（契约 v1.1：按钮/灯不进 io_map）。"""
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, io_entries_from(IO_LIST)[:3])
+        assert ok, problems
 
     def test_r5_direction_mismatch(self):
-        io_map = io_map_from(IO_LIST, patches=[(14, {"dir": "input"})])  # x_sw 方向反转
+        io_map = io_entries_from(IO_LIST, patches=[(14, {"dir": "input"})])  # x_sw 方向反转
         ok, problems = consistency_check(MOTION_XML, IO_LIST, io_map)
         assert any("R5" in p and "方向不一致" in p for p in problems)
 
+    def test_r5_type_mismatch(self):
+        io_map = io_entries_from(IO_LIST, patches=[(14, {"type": "bool"})])  # INT 通道标 bool
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, io_map)
+        assert any("R5" in p and "类型不一致" in p for p in problems)
+
     def test_r5_plc_var_not_in_io_list(self):
-        io_map = io_map_from(IO_LIST, patches=[(0, {"plc_var": "ghost_var"})])
+        io_map = io_entries_from(IO_LIST, patches=[(0, {"plc_var": "ghost_var"})])
         ok, problems = consistency_check(MOTION_XML, IO_LIST, io_map)
         assert any("R5" in p and "ghost_var" in p for p in problems)
 
+    def test_r5_synth_driver_channel_exempt(self):
+        """②b 合成的仿真侧驱动通道（<axis>_cmd，非 PLC 对外变量）豁免 ⊆ 检查。"""
+        entries = io_entries_from(IO_LIST) + [{
+            "plc_var": "x_cmd", "dir": "output", "type": "float",
+            "bind": {"asset": "gantry", "quantity": "x_cmd", "range": [0.0, 1.0]}}]
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, entries)
+        assert ok, problems
+
+    def test_r5_bind_must_be_asset_quantity(self):
+        io_map = io_entries_from(IO_LIST, patches=[(0, {"bind": {"prim": "/World/run"}})])
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, io_map)
+        assert any("R5" in p and "bind" in p for p in problems)
+
+    def test_contract3_entries_shape_accepted(self):
+        """契约③ io_map.json 形态（{entries: [...]}，csk build 产物）同规则对账。"""
+        wrapped = {"io_map_version": "1.0.0-draft.1", "entries": io_entries_from(IO_LIST)}
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, wrapped)
+        assert ok, problems
+
     def test_io_map_from_file_path(self, tmp_path):
         path = tmp_path / "io_map.json"
-        path.write_text(json.dumps(io_map_from(IO_LIST)), encoding="utf-8")
+        path.write_text(json.dumps(io_entries_from(IO_LIST)), encoding="utf-8")
         ok, problems = consistency_check(MOTION_XML, IO_LIST, path)
         assert ok, problems
+
+
+class TestR6DeviceAddresses:
+    """R6：⓪ 侧地址检查——AML 通道地址 ≡ XML 定位变量地址（画圆场景实证）。"""
+
+    MODEL_AML = REPO / "examples" / "aml" / "plotter3axis_station.aml"
+    SPEC = json.loads((REPO / "examples" / "specs" / "plotter3axis.spec.json")
+                      .read_text(encoding="utf-8"))
+
+    def _model(self):
+        from agent.aml_parser import parse_aml
+        model, problems = parse_aml(self.MODEL_AML)
+        assert problems == []
+        return model
+
+    def test_matching_addresses_pass(self):
+        ok, problems = consistency_check(
+            REPO / "src" / "plc" / "plotter3axis.xml", self.SPEC["io_list"],
+            device_model=self._model())
+        assert ok, problems
+
+    def test_diverged_addresses_caught(self, tmp_path):
+        # 把 x_sp 挪到错误地址 → R6 必须抓到
+        text = (REPO / "src" / "plc" / "plotter3axis.xml").read_text(encoding="utf-8")
+        broken = text.replace('name="x_sp" address="%QW10"', 'name="x_sp" address="%QW3"')
+        assert broken != text
+        bad = tmp_path / "bad_addr.xml"
+        bad.write_text(broken, encoding="utf-8")
+        ok, problems = consistency_check(bad, self.SPEC["io_list"], device_model=self._model())
+        assert not ok
+        assert any(p.startswith("R6") and "x_sp" in p for p in problems)
+
+
+# ---------------- R8：轴参数三方比对（device_model v1.1，生成方案 §6.2） ----------------
+
+def test_pou_st_text_html_p_form(tmp_path):
+    # LLM 生成器常见序列化：<html:p> 段落（xhtml 前缀）——ST 提取须兼容
+    # （2026-09-22 实测教训：只认 <xhtml> 包裹形态会把合法产物读成空，R8 全线误报）
+    import xml.etree.ElementTree as ET
+    from agent.consistency_check import _arg_number, _call_args, _pou_st_text
+    xml = ('<?xml version="1.0"?><project xmlns="http://www.plcopen.org/xml/tc6_0201" '
+           'xmlns:html="http://www.w3.org/1999/xhtml"><types><pous>'
+           '<pou name="PLC_PRG" pouType="program"><body><ST>'
+           '<html:p>go_x(fire := go_x_exe, Velocity := 40.0);</html:p>'
+           '<html:p>ix_z(POSWIN := 1.0);</html:p>'
+           '</ST></body></pou></pous></types></project>')
+    p = tmp_path / "html_p.xml"
+    p.write_text(xml, encoding="utf-8")
+    st = _pou_st_text(ET.parse(p).getroot(), "PLC_PRG")
+    assert st and "go_x(fire" in st and "ix_z(POSWIN" in st
+    assert _arg_number(_call_args(st, "go_x"), "Velocity") == 40.0
+    assert _arg_number(_call_args(st, "ix_z"), "POSWIN") == 1.0
+
+def test_cdata_commands_are_read_and_missing_command_is_rejected():
+    import re
+    import xml.etree.ElementTree as ET
+    from agent.consistency_check import _pou_st_text
+
+    root = ET.parse(MOTION_XML).getroot()
+    body = _pou_st_text(root, "PLC_PRG")
+    st = next(p for p in root.iter() if p.tag.rsplit("}", 1)[-1] == "pou"
+              and p.get("name") == "PLC_PRG").find(".//{*}ST")
+    for child in list(st):
+        st.remove(child)
+    st.text = "CDATA_BODY_PLACEHOLDER"
+    template = ET.tostring(root, encoding="unicode")
+    xml = template.replace("CDATA_BODY_PLACEHOLDER", "<![CDATA[" + body + "]]>")
+    ok, problems = consistency_check(xml, IO_LIST)
+    assert ok, problems
+    missing = template.replace("CDATA_BODY_PLACEHOLDER", "<![CDATA[" +
+                               re.sub(r"\brun\b", "unused_enable", body) + "]]>")
+    ok, problems = consistency_check(missing, IO_LIST)
+    assert not ok
+    assert any("R9:" in p and "'run'" in p for p in problems)
+
+
+DEVICE_MODEL, _ = parse_aml(REPO / "examples" / "aml" / "motion3axis_station.aml")
+
+
+def _scene_of(io_list):
+    return SceneSpecGenerator().generate({"task_id": "t", "io_list": io_list},
+                                         DEVICE_MODEL)["scene"]
+
+
+class TestR8AxisParams:
+    def test_baseline_green_with_scene(self):
+        # 基准：AML↔XML↔scene.spec 三方全一致（motion3axis v4.0）
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, device_model=DEVICE_MODEL,
+                                         scene=_scene_of(IO_LIST))
+        assert ok, problems
+        assert not [p for p in problems if "R8" in p]
+
+    def test_poswin_mismatch_detected(self):
+        # 全轴统一偏离 XML 初值 → 仍报硬错（单值可比）
+        dm = json.loads(json.dumps(DEVICE_MODEL))
+        for a in dm["kinematics"]["axes"]:
+            a["poswin"] = 3.0
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, device_model=dm)
+        assert not ok
+        assert any("POSWIN 不一致" in p and "XML=2.0" in p for p in problems)
+
+    def test_poswin_per_axis_call_site(self, tmp_path):
+        # 参数化形态：各轴 poswin 不等（绘图站 2/2/1）时，PLC_PRG 里
+        # ix_<轴>(POSWIN := 值) 逐轴对账——不再要求共享类型初值
+        text = MOTION_XML.read_text(encoding="utf-8")
+        patched = text.replace("POSWIN : REAL := 2.0;", "POSWIN : REAL;")
+        # 在 PLC_PRG 的 ST 里给三根轴的 INTERP 实例调用补 POSWIN 入参
+        patched = patched.replace(
+            "ix_x(fire", "ix_x(POSWIN := 2.0, fire").replace(
+            "ix_y(fire", "ix_y(POSWIN := 2.0, fire").replace(
+            "ix_z(fire", "ix_z(POSWIN := 1.0, fire")
+        assert patched != text
+        dm = json.loads(json.dumps(DEVICE_MODEL))
+        dm["kinematics"]["axes"][2]["poswin"] = 1.0     # z 轴 1.0（绘图站形态）
+        tmp = tmp_path / "r8_poswin_per_axis.xml"
+        tmp.write_text(patched, encoding="utf-8")
+        ok, problems = consistency_check(tmp, IO_LIST, device_model=dm)
+        assert not [p for p in problems if "POSWIN" in p and not p.startswith("SKIP")]
+
+    def test_mixed_poswin_requires_matching_instance_argument(self):
+        # master 已将 POSWIN 参数化，逐轴检查，不能继续跳过异构参数。
+        dm = json.loads(json.dumps(DEVICE_MODEL))
+        dm["kinematics"]["axes"][2]["poswin"] = 1.0
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, device_model=dm)
+        assert not ok
+        assert any("R8:" in p and "POSWIN" in p and "z_axis" in p for p in problems)
+
+    def test_defaults_mismatch_detected(self):
+        dm = json.loads(json.dumps(DEVICE_MODEL))
+        dm["kinematics"]["axes"][2]["defaults"]["velocity"] = 15.0
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, device_model=dm)
+        assert not ok
+        assert any("go_z 的 Velocity=40.0" in p and "velocity=15.0" in p for p in problems)
+
+    def test_stroke_mismatch_detected(self):
+        # 全轴同行程地偏离 XML 常量才可比（多轴行程不一走 SKIP——FB 体内共享常量
+        # 无法逐轴表达，lx 参数化后改逐轴实例参数比对）
+        dm = json.loads(json.dumps(DEVICE_MODEL))
+        for a in dm["kinematics"]["axes"]:
+            a["stroke"] = [0.0, 80.0]
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, device_model=dm)
+        assert not ok
+        assert any("MC 越程界限 [0.0,100.0]" in p and "AML stroke [0.0, 80.0]" in p
+                   for p in problems)
+
+    def test_mixed_stroke_skips_xml_side(self):
+        dm = json.loads(json.dumps(DEVICE_MODEL))
+        dm["kinematics"]["axes"][0]["stroke"] = [0.0, 80.0]
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, device_model=dm)
+        assert ok  # SKIP 不是硬问题
+        assert any("多轴行程不一" in p for p in problems)
+
+    def test_scene_travel_mismatch_detected(self):
+        scene = _scene_of(IO_LIST)
+        for a in scene["assets"]:
+            if a["type"] == "gantry_xyz":
+                a["params"]["travel_y"] = 0.7
+        ok, problems = consistency_check(MOTION_XML, IO_LIST, device_model=DEVICE_MODEL,
+                                         scene=scene)
+        assert not ok
+        assert any("scene travel_y=0.7" in p for p in problems)
+
+    def test_missing_call_detected(self):
+        text = MOTION_XML.read_text(encoding="utf-8").replace("go_y(", "goY(", 2)
+        ok, problems = consistency_check(text, IO_LIST, device_model=DEVICE_MODEL)
+        assert not ok
+        assert any("缺 go_y 调用" in p for p in problems)
+
+    def test_nested_paren_call_args_not_truncated(self):
+        # 实参含嵌套括号（fire := ... AND (NOT go_x_exe)、abort_bus := (a OR b)）
+        # 时 _call_args 须配平括号取全实参——[^)]* 截断曾致"缺 Velocity 实参"误报
+        # （plotter_cell 2026-09-22 三局各烧 1~2 轮实证）。
+        text = MOTION_XML.read_text(encoding="utf-8").replace(
+            "go_x(fire := cmd_go,",
+            "go_x(fire := cmd_go AND (NOT go_x_exe),", 1)
+        ok, problems = consistency_check(text, IO_LIST, device_model=DEVICE_MODEL)
+        assert not any("go_x 调用缺" in p for p in problems), problems
+
+    def test_v3_form_xml_skipped(self):
+        # plotter 种子仍 v3 形态（INTERP 带 VMAX）→ R8 记 SKIP 不误报
+        dm, _ = parse_aml(REPO / "examples" / "aml" / "plotter3axis_station.aml")
+        spec = json.loads((REPO / "examples" / "specs" / "plotter3axis.spec.json").read_text(encoding="utf-8"))
+        ok, problems = consistency_check(REPO / "src" / "plc" / "plotter3axis.xml",
+                                         spec["io_list"], device_model=dm)
+        assert ok  # 硬问题为零（v3 形态 SKIP + 其余检查须过）
+        assert any(p.startswith("SKIP: R8") and "v3" in p for p in problems)

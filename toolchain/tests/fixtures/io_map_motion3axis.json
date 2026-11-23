@@ -22,6 +22,9 @@
       "bind": { "asset": "motion3axis", "quantity": "move_done" } },
     { "plc_var": "prog_id",    "dir": "output", "type": "analog",
       "modbus": { "area": "holding_registers", "address": 20, "plc_addr": "%QW20", "length": 1, "encoding": "int16_be" },
-      "bind": { "asset": "motion3axis", "quantity": "prog_id" } }
+      "bind": { "asset": "motion3axis", "quantity": "prog_id" } },
+    { "plc_var": "echo",       "dir": "output", "type": "bool",
+      "modbus": { "area": "coils", "address": 8, "plc_addr": "%QX1.0", "length": 1, "encoding": "bool01" },
+      "bind": { "asset": "motion3axis", "quantity": "echo" } }
   ]
 }

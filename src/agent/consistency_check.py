@@ -6,7 +6,7 @@
 对账三方的"变量身份"：
     ② plc_project.xml 的定位变量（带 AT 地址，统一 %Q 区）
     ① requirement_spec.io_list（三方唯一源头）
-    ③ io_map.json（仿真侧产出，字段结构权威见主方案 §3.3）
+    ③ io_map（契约 v1.1：scene.spec.json 内嵌 ioEntry 数组 / csk 契约③ io_map.json）
 
 规则：
   R1 xml2st 结构闸门先过（复用 lx 的 xml2st.parse，位宽/拒绝清单问题直接短路）；
@@ -14,8 +14,16 @@
      （XML 中不允许出现 io_list 未声明的对外变量——单一源头）；
   R3 类型匹配：BOOL↔BOOL；INT↔INT/UINT/WORD（lx 位宽表的字宽兼容集）；
   R4 地址不冲突：定位变量表内地址不得重复；
-  R5 io_map 腿（提供了 io_map.json 才检查）：plc_var ⊆ io_list 且双向覆盖、
-     dir/type 与 io_list 一致。
+  R5 io_map 一致性检查（提供了 io_map 才检查）：每条 ioEntry 的 plc_var ∈ io_list 且
+     dir/type 兼容（bool↔BOOL、float/analog/word↔INT）、bind 为 {asset, quantity}。
+     覆盖为单向（io_map ⊆ io_list）——契约 v1.1 的 io_map 只含可绑物理通道，
+     按钮/灯与 NC/诊断通道不进 io_map（见 contract/README 字段语义）。
+  R6 ⓪ 侧地址检查（提供了 device_model 才检查）：AML 通道地址 ≡ XML 定位变量地址。
+  R8 轴参数三方比对（提供了 device_model 才检查，生成方案 §6.2）：AML axis_objects
+     ≡ XML 轴实例参数 ≡ scene.spec 轴参数——POSWIN（INTERP 类型初值）/ MC 调用
+     动力学（go/rel 实例字面量 ≡ defaults）/ 行程（MC 越程界限 ≡ stroke，
+     scene.travel ≡ stroke×scale）。v3 形态 XML（INTERP 带 VMAX 参数版）暂不支持，
+     记 SKIP 待种子升 v4.0 后启用。
 
 调用时机：编排器在生成后、仿真前（半环 = 部署前）。
 
@@ -31,6 +39,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "pipeline"))
 import xml2st  # noqa: E402  lx 侧契约实现（R1 复用）
+from .scene_gen import is_driver_channel  # noqa: E402  仿真侧驱动通道豁免判定（②b 定义）
 
 ADDRESS_RE = xml2st.ADDRESS_RE
 
@@ -41,6 +50,10 @@ TYPE_COMPAT = {
 }
 # 变量块种类（与 xml2st.parse 的支持范围一致；定位变量可出现在任一块）
 VAR_BLOCK_TAGS = ("inputVars", "inOutVars", "outputVars", "localVars")
+
+# R5：io_map 条目类型（契约 v1.1 ioEntry enum bool|float；契约③另含 analog|word）
+# -> io_list 类型（BOOL/INT 封闭集）。模拟量工程值由桥侧定点/浮点承载（共同议题）。
+IO_ENTRY_TYPE_COMPAT = {"bool": "BOOL", "float": "INT", "analog": "INT", "word": "INT"}
 
 
 def _is_xml_text(xml_source):
@@ -124,53 +137,284 @@ def _check_addresses(problems, located):
 
 
 def _check_io_map(problems, io_map, io_list):
-    """R5：io_map 腿对账（结构：plc_var/io_channel/bind/dir/type，主方案 §3.3）。"""
-    if isinstance(io_map, dict) and isinstance(io_map.get("mappings"), list):
-        entries = io_map["mappings"]
+    """R5：io_map 对账（契约 v1.1 ioEntry：plc_var/dir/type{bool,float}/bind{asset,quantity}）。
+
+    io_map 只覆盖**可绑物理通道**（契约 v1.1：hmi_panel 无注册 quantity，按钮/灯
+    及 NC 设定值/状态字/速度指令通道不在其列），故覆盖检查为单向 io_map ⊆ io_list；
+    反向覆盖（可绑通道不得静默丢失）由 ②b 生成器自检的路由覆盖规则保证
+    （scene_gen.validate_scene_outputs V3）。
+    """
+    if isinstance(io_map, dict) and isinstance(io_map.get("entries"), list):
+        entries = io_map["entries"]  # 契约③ io_map.json 形态（csk build 产物）
     elif isinstance(io_map, list):
-        entries = io_map
+        entries = io_map            # scene.spec 内嵌形态（gc ②b 产物）
     else:
         return _err_io_map_shape(problems, io_map)
 
     io_by_name = {p.get("name"): p for p in io_list}
-    mapped = set()
     for idx, entry in enumerate(entries):
         path = "io_map[%d]" % idx
         if not isinstance(entry, dict) or "plc_var" not in entry:
-            problems.append("R5: %s 缺少 plc_var 字段（结构见主方案 §3.3）" % path)
+            problems.append("R5: %s 缺少 plc_var 字段（ioEntry 见契约 contract/README）" % path)
             continue
         plc_var = entry.get("plc_var")
         point = io_by_name.get(plc_var)
         if point is None:
-            problems.append("R5: %s 的 plc_var %r 不在 io_list 中" % (path, plc_var))
+            if is_driver_channel(entry):
+                pass  # 仿真侧驱动通道（②b 合成的 <axis>_cmd 位置指令）非 PLC 对外变量，
+                      # 豁免 ⊆ 检查——待 RFC 把位置指令通道并入契约②后改为真实对账
+            else:
+                problems.append("R5: %s 的 plc_var %r 不在 io_list 中" % (path, plc_var))
             continue
         if entry.get("dir") is not None and entry["dir"] != point.get("dir"):
             problems.append("R5: %s 方向不一致——io_map=%r，io_list=%r" % (path, entry["dir"], point["dir"]))
-        if entry.get("type") is not None and entry["type"] != point.get("type"):
-            problems.append("R5: %s 类型不一致——io_map=%r，io_list=%r" % (path, entry["type"], point["type"]))
-        if entry.get("io_channel") is None:
-            problems.append("R5: %s 缺少 io_channel（Modbus 地址 / IO 镜像通道）" % path)
+        etype = entry.get("type")
+        if etype is not None and IO_ENTRY_TYPE_COMPAT.get(etype) != point.get("type"):
+            problems.append("R5: %s 类型不一致——io_map=%r 与 io_list %r 不兼容"
+                            "（bool↔BOOL；float/analog/word↔INT）" % (path, etype, point.get("type")))
         bind = entry.get("bind")
-        if not (isinstance(bind, dict) and bind.get("prim") and bind.get("quantity")):
-            problems.append("R5: %s 的 bind 必须是 {prim, quantity}" % path)
-        mapped.add(plc_var)
-
-    for name in io_by_name:
-        if name not in mapped:
-            problems.append("R5: io_list 变量 %r 在 io_map 中无绑定记录" % name)
+        if not (isinstance(bind, dict) and bind.get("asset") and bind.get("quantity")):
+            problems.append("R5: %s 的 bind 必须是 {asset, quantity}（契约 v1.1，bind.asset=场景资产 id）" % path)
 
 
 def _err_io_map_shape(problems, io_map):
-    problems.append("R5: io_map 结构应为 {mappings: [...]} 或数组（主方案 §3.3），实际 %s"
+    problems.append("R5: io_map 结构应为 ioEntry 数组或 {entries: [...]}（契约 contract/README），实际 %s"
                     % type(io_map).__name__)
 
 
-def consistency_check(xml_source, io_list, io_map=None):
+# ---------------- R8：轴参数三方比对（device_model v1.1，生成方案 §6.2） ----------------
+
+_NUM = r"-?\d+(?:\.\d+)?"
+
+
+def _iter_local(root, tag):
+    """按 localname 迭代（PLCopen XML 根带 tc6_0201 命名空间，iter 不支持通配）。"""
+    for el in root.iter():
+        if isinstance(el.tag, str) and el.tag.rsplit("}", 1)[-1] == tag:
+            yield el
+
+
+def _pou_st_text(root, pou_name):
+    """取 POU 的 ST 体文本；支持 xhtml、html:p 和直接文本/CDATA。
+    兼容两种 PLCopen 序列化：默认命名空间下的 <xhtml> 包裹元素（种子/模板
+    形态）与 xhtml 前缀的 <html:p> 段落（LLM 生成器常见形态——逐段拼接，
+    2026-09-22 实测教训：只认前者会把合法产物的 ST 读成空，R8 全线误报）。"""
+    for pou in _iter_local(root, "pou"):
+        if pou.get("name") == pou_name:
+            xh = pou.find(".//{*}xhtml")
+            if xh is not None:
+                return "".join(xh.itertext())
+            st = pou.find(".//{*}ST")
+            if st is None:
+                return None
+            lines = ["".join(p.itertext())
+                     for p in st.iter()
+                     if isinstance(p.tag, str) and p.tag.rsplit("}", 1)[-1] == "p"]
+            return "\n".join(lines) if lines else ("".join(st.itertext()).strip() or None)
+    return None
+
+
+def _pou_var_init(root, pou_name, var_name):
+    """取 POU 接口内变量的初值（simpleValue 数值化）；无则 None。"""
+    for pou in _iter_local(root, "pou"):
+        if pou.get("name") != pou_name:
+            continue
+        for var in _iter_local(pou, "variable"):
+            if var.get("name") == var_name:
+                sv = var.find(".//{*}simpleValue")
+                try:
+                    return float(sv.get("value")) if sv is not None else None
+                except (TypeError, ValueError):
+                    return None
+    return None
+
+
+def _interp_is_v3(root):
+    """INTERP 带 VMAX 参数 = v3 形态（命令级动力学版为 v4.0，生成方案 §2.1）。"""
+    for pou in _iter_local(root, "pou"):
+        if pou.get("name") == "INTERP":
+            return any(v.get("name") == "VMAX" for v in _iter_local(pou, "variable"))
+    return False
+
+
+def _call_args(st_text, call_name):
+    """ST 体中 call_name(...) 的实参文本（跨行，括号配平——实参含嵌套
+    括号如 fire := man_go AND (NOT go_x_exe) 时不截断，2026-09-22 误报实证）；
+    调用不存在返回 None。"""
+    m = re.search(r"\b%s\s*\(" % re.escape(call_name), st_text)
+    if m is None:
+        return None
+    depth, start = 1, m.end()
+    for i in range(start, len(st_text)):
+        ch = st_text[i]
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                return st_text[start:i]
+    return None
+
+
+def _arg_number(args_text, arg_name):
+    m = re.search(r"\b%s\s*:=\s*(%s)" % (re.escape(arg_name), _NUM), args_text)
+    return float(m.group(1)) if m else None
+
+
+def _check_axis_params(problems, root, device_model, scene):
+    """R8：轴参数三方比对——AML axis_objects ≡ XML 轴实例参数 ≡ scene.spec 轴参数。
+
+    AML 是唯一来源（RFC 2026-09-15）：比对 POSWIN（INTERP 共享 FB 的类型级初值，
+    须与每轴一致）/ MC 调用动力学（go/rel 实例字面量 ≡ defaults）/ 行程
+    （MC_MOVEABSOLUTE 体内越程界限 ≡ stroke——现为字面常量，仅全轴同行程可比，
+    lx 参数化后改逐轴实例参数；scene.travel ≡ stroke×scale）。
+    io 未绑定的轴不比对（⓪ 已记 problems）；scene 未提供时跳过 scene 侧。
+    """
+    from .scene_gen import _SCALE_BY_UNIT
+    axes = [a for a in device_model.get("kinematics", {}).get("axes", []) if a.get("io")]
+    if not axes:
+        return
+    if _interp_is_v3(root):
+        problems.append("SKIP: R8 轴参数比对需 v4.0 形态 XML（检测到 INTERP 带 VMAX 参数"
+                        "的 v3 形态，种子升 v4.0 后启用——生成方案 §6.4）")
+        return
+
+    def short_of(a):
+        name = a.get("axis") or ""
+        return name[:-len("_axis")] if name.endswith("_axis") else name
+
+    prg = _pou_st_text(root, "PLC_PRG") or ""
+
+    # POSWIN：逐轴实例入参优先（ix_<轴>(POSWIN:=) 参数化形态，各轴可不等——
+    # 如绘图站 x/y=2.0、z=1.0）；无调用点入参的轴回退共享 FB 类型级初值
+    # （v4.0 过渡形态，全轴一致）
+    poswin = _pou_var_init(root, "INTERP", "POSWIN")
+    for a in axes:
+        want = a.get("poswin")
+        if want is None:
+            continue
+        args = _call_args(prg, "ix_%s" % short_of(a))
+        got = _arg_number(args, "POSWIN") if args is not None else None
+        if got is None:
+            got = poswin
+        if got is None:
+            problems.append("SKIP: R8 POSWIN 比对——轴 %r 无 ix 实例入参且 INTERP "
+                            "无类型初值（模板形态未预期）" % a["axis"])
+        elif abs(got - want) > 1e-9:
+            problems.append("R8: 轴 %r POSWIN 不一致——XML=%s，AML=%s"
+                            "（poswin 是 PLC 与判定引擎共用容差源，生成方案 §6.1）"
+                            % (a["axis"], got, want))
+
+    # MC 调用动力学：go/rel 实例字面量 ≡ defaults
+    for a in axes:
+        s = short_of(a)
+        for kind in ("go", "rel"):
+            if kind == "rel" and "rel_d" not in (a["io"] or {}):
+                continue  # 无 rel_d 角色（可选）→ 模板不展开 MC_MOVERELATIVE
+            args = _call_args(prg, "%s_%s" % (kind, s))
+            if args is None:
+                problems.append("R8: XML 缺 %s_%s 调用（轴实例组不完整，模板 §2.2）"
+                                % (kind, s))
+                continue
+            for arg, field in (("Velocity", "velocity"), ("Acceleration", "acceleration"),
+                               ("Deceleration", "deceleration")):
+                want = (a.get("defaults") or {}).get(field)
+                got = _arg_number(args, arg)
+                if got is None:
+                    problems.append("R8: %s_%s 调用缺 %s 实参（动力学须来自 axis_object"
+                                    " defaults，LLM 不得自编）" % (kind, s, arg))
+                elif want is not None and abs(got - want) > 1e-9:
+                    problems.append("R8: 轴 %r %s_%s 的 %s=%s 与 AML defaults.%s=%s 不一致"
+                                    % (a["axis"], kind, s, arg, got, field, want))
+
+    # 行程：MC_MOVEABSOLUTE 体内越程界限（字面常量，仅全轴同行程可比）
+    ma = _pou_st_text(root, "MC_MOVEABSOLUTE") or ""
+    m = re.search(r"Position\s*<\s*(%s)\s+OR\s+Position\s*>\s*(%s)" % (_NUM, _NUM), ma)
+    strokes = [a.get("stroke") for a in axes]
+    if m is None:
+        problems.append("SKIP: R8 行程比对——MC_MOVEABSOLUTE 体内未找到越程界限字面量"
+                        "（lx 参数化为实例参数后此处改读实例参数）")
+    elif any(s is None for s in strokes) or len({tuple(s) for s in strokes}) > 1:
+        problems.append("SKIP: R8 XML 侧行程比对——多轴行程不一，越程界限现为 FB 体内"
+                        "共享常量（lx 参数化后逐轴比对）；scene 侧仍比对")
+    else:
+        lo, hi = float(m.group(1)), float(m.group(2))
+        if abs(lo - strokes[0][0]) > 1e-9 or abs(hi - strokes[0][1]) > 1e-9:
+            problems.append("R8: MC 越程界限 [%s,%s] 与 AML stroke %s 不一致"
+                            % (lo, hi, strokes[0]))
+
+    # scene 侧：gantry travel ≡ stroke×scale（SI 米）；speed ≡ x 轴 limits.vmax×scale
+    if scene is None:
+        return
+    if isinstance(scene, (str, Path)):
+        try:
+            scene = json.loads(Path(scene).read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            problems.append("R8: scene.spec 无法读取/解析: %s" % exc)
+            return
+    gantry = next((s for s in scene.get("assets", [])
+                   if s.get("type") == "gantry_xyz"), None)
+    if gantry is None:
+        return  # scene 无 gantry 轴承载（多资产/无仿真）——scene 侧无比对对象
+    p = gantry.get("params", {})
+    from .scene_gen import _clamp_to_contract
+    for a in axes:
+        s, stroke = short_of(a), a.get("stroke")
+        travel = p.get("travel_%s" % s)
+        if travel is None or stroke is None:
+            continue
+        scale = _SCALE_BY_UNIT.get(a.get("unit") or "%", 0.01)
+        expect = round((stroke[1] - stroke[0]) * scale, 9)
+        # csk 契约对 travel_z 设开区间下界 >0.01——绘图笔 10mm 行程（=0.01）被
+        # scene_gen 钳到下界+10%（0.011）。契约钳位值同样认可（两上游权威冲突的
+        # 已知议题，travel_z 下界 RFC 待 csk 裁决——2026-09-16 登记看板）。
+        clamped = round(_clamp_to_contract("travel_%s" % s, expect), 9)
+        if abs(expect - travel) > 1e-6 and abs(clamped - travel) > 1e-6:
+            problems.append("R8: 轴 %r scene travel_%s=%s 与 AML stroke×scale=%s 不一致"
+                            "（scene.spec 轴参数须与 PLC 侧同源 device_model）"
+                            % (a["axis"], s, travel, expect))
+    speed = p.get("speed")
+    x = next((a for a in axes if short_of(a) == "x"), None)
+    if speed is not None and x is not None and (x.get("limits") or {}).get("vmax") is not None:
+        scale = _SCALE_BY_UNIT.get(x.get("unit") or "%", 0.01)
+        expect = round(x["limits"]["vmax"] * scale, 9)
+        if abs(expect - speed) > 1e-6:
+            problems.append("R8: scene speed=%s 与 AML x 轴 limits.vmax×scale=%s 不一致"
+                            % (speed, expect))
+
+
+def _check_device_addresses(problems, located, device_model):
+    """R6：⓪ 侧地址检查——AML 通道地址是 io_map/验收脚本的共同语言，
+    生成代码必须逐字遵循（名字↔地址双向对账）。画圆场景实证：名字/类型
+    全对但地址自编一套，静态层全绿、Modbus 层才露馅。"""
+    points = {p["name"]: p.get("address") for p in device_model.get("io_points", [])
+              if p.get("address")}
+    if not points:
+        return
+    xml_addr = {v["name"]: v["addr"] for v in located}
+    for name, aml_addr in points.items():
+        got = xml_addr.get(name)
+        if got is None:
+            continue  # R2 已报缺失，不重复
+        if got != aml_addr:
+            problems.append("R6: 变量 %r 地址 %s 与设备模型通道 %s 不一致"
+                            "（AML/io_map/验收脚本按站约定表寻址，须逐字遵循）"
+                            % (name, got, aml_addr))
+    for name, addr in xml_addr.items():
+        if name not in points and name != "prog_id":
+            if addr in set(points.values()):
+                problems.append("R6: 变量 %r（%s）占用了设备模型其他通道的地址"
+                                % (name, addr))
+
+
+def consistency_check(xml_source, io_list, io_map=None, device_model=None, scene=None):
     """主入口。返回 (ok, problems)。
 
-    xml_source: PLCopen XML 路径或文本；
-    io_list:    requirement_spec.io_list；
-    io_map:     dict / list / 文件路径；None = 仿真侧尚未产出，跳过该腿。
+    xml_source:   PLCopen XML 路径或文本；
+    io_list:      requirement_spec.io_list；
+    io_map:       dict / list / 文件路径；None = 仿真侧尚未产出，跳过 R5。
+    device_model: ⓪ 的设备模型；提供时启用 R6 地址检查与 R8 轴参数比对。
+    scene:        scene.spec dict / 文件路径；提供时 R8 增比对 scene 侧轴参数。
     """
     problems = []
 
@@ -190,6 +434,9 @@ def consistency_check(xml_source, io_list, io_map=None):
     located = extract_located_vars(xml_source)
     _check_names_and_types(problems, located, io_list)
     _check_addresses(problems, located)
+    if device_model is not None:
+        _check_device_addresses(problems, located, device_model)
+        _check_axis_params(problems, _load_root(xml_source), device_model, scene)
 
     if io_map is None:
         problems.append("SKIP: io_map 未提供（仿真侧尚未产出）——仅对账 XML ↔ io_list 两方")
@@ -201,5 +448,41 @@ def consistency_check(xml_source, io_list, io_map=None):
                 return False, ["R5: io_map 无法读取/解析: %s" % exc]
         _check_io_map(problems, io_map, io_list)
 
-    hard = [p for p in problems if not p.startswith("SKIP")]
-    return not hard, problems
+    # R9：输入命令消费检查（2026-09-23 训练循环新增，通用规则）：io_list 的
+    # 每个 input BOOL 命令必须在 PLC_PRG 逻辑中出现——未被引用 = 功能缺失
+    # （实测：cmd_home 完全未实现，四轮验收同错无回喂抓手）
+    try:
+        import xml.etree.ElementTree as _ET
+        root = _ET.parse(xml_source).getroot() if not _is_xml_text(xml_source)             else _ET.fromstring(xml_source)
+        prg_all = _pou_st_text(root, "PLC_PRG") or ""
+        for item in io_list or []:
+            if item.get("dir") == "input" and item.get("type") == "BOOL":
+                if item["name"] not in prg_all:
+                    problems.append(
+                        "R9: 输入命令 %r 未在程序逻辑中出现——spec 声明的每个"
+                        "输入命令都必须有处理逻辑（功能缺失）" % item["name"])
+    except Exception:
+        pass
+    # R9b：回零接线检查（2026-09-23 训练循环，Z 回零六场连庄的 decisive 检查）：
+    # cmd_home 声明时，每轴须有 hm_<轴> MC_HOME 调用，且其触发（hm_<轴>_exe
+    # 或 hm_<轴>.Busy）汇入 ix_<轴> 的 fire 表达式——只调用不接线=脉冲后停摆
+    try:
+        if any(item.get("name") == "cmd_home" for item in (io_list or [])):
+            shorts = sorted({m.group(1) for item in (io_list or [])
+                             for m in [re.match(r"^(\w+)_fb$", item.get("name") or "")]
+                             if m and len(m.group(1)) <= 2})
+            import re as _re
+            for s in shorts:
+                args_hm = _call_args(prg_all, "hm_%s" % s)
+                if args_hm is None:
+                    problems.append(
+                        "R9: 缺 hm_%s 调用——cmd_home 存在时每轴须有 MC_HOME 实例" % s)
+                    continue
+                fire_ix = _call_args(prg_all, "ix_%s" % s) or ""
+                if ("hm_%s_exe" % s) not in fire_ix and ("hm_%s." % s) not in fire_ix:
+                    problems.append(
+                        "R9: hm_%s 的触发未汇入 ix_%s 的 fire（回零触发线断——"
+                        "脉冲结束后轴不动）" % (s, s))
+    except Exception:
+        pass
+    return not any(not p.startswith("SKIP") for p in problems), problems

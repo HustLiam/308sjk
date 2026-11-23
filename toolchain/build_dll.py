@@ -20,6 +20,7 @@ import argparse
 import glob
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -63,22 +64,45 @@ def xml_to_st(xml_path: str, out_dir: str) -> str:
 
 
 def st_to_c(iec2c: str, st_path: str, out_dir: str, extra_args=None) -> list:
-    """matiec iec2c：ST → C。生成文件落在 out_dir（子进程 cwd 切到 out_dir）。"""
-    args = (extra_args if extra_args is not None else ["-f", "-l"]) + [os.path.abspath(st_path)]
+    """matiec iec2c：ST → C。生成文件落在 out_dir（子进程 cwd 切到 out_dir）。
+
+    extra_args 为 None 时默认 `-f -l`；标准库目录由调用方经 extra_args 以
+    `-I <matiec_root>/lib` 传入（iec2c 从该目录找 ieclib.txt，否则依赖 cwd/lib）。"""
+    if extra_args is None:
+        args = ["-f", "-l"]
+    else:
+        args = list(extra_args)
+    args.append(os.path.abspath(st_path))
     r = subprocess.run([iec2c] + args, cwd=out_dir, capture_output=True, text=True)
     if r.returncode != 0:
         raise RuntimeError(f"iec2c 失败（matiec 版本参数差异见 csk 文档 §6.2.2）:\n{r.stdout}\n{r.stderr}")
-    return sorted(glob.glob(os.path.join(out_dir, "*.c")))
+    c_files = sorted(glob.glob(os.path.join(out_dir, "*.c")))
+    return drop_textually_included(c_files)
+
+
+def drop_textually_included(c_files: list) -> list:
+    """剔除被其他生成 .c 文本包含（#include "xxx.c"）的文件。
+
+    部分 matiec 版本（含 OpenPLC 内置 2019 版）把 POUS.c 直接 #include 进资源 .c
+    （unity build，由包含方先提供头文件）——被包含者再单独编译必然重复符号。"""
+    included = set()
+    for path in c_files:
+        with open(path, encoding="utf-8", errors="ignore") as f:
+            for m in re.finditer(r'^\s*#include\s+"([^"]+\.c)"', f.read(), re.MULTILINE):
+                included.add(os.path.basename(m.group(1)))
+    return [c for c in c_files if os.path.basename(c) not in included]
 
 
 def compile_shared(cc: str, c_files, out_dir: str, matiec_lib=None,
                    lib_c_glob=None) -> str:
-    """gcc → 共享库。matiec lib 头文件与标准库 C 一并编译（路径随 matiec-root 提供）。"""
+    """gcc → 共享库。matiec lib 头文件与标准库 C 一并编译（路径随 matiec-root 提供）。
+
+    头文件位于 <matiec_root>/lib/C/（iec_std_lib.h 等），lib/ 与 lib/C/ 均加入 -I。"""
     ext = ".dll" if os.name == "nt" else ".so"
     out = os.path.join(out_dir, f"plc_logic{ext}")
     cmd = [cc, "-shared", "-fPIC", "-O2"]
     if matiec_lib:
-        cmd += ["-I", matiec_lib]
+        cmd += ["-I", matiec_lib, "-I", os.path.join(matiec_lib, "C")]
     cmd += c_files + [os.path.join(out_dir, "plc_shim.c")]
     if lib_c_glob:
         cmd += sorted(glob.glob(lib_c_glob))
@@ -117,7 +141,12 @@ def build(source_path: str, io_map_path: str, out_dir: str,
         st_path = source_path
         result["steps"].append({"step": "xml2st", "ok": True, "skipped": "输入已是 .st"})
 
-    # ② st → C
+    # ② st → C（标准库经 -I 指向 <matiec_root>/lib；调用方显式覆盖参数时不追加）
+    if extra_iec2c_args is None:
+        extra_iec2c_args = ["-f", "-l"]
+        lib_dir = os.path.join(matiec_root, "lib") if matiec_root else None
+        if lib_dir and os.path.isdir(lib_dir):
+            extra_iec2c_args = ["-f", "-l", "-I", lib_dir]
     c_files = st_to_c(iec2c, st_path, out_dir, extra_iec2c_args)
     result["steps"].append({"step": "iec2c", "ok": True, "files": [os.path.basename(c) for c in c_files]})
 

@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:308sjk:component-rule:0.1-draft",
+  "title": "Unapproved component modeling rule; approval is a separate exact-byte record",
+  "type": "object",
+  "required": ["format", "component_type", "version", "parameter_bounds", "model", "assumptions", "unresolved"],
+  "properties": {
+    "format": {"const": "308sjk.component_rule/0.1-draft"},
+    "component_type": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,95}$"},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "parameter_bounds": {"type": "object", "additionalProperties": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2}},
+    "model": {"type": "object", "properties": {
+      "behavior": {"enum": ["none", "conveyor", "binary_prismatic", "ray", "source", "sink", "indicator", "panel", "rigid", "joint_position", "robot_control"]},
+      "geoms": {"type": "array", "items": {"$ref": "#/$defs/geom"}},
+      "blender_bodies": {"type": "array", "items": {"$ref": "#/$defs/geom"}},
+      "interfaces": {"type": "array", "items": {"type": "object", "required": ["name"], "properties": {"name": {"type": "string"}, "position_m": {"$ref": "#/$defs/vector"}, "rpy_rad": {"$ref": "#/$defs/vector"}}, "additionalProperties": false}},
+      "physical_parameters": {"type": "object"}, "bodies": {"type": "array"}, "joints": {"type": "array"}, "equalities": {"type": "array"}
+    }, "additionalProperties": false},
+    "assumptions": {"type": "array", "items": {"type": "string"}},
+    "unresolved": {"type": "array", "items": {"type": "string"}},
+    "blender_script": {"type": "string", "maxLength": 64000},
+    "provenance": {}, "description": {"type": "string"}
+  },
+  "$defs": {
+    "scalar": {"type": ["number", "string"]},
+    "vector": {"type": "array", "items": {"$ref": "#/$defs/scalar"}},
+    "geom": {"type": "object", "required": ["name", "type"], "properties": {
+      "name": {"type": "string"}, "type": {"enum": ["box", "sphere", "cylinder", "capsule", "ellipsoid", "mesh"]},
+      "size": {"$ref": "#/$defs/vector"}, "pos": {"$ref": "#/$defs/vector"}, "rpy_rad": {"$ref": "#/$defs/vector"}, "rgba": {"$ref": "#/$defs/vector"},
+      "mass": {"$ref": "#/$defs/scalar"}, "density": {"$ref": "#/$defs/scalar"}, "friction": {},
+      "collision": {"type": ["boolean", "string"]}, "mesh": {"type": "string"}, "body": {"type": "string"}, "priority": {"type": "integer"}
+    }, "additionalProperties": false}
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,74 @@
+<project xmlns="http://www.plcopen.org/xml/tc6_0201" xmlns:html="http://www.w3.org/1999/xhtml"><fileHeader companyName="308sjk" productName="Isolated IO harness" productVersion="1" creationDateTime="2026-11-03T00:00:00" /><contentHeader name="isolated_model_io" /><types><dataTypes /><pous><pou name="PLC_PRG" pouType="program"><interface><localVars><variable name="rb100_j1_target" address="%QW100"><type><INT /></type></variable><variable name="rb100_j2_target" address="%QW101"><type><INT /></type></variable><variable name="rb100_j3_target" address="%QW102"><type><INT /></type></variable><variable name="rb100_j4_target" address="%QW103"><type><INT /></type></variable><variable name="rb100_j5_target" address="%QW104"><type><INT /></type></variable><variable name="rb100_j6_target" address="%QW105"><type><INT /></type></variable><variable name="rb100_j1_actual" address="%QW110"><type><INT /></type></variable><variable name="rb100_j2_actual" address="%QW111"><type><INT /></type></variable><variable name="rb100_j3_actual" address="%QW112"><type><INT /></type></variable><variable name="rb100_j4_actual" address="%QW113"><type><INT /></type></variable><variable name="rb100_j5_actual" address="%QW114"><type><INT /></type></variable><variable name="rb100_j6_actual" address="%QW115"><type><INT /></type></variable><variable name="rb100_enable" address="%QW106"><type><INT /></type></variable><variable name="rb100_feedback_seq" address="%QW116"><type><INT /></type></variable><variable name="vcheck_request" address="%QW80"><type><WORD /></type></variable><variable name="vcheck_commit" address="%QW81"><type><WORD /></type></variable><variable name="vcheck_ack" address="%QW82"><type><WORD /></type></variable><variable name="vcheck_id0" address="%QW64"><type><WORD /></type></variable><variable name="vcheck_id1" address="%QW65"><type><WORD /></type></variable><variable name="vcheck_id2" address="%QW66"><type><WORD /></type></variable><variable name="vcheck_id3" address="%QW67"><type><WORD /></type></variable><variable name="vcheck_id4" address="%QW68"><type><WORD /></type></variable><variable name="vcheck_id5" address="%QW69"><type><WORD /></type></variable><variable name="vcheck_id6" address="%QW70"><type><WORD /></type></variable><variable name="vcheck_id7" address="%QW71"><type><WORD /></type></variable><variable name="vcheck_id8" address="%QW72"><type><WORD /></type></variable><variable name="vcheck_id9" address="%QW73"><type><WORD /></type></variable><variable name="vcheck_id10" address="%QW74"><type><WORD /></type></variable><variable name="vcheck_id11" address="%QW75"><type><WORD /></type></variable><variable name="vcheck_id12" address="%QW76"><type><WORD /></type></variable><variable name="vcheck_id13" address="%QW77"><type><WORD /></type></variable><variable name="vcheck_id14" address="%QW78"><type><WORD /></type></variable><variable name="vcheck_id15" address="%QW79"><type><WORD /></type></variable><variable name="vcheck_staging0" address="%QW83"><type><WORD /></type></variable><variable name="vcheck_staging1" address="%QW84"><type><WORD /></type></variable><variable name="vcheck_staging2" address="%QW85"><type><WORD /></type></variable><variable name="vcheck_staging3" address="%QW86"><type><WORD /></type></variable><variable name="vcheck_staging4" address="%QW87"><type><WORD /></type></variable><variable name="vcheck_staging5" address="%QW88"><type><WORD /></type></variable><variable name="vcheck_staging6" address="%QW89"><type><WORD /></type></variable><variable name="vcheck_observed0" address="%QW90"><type><WORD /></type></variable><variable name="vcheck_observed1" address="%QW91"><type><WORD /></type></variable><variable name="vcheck_observed2" address="%QW92"><type><WORD /></type></variable><variable name="vcheck_observed3" address="%QW93"><type><WORD /></type></variable><variable name="vcheck_observed4" address="%QW94"><type><WORD /></type></variable><variable name="vcheck_observed5" address="%QW95"><type><WORD /></type></variable><variable name="vcheck_observed6" address="%QW96"><type><WORD /></type></variable><variable name="agent_motion_mode" address="%QW97"><type><INT /></type></variable><variable name="agent_motion_state" address="%QW98"><type><INT /></type></variable><variable name="agent_motion_done" address="%QW99"><type><INT /></type></variable><variable name="agent_motion_id0" address="%QW107"><type><WORD /></type></variable><variable name="agent_motion_id1" address="%QW108"><type><WORD /></type></variable><variable name="agent_motion_id2" address="%QW109"><type><WORD /></type></variable><variable name="agent_motion_id3" address="%QW117"><type><WORD /></type></variable><variable name="agent_motion_id4" address="%QW118"><type><WORD /></type></variable><variable name="agent_motion_id5" address="%QW119"><type><WORD /></type></variable><variable name="agent_motion_id6" address="%QW120"><type><WORD /></type></variable><variable name="agent_motion_id7" address="%QW121"><type><WORD /></type></variable><variable name="agent_motion_id8" address="%QW122"><type><WORD /></type></variable><variable name="agent_motion_id9" address="%QW123"><type><WORD /></type></variable><variable name="agent_motion_id10" address="%QW124"><type><WORD /></type></variable><variable name="agent_motion_id11" address="%QW125"><type><WORD /></type></variable><variable name="agent_motion_id12" address="%QW126"><type><WORD /></type></variable><variable name="agent_motion_id13" address="%QW127"><type><WORD /></type></variable><variable name="agent_motion_id14" address="%QW128"><type><WORD /></type></variable><variable name="agent_motion_id15" address="%QW129"><type><WORD /></type></variable><variable name="agent_motion_timer0"><type><derived name="TON" /></type></variable><variable name="agent_motion_dwell0"><type><derived name="TON" /></type></variable></localVars></interface><body><ST><html:p>vcheck_id0:= WORD#16#4EA6;
+vcheck_id1:= WORD#16#D43A;
+vcheck_id2:= WORD#16#594F;
+vcheck_id3:= WORD#16#A065;
+vcheck_id4:= WORD#16#33D4;
+vcheck_id5:= WORD#16#7571;
+vcheck_id6:= WORD#16#D414;
+vcheck_id7:= WORD#16#4E10;
+vcheck_id8:= WORD#16#0F46;
+vcheck_id9:= WORD#16#F22C;
+vcheck_id10:= WORD#16#B3F4;
+vcheck_id11:= WORD#16#3F7E;
+vcheck_id12:= WORD#16#D8F4;
+vcheck_id13:= WORD#16#1395;
+vcheck_id14:= WORD#16#D429;
+vcheck_id15:= WORD#16#80F3;
+IF vcheck_request = vcheck_commit THEN
+  rb100_j1_target := WORD_TO_INT(vcheck_staging0);
+  rb100_j2_target := WORD_TO_INT(vcheck_staging1);
+  rb100_j3_target := WORD_TO_INT(vcheck_staging2);
+  rb100_j4_target := WORD_TO_INT(vcheck_staging3);
+  rb100_j5_target := WORD_TO_INT(vcheck_staging4);
+  rb100_j6_target := WORD_TO_INT(vcheck_staging5);
+  vcheck_observed0 := INT_TO_WORD(rb100_j1_actual);
+  vcheck_observed1 := INT_TO_WORD(rb100_j2_actual);
+  vcheck_observed2 := INT_TO_WORD(rb100_j3_actual);
+  vcheck_observed3 := INT_TO_WORD(rb100_j4_actual);
+  vcheck_observed4 := INT_TO_WORD(rb100_j5_actual);
+  vcheck_observed5 := INT_TO_WORD(rb100_j6_actual);
+  rb100_enable := WORD_TO_INT(vcheck_staging6);
+  vcheck_observed6 := INT_TO_WORD(rb100_feedback_seq);
+  vcheck_ack := vcheck_request;
+END_IF;
+agent_motion_id0:= WORD#16#558c;
+agent_motion_id1:= WORD#16#4d83;
+agent_motion_id2:= WORD#16#4a88;
+agent_motion_id3:= WORD#16#852a;
+agent_motion_id4:= WORD#16#de67;
+agent_motion_id5:= WORD#16#2a37;
+agent_motion_id6:= WORD#16#b533;
+agent_motion_id7:= WORD#16#56fc;
+agent_motion_id8:= WORD#16#3b48;
+agent_motion_id9:= WORD#16#dd77;
+agent_motion_id10:= WORD#16#d433;
+agent_motion_id11:= WORD#16#8576;
+agent_motion_id12:= WORD#16#b48d;
+agent_motion_id13:= WORD#16#63b7;
+agent_motion_id14:= WORD#16#4a23;
+agent_motion_id15:= WORD#16#ae09;
+agent_motion_timer0(IN := agent_motion_mode = 1 AND rb100_enable = 1 AND agent_motion_state = 0, PT := T#10000ms);
+agent_motion_dwell0(IN := agent_motion_mode = 1 AND rb100_enable = 1 AND agent_motion_state = 0 AND agent_motion_timer0.Q AND (ABS(INT_TO_DINT(rb100_j1_actual) - DINT#1379) &lt;= DINT#1 AND ABS(INT_TO_DINT(rb100_j2_actual) - DINT#-6719) &lt;= DINT#1 AND ABS(INT_TO_DINT(rb100_j3_actual) - DINT#5180) &lt;= DINT#1 AND ABS(INT_TO_DINT(rb100_j4_actual) - DINT#3892) &lt;= DINT#1 AND ABS(INT_TO_DINT(rb100_j5_actual) - DINT#-3337) &lt;= DINT#1 AND ABS(INT_TO_DINT(rb100_j6_actual) - DINT#4834) &lt;= DINT#1), PT := T#0ms);
+agent_motion_done := 0;
+IF agent_motion_mode = 0 THEN
+  agent_motion_state := 0;
+ELSIF agent_motion_mode = 1 AND rb100_enable = 1 THEN
+  CASE agent_motion_state OF
+  0:
+    rb100_j1_target := REAL_TO_INT(879.0 + 500.0 * TIME_TO_REAL(agent_motion_timer0.ET) / 10.0);
+    rb100_j2_target := REAL_TO_INT(-6719.0 + 0.0 * TIME_TO_REAL(agent_motion_timer0.ET) / 10.0);
+    rb100_j3_target := REAL_TO_INT(5180.0 + 0.0 * TIME_TO_REAL(agent_motion_timer0.ET) / 10.0);
+    rb100_j4_target := REAL_TO_INT(3892.0 + 0.0 * TIME_TO_REAL(agent_motion_timer0.ET) / 10.0);
+    rb100_j5_target := REAL_TO_INT(-3337.0 + 0.0 * TIME_TO_REAL(agent_motion_timer0.ET) / 10.0);
+    rb100_j6_target := REAL_TO_INT(4834.0 + 0.0 * TIME_TO_REAL(agent_motion_timer0.ET) / 10.0);
+    IF agent_motion_dwell0.Q THEN agent_motion_state := 1; END_IF;
+  ELSE
+    rb100_j1_target := 1379;
+    rb100_j2_target := -6719;
+    rb100_j3_target := 5180;
+    rb100_j4_target := 3892;
+    rb100_j5_target := -3337;
+    rb100_j6_target := 4834;
+    agent_motion_done := 1;
+  END_CASE;
+END_IF;</html:p></ST></body></pou></pous></types><instances /></project>

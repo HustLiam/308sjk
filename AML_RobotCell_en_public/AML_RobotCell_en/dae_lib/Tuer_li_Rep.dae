@@ -1,0 +1,93 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<COLLADA version="1.5.0" xmlns="http://www.collada.org/2008/03/COLLADASchema">
+	<asset>
+		<contributor>
+			<author>AutomationML e.V.</author>
+			<author_website>www.automationml.org</author_website>
+			<authoring_tool>"Notepad++" "6.8.6" "6.8.6"</authoring_tool>
+		</contributor>
+		<created>2015-12-15T13:12:06.7153453+01:00</created>
+		<modified>2015-12-15T13:12:06.7153453+01:00</modified>
+		<unit meter="0.001" name="mm" />
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_nodes>
+		<node id="Tuer_li" name="Tuer_li">
+			<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+			<instance_geometry url="#Tuer_li_R0_G0_B255_A255">
+				<bind_material>
+					<technique_common>
+						<instance_material symbol="Tuer_li_MATERIAL_R0_G0_B255_A255" target="#Tuer_li_MATERIAL_R0_G0_B255_A255" />
+					</technique_common>
+				</bind_material>
+			</instance_geometry>
+		</node>
+	</library_nodes>
+	<library_visual_scenes>
+		<visual_scene id="Tuer_li_visual_scene">
+			<node id="Tuer_li_visual_scene_node" name="Tuer_li">
+				<instance_node url="#Tuer_li" />
+			</node>
+		</visual_scene>
+	</library_visual_scenes>
+	<library_effects>
+		<effect id="Tuer_li_EFFECT_R0_G0_B255_A255">
+			<profile_COMMON>
+				<technique sid="common">
+					<phong>
+						<diffuse>
+							<color>0 0 1 1</color>
+						</diffuse>
+					</phong>
+				</technique>
+			</profile_COMMON>
+		</effect>
+	</library_effects>
+	<library_materials>
+		<material id="Tuer_li_MATERIAL_R0_G0_B255_A255">
+			<instance_effect url="#Tuer_li_EFFECT_R0_G0_B255_A255" />
+		</material>
+	</library_materials>
+	<library_geometries>
+		<geometry id="Tuer_li_R0_G0_B255_A255" name="Tuer_li_R0_G0_B255_A255">
+			<mesh>
+				<source id="Tuer_li_R0_G0_B255_A255_positions">
+					<float_array count="24" id="Tuer_li_R0_G0_B255_A255_positions_array">588.536 -20.6066 1990 -6.46447 -20.6066 1990 588.536 -20.6066 190 -6.46447 -20.6066 190 588.536 -5.6066 1990 588.536 -5.6066 190 -6.46447 -5.6066 1990 -6.46447 -5.6066 190</float_array>
+					<technique_common>
+						<accessor count="8" source="#Tuer_li_R0_G0_B255_A255_positions_array" stride="3">
+							<param name="X" type="float" />
+							<param name="Y" type="float" />
+							<param name="Z" type="float" />
+						</accessor>
+					</technique_common>
+				</source>
+				<source id="Tuer_li_R0_G0_B255_A255_normals">
+					<float_array count="18" id="Tuer_li_R0_G0_B255_A255_normals_array">0 -1 0 1 0 0 0 1 0 -1 0 0 0 0 -1 0 0 1</float_array>
+					<technique_common>
+						<accessor count="6" source="#Tuer_li_R0_G0_B255_A255_normals_array" stride="3">
+							<param name="X" type="float" />
+							<param name="Y" type="float" />
+							<param name="Z" type="float" />
+						</accessor>
+					</technique_common>
+				</source>
+				<vertices id="Tuer_li_R0_G0_B255_A255_vertices">
+					<input semantic="POSITION" source="#Tuer_li_R0_G0_B255_A255_positions" />
+				</vertices>
+				<tristrips count="6" material="Tuer_li_MATERIAL_R0_G0_B255_A255">
+					<input offset="0" semantic="VERTEX" source="#Tuer_li_R0_G0_B255_A255_vertices" />
+					<input offset="1" semantic="NORMAL" source="#Tuer_li_R0_G0_B255_A255_normals" />
+					<p>3 0 2 0 1 0 0 0</p>
+					<p>2 1 5 1 0 1 4 1</p>
+					<p>5 2 7 2 4 2 6 2</p>
+					<p>7 3 3 3 6 3 1 3</p>
+					<p>2 4 3 4 5 4 7 4</p>
+					<p>1 5 0 5 6 5 4 5</p>
+				</tristrips>
+			</mesh>
+		</geometry>
+	</library_geometries>
+	<scene>
+		<instance_visual_scene url="#Tuer_li_visual_scene" />
+	</scene>
+</COLLADA>

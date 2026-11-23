@@ -1,0 +1,265 @@
+#!/usr/bin/env python
+"""MuJoCo 独立运行时：一个进程承载「物理仿真 + Modbus 服务端」（isaac_jog_runtime 的轻量镜像）。
+
+链路与 runtime/README 的 Isaac 工作流 A 完全同构，仅把仿真面从 Isaac/USD 换成
+MuJoCo/MJCF：进程加载 mujoco_build.py 组装的 MJCF，逐物理步 mj_step；每帧把指令
+寄存器经 axisSpeed 速率限制写入位置执行器 ctrl，把关节 qpos 回写反馈寄存器。
+外部照旧用 gantry_jog_gui.py（或 OpenPLC %QW 桥）通过 Modbus TCP 连接。
+
+寄存器布局/钳位/Z 轴语义/开场抬笔全部复用 gantry_bridge 的既有约定，
+io_map 契约不变——PLC 侧与示教器零改动即可切换仿真后端。
+
+用法（无需 Isaac、无 GUI 依赖，秒级启动）：
+    python mujoco_jog_runtime.py --scene ../scenegen/out/gantry/scene.spec.json
+    python mujoco_jog_runtime.py --scene ... --port 5020              # 默认值
+    python mujoco_jog_runtime.py --scene ... --watch                 # 观测模式（打印跟随误差）
+停止：Ctrl+C。
+"""
+
+import argparse
+import os
+import sys
+import time
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+
+from gantry_bridge import AXES, GantryBridge, derive_layout, load_io_map  # noqa: E402
+from mujoco_build import build_mjcf, load_spec  # noqa: E402
+
+DEFAULT_SPEC = os.path.normpath(
+    os.path.join(HERE, "..", "scenegen", "out", "gantry", "scene.spec.json"))
+DEFAULT_IO_MAP = os.path.normpath(
+    os.path.join(HERE, "..", "scenegen", "out", "gantry", "io_map.json"))
+
+
+def parse_args():
+    p = argparse.ArgumentParser(description="龙门 MuJoCo 独立运行时（物理仿真 + Modbus 服务端）")
+    p.add_argument("--scene", default=DEFAULT_SPEC,
+                   help="scene.spec.json 路径（现场组装 MJCF；也可直接传 .xml）")
+    p.add_argument("--io-map", default=DEFAULT_IO_MAP,
+                   help="io_map.json（推导寄存器布局；缺省用仓库 gantry 场景）")
+    p.add_argument("--host", default="0.0.0.0", help="Modbus 绑定地址")
+    p.add_argument("--port", type=int, default=5020)
+    p.add_argument("--physics-hz", type=int, default=120, help="物理步频（默认 120Hz）")
+    p.add_argument("--watch", action="store_true", help="每 2s 打印指令/反馈跟随表")
+    p.add_argument("--viewer", action="store_true",
+                   help="打开 MuJoCo 3D 交互视窗（需显示服务；无头环境自动回退）")
+    p.add_argument("--plc", action="store_true",
+                   help="启用 PLC 回环（lx 文档 §6.2：桥作客户端轮询 OpenPLC 的 %Q 区，"
+                        "换算归桥——int16 工程量 ↔ SI 米）")
+    p.add_argument("--plc-host", default=os.environ.get("MODBUS_HOST", "127.0.0.1"),
+                   help="OpenPLC Modbus 地址（缺省取环境变量 MODBUS_HOST）")
+    p.add_argument("--plc-port", type=int, default=502, help="OpenPLC Modbus 端口")
+    p.add_argument("--plc-spec", default=None,
+                   help="PLC requirement_spec.json（取 io_list range 推导换算；缺省 1:1）")
+    p.add_argument("--frame-output", help="将本仿真实例的画面原子发布为 npy，供 Studio 显示")
+    return p.parse_args()
+
+
+def initialize_bridge_pose(model, data, bridge, joints, actuators):
+    """将真实物理初态与桥的开场目标一致，避免抬笔目标却从纸面零位起步。"""
+    import mujoco
+    initial = bridge.read_commands()
+    for axis, target in initial.items():
+        data.qpos[model.jnt_qposadr[joints[axis]]] = target
+        data.ctrl[actuators[axis]] = target
+    mujoco.mj_forward(model, data)
+    bridge.write_positions({axis: float(data.qpos[model.jnt_qposadr[joints[axis]]]) for axis in initial})
+    return initial
+
+
+def main():
+    import mujoco
+    import numpy as np
+
+    args = parse_args()
+    io_map = load_io_map(args.io_map if os.path.isfile(args.io_map) else None)
+
+    # 行程/轴速/相机锚点推导：【csk 2026-09-08 plotter 兼容】gantry_xyz 用 travel_*/speed；
+    # linear_axis（plotter_cell）用 stroke×scale_m_per_unit / vmax×scale 换算米制，
+    # 桥的钳位行程随 spec 走（无 spec 时才落到 derive_layout 的内置缺省）。
+    travel_hint = {}
+    axis_speed = {a: 0.5 for a in AXES}
+    gx = gy = 0.0
+    spec = None if args.scene.endswith(".xml") else load_spec(args.scene)
+    if spec:
+        axis_pose = None
+        for a in spec.get("assets", []):
+            p = a.get("params", {})
+            if a.get("type") == "gantry_xyz":
+                travel_hint = {"X": float(p.get("travel_x", 0.6)),
+                               "Y": float(p.get("travel_y", 0.4)),
+                               "Z": float(p.get("travel_z", 0.2))}
+                axis_speed = {ax: float(p.get("speed", 0.5)) for ax in AXES}
+                gx, gy = (float(v) for v in
+                          a.get("pose", {}).get("position", (0.0, 0.0))[:2])
+            elif a.get("type") == "linear_axis":
+                lo, hi = p["stroke"]
+                s = float(p["scale_m_per_unit"])
+                travel_hint[p["axis"].upper()] = (float(hi) - float(lo)) * s
+                axis_speed[p["axis"].upper()] = float(p.get("vmax", 40.0)) * s
+                if axis_pose is None:
+                    axis_pose = a.get("pose", {}).get("position", (0.0, 0.0, 0.0))
+        if axis_pose is not None and "X" in travel_hint and "Y" in travel_hint:
+            gx = float(axis_pose[0]) - travel_hint["X"] / 2   # 链锚点（行程起点）＝相机左下角
+            gy = float(axis_pose[1]) - travel_hint["Y"] / 2
+
+    layout, n_regs = derive_layout(io_map, travel_hint or None)
+
+    if args.scene.endswith(".xml"):
+        model = mujoco.MjModel.from_xml_path(args.scene)
+    else:
+        model = mujoco.MjModel.from_xml_string(build_mjcf(spec))
+    data = mujoco.MjData(model)
+    # 参与轴 = 桥布局轴（由 io_map 推导；单轴/双轴场景只接实际绑定的轴）。
+    # 场景缺该轴的关节/执行器时显式失败——mj_name2id 返回 -1 的负索引会静默
+    # 写到别的轴上（2026-09-22 轴集通用化）
+    axes = list(layout)
+    jid = {a: mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, f"joint_{a.lower()}")
+           for a in axes}
+    aid = {a: mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, f"drive_{a.lower()}")
+           for a in axes}
+    missing = [f"joint_{a.lower()}/drive_{a.lower()}" for a in axes
+               if jid[a] < 0 or aid[a] < 0]
+    if missing:
+        raise SystemExit("场景缺少 io_map 绑定轴的关节/执行器：%s——核对 io_map 与 scene 资产"
+                         % ", ".join(missing))
+    travel = {a: layout[a]["travel"] for a in axes}
+
+    bridge = GantryBridge(layout, n_regs, host=args.host, port=args.port)
+    # 开场指令与场景初始位一致：X/Y 原点、Z 抬笔（客户端连上后由它接管）
+    bridge.set_commands({a: (travel[a] if a == "Z" else 0.0) for a in axes})
+    initial_cmd = initialize_bridge_pose(model, data, bridge, jid, aid)
+    bridge.serve_forever()
+    print(f"Modbus server ready (mujoco {mujoco.__version__}, in-process)")
+    print(bridge.describe())
+    print(f"physics: {args.physics_hz}Hz, scene: {args.scene}")
+
+    plc_link = None
+    if args.plc:
+        from plc_link import PlcLink
+        plc_link = PlcLink(bridge, io_map or [], spec=args.plc_spec,
+                           host=args.plc_host, port=args.plc_port)
+        plc_link.start()
+        print(f"PLC 回环已启动：轮询 OpenPLC {args.plc_host}:{args.plc_port} 的 %Q 区"
+              f"（通道 {len(plc_link.channels)}，换算归桥，周期 {plc_link.period_s * 1000:.0f}ms）")
+        print(plc_link.describe())
+
+    model.opt.timestep = 1.0 / args.physics_hz
+    last_cmd = dict(initial_cmd)
+    frame = 1.0 / args.physics_hz
+    n_watch = 0
+    feedback_online_since = None
+    feedback_ready = False
+
+    viewer_ctx = None
+    if args.viewer:
+        try:
+            import mujoco.viewer
+            viewer_ctx = mujoco.viewer.launch_passive(model, data)
+            print("MuJoCo 3D 视窗已打开（拖动旋转 / 滚轮缩放；关闭视窗即结束仿真）")
+        except Exception as exc:
+            print(f"视窗不可用（{type(exc).__name__}: {exc}），回退无头模式")
+
+    # 落笔墨迹：笔尖接近纸面（≤1.2cm，兼容伺服静差）且离开上个墨点 ≥4mm 时，
+    # 在 viewer 场景里留一颗墨点（user_scn 环形缓冲，写满覆盖最旧——保留最近笔迹）
+    INK_MAX = 2000
+    ink_next = 0
+    ink_last = None
+    # 【csk 2026-09-08 场景无关化】笔尖/纸面高度从模型几何动态取（龙门/plotter 通用，
+    # 不再硬编码龙门常数）：笔尖 = 胶囊几何中心 - 半长（fromto 端点）；纸面 = 几何中心 + 半厚
+    pen_gid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "pen")
+    paper_gid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "paper")
+
+    def drop_ink():
+        nonlocal ink_next, ink_last
+        if viewer_ctx is None:
+            return
+        tip = (data.geom_xpos[pen_gid][0], data.geom_xpos[pen_gid][1],
+               data.geom_xpos[pen_gid][2] - model.geom_size[pen_gid][1])
+        paper_top = data.geom_xpos[paper_gid][2] + model.geom_size[paper_gid][2]
+        if tip[2] > paper_top + 0.012:               # 未落笔（离纸 >1.2cm 不留痕）
+            return
+        if ink_last is not None and \
+                (tip[0] - ink_last[0]) ** 2 + (tip[1] - ink_last[1]) ** 2 < 0.004 ** 2:
+            return                                   # 与上个墨点太近，不重复留痕
+        g = viewer_ctx.user_scn.geoms[ink_next % INK_MAX]
+        mujoco.mjv_initGeom(
+            g, mujoco.mjtGeom.mjGEOM_SPHERE,
+            np.array([0.004, 0.004, 0.004]),
+            np.array([tip[0], tip[1], paper_top + 0.0015]),
+            np.eye(3).flatten(),
+            np.array([0.1, 0.1, 0.55, 1.0], dtype=np.float32))
+        ink_next += 1
+        viewer_ctx.user_scn.ngeom = min(ink_next, INK_MAX)
+        ink_last = tip
+
+    publisher = None
+    if args.frame_output:
+        from frame_stream import FramePublisher
+        publisher = FramePublisher(model, args.frame_output,
+                                   lookat=(gx + travel.get("X", 1.0) / 2,
+                                           gy + travel.get("Y", 1.0) / 2, 0.05))
+
+    try:
+        while viewer_ctx is None or viewer_ctx.is_running():
+            t0 = time.perf_counter()
+            n_watch += 1
+            for a, target in bridge.read_commands().items():
+                step = axis_speed.get(a, 0.5) * frame
+                cur = last_cmd[a]
+                delta = target - cur
+                new = target if abs(delta) <= step else \
+                    cur + step * (1.0 if delta > 0 else -1.0)
+                data.ctrl[aid[a]] = np.clip(new, 0.0, travel[a])
+                last_cmd[a] = new
+            mujoco.mj_step(model, data)
+            bridge.write_positions({a: float(data.qpos[jid[a]]) for a in axes})
+            if plc_link is not None and not feedback_ready:
+                if not plc_link.online:
+                    feedback_online_since = None
+                elif feedback_online_since is None:
+                    feedback_online_since = time.monotonic()
+                elif time.monotonic() - feedback_online_since >= 0.1:
+                    # 至少完成物理反馈发布与数次 PLC 扫描，启动日志不冒充反馈已就绪。
+                    print("PLC 物理反馈已就绪", flush=True)
+                    feedback_ready = True
+            if publisher is not None:
+                publisher.publish(data)
+            if viewer_ctx is not None:
+                drop_ink()
+                if n_watch % 2 == 0:
+                    viewer_ctx.sync()                # 60Hz 同步足够流畅
+                if n_watch == 30:
+                    # 初始机位（启动自动对焦之后再设才不被覆盖）：3/4 俯视工作区
+                    # 中心——默认平视角度下纸面几乎侧对镜头，落笔墨迹不可见
+                    viewer_ctx.cam.azimuth = 135.0
+                    viewer_ctx.cam.elevation = -42.0
+                    viewer_ctx.cam.distance = 1.9
+                    viewer_ctx.cam.lookat[:] = np.array([gx + travel.get("X", 0.6) / 2,
+                                                         gy + travel.get("Y", 0.4) / 2,
+                                                         data.geom_xpos[paper_gid][2]])
+                    viewer_ctx.sync()
+            if args.watch and n_watch % int(args.physics_hz * 2) == 0:
+                fb = bridge.read_positions()
+                print(" ".join(f"Axis{a}: cmd={last_cmd[a]:.3f} fb={fb[a]:.3f}"
+                               for a in axes), flush=True)
+            remain = frame - (time.perf_counter() - t0)
+            if remain > 0:
+                time.sleep(remain)
+    except KeyboardInterrupt:
+        print("\nCtrl+C，停止中…")
+    finally:
+        if publisher is not None:
+            publisher.close()
+        if plc_link is not None:
+            plc_link.stop()
+        if viewer_ctx is not None:
+            viewer_ctx.close()
+        bridge.stop()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

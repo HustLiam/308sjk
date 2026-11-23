@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-三轴运动控制场景验收（motion3axis.xml：CiA 402 驱动模型 + PLCopen MC API）。
+三轴运动控制场景验收（motion3axis.xml：CiA 402 驱动模型 + PLCopen MC 对齐 API）。
 
 前置：
     python src/pipeline/run_deploy.py --xml src/plc/motion3axis.xml
@@ -9,16 +9,19 @@
     python src/pipeline/scenario_motion3axis.py
 
 本脚本一身两角：
-  · CiA 402 主站——写应用级指令（run/cmd_go/jog/quickstop/inject_fault/cmd_reset
-    与目标位置寄存器），读应用状态（all_oe/move_done/any_moving/fault_any）与
-    各轴状态字（验证 CiA 402 状态位与握手位）；
+  · CiA 402 / PLCopen MC 主站——写应用级指令（run/cmd_go/cmd_rel/cmd_halt/cmd_home/
+    jog/quickstop/cmd_reset 与目标位置/相对距离寄存器），读应用状态（all_oe/move_done/
+    any_moving/fault_any）、各轴状态字与 ErrorID 诊断字；
   · 电机+编码器仿真——按各轴速度指令（带符号 INT，单位/s）积分位置反馈。
 
 地址表：
     线圈入  run 0.0 cmd_home 0.1 cmd_go 0.2 jog_fwd 0.3 jog_rev 0.4
             quickstop 0.5 inject_fault 0.6 cmd_reset 0.7
-    寄存器入 x/y/z_fb %QW0/1/2（本脚本写）；x/y/z_sp %QW10/11/12（主站写）
+            cmd_halt 2.0 cmd_rel 2.1
+    寄存器入 x/y/z_fb %QW0/1/2（本脚本写）；rel_x/y/z_d %QW3/4/5（主站写）
+            x/y/z_sp %QW10/11/12（主站写）
     寄存器出 x/y/z_sw %QW6/7/8（状态字）；x/y/z_v %QW13/14/15（速度指令）
+            x/y/z_err_id %QW16/17/18（MC 块 ErrorID：0=无 1=越程 2=轴故障 3=未使能）
     线圈出  all_oe 1.0 move_done 1.1 any_moving 1.2 fault_any 1.3
     prog_id %QW20=1
 """
@@ -32,10 +35,13 @@ from modbus_io import SafeCoilIO, connect, read_reg, require_program  # noqa: E4
 
 RUN, CMD_HOME, CMD_GO, JOG_FWD, JOG_REV, QS, INJECT, CMD_RESET = range(8)
 ALL_OE, MOVE_DONE, ANY_MOVING, FAULT_ANY = 8, 9, 10, 11
+CMD_HALT, CMD_REL = 16, 17                      # %QX2.0 / %QX2.1
 X_FB, Y_FB, Z_FB = 0, 1, 2
+REL_X_D, REL_Y_D, REL_Z_D = 3, 4, 5
 X_SP, Y_SP, Z_SP = 10, 11, 12
 X_SW, Y_SW, Z_SW = 6, 7, 8
 X_V, Y_V, Z_V = 13, 14, 15
+X_ERR_ID, Y_ERR_ID, Z_ERR_ID = 16, 17, 18
 PROG_ID = 1
 DT = 0.06
 TOL = 3   # 编码器侧到位容差（含伺服滞后）
@@ -136,20 +142,20 @@ def main():
 
     # ---- [4] P2(60,40,60)：仅 Z 下探 ----
     print("[4] cmd_go P2(60,40,60)：仅 Z 轴运动")
-    z_only = [True]
+    x0p, y0p = state["x"], state["y"]
+    max_dxy = 0.0
     t0 = time.time()
     wreg(X_SP, 60); wreg(Y_SP, 40); wreg(Z_SP, 60)
     time.sleep(0.15)
     io.pulse(CMD_GO)
     while time.time() - t0 < 10.0:
         xv, yv, zv, *_ = cycle()
-        if zv != 0 and (xv != 0 or yv != 0):
-            z_only[0] = False
+        max_dxy = max(max_dxy, abs(state["x"] - x0p), abs(state["y"] - y0p))
         if io.read(MOVE_DONE) and not io.read(ANY_MOVING):
             break
         time.sleep(DT)
     check("到位", io.read(MOVE_DONE))
-    check("全程 X/Y 速度为零（仅 Z 运动）", z_only[0])
+    check("全程 X/Y 位移≤3（仅 Z 运动，实际最大 %.1f）" % max_dxy, max_dxy <= 3)
     check("Z 定位（实际 %d）" % read_reg(m, Z_FB), abs(60 - read_reg(m, Z_FB)) <= TOL)
 
     # ---- [5] MC_Stop 快停：运动中 quickstop → QSA 受控减速 ----
@@ -175,26 +181,70 @@ def main():
     io.write(JOG_FWD, True)
     fwd = wait(lambda: read_reg(m, X_V) > 0, 2.0)
     check("按住正向 → X 速度>0", fwd)
-    x_at = state["x"]
-    wait(lambda: abs(read_reg(m, X_V)) == 0, 2.0) if not io.write(JOG_FWD, False) else None
+    x_mid = read_reg(m, X_FB)
+    t0 = time.time()
+    while time.time() - t0 < 0.4:                 # 按住期间持续积分（判进给，不依赖松开后位置）
+        cycle()
+        time.sleep(DT)
+    x_now = read_reg(m, X_FB)
     io.write(JOG_FWD, False)
     stopped = wait(lambda: abs(read_reg(m, X_V)) == 0 and not io.read(ANY_MOVING), 2.0)
     check("松开 → 减速停止", stopped)
-    check("X 位置前进了（%s→%.0f）" % (x_at, state["x"]), state["x"] > x_at + 1)
+    check("按住期间 X 前进（%d→%d）" % (x_mid, x_now), x_now > x_mid + 1)
 
-    # ---- [7] 故障注入 + MC_Reset ----
-    print("[7] inject_fault（目标越程 150）→ INTERP 安全拒绝（CSP 语义: 插补层拦截）")
+    # ---- [7] 目标越程：MC 层拒绝（PLCopen ErrorID 语义）----
+    print("[7] x_sp=150 越程 → MC_MoveAbsolute 拒绝：ErrorID=1，轴不动不失能")
     x_before = state["x"]
-    io.pulse(INJECT)
+    wreg(X_SP, 150)
+    time.sleep(0.15)
+    io.pulse(CMD_GO)
     time.sleep(1.0)
     xv, *_ = cycle()
-    check("X 轴未运动（越程被插补引擎拒绝）", abs(xv) <= 2)
+    check("x_err_id=1 越程（实际 %d）" % read_reg(m, X_ERR_ID), read_reg(m, X_ERR_ID) == 1)
+    check("X 轴未运动（命令被拒绝）", abs(xv) <= 2)
     check("X 位置未变（安全拒绝）", abs(state["x"] - x_before) <= 2)
-    check("无驱动器故障（插补层已拦截）", not io.read(FAULT_ANY))
+    check("无驱动器故障（MC 层已拦截）", not io.read(FAULT_ANY))
     check("驱动器仍使能", io.read(ALL_OE))
+    wreg(X_SP, 20)
 
-    # ---- [8] MC_Home 回零 + 失能 ----
-    print("[8] cmd_home 三轴回零，然后 run=0 失能")
+    # ---- [8] MC_Halt 受控暂停：运动中 halt → 减速停（不失能）→ 重发指令 ----
+    print("[8] 运动中 cmd_halt：受控减速至停、保持使能，重发指令恢复")
+    wreg(X_SP, 80); wreg(Y_SP, 70); wreg(Z_SP, 10)
+    time.sleep(0.15)
+    io.pulse(CMD_GO)
+    wait(lambda: io.read(ANY_MOVING), 2.0)
+    io.pulse(CMD_HALT)
+    stopped = wait(lambda: not io.read(ANY_MOVING), 3.0)
+    check("Halt 受控减速至停（≤3s）", stopped)
+    check("Halt 不失能（all_oe 保持，区别于 quickstop）", io.read(ALL_OE))
+    check("确实停在中途（x=%.0f < 80-5）" % state["x"], state["x"] < 75)
+    check("无故障", not io.read(FAULT_ANY))
+    done = goto(80, 70, 10, 10.0)
+    check("Halt 后重发指令到位", done)
+
+    # ---- [9] MC_MoveRelative 相对定位 ----
+    print("[9] cmd_rel：相对定位（实际位置 + 距离）与越程拒绝")
+    x0 = read_reg(m, X_FB)
+    wreg(REL_X_D, -30); wreg(REL_Y_D, 0); wreg(REL_Z_D, 0)
+    time.sleep(0.15)
+    io.pulse(CMD_REL)
+    done = wait(lambda: not io.read(ANY_MOVING), 10.0)
+    check("相对定位完成（运动结束）", done)
+    check("X: %d-30 → 实际 %d" % (x0, read_reg(m, X_FB)),
+          abs((x0 - 30) - read_reg(m, X_FB)) <= TOL)
+    check("成功命令后 x_err_id=0（实际 %d）" % read_reg(m, X_ERR_ID), read_reg(m, X_ERR_ID) == 0)
+    x_before = state["x"]
+    wreg(REL_X_D, 200)                           # 80-30=50 → 50+200=250 越程
+    time.sleep(0.15)
+    io.pulse(CMD_REL)
+    time.sleep(1.0)
+    xv, *_ = cycle()
+    check("越程相对拒绝 x_err_id=1（实际 %d）" % read_reg(m, X_ERR_ID),
+          read_reg(m, X_ERR_ID) == 1)
+    check("X 轴未运动", abs(xv) <= 2 and abs(state["x"] - x_before) <= 2)
+
+    # ---- [10] MC_Home 回零 + 失能 ----
+    print("[10] cmd_home 三轴回零，然后 run=0 失能")
     done = goto(0, 0, 0, 12.0)
     check("回零到位", done)
     for tag, reg in (("X", X_FB), ("Y", Y_FB), ("Z", Z_FB)):
@@ -205,7 +255,7 @@ def main():
     xv, yv, zv, *_ = cycle()
     check("失能后三轴速度为零", abs(xv) <= 2 and abs(yv) <= 2 and abs(zv) <= 2)
 
-    # ---- [9] 全程不变量 ----
+    # ---- [11] 全程不变量 ----
     check("全程不变量无违例（失能态零速 / 速度限幅）", not violations)
     if violations:
         print("      违例: %s" % violations[:5])

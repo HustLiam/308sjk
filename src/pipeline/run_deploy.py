@@ -13,7 +13,7 @@
     OpenPLC v3 运行时（Docker/WSL2/远程 Linux）
         │ 编译失败 → 错误日志回喂 agent ↩
         ▼
-    start_plc → Modbus TCP :502 → Isaac Sim 桥接 / verify_modbus.py
+    start_plc → Modbus TCP :502 → 仿真桥接 / verify_modbus.py
 
 用法:
     python src/pipeline/run_deploy.py [--xml path.xml] [--url http://127.0.0.1:8080]
@@ -33,6 +33,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from xml2st import convert                      # noqa: E402
 from openplc_client import OpenPLCClient, OpenPLCError  # noqa: E402
+from compiler_guard import ensure_local_compiler, CompilerConfigurationError
 
 WORKSPACE = REPO_ROOT / "workspace"
 RESULT_JSON = WORKSPACE / "deploy_result.json"
@@ -51,6 +52,7 @@ def main():
         pass
 
     steps, errors = [], []
+    compiler = {}
 
     def step(name, ok, detail=""):
         steps.append({"step": name, "ok": bool(ok), "detail": str(detail)})
@@ -60,7 +62,8 @@ def main():
     def finish(status, code):
         WORKSPACE.mkdir(exist_ok=True)
         RESULT_JSON.write_text(
-            json.dumps({"status": status, "steps": steps, "errors": errors},
+            json.dumps({"status": status, "steps": steps, "errors": errors,
+                        "compiler": compiler},
                        ensure_ascii=False, indent=2), encoding="utf-8")
         print("\n[deploy] RESULT: %s" % status)
         return code
@@ -83,10 +86,30 @@ def main():
     step("write program.st", True, str(st_path))
 
     # ② 上传 + 编译 + 启动
+    client = None
     try:
-        client = OpenPLCClient(base_url=args.url)
+        compiler = ensure_local_compiler(args.url)
+    except CompilerConfigurationError as exc:
+        errors.append(str(exc))
+        step("compiler configuration", False, str(exc))
+        return finish("CONFIGURATION_ERROR", 1)
+    if compiler.get("optimizer") == "bypassed":
+        step("compiler configuration", True, "ST optimizer bypassed; matiec compiles original ST")
+    else:
+        print("  [INFO] compiler configuration not verified: " + compiler["status"])
+    try:
+        client = OpenPLCClient(base_url=args.url,
+                               username=os.environ.get("OPENPLC_USERNAME", "openplc"),
+                               password=os.environ.get("OPENPLC_PASSWORD", "openplc"))
         client.login()
         step("login runtime", True, args.url)
+
+        status = client.status()
+        if status == "RUNNING":
+            status = client.stop()
+            step("stop before upload", status == "STOPPED", status)
+        if status != "STOPPED":
+            raise OpenPLCError("上传前 Runtime 未停止：" + status)
 
         st_file = client.upload_and_compile(st_text, args.name)
         step("upload & trigger compile", True, st_file)
@@ -117,6 +140,13 @@ def main():
         errors.append(msg + " / " + str(e.__cause__ or e))
         step("connect runtime", False, msg)
         return finish("FAILED", 1)
+    except requests.exceptions.RequestException as e:
+        errors.append(str(e))
+        step("runtime HTTP request", False, str(e))
+        return finish("FAILED", 1)
+    finally:
+        if client is not None:
+            client.session.close()
 
     return finish("OK", 0)
 

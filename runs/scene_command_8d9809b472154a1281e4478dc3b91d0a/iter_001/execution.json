@@ -1,0 +1,3471 @@
+{
+  "status": "completed",
+  "error": null,
+  "events": [
+    {
+      "command_sequence": 2,
+      "outputs": {
+        "rb100_j1_target": 879,
+        "rb100_j2_target": -6719,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 879,
+        "rb100_j2_actual": -6719,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 2
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.30682888250060314,
+        "rb100_j2_target": -2.34537344882998
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 879,
+        "rb100_j2_actual": -6719,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 2
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 3,
+      "outputs": {
+        "rb100_j1_target": 883,
+        "rb100_j2_target": -6715,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 883,
+        "rb100_j2_actual": -6715,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 3
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3082251459021986,
+        "rb100_j2_target": -2.343977185428385
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 883,
+        "rb100_j2_actual": -6715,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 3
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 4,
+      "outputs": {
+        "rb100_j1_target": 889,
+        "rb100_j2_target": -6709,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 889,
+        "rb100_j2_actual": -6709,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 4
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3103195410045918,
+        "rb100_j2_target": -2.3418827903259913
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 889,
+        "rb100_j2_actual": -6709,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 4
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 5,
+      "outputs": {
+        "rb100_j1_target": 893,
+        "rb100_j2_target": -6705,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 893,
+        "rb100_j2_actual": -6705,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 5
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.31171580440618724,
+        "rb100_j2_target": -2.340486526924396
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 893,
+        "rb100_j2_actual": -6705,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 5
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 6,
+      "outputs": {
+        "rb100_j1_target": 899,
+        "rb100_j2_target": -6699,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 899,
+        "rb100_j2_actual": -6699,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 6
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.31381019950858047,
+        "rb100_j2_target": -2.3383921318220025
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 899,
+        "rb100_j2_actual": -6699,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 6
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 7,
+      "outputs": {
+        "rb100_j1_target": 903,
+        "rb100_j2_target": -6695,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 903,
+        "rb100_j2_actual": -6695,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 7
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3152064629101759,
+        "rb100_j2_target": -2.3369958684204075
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 903,
+        "rb100_j2_actual": -6695,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 7
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 8,
+      "outputs": {
+        "rb100_j1_target": 909,
+        "rb100_j2_target": -6689,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 909,
+        "rb100_j2_actual": -6689,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 8
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.31730085801256913,
+        "rb100_j2_target": -2.334901473318014
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 909,
+        "rb100_j2_actual": -6689,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 8
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 9,
+      "outputs": {
+        "rb100_j1_target": 913,
+        "rb100_j2_target": -6685,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 913,
+        "rb100_j2_actual": -6685,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 9
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3186971214141646,
+        "rb100_j2_target": -2.333505209916418
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 913,
+        "rb100_j2_actual": -6685,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 9
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 10,
+      "outputs": {
+        "rb100_j1_target": 917,
+        "rb100_j2_target": -6681,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 917,
+        "rb100_j2_actual": -6681,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 10
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.32009338481576005,
+        "rb100_j2_target": -2.3321089465148233
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 917,
+        "rb100_j2_actual": -6681,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 10
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 11,
+      "outputs": {
+        "rb100_j1_target": 923,
+        "rb100_j2_target": -6675,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 923,
+        "rb100_j2_actual": -6675,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 11
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3221877799181532,
+        "rb100_j2_target": -2.3300145514124297
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 923,
+        "rb100_j2_actual": -6675,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 11
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 12,
+      "outputs": {
+        "rb100_j1_target": 927,
+        "rb100_j2_target": -6671,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 927,
+        "rb100_j2_actual": -6671,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 12
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.32358404331974866,
+        "rb100_j2_target": -2.328618288010835
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 927,
+        "rb100_j2_actual": -6671,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 12
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 13,
+      "outputs": {
+        "rb100_j1_target": 931,
+        "rb100_j2_target": -6667,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 931,
+        "rb100_j2_actual": -6667,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 13
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3249803067213442,
+        "rb100_j2_target": -2.327222024609239
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 931,
+        "rb100_j2_actual": -6667,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 13
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 14,
+      "outputs": {
+        "rb100_j1_target": 935,
+        "rb100_j2_target": -6663,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 935,
+        "rb100_j2_actual": -6663,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 14
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.32637657012293964,
+        "rb100_j2_target": -2.3258257612076436
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 935,
+        "rb100_j2_actual": -6663,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 14
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 15,
+      "outputs": {
+        "rb100_j1_target": 941,
+        "rb100_j2_target": -6657,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 941,
+        "rb100_j2_actual": -6657,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 15
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3284709652253328,
+        "rb100_j2_target": -2.3237313661052506
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 941,
+        "rb100_j2_actual": -6657,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 15
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 16,
+      "outputs": {
+        "rb100_j1_target": 945,
+        "rb100_j2_target": -6653,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 945,
+        "rb100_j2_actual": -6653,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 16
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3298672286269283,
+        "rb100_j2_target": -2.3223351027036547
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 945,
+        "rb100_j2_actual": -6653,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 16
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 17,
+      "outputs": {
+        "rb100_j1_target": 949,
+        "rb100_j2_target": -6649,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 949,
+        "rb100_j2_actual": -6649,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 17
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.33126349202852373,
+        "rb100_j2_target": -2.3209388393020594
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 949,
+        "rb100_j2_actual": -6649,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 17
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 18,
+      "outputs": {
+        "rb100_j1_target": 955,
+        "rb100_j2_target": -6643,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 955,
+        "rb100_j2_actual": -6643,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 18
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.33335788713091696,
+        "rb100_j2_target": -2.3188444441996663
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 955,
+        "rb100_j2_actual": -6643,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 18
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 19,
+      "outputs": {
+        "rb100_j1_target": 959,
+        "rb100_j2_target": -6639,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 959,
+        "rb100_j2_actual": -6639,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 19
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3347541505325124,
+        "rb100_j2_target": -2.317448180798071
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 959,
+        "rb100_j2_actual": -6639,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 19
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 20,
+      "outputs": {
+        "rb100_j1_target": 963,
+        "rb100_j2_target": -6635,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 963,
+        "rb100_j2_actual": -6635,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 20
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3361504139341079,
+        "rb100_j2_target": -2.316051917396475
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 963,
+        "rb100_j2_actual": -6635,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 20
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 21,
+      "outputs": {
+        "rb100_j1_target": 969,
+        "rb100_j2_target": -6629,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 969,
+        "rb100_j2_actual": -6629,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 21
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.33824480903650106,
+        "rb100_j2_target": -2.3139575222940825
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 969,
+        "rb100_j2_actual": -6629,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 21
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 22,
+      "outputs": {
+        "rb100_j1_target": 973,
+        "rb100_j2_target": -6625,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 973,
+        "rb100_j2_actual": -6625,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 22
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.33964107243809655,
+        "rb100_j2_target": -2.3125612588924866
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 973,
+        "rb100_j2_actual": -6625,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 22
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 23,
+      "outputs": {
+        "rb100_j1_target": 979,
+        "rb100_j2_target": -6619,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 979,
+        "rb100_j2_actual": -6619,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 23
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3417354675404898,
+        "rb100_j2_target": -2.3104668637900936
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 979,
+        "rb100_j2_actual": -6619,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 23
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 24,
+      "outputs": {
+        "rb100_j1_target": 979,
+        "rb100_j2_target": -6619,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 979,
+        "rb100_j2_actual": -6619,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 24
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3417354675404898,
+        "rb100_j2_target": -2.3104668637900936
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 979,
+        "rb100_j2_actual": -6619,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 24
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 25,
+      "outputs": {
+        "rb100_j1_target": 979,
+        "rb100_j2_target": -6619,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 979,
+        "rb100_j2_actual": -6619,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 25
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3417354675404898,
+        "rb100_j2_target": -2.3104668637900936
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 979,
+        "rb100_j2_actual": -6619,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 25
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 26,
+      "outputs": {
+        "rb100_j1_target": 979,
+        "rb100_j2_target": -6619,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 979,
+        "rb100_j2_actual": -6619,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 26
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3417354675404898,
+        "rb100_j2_target": -2.3104668637900936
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 979,
+        "rb100_j2_actual": -6619,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 26
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 27,
+      "outputs": {
+        "rb100_j1_target": 979,
+        "rb100_j2_target": -6619,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 979,
+        "rb100_j2_actual": -6619,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 27
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3417354675404898,
+        "rb100_j2_target": -2.3104668637900936
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 979,
+        "rb100_j2_actual": -6619,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 27
+      },
+      "state": 0
+    },
+    {
+      "command_sequence": 28,
+      "outputs": {
+        "rb100_j1_target": 979,
+        "rb100_j2_target": -6619,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 979,
+        "rb100_j2_actual": -6619,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 28
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3417354675404898,
+        "rb100_j2_target": -2.3104668637900936
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 979,
+        "rb100_j2_actual": -6619,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 28
+      },
+      "state": 1
+    },
+    {
+      "command_sequence": 29,
+      "outputs": {
+        "rb100_j1_target": 975,
+        "rb100_j2_target": -6623,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 975,
+        "rb100_j2_actual": -6623,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 29
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.34033920413889424,
+        "rb100_j2_target": -2.311863127191689
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 975,
+        "rb100_j2_actual": -6623,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 29
+      },
+      "state": 1
+    },
+    {
+      "command_sequence": 30,
+      "outputs": {
+        "rb100_j1_target": 971,
+        "rb100_j2_target": -6627,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 971,
+        "rb100_j2_actual": -6627,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 30
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3389429407372988,
+        "rb100_j2_target": -2.3132593905932843
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 971,
+        "rb100_j2_actual": -6627,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 30
+      },
+      "state": 1
+    },
+    {
+      "command_sequence": 31,
+      "outputs": {
+        "rb100_j1_target": 967,
+        "rb100_j2_target": -6631,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 967,
+        "rb100_j2_actual": -6631,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 31
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3375466773357033,
+        "rb100_j2_target": -2.3146556539948797
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 967,
+        "rb100_j2_actual": -6631,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 31
+      },
+      "state": 1
+    },
+    {
+      "command_sequence": 32,
+      "outputs": {
+        "rb100_j1_target": 963,
+        "rb100_j2_target": -6635,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 963,
+        "rb100_j2_actual": -6635,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 32
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3361504139341079,
+        "rb100_j2_target": -2.316051917396475
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 963,
+        "rb100_j2_actual": -6635,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 32
+      },
+      "state": 1
+    },
+    {
+      "command_sequence": 33,
+      "outputs": {
+        "rb100_j1_target": 957,
+        "rb100_j2_target": -6641,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 957,
+        "rb100_j2_actual": -6641,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 33
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3340560188317147,
+        "rb100_j2_target": -2.3181463124988686
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 957,
+        "rb100_j2_actual": -6641,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 33
+      },
+      "state": 1
+    },
+    {
+      "command_sequence": 34,
+      "outputs": {
+        "rb100_j1_target": 953,
+        "rb100_j2_target": -6645,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 953,
+        "rb100_j2_actual": -6645,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 34
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.33265975543011916,
+        "rb100_j2_target": -2.319542575900464
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 953,
+        "rb100_j2_actual": -6645,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 34
+      },
+      "state": 1
+    },
+    {
+      "command_sequence": 35,
+      "outputs": {
+        "rb100_j1_target": 949,
+        "rb100_j2_target": -6649,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 949,
+        "rb100_j2_actual": -6649,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 35
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.33126349202852373,
+        "rb100_j2_target": -2.3209388393020594
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 949,
+        "rb100_j2_actual": -6649,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 35
+      },
+      "state": 1
+    },
+    {
+      "command_sequence": 36,
+      "outputs": {
+        "rb100_j1_target": 945,
+        "rb100_j2_target": -6653,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 945,
+        "rb100_j2_actual": -6653,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 36
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3298672286269283,
+        "rb100_j2_target": -2.3223351027036547
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 945,
+        "rb100_j2_actual": -6653,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 36
+      },
+      "state": 1
+    },
+    {
+      "command_sequence": 37,
+      "outputs": {
+        "rb100_j1_target": 939,
+        "rb100_j2_target": -6659,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 939,
+        "rb100_j2_actual": -6659,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 37
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3277728335245351,
+        "rb100_j2_target": -2.3244294978060482
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 939,
+        "rb100_j2_actual": -6659,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 37
+      },
+      "state": 1
+    },
+    {
+      "command_sequence": 38,
+      "outputs": {
+        "rb100_j1_target": 935,
+        "rb100_j2_target": -6663,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 935,
+        "rb100_j2_actual": -6663,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 38
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.32637657012293964,
+        "rb100_j2_target": -2.3258257612076436
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 935,
+        "rb100_j2_actual": -6663,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 38
+      },
+      "state": 1
+    },
+    {
+      "command_sequence": 39,
+      "outputs": {
+        "rb100_j1_target": 931,
+        "rb100_j2_target": -6667,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 931,
+        "rb100_j2_actual": -6667,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 39
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3249803067213442,
+        "rb100_j2_target": -2.327222024609239
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 931,
+        "rb100_j2_actual": -6667,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 39
+      },
+      "state": 1
+    },
+    {
+      "command_sequence": 40,
+      "outputs": {
+        "rb100_j1_target": 927,
+        "rb100_j2_target": -6671,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 927,
+        "rb100_j2_actual": -6671,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 40
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.32358404331974866,
+        "rb100_j2_target": -2.328618288010835
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 927,
+        "rb100_j2_actual": -6671,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 40
+      },
+      "state": 1
+    },
+    {
+      "command_sequence": 41,
+      "outputs": {
+        "rb100_j1_target": 921,
+        "rb100_j2_target": -6677,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 921,
+        "rb100_j2_actual": -6677,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 41
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.32148964821735554,
+        "rb100_j2_target": -2.3307126831132274
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 921,
+        "rb100_j2_actual": -6677,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 41
+      },
+      "state": 1
+    },
+    {
+      "command_sequence": 42,
+      "outputs": {
+        "rb100_j1_target": 917,
+        "rb100_j2_target": -6681,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 917,
+        "rb100_j2_actual": -6681,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 42
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.32009338481576005,
+        "rb100_j2_target": -2.3321089465148233
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 917,
+        "rb100_j2_actual": -6681,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 42
+      },
+      "state": 1
+    },
+    {
+      "command_sequence": 43,
+      "outputs": {
+        "rb100_j1_target": 913,
+        "rb100_j2_target": -6685,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 913,
+        "rb100_j2_actual": -6685,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 43
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3186971214141646,
+        "rb100_j2_target": -2.333505209916418
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 913,
+        "rb100_j2_actual": -6685,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 43
+      },
+      "state": 1
+    },
+    {
+      "command_sequence": 44,
+      "outputs": {
+        "rb100_j1_target": 907,
+        "rb100_j2_target": -6691,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 907,
+        "rb100_j2_actual": -6691,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 44
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3166027263117714,
+        "rb100_j2_target": -2.3355996050188117
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 907,
+        "rb100_j2_actual": -6691,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 44
+      },
+      "state": 1
+    },
+    {
+      "command_sequence": 45,
+      "outputs": {
+        "rb100_j1_target": 901,
+        "rb100_j2_target": -6697,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 901,
+        "rb100_j2_actual": -6697,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 45
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.31450833120937816,
+        "rb100_j2_target": -2.3376940001212048
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 901,
+        "rb100_j2_actual": -6697,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 45
+      },
+      "state": 1
+    },
+    {
+      "command_sequence": 46,
+      "outputs": {
+        "rb100_j1_target": 897,
+        "rb100_j2_target": -6701,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 897,
+        "rb100_j2_actual": -6701,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 46
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3131120678077827,
+        "rb100_j2_target": -2.3390902635228006
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 897,
+        "rb100_j2_actual": -6701,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 46
+      },
+      "state": 1
+    },
+    {
+      "command_sequence": 47,
+      "outputs": {
+        "rb100_j1_target": 891,
+        "rb100_j2_target": -6707,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 891,
+        "rb100_j2_actual": -6707,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 47
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.31101767270538955,
+        "rb100_j2_target": -2.341184658625194
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 891,
+        "rb100_j2_actual": -6707,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 47
+      },
+      "state": 1
+    },
+    {
+      "command_sequence": 48,
+      "outputs": {
+        "rb100_j1_target": 887,
+        "rb100_j2_target": -6711,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 887,
+        "rb100_j2_actual": -6711,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 48
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3096214093037941,
+        "rb100_j2_target": -2.342580922026789
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 887,
+        "rb100_j2_actual": -6711,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 48
+      },
+      "state": 1
+    },
+    {
+      "command_sequence": 49,
+      "outputs": {
+        "rb100_j1_target": 883,
+        "rb100_j2_target": -6715,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 883,
+        "rb100_j2_actual": -6715,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 49
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3082251459021986,
+        "rb100_j2_target": -2.343977185428385
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 883,
+        "rb100_j2_actual": -6715,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 49
+      },
+      "state": 1
+    },
+    {
+      "command_sequence": 50,
+      "outputs": {
+        "rb100_j1_target": 879,
+        "rb100_j2_target": -6719,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 879,
+        "rb100_j2_actual": -6719,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 50
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.30682888250060314,
+        "rb100_j2_target": -2.34537344882998
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 879,
+        "rb100_j2_actual": -6719,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 50
+      },
+      "state": 1
+    },
+    {
+      "command_sequence": 51,
+      "outputs": {
+        "rb100_j1_target": 879,
+        "rb100_j2_target": -6719,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 879,
+        "rb100_j2_actual": -6719,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 51
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.30682888250060314,
+        "rb100_j2_target": -2.34537344882998
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 879,
+        "rb100_j2_actual": -6719,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 51
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 52,
+      "outputs": {
+        "rb100_j1_target": 885,
+        "rb100_j2_target": -6713,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 885,
+        "rb100_j2_actual": -6713,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 52
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3089232776029963,
+        "rb100_j2_target": -2.3432790537275867
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 885,
+        "rb100_j2_actual": -6713,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 52
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 53,
+      "outputs": {
+        "rb100_j1_target": 889,
+        "rb100_j2_target": -6709,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 889,
+        "rb100_j2_actual": -6709,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 53
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3103195410045918,
+        "rb100_j2_target": -2.3418827903259913
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 889,
+        "rb100_j2_actual": -6709,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 53
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 54,
+      "outputs": {
+        "rb100_j1_target": 895,
+        "rb100_j2_target": -6703,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 895,
+        "rb100_j2_actual": -6703,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 54
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.31241393610698504,
+        "rb100_j2_target": -2.3397883952235983
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 895,
+        "rb100_j2_actual": -6703,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 54
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 55,
+      "outputs": {
+        "rb100_j1_target": 899,
+        "rb100_j2_target": -6699,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 899,
+        "rb100_j2_actual": -6699,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 55
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.31381019950858047,
+        "rb100_j2_target": -2.3383921318220025
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 899,
+        "rb100_j2_actual": -6699,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 55
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 56,
+      "outputs": {
+        "rb100_j1_target": 903,
+        "rb100_j2_target": -6695,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 903,
+        "rb100_j2_actual": -6695,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 56
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3152064629101759,
+        "rb100_j2_target": -2.3369958684204075
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 903,
+        "rb100_j2_actual": -6695,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 56
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 57,
+      "outputs": {
+        "rb100_j1_target": 909,
+        "rb100_j2_target": -6689,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 909,
+        "rb100_j2_actual": -6689,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 57
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.31730085801256913,
+        "rb100_j2_target": -2.334901473318014
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 909,
+        "rb100_j2_actual": -6689,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 57
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 58,
+      "outputs": {
+        "rb100_j1_target": 913,
+        "rb100_j2_target": -6685,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 913,
+        "rb100_j2_actual": -6685,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 58
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3186971214141646,
+        "rb100_j2_target": -2.333505209916418
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 913,
+        "rb100_j2_actual": -6685,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 58
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 59,
+      "outputs": {
+        "rb100_j1_target": 917,
+        "rb100_j2_target": -6681,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 917,
+        "rb100_j2_actual": -6681,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 59
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.32009338481576005,
+        "rb100_j2_target": -2.3321089465148233
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 917,
+        "rb100_j2_actual": -6681,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 59
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 60,
+      "outputs": {
+        "rb100_j1_target": 923,
+        "rb100_j2_target": -6675,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 923,
+        "rb100_j2_actual": -6675,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 60
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3221877799181532,
+        "rb100_j2_target": -2.3300145514124297
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 923,
+        "rb100_j2_actual": -6675,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 60
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 61,
+      "outputs": {
+        "rb100_j1_target": 929,
+        "rb100_j2_target": -6669,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 929,
+        "rb100_j2_actual": -6669,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 61
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.32428217502054646,
+        "rb100_j2_target": -2.3279201563100367
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 929,
+        "rb100_j2_actual": -6669,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 61
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 62,
+      "outputs": {
+        "rb100_j1_target": 933,
+        "rb100_j2_target": -6665,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 933,
+        "rb100_j2_actual": -6665,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 62
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3256784384221419,
+        "rb100_j2_target": -2.3265238929084413
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 933,
+        "rb100_j2_actual": -6665,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 62
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 63,
+      "outputs": {
+        "rb100_j1_target": 937,
+        "rb100_j2_target": -6661,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 937,
+        "rb100_j2_actual": -6661,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 63
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3270747018237374,
+        "rb100_j2_target": -2.325127629506846
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 937,
+        "rb100_j2_actual": -6661,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 63
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 64,
+      "outputs": {
+        "rb100_j1_target": 941,
+        "rb100_j2_target": -6657,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 941,
+        "rb100_j2_actual": -6657,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 64
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3284709652253328,
+        "rb100_j2_target": -2.3237313661052506
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 941,
+        "rb100_j2_actual": -6657,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 64
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 65,
+      "outputs": {
+        "rb100_j1_target": 947,
+        "rb100_j2_target": -6651,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 947,
+        "rb100_j2_actual": -6651,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 65
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.33056536032772604,
+        "rb100_j2_target": -2.3216369710028575
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 947,
+        "rb100_j2_actual": -6651,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 65
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 66,
+      "outputs": {
+        "rb100_j1_target": 951,
+        "rb100_j2_target": -6647,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 951,
+        "rb100_j2_actual": -6647,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 66
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3319616237293215,
+        "rb100_j2_target": -2.3202407076012617
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 951,
+        "rb100_j2_actual": -6647,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 66
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 67,
+      "outputs": {
+        "rb100_j1_target": 955,
+        "rb100_j2_target": -6643,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 955,
+        "rb100_j2_actual": -6643,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 67
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.33335788713091696,
+        "rb100_j2_target": -2.3188444441996663
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 955,
+        "rb100_j2_actual": -6643,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 67
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 68,
+      "outputs": {
+        "rb100_j1_target": 961,
+        "rb100_j2_target": -6637,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 961,
+        "rb100_j2_actual": -6637,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 68
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.33545228223331014,
+        "rb100_j2_target": -2.3167500490972732
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 961,
+        "rb100_j2_actual": -6637,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 68
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 69,
+      "outputs": {
+        "rb100_j1_target": 965,
+        "rb100_j2_target": -6633,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 965,
+        "rb100_j2_actual": -6633,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 69
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3368485456349056,
+        "rb100_j2_target": -2.3153537856956774
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 965,
+        "rb100_j2_actual": -6633,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 69
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 70,
+      "outputs": {
+        "rb100_j1_target": 969,
+        "rb100_j2_target": -6629,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 969,
+        "rb100_j2_actual": -6629,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 70
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.33824480903650106,
+        "rb100_j2_target": -2.3139575222940825
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 969,
+        "rb100_j2_actual": -6629,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 70
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 71,
+      "outputs": {
+        "rb100_j1_target": 975,
+        "rb100_j2_target": -6623,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 975,
+        "rb100_j2_actual": -6623,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 71
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.34033920413889424,
+        "rb100_j2_target": -2.311863127191689
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 975,
+        "rb100_j2_actual": -6623,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 71
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 72,
+      "outputs": {
+        "rb100_j1_target": 979,
+        "rb100_j2_target": -6619,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 979,
+        "rb100_j2_actual": -6619,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 72
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3417354675404898,
+        "rb100_j2_target": -2.3104668637900936
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 979,
+        "rb100_j2_actual": -6619,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 72
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 73,
+      "outputs": {
+        "rb100_j1_target": 979,
+        "rb100_j2_target": -6619,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 979,
+        "rb100_j2_actual": -6619,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 73
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3417354675404898,
+        "rb100_j2_target": -2.3104668637900936
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 979,
+        "rb100_j2_actual": -6619,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 73
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 74,
+      "outputs": {
+        "rb100_j1_target": 979,
+        "rb100_j2_target": -6619,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 979,
+        "rb100_j2_actual": -6619,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 74
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3417354675404898,
+        "rb100_j2_target": -2.3104668637900936
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 979,
+        "rb100_j2_actual": -6619,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 74
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 75,
+      "outputs": {
+        "rb100_j1_target": 979,
+        "rb100_j2_target": -6619,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 979,
+        "rb100_j2_actual": -6619,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 75
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3417354675404898,
+        "rb100_j2_target": -2.3104668637900936
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 979,
+        "rb100_j2_actual": -6619,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 75
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 76,
+      "outputs": {
+        "rb100_j1_target": 979,
+        "rb100_j2_target": -6619,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 979,
+        "rb100_j2_actual": -6619,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 76
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3417354675404898,
+        "rb100_j2_target": -2.3104668637900936
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 979,
+        "rb100_j2_actual": -6619,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 76
+      },
+      "state": 2
+    },
+    {
+      "command_sequence": 77,
+      "outputs": {
+        "rb100_j1_target": 979,
+        "rb100_j2_target": -6619,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 979,
+        "rb100_j2_actual": -6619,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 77
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3417354675404898,
+        "rb100_j2_target": -2.3104668637900936
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 979,
+        "rb100_j2_actual": -6619,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 77
+      },
+      "state": 3
+    },
+    {
+      "command_sequence": 78,
+      "outputs": {
+        "rb100_j1_target": 975,
+        "rb100_j2_target": -6623,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 975,
+        "rb100_j2_actual": -6623,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 78
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.34033920413889424,
+        "rb100_j2_target": -2.311863127191689
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 975,
+        "rb100_j2_actual": -6623,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 78
+      },
+      "state": 3
+    },
+    {
+      "command_sequence": 79,
+      "outputs": {
+        "rb100_j1_target": 971,
+        "rb100_j2_target": -6627,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 971,
+        "rb100_j2_actual": -6627,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 79
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3389429407372988,
+        "rb100_j2_target": -2.3132593905932843
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 971,
+        "rb100_j2_actual": -6627,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 79
+      },
+      "state": 3
+    },
+    {
+      "command_sequence": 80,
+      "outputs": {
+        "rb100_j1_target": 967,
+        "rb100_j2_target": -6631,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 967,
+        "rb100_j2_actual": -6631,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 80
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3375466773357033,
+        "rb100_j2_target": -2.3146556539948797
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 967,
+        "rb100_j2_actual": -6631,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 80
+      },
+      "state": 3
+    },
+    {
+      "command_sequence": 81,
+      "outputs": {
+        "rb100_j1_target": 963,
+        "rb100_j2_target": -6635,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 963,
+        "rb100_j2_actual": -6635,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 81
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3361504139341079,
+        "rb100_j2_target": -2.316051917396475
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 963,
+        "rb100_j2_actual": -6635,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 81
+      },
+      "state": 3
+    },
+    {
+      "command_sequence": 82,
+      "outputs": {
+        "rb100_j1_target": 957,
+        "rb100_j2_target": -6641,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 957,
+        "rb100_j2_actual": -6641,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 82
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3340560188317147,
+        "rb100_j2_target": -2.3181463124988686
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 957,
+        "rb100_j2_actual": -6641,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 82
+      },
+      "state": 3
+    },
+    {
+      "command_sequence": 83,
+      "outputs": {
+        "rb100_j1_target": 953,
+        "rb100_j2_target": -6645,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 953,
+        "rb100_j2_actual": -6645,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 83
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.33265975543011916,
+        "rb100_j2_target": -2.319542575900464
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 953,
+        "rb100_j2_actual": -6645,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 83
+      },
+      "state": 3
+    },
+    {
+      "command_sequence": 84,
+      "outputs": {
+        "rb100_j1_target": 949,
+        "rb100_j2_target": -6649,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 949,
+        "rb100_j2_actual": -6649,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 84
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.33126349202852373,
+        "rb100_j2_target": -2.3209388393020594
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 949,
+        "rb100_j2_actual": -6649,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 84
+      },
+      "state": 3
+    },
+    {
+      "command_sequence": 85,
+      "outputs": {
+        "rb100_j1_target": 945,
+        "rb100_j2_target": -6653,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 945,
+        "rb100_j2_actual": -6653,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 85
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3298672286269283,
+        "rb100_j2_target": -2.3223351027036547
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 945,
+        "rb100_j2_actual": -6653,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 85
+      },
+      "state": 3
+    },
+    {
+      "command_sequence": 86,
+      "outputs": {
+        "rb100_j1_target": 941,
+        "rb100_j2_target": -6657,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 941,
+        "rb100_j2_actual": -6657,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 86
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3284709652253328,
+        "rb100_j2_target": -2.3237313661052506
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 941,
+        "rb100_j2_actual": -6657,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 86
+      },
+      "state": 3
+    },
+    {
+      "command_sequence": 87,
+      "outputs": {
+        "rb100_j1_target": 935,
+        "rb100_j2_target": -6663,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 935,
+        "rb100_j2_actual": -6663,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 87
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.32637657012293964,
+        "rb100_j2_target": -2.3258257612076436
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 935,
+        "rb100_j2_actual": -6663,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 87
+      },
+      "state": 3
+    },
+    {
+      "command_sequence": 88,
+      "outputs": {
+        "rb100_j1_target": 929,
+        "rb100_j2_target": -6669,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 929,
+        "rb100_j2_actual": -6669,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 88
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.32428217502054646,
+        "rb100_j2_target": -2.3279201563100367
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 929,
+        "rb100_j2_actual": -6669,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 88
+      },
+      "state": 3
+    },
+    {
+      "command_sequence": 89,
+      "outputs": {
+        "rb100_j1_target": 925,
+        "rb100_j2_target": -6673,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 925,
+        "rb100_j2_actual": -6673,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 89
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.32288591161895097,
+        "rb100_j2_target": -2.3293164197116325
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 925,
+        "rb100_j2_actual": -6673,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 89
+      },
+      "state": 3
+    },
+    {
+      "command_sequence": 90,
+      "outputs": {
+        "rb100_j1_target": 919,
+        "rb100_j2_target": -6679,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 919,
+        "rb100_j2_actual": -6679,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 90
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.32079151651655774,
+        "rb100_j2_target": -2.3314108148140256
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 919,
+        "rb100_j2_actual": -6679,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 90
+      },
+      "state": 3
+    },
+    {
+      "command_sequence": 91,
+      "outputs": {
+        "rb100_j1_target": 915,
+        "rb100_j2_target": -6683,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 915,
+        "rb100_j2_actual": -6683,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 91
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3193952531149623,
+        "rb100_j2_target": -2.332807078215621
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 915,
+        "rb100_j2_actual": -6683,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 91
+      },
+      "state": 3
+    },
+    {
+      "command_sequence": 92,
+      "outputs": {
+        "rb100_j1_target": 911,
+        "rb100_j2_target": -6687,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 911,
+        "rb100_j2_actual": -6687,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 92
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3179989897133668,
+        "rb100_j2_target": -2.3342033416172163
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 911,
+        "rb100_j2_actual": -6687,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 92
+      },
+      "state": 3
+    },
+    {
+      "command_sequence": 93,
+      "outputs": {
+        "rb100_j1_target": 905,
+        "rb100_j2_target": -6693,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 905,
+        "rb100_j2_actual": -6693,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 93
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3159045946109737,
+        "rb100_j2_target": -2.33629773671961
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 905,
+        "rb100_j2_actual": -6693,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 93
+      },
+      "state": 3
+    },
+    {
+      "command_sequence": 94,
+      "outputs": {
+        "rb100_j1_target": 901,
+        "rb100_j2_target": -6697,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 901,
+        "rb100_j2_actual": -6697,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 94
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.31450833120937816,
+        "rb100_j2_target": -2.3376940001212048
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 901,
+        "rb100_j2_actual": -6697,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 94
+      },
+      "state": 3
+    },
+    {
+      "command_sequence": 95,
+      "outputs": {
+        "rb100_j1_target": 895,
+        "rb100_j2_target": -6703,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 895,
+        "rb100_j2_actual": -6703,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 95
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.31241393610698504,
+        "rb100_j2_target": -2.3397883952235983
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 895,
+        "rb100_j2_actual": -6703,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 95
+      },
+      "state": 3
+    },
+    {
+      "command_sequence": 96,
+      "outputs": {
+        "rb100_j1_target": 891,
+        "rb100_j2_target": -6707,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 891,
+        "rb100_j2_actual": -6707,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 96
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.31101767270538955,
+        "rb100_j2_target": -2.341184658625194
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 891,
+        "rb100_j2_actual": -6707,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 96
+      },
+      "state": 3
+    },
+    {
+      "command_sequence": 97,
+      "outputs": {
+        "rb100_j1_target": 887,
+        "rb100_j2_target": -6711,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 887,
+        "rb100_j2_actual": -6711,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 97
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3096214093037941,
+        "rb100_j2_target": -2.342580922026789
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 887,
+        "rb100_j2_actual": -6711,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 97
+      },
+      "state": 3
+    },
+    {
+      "command_sequence": 98,
+      "outputs": {
+        "rb100_j1_target": 883,
+        "rb100_j2_target": -6715,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 883,
+        "rb100_j2_actual": -6715,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 98
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.3082251459021986,
+        "rb100_j2_target": -2.343977185428385
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 883,
+        "rb100_j2_actual": -6715,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 98
+      },
+      "state": 3
+    },
+    {
+      "command_sequence": 99,
+      "outputs": {
+        "rb100_j1_target": 879,
+        "rb100_j2_target": -6719,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 879,
+        "rb100_j2_actual": -6719,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 99
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.30682888250060314,
+        "rb100_j2_target": -2.34537344882998
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 879,
+        "rb100_j2_actual": -6719,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 99
+      },
+      "state": 3
+    },
+    {
+      "command_sequence": 100,
+      "outputs": {
+        "rb100_j1_target": 879,
+        "rb100_j2_target": -6719,
+        "rb100_j3_target": 5180,
+        "rb100_j4_target": 3892,
+        "rb100_j5_target": -3337,
+        "rb100_j6_target": 4834,
+        "rb100_enable": 1
+      },
+      "feedback": {
+        "rb100_j1_actual": 879,
+        "rb100_j2_actual": -6719,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 100
+      },
+      "qpos_rad": {
+        "rb100_j1_target": 0.30682888250060314,
+        "rb100_j2_target": -2.34537344882998
+      },
+      "plc_observed_inputs": {
+        "rb100_j1_actual": 879,
+        "rb100_j2_actual": -6719,
+        "rb100_j3_actual": 5180,
+        "rb100_j4_actual": 3892,
+        "rb100_j5_actual": -3337,
+        "rb100_j6_actual": 4834,
+        "rb100_feedback_seq": 100
+      },
+      "state": 4
+    }
+  ]
+}

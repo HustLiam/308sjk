@@ -5,14 +5,8 @@ from pathlib import Path
 # 仓库根目录（src/agent/ 的上两级）
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-# 智谱 BigModel 开放平台 API 地址（OpenAI 兼容）
-API_URL = "https://open.bigmodel.cn/api/coding/paas/v4"
-
-# 使用的模型
-MODEL = "glm-5.3"
-
 # 从环境变量读取 API Key 时依次尝试的变量名
-API_KEY_ENV_VARS = ("ZHIPUAI_API_KEY", "BIGMODEL_API_KEY", "API_KEY")
+API_KEY_ENV_VARS = ("LLM_API_KEY", "DEEPSEEK_API_KEY", "ZHIPUAI_API_KEY", "BIGMODEL_API_KEY", "API_KEY")
 
 # PLCopen XML 交付物目录（模式库种子所在）
 PLC_DIR = PROJECT_ROOT / "src" / "plc"
@@ -25,15 +19,31 @@ def _load_dotenv(path: Path) -> None:
     """极简 .env 加载器：读取 KEY=VALUE 行写入环境变量（不覆盖已有值）。"""
     if not path.is_file():
         return
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for line in path.read_text(encoding="utf-8-sig").splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, _, value = line.partition("=")
-        os.environ.setdefault(key.strip(), value.strip())
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        os.environ.setdefault(key.strip(), value)
 
 
 _load_dotenv(PROJECT_ROOT / ".env")
+
+API_URL = os.environ.get("LLM_API_URL", "https://api.deepseek.com").rstrip("/")
+MODEL = os.environ.get("LLM_MODEL", "deepseek-flash")
+
+
+def generation_options(default_tokens):
+    """不同 OpenAI 兼容提供方的生成/推理配置，均可由 .env 覆盖。"""
+    thinking = os.environ.get("LLM_THINKING", "disabled")
+    options = {"max_tokens": int(os.environ.get("LLM_MAX_OUTPUT_TOKENS", default_tokens)),
+               "thinking": {"type": thinking}}
+    if thinking == "enabled":
+        options["reasoning_effort"] = os.environ.get("LLM_REASONING_EFFORT", "high")
+    return options
 
 
 def get_api_key() -> str:

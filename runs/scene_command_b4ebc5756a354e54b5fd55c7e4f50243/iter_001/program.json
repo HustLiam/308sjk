@@ -1,0 +1,674 @@
+{
+  "io_list": [
+    {
+      "name": "rb100_j1_target",
+      "role": "target",
+      "dir": "output",
+      "type": "INT",
+      "address": "%QW100",
+      "deg_per_count": 0.02,
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5",
+      "source_file": "dae_lib/KR240R2700prime_Product.dae",
+      "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_1"
+    },
+    {
+      "name": "rb100_j2_target",
+      "role": "target",
+      "dir": "output",
+      "type": "INT",
+      "address": "%QW101",
+      "deg_per_count": 0.02,
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5",
+      "source_file": "dae_lib/KR240R2700prime_Product.dae",
+      "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_2"
+    },
+    {
+      "name": "rb100_j3_target",
+      "role": "target",
+      "dir": "output",
+      "type": "INT",
+      "address": "%QW102",
+      "deg_per_count": 0.02,
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5",
+      "source_file": "dae_lib/KR240R2700prime_Product.dae",
+      "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_3"
+    },
+    {
+      "name": "rb100_j4_target",
+      "role": "target",
+      "dir": "output",
+      "type": "INT",
+      "address": "%QW103",
+      "deg_per_count": 0.02,
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5",
+      "source_file": "dae_lib/KR240R2700prime_Product.dae",
+      "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_4"
+    },
+    {
+      "name": "rb100_j5_target",
+      "role": "target",
+      "dir": "output",
+      "type": "INT",
+      "address": "%QW104",
+      "deg_per_count": 0.02,
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5",
+      "source_file": "dae_lib/KR240R2700prime_Product.dae",
+      "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_5"
+    },
+    {
+      "name": "rb100_j6_target",
+      "role": "target",
+      "dir": "output",
+      "type": "INT",
+      "address": "%QW105",
+      "deg_per_count": 0.02,
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5",
+      "source_file": "dae_lib/KR240R2700prime_Product.dae",
+      "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_6"
+    },
+    {
+      "name": "rb100_j1_actual",
+      "role": "actual",
+      "dir": "input",
+      "type": "INT",
+      "address": "%QW110",
+      "deg_per_count": 0.02,
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5",
+      "source_file": "dae_lib/KR240R2700prime_Product.dae",
+      "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_1"
+    },
+    {
+      "name": "rb100_j2_actual",
+      "role": "actual",
+      "dir": "input",
+      "type": "INT",
+      "address": "%QW111",
+      "deg_per_count": 0.02,
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5",
+      "source_file": "dae_lib/KR240R2700prime_Product.dae",
+      "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_2"
+    },
+    {
+      "name": "rb100_j3_actual",
+      "role": "actual",
+      "dir": "input",
+      "type": "INT",
+      "address": "%QW112",
+      "deg_per_count": 0.02,
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5",
+      "source_file": "dae_lib/KR240R2700prime_Product.dae",
+      "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_3"
+    },
+    {
+      "name": "rb100_j4_actual",
+      "role": "actual",
+      "dir": "input",
+      "type": "INT",
+      "address": "%QW113",
+      "deg_per_count": 0.02,
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5",
+      "source_file": "dae_lib/KR240R2700prime_Product.dae",
+      "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_4"
+    },
+    {
+      "name": "rb100_j5_actual",
+      "role": "actual",
+      "dir": "input",
+      "type": "INT",
+      "address": "%QW114",
+      "deg_per_count": 0.02,
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5",
+      "source_file": "dae_lib/KR240R2700prime_Product.dae",
+      "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_5"
+    },
+    {
+      "name": "rb100_j6_actual",
+      "role": "actual",
+      "dir": "input",
+      "type": "INT",
+      "address": "%QW115",
+      "deg_per_count": 0.02,
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5",
+      "source_file": "dae_lib/KR240R2700prime_Product.dae",
+      "source_id": "KR240R2700prime_010RB_100_KR240R2700prime__Joint_6"
+    },
+    {
+      "name": "rb100_enable",
+      "role": "enable",
+      "dir": "output",
+      "type": "INT",
+      "address": "%QW106",
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5"
+    },
+    {
+      "name": "rb100_feedback_seq",
+      "role": "feedback_sequence",
+      "dir": "input",
+      "type": "INT",
+      "address": "%QW116",
+      "component_id": "AF138E59-0000-17AC-556E-B124000031B5"
+    },
+    {
+      "name": "vcheck_request",
+      "type": "INT",
+      "address": "%QW80",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_commit",
+      "type": "INT",
+      "address": "%QW81",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_ack",
+      "type": "INT",
+      "address": "%QW82",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_id0",
+      "type": "INT",
+      "address": "%QW64",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_id1",
+      "type": "INT",
+      "address": "%QW65",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_id2",
+      "type": "INT",
+      "address": "%QW66",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_id3",
+      "type": "INT",
+      "address": "%QW67",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_id4",
+      "type": "INT",
+      "address": "%QW68",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_id5",
+      "type": "INT",
+      "address": "%QW69",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_id6",
+      "type": "INT",
+      "address": "%QW70",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_id7",
+      "type": "INT",
+      "address": "%QW71",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_id8",
+      "type": "INT",
+      "address": "%QW72",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_id9",
+      "type": "INT",
+      "address": "%QW73",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_id10",
+      "type": "INT",
+      "address": "%QW74",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_id11",
+      "type": "INT",
+      "address": "%QW75",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_id12",
+      "type": "INT",
+      "address": "%QW76",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_id13",
+      "type": "INT",
+      "address": "%QW77",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_id14",
+      "type": "INT",
+      "address": "%QW78",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_id15",
+      "type": "INT",
+      "address": "%QW79",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_staging0",
+      "type": "INT",
+      "address": "%QW83",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_staging1",
+      "type": "INT",
+      "address": "%QW84",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_staging2",
+      "type": "INT",
+      "address": "%QW85",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_staging3",
+      "type": "INT",
+      "address": "%QW86",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_staging4",
+      "type": "INT",
+      "address": "%QW87",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_staging5",
+      "type": "INT",
+      "address": "%QW88",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_staging6",
+      "type": "INT",
+      "address": "%QW89",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_observed0",
+      "type": "INT",
+      "address": "%QW90",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_observed1",
+      "type": "INT",
+      "address": "%QW91",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_observed2",
+      "type": "INT",
+      "address": "%QW92",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_observed3",
+      "type": "INT",
+      "address": "%QW93",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_observed4",
+      "type": "INT",
+      "address": "%QW94",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_observed5",
+      "type": "INT",
+      "address": "%QW95",
+      "dir": "input"
+    },
+    {
+      "name": "vcheck_observed6",
+      "type": "INT",
+      "address": "%QW96",
+      "dir": "input"
+    },
+    {
+      "name": "agent_motion_mode",
+      "type": "INT",
+      "dir": "input",
+      "address": "%QW97"
+    },
+    {
+      "name": "agent_motion_state",
+      "type": "INT",
+      "dir": "input",
+      "address": "%QW98"
+    },
+    {
+      "name": "agent_motion_done",
+      "type": "INT",
+      "dir": "input",
+      "address": "%QW99"
+    },
+    {
+      "name": "agent_motion_id0",
+      "type": "INT",
+      "dir": "input",
+      "address": "%QW107"
+    },
+    {
+      "name": "agent_motion_id1",
+      "type": "INT",
+      "dir": "input",
+      "address": "%QW108"
+    },
+    {
+      "name": "agent_motion_id2",
+      "type": "INT",
+      "dir": "input",
+      "address": "%QW109"
+    },
+    {
+      "name": "agent_motion_id3",
+      "type": "INT",
+      "dir": "input",
+      "address": "%QW117"
+    },
+    {
+      "name": "agent_motion_id4",
+      "type": "INT",
+      "dir": "input",
+      "address": "%QW118"
+    },
+    {
+      "name": "agent_motion_id5",
+      "type": "INT",
+      "dir": "input",
+      "address": "%QW119"
+    },
+    {
+      "name": "agent_motion_id6",
+      "type": "INT",
+      "dir": "input",
+      "address": "%QW120"
+    },
+    {
+      "name": "agent_motion_id7",
+      "type": "INT",
+      "dir": "input",
+      "address": "%QW121"
+    },
+    {
+      "name": "agent_motion_id8",
+      "type": "INT",
+      "dir": "input",
+      "address": "%QW122"
+    },
+    {
+      "name": "agent_motion_id9",
+      "type": "INT",
+      "dir": "input",
+      "address": "%QW123"
+    },
+    {
+      "name": "agent_motion_id10",
+      "type": "INT",
+      "dir": "input",
+      "address": "%QW124"
+    },
+    {
+      "name": "agent_motion_id11",
+      "type": "INT",
+      "dir": "input",
+      "address": "%QW125"
+    },
+    {
+      "name": "agent_motion_id12",
+      "type": "INT",
+      "dir": "input",
+      "address": "%QW126"
+    },
+    {
+      "name": "agent_motion_id13",
+      "type": "INT",
+      "dir": "input",
+      "address": "%QW127"
+    },
+    {
+      "name": "agent_motion_id14",
+      "type": "INT",
+      "dir": "input",
+      "address": "%QW128"
+    },
+    {
+      "name": "agent_motion_id15",
+      "type": "INT",
+      "dir": "input",
+      "address": "%QW129"
+    }
+  ],
+  "registers": {
+    "mode": 97,
+    "state": 98,
+    "done": 99,
+    "identity": [
+      107,
+      108,
+      109,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125,
+      126,
+      127,
+      128,
+      129
+    ]
+  },
+  "program_hash": "322df3f2e0483acd4fc969bf85677aeefbb0212e289f6bbfd0f814ad244117a3",
+  "steps": [
+    {
+      "from_deg": {
+        "rb100_j1_target": 17.586,
+        "rb100_j2_target": -134.388,
+        "rb100_j3_target": 103.596,
+        "rb100_j4_target": 77.84,
+        "rb100_j5_target": -66.737,
+        "rb100_j6_target": 96.681
+      },
+      "to_deg": {
+        "rb100_j1_target": 20.580000000000002,
+        "rb100_j2_target": -134.388,
+        "rb100_j3_target": 103.596,
+        "rb100_j4_target": 77.84,
+        "rb100_j5_target": -66.737,
+        "rb100_j6_target": 96.681
+      },
+      "duration_s": 2,
+      "hold_s": 0.3
+    },
+    {
+      "from_deg": {
+        "rb100_j1_target": 20.580000000000002,
+        "rb100_j2_target": -134.388,
+        "rb100_j3_target": 103.596,
+        "rb100_j4_target": 77.84,
+        "rb100_j5_target": -66.737,
+        "rb100_j6_target": 96.681
+      },
+      "to_deg": {
+        "rb100_j1_target": 17.580000000000002,
+        "rb100_j2_target": -134.388,
+        "rb100_j3_target": 103.596,
+        "rb100_j4_target": 77.84,
+        "rb100_j5_target": -66.737,
+        "rb100_j6_target": 96.681
+      },
+      "duration_s": 2,
+      "hold_s": 0
+    }
+  ],
+  "contract": {
+    "format": "308sjk.isolated_io_harness/1",
+    "device_ir_sha256": "7dd64866a16718bd6796da0fbe8646e365d32dc3530e47e50e5b50e8119a8f56",
+    "io": [
+      {
+        "name": "rb100_j1_target",
+        "dir": "output",
+        "type": "INT",
+        "address": "%QW100",
+        "initial": 0
+      },
+      {
+        "name": "rb100_j2_target",
+        "dir": "output",
+        "type": "INT",
+        "address": "%QW101",
+        "initial": 0
+      },
+      {
+        "name": "rb100_j3_target",
+        "dir": "output",
+        "type": "INT",
+        "address": "%QW102",
+        "initial": 0
+      },
+      {
+        "name": "rb100_j4_target",
+        "dir": "output",
+        "type": "INT",
+        "address": "%QW103",
+        "initial": 0
+      },
+      {
+        "name": "rb100_j5_target",
+        "dir": "output",
+        "type": "INT",
+        "address": "%QW104",
+        "initial": 0
+      },
+      {
+        "name": "rb100_j6_target",
+        "dir": "output",
+        "type": "INT",
+        "address": "%QW105",
+        "initial": 0
+      },
+      {
+        "name": "rb100_j1_actual",
+        "dir": "input",
+        "type": "INT",
+        "address": "%QW110",
+        "initial": 0
+      },
+      {
+        "name": "rb100_j2_actual",
+        "dir": "input",
+        "type": "INT",
+        "address": "%QW111",
+        "initial": 0
+      },
+      {
+        "name": "rb100_j3_actual",
+        "dir": "input",
+        "type": "INT",
+        "address": "%QW112",
+        "initial": 0
+      },
+      {
+        "name": "rb100_j4_actual",
+        "dir": "input",
+        "type": "INT",
+        "address": "%QW113",
+        "initial": 0
+      },
+      {
+        "name": "rb100_j5_actual",
+        "dir": "input",
+        "type": "INT",
+        "address": "%QW114",
+        "initial": 0
+      },
+      {
+        "name": "rb100_j6_actual",
+        "dir": "input",
+        "type": "INT",
+        "address": "%QW115",
+        "initial": 0
+      },
+      {
+        "name": "rb100_enable",
+        "dir": "output",
+        "type": "INT",
+        "address": "%QW106",
+        "initial": 0
+      },
+      {
+        "name": "rb100_feedback_seq",
+        "dir": "input",
+        "type": "INT",
+        "address": "%QW116",
+        "initial": 0
+      }
+    ],
+    "identity": [
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79
+    ],
+    "request": 80,
+    "commit": 81,
+    "ack": 82,
+    "staging": {
+      "rb100_j1_target": 83,
+      "rb100_j2_target": 84,
+      "rb100_j3_target": 85,
+      "rb100_j4_target": 86,
+      "rb100_j5_target": 87,
+      "rb100_j6_target": 88,
+      "rb100_enable": 89
+    },
+    "observed": {
+      "rb100_j1_actual": 90,
+      "rb100_j2_actual": 91,
+      "rb100_j3_actual": 92,
+      "rb100_j4_actual": 93,
+      "rb100_j5_actual": 94,
+      "rb100_j6_actual": 95,
+      "rb100_feedback_seq": 96
+    },
+    "identity_sha256": "4ea6d43a594fa06533d47571d4144e100f46f22cb3f43f7ed8f41395d42980f3"
+  }
+}
