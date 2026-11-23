@@ -2279,14 +2279,6 @@
 						<RoleRequirements RefBaseRoleClassPath="AutomationMLBaseRoleClassLib/AutomationMLBaseRole/Structure" />
 					</InternalElement>
 					<RoleRequirements RefBaseRoleClassPath="AutomationMLBaseRoleClassLib/AutomationMLBaseRole/Structure" />
-					<ExternalInterface Name="fence_ok" ID="io_fence_ok" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/DigitalOutput">
-						<Attribute Name="address">
-							<Value>%QX0.2</Value>
-						</Attribute>
-						<Attribute Name="description">
-							<Value>防护围栏联锁正常</Value>
-						</Attribute>
-					</ExternalInterface>
 				</InternalElement>
 				<RoleRequirements RefBaseRoleClassPath="AutomationMLBaseRoleClassLib/AutomationMLBaseRole/Structure" />
 			</InternalElement>
@@ -2388,151 +2380,94 @@
 							<RoleRequirements RefBaseRoleClassPath="AutomationMLBaseRoleClassLib/AutomationMLBaseRole/Structure" />
 						</InternalElement>
 						<RoleRequirements RefBaseRoleClassPath="AutomationMLExtendedRoleClassLib/Clamp" />
-						<InternalElement Name="DI_Module">
-							<ExternalInterface Name="ch_estop_ok" ID="port_estop_ok" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
+						<InternalElement Name="AO_Module">
+							<ExternalInterface Name="ch_rb100_j1_target" ID="port_rb100_j1_target" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
 								<Attribute Name="channel">
-									<Value>DI0</Value>
+									<Value>AO0</Value>
 								</Attribute>
 							</ExternalInterface>
-							<ExternalInterface Name="ch_gate_closed" ID="port_gate_closed" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
+							<ExternalInterface Name="ch_rb100_j2_target" ID="port_rb100_j2_target" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
 								<Attribute Name="channel">
-									<Value>DI1</Value>
+									<Value>AO1</Value>
 								</Attribute>
 							</ExternalInterface>
-							<ExternalInterface Name="ch_fence_ok" ID="port_fence_ok" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
+							<ExternalInterface Name="ch_rb100_j3_target" ID="port_rb100_j3_target" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
 								<Attribute Name="channel">
-									<Value>DI2</Value>
+									<Value>AO2</Value>
 								</Attribute>
 							</ExternalInterface>
-							<ExternalInterface Name="ch_robot_home_fb" ID="port_robot_home_fb" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
+							<ExternalInterface Name="ch_rb100_j4_target" ID="port_rb100_j4_target" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
 								<Attribute Name="channel">
-									<Value>DI3</Value>
+									<Value>AO3</Value>
 								</Attribute>
 							</ExternalInterface>
-							<ExternalInterface Name="ch_robot_prog_done" ID="port_robot_prog_done" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
+							<ExternalInterface Name="ch_rb100_j5_target" ID="port_rb100_j5_target" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
 								<Attribute Name="channel">
-									<Value>DI4</Value>
+									<Value>AO4</Value>
 								</Attribute>
 							</ExternalInterface>
-							<ExternalInterface Name="ch_robot_fault" ID="port_robot_fault" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
+							<ExternalInterface Name="ch_rb100_j6_target" ID="port_rb100_j6_target" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
 								<Attribute Name="channel">
-									<Value>DI5</Value>
+									<Value>AO5</Value>
 								</Attribute>
 							</ExternalInterface>
-							<ExternalInterface Name="ch_gripper_part_held" ID="port_gripper_part_held" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
+							<ExternalInterface Name="ch_rb100_enable" ID="port_rb100_enable" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
 								<Attribute Name="channel">
-									<Value>DI6</Value>
-								</Attribute>
-							</ExternalInterface>
-							<ExternalInterface Name="ch_conveyor_part_present" ID="port_conveyor_part_present" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
-								<Attribute Name="channel">
-									<Value>DI7</Value>
-								</Attribute>
-							</ExternalInterface>
-						</InternalElement>
-						<InternalElement Name="DO_Module">
-							<ExternalInterface Name="ch_robot_enable" ID="port_robot_enable" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
-								<Attribute Name="channel">
-									<Value>DO0</Value>
-								</Attribute>
-							</ExternalInterface>
-							<ExternalInterface Name="ch_robot_home_cmd" ID="port_robot_home_cmd" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
-								<Attribute Name="channel">
-									<Value>DO1</Value>
-								</Attribute>
-							</ExternalInterface>
-							<ExternalInterface Name="ch_robot_start_prog" ID="port_robot_start_prog" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
-								<Attribute Name="channel">
-									<Value>DO2</Value>
-								</Attribute>
-							</ExternalInterface>
-							<ExternalInterface Name="ch_robot_stop" ID="port_robot_stop" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
-								<Attribute Name="channel">
-									<Value>DO3</Value>
-								</Attribute>
-							</ExternalInterface>
-							<ExternalInterface Name="ch_gripper_close_cmd" ID="port_gripper_close_cmd" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
-								<Attribute Name="channel">
-									<Value>DO4</Value>
-								</Attribute>
-							</ExternalInterface>
-							<ExternalInterface Name="ch_conveyor_run" ID="port_conveyor_run" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
-								<Attribute Name="channel">
-									<Value>DO5</Value>
+									<Value>AO6</Value>
 								</Attribute>
 							</ExternalInterface>
 						</InternalElement>
 						<InternalElement Name="AI_Module">
-							<ExternalInterface Name="ch_robot_j1_pos" ID="port_robot_j1_pos" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
+							<ExternalInterface Name="ch_rb100_j1_actual" ID="port_rb100_j1_actual" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
 								<Attribute Name="channel">
 									<Value>AI0</Value>
 								</Attribute>
 							</ExternalInterface>
-							<ExternalInterface Name="ch_robot_j2_pos" ID="port_robot_j2_pos" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
+							<ExternalInterface Name="ch_rb100_j2_actual" ID="port_rb100_j2_actual" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
 								<Attribute Name="channel">
 									<Value>AI1</Value>
 								</Attribute>
 							</ExternalInterface>
-							<ExternalInterface Name="ch_robot_j3_pos" ID="port_robot_j3_pos" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
+							<ExternalInterface Name="ch_rb100_j3_actual" ID="port_rb100_j3_actual" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
 								<Attribute Name="channel">
 									<Value>AI2</Value>
 								</Attribute>
 							</ExternalInterface>
-							<ExternalInterface Name="ch_robot_j4_pos" ID="port_robot_j4_pos" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
+							<ExternalInterface Name="ch_rb100_j4_actual" ID="port_rb100_j4_actual" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
 								<Attribute Name="channel">
 									<Value>AI3</Value>
 								</Attribute>
 							</ExternalInterface>
-							<ExternalInterface Name="ch_robot_j5_pos" ID="port_robot_j5_pos" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
+							<ExternalInterface Name="ch_rb100_j5_actual" ID="port_rb100_j5_actual" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
 								<Attribute Name="channel">
 									<Value>AI4</Value>
 								</Attribute>
 							</ExternalInterface>
-							<ExternalInterface Name="ch_robot_j6_pos" ID="port_robot_j6_pos" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
+							<ExternalInterface Name="ch_rb100_j6_actual" ID="port_rb100_j6_actual" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
 								<Attribute Name="channel">
 									<Value>AI5</Value>
 								</Attribute>
 							</ExternalInterface>
-							<ExternalInterface Name="ch_conveyor_speed_fb" ID="port_conveyor_speed_fb" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
+							<ExternalInterface Name="ch_rb100_feedback_seq" ID="port_rb100_feedback_seq" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
 								<Attribute Name="channel">
 									<Value>AI6</Value>
 								</Attribute>
 							</ExternalInterface>
-							<ExternalInterface Name="ch_conveyor_speed_sp" ID="port_conveyor_speed_sp" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
-								<Attribute Name="channel">
-									<Value>AI7</Value>
-								</Attribute>
-							</ExternalInterface>
-							<ExternalInterface Name="ch_prog_id" ID="port_prog_id" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/PortInterface">
-								<Attribute Name="channel">
-									<Value>AI8</Value>
-								</Attribute>
-							</ExternalInterface>
 						</InternalElement>
+						<Attribute Name="cycle_hz">
+							<Value>30</Value>
+						</Attribute>
+						<Attribute Name="command_timeout_s">
+							<Value>2</Value>
+						</Attribute>
+						<Attribute Name="modbus_endpoint">
+							<Value>192.168.12.131:1502</Value>
+						</Attribute>
+						<Attribute Name="max_speed_deg_s">
+							<Value>30</Value>
+						</Attribute>
 					</InternalElement>
 					<RoleRequirements RefBaseRoleClassPath="AutomationMLBaseRoleClassLib/AutomationMLBaseRole/Structure" />
-					<ExternalInterface Name="estop_ok" ID="io_estop_ok" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/DigitalOutput">
-						<Attribute Name="address">
-							<Value>%QX0.0</Value>
-						</Attribute>
-						<Attribute Name="description">
-							<Value>急停回路正常（Kreis geschlossen）</Value>
-						</Attribute>
-					</ExternalInterface>
-					<ExternalInterface Name="prog_id" ID="io_prog_id" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/AnalogOutput">
-						<Attribute Name="address">
-							<Value>%QW20</Value>
-						</Attribute>
-						<Attribute Name="description">
-							<Value>程序身份编号（robotcell_demo=8）</Value>
-						</Attribute>
-						<Attribute Name="range_min">
-							<Value>0</Value>
-						</Attribute>
-						<Attribute Name="range_max">
-							<Value>65535</Value>
-						</Attribute>
-					</ExternalInterface>
 				</InternalElement>
 				<InternalElement ID="AF138E59-0000-17AC-556E-BC490000333E" Name="benachbarte_Zellen_A">
 					<RoleRequirements RefBaseRoleClassPath="AutomationMLBaseRoleClassLib/AutomationMLBaseRole/Structure" />
@@ -2558,56 +2493,6 @@
 						</Attribute>
 					</ExternalInterface>
 					<RoleRequirements RefBaseRoleClassPath="AutomationMLBaseRoleClassLib/AutomationMLBaseRole/Resource" />
-					<ExternalInterface Name="conveyor_part_present" ID="io_conveyor_part_present" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/DigitalOutput">
-						<Attribute Name="address">
-							<Value>%QX0.3</Value>
-						</Attribute>
-						<Attribute Name="description">
-							<Value>输送段末端工件到位检测</Value>
-						</Attribute>
-					</ExternalInterface>
-					<ExternalInterface Name="conveyor_run" ID="io_conveyor_run" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/DigitalInput">
-						<Attribute Name="address">
-							<Value>%QX1.5</Value>
-						</Attribute>
-						<Attribute Name="description">
-							<Value>输送段运行指令</Value>
-						</Attribute>
-					</ExternalInterface>
-					<ExternalInterface Name="conveyor_speed_fb" ID="io_conveyor_speed_fb" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/AnalogInput">
-						<Attribute Name="address">
-							<Value>%QW6</Value>
-						</Attribute>
-						<Attribute Name="description">
-							<Value>带速反馈</Value>
-						</Attribute>
-						<Attribute Name="scale">
-							<Value>0.01</Value>
-						</Attribute>
-						<Attribute Name="range_min">
-							<Value>0.0</Value>
-						</Attribute>
-						<Attribute Name="range_max">
-							<Value>3.0</Value>
-						</Attribute>
-					</ExternalInterface>
-					<ExternalInterface Name="conveyor_speed_sp" ID="io_conveyor_speed_sp" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/AnalogOutput">
-						<Attribute Name="address">
-							<Value>%QW7</Value>
-						</Attribute>
-						<Attribute Name="description">
-							<Value>带速设定</Value>
-						</Attribute>
-						<Attribute Name="scale">
-							<Value>0.01</Value>
-						</Attribute>
-						<Attribute Name="range_min">
-							<Value>0.0</Value>
-						</Attribute>
-						<Attribute Name="range_max">
-							<Value>3.0</Value>
-						</Attribute>
-					</ExternalInterface>
 				</InternalElement>
 				<InternalElement ID="AF138E59-0000-17AC-556E-BC4900003341" Name="Materialbereitstellung_A">
 					<ExternalInterface Name="Representation" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/ExternalDataConnector/COLLADAInterface" ID="6B6F83ED-EFBC-4EDA-9261-3A447B94DF5C">
@@ -2630,14 +2515,6 @@
 						</Attribute>
 					</ExternalInterface>
 					<RoleRequirements RefBaseRoleClassPath="AutomationMLBaseRoleClassLib/AutomationMLBaseRole/Resource" />
-					<ExternalInterface Name="gate_closed" ID="io_gate_closed" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/DigitalOutput">
-						<Attribute Name="address">
-							<Value>%QX0.1</Value>
-						</Attribute>
-						<Attribute Name="description">
-							<Value>单元门 Tore_A 关闭到位</Value>
-						</Attribute>
-					</ExternalInterface>
 				</InternalElement>
 				<RoleRequirements RefBaseRoleClassPath="AutomationMLBaseRoleClassLib/AutomationMLBaseRole/Structure" />
 			</InternalElement>
@@ -3962,164 +3839,6 @@
 					<InternalLink Name="Attachment_030SWZ121_030WZD121" RefPartnerSideA="[AF138E59-0000-17AC-556E-B8A900003276]:[Attachment_030WZD121]" RefPartnerSideB="[AF138E59-0000-17AC-556E-B8A900003278]:[Attachment_030SWZ121]" />
 					<InternalLink Name="Attachment_030RB_100_KR240R2700prime__030GES190" RefPartnerSideA="[AF138E59-0000-17AC-556E-B84F00003259]:[Attachment_030GES190]" RefPartnerSideB="[AF138E59-0000-17AC-556E-B8B40000328F]:[Attachment_030RB_100_KR240R2700prime_]" />
 					<RoleRequirements RefBaseRoleClassPath="AutomationMLBaseRoleClassLib/AutomationMLBaseRole/Structure" />
-					<ExternalInterface Name="robot_home_fb" ID="io_robot_home_fb" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/DigitalOutput">
-						<Attribute Name="address">
-							<Value>%QX0.6</Value>
-						</Attribute>
-						<Attribute Name="description">
-							<Value>机器人在原位（P1/Home）</Value>
-						</Attribute>
-					</ExternalInterface>
-					<ExternalInterface Name="robot_prog_done" ID="io_robot_prog_done" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/DigitalOutput">
-						<Attribute Name="address">
-							<Value>%QX0.7</Value>
-						</Attribute>
-						<Attribute Name="description">
-							<Value>当前程序段执行完成</Value>
-						</Attribute>
-					</ExternalInterface>
-					<ExternalInterface Name="robot_fault" ID="io_robot_fault" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/DigitalOutput">
-						<Attribute Name="address">
-							<Value>%QX2.0</Value>
-						</Attribute>
-						<Attribute Name="description">
-							<Value>机器人故障（需 MC_Reset）</Value>
-						</Attribute>
-					</ExternalInterface>
-					<ExternalInterface Name="robot_enable" ID="io_robot_enable" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/DigitalInput">
-						<Attribute Name="address">
-							<Value>%QX1.0</Value>
-						</Attribute>
-						<Attribute Name="description">
-							<Value>机器人驱动使能（MC_Power）</Value>
-						</Attribute>
-					</ExternalInterface>
-					<ExternalInterface Name="robot_home_cmd" ID="io_robot_home_cmd" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/DigitalInput">
-						<Attribute Name="address">
-							<Value>%QX1.1</Value>
-						</Attribute>
-						<Attribute Name="description">
-							<Value>回零指令（MC_Home，上升沿）</Value>
-						</Attribute>
-					</ExternalInterface>
-					<ExternalInterface Name="robot_start_prog" ID="io_robot_start_prog" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/DigitalInput">
-						<Attribute Name="address">
-							<Value>%QX1.2</Value>
-						</Attribute>
-						<Attribute Name="description">
-							<Value>程序启动（上升沿）</Value>
-						</Attribute>
-					</ExternalInterface>
-					<ExternalInterface Name="robot_stop" ID="io_robot_stop" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/DigitalInput">
-						<Attribute Name="address">
-							<Value>%QX1.3</Value>
-						</Attribute>
-						<Attribute Name="description">
-							<Value>受控停止（Q stop）</Value>
-						</Attribute>
-					</ExternalInterface>
-					<ExternalInterface Name="robot_j1_pos" ID="io_robot_j1_pos" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/AnalogInput">
-						<Attribute Name="address">
-							<Value>%QW0</Value>
-						</Attribute>
-						<Attribute Name="description">
-							<Value>J1 轴角度反馈</Value>
-						</Attribute>
-						<Attribute Name="scale">
-							<Value>0.01</Value>
-						</Attribute>
-						<Attribute Name="range_min">
-							<Value>-320.0</Value>
-						</Attribute>
-						<Attribute Name="range_max">
-							<Value>320.0</Value>
-						</Attribute>
-					</ExternalInterface>
-					<ExternalInterface Name="robot_j2_pos" ID="io_robot_j2_pos" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/AnalogInput">
-						<Attribute Name="address">
-							<Value>%QW1</Value>
-						</Attribute>
-						<Attribute Name="description">
-							<Value>J2 轴角度反馈</Value>
-						</Attribute>
-						<Attribute Name="scale">
-							<Value>0.01</Value>
-						</Attribute>
-						<Attribute Name="range_min">
-							<Value>-320.0</Value>
-						</Attribute>
-						<Attribute Name="range_max">
-							<Value>320.0</Value>
-						</Attribute>
-					</ExternalInterface>
-					<ExternalInterface Name="robot_j3_pos" ID="io_robot_j3_pos" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/AnalogInput">
-						<Attribute Name="address">
-							<Value>%QW2</Value>
-						</Attribute>
-						<Attribute Name="description">
-							<Value>J3 轴角度反馈</Value>
-						</Attribute>
-						<Attribute Name="scale">
-							<Value>0.01</Value>
-						</Attribute>
-						<Attribute Name="range_min">
-							<Value>-320.0</Value>
-						</Attribute>
-						<Attribute Name="range_max">
-							<Value>320.0</Value>
-						</Attribute>
-					</ExternalInterface>
-					<ExternalInterface Name="robot_j4_pos" ID="io_robot_j4_pos" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/AnalogInput">
-						<Attribute Name="address">
-							<Value>%QW3</Value>
-						</Attribute>
-						<Attribute Name="description">
-							<Value>J4 轴角度反馈</Value>
-						</Attribute>
-						<Attribute Name="scale">
-							<Value>0.01</Value>
-						</Attribute>
-						<Attribute Name="range_min">
-							<Value>-320.0</Value>
-						</Attribute>
-						<Attribute Name="range_max">
-							<Value>320.0</Value>
-						</Attribute>
-					</ExternalInterface>
-					<ExternalInterface Name="robot_j5_pos" ID="io_robot_j5_pos" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/AnalogInput">
-						<Attribute Name="address">
-							<Value>%QW4</Value>
-						</Attribute>
-						<Attribute Name="description">
-							<Value>J5 轴角度反馈</Value>
-						</Attribute>
-						<Attribute Name="scale">
-							<Value>0.01</Value>
-						</Attribute>
-						<Attribute Name="range_min">
-							<Value>-320.0</Value>
-						</Attribute>
-						<Attribute Name="range_max">
-							<Value>320.0</Value>
-						</Attribute>
-					</ExternalInterface>
-					<ExternalInterface Name="robot_j6_pos" ID="io_robot_j6_pos" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/AnalogInput">
-						<Attribute Name="address">
-							<Value>%QW5</Value>
-						</Attribute>
-						<Attribute Name="description">
-							<Value>J6 轴角度反馈</Value>
-						</Attribute>
-						<Attribute Name="scale">
-							<Value>0.01</Value>
-						</Attribute>
-						<Attribute Name="range_min">
-							<Value>-320.0</Value>
-						</Attribute>
-						<Attribute Name="range_max">
-							<Value>320.0</Value>
-						</Attribute>
-					</ExternalInterface>
 				</InternalElement>
 				<InternalElement ID="AF138E59-0000-17AC-556E-B8BD000032A1" Name="030RB_200">
 					<InternalElement ID="AF138E59-0000-17AC-556E-B8BD000032A2" Name="030RB_200_KR240R2700prime_">
@@ -5099,22 +4818,6 @@
 							<RoleRequirements RefBaseRoleClassPath="AutomationMLBaseRoleClassLib/AutomationMLBaseRole/Frame" />
 						</InternalElement>
 						<RoleRequirements RefBaseRoleClassPath="AutomationMLExtendedRoleClassLib/Clamp" />
-						<ExternalInterface Name="gripper_part_held" ID="io_gripper_part_held" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/DigitalOutput">
-							<Attribute Name="address">
-								<Value>%QX0.4</Value>
-							</Attribute>
-							<Attribute Name="description">
-								<Value>抓手持有工件（真空/夹持反馈）</Value>
-							</Attribute>
-						</ExternalInterface>
-						<ExternalInterface Name="gripper_close_cmd" ID="io_gripper_close_cmd" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/DigitalInput">
-							<Attribute Name="address">
-								<Value>%QX1.4</Value>
-							</Attribute>
-							<Attribute Name="description">
-								<Value>抓手闭合指令</Value>
-							</Attribute>
-						</ExternalInterface>
 					</InternalElement>
 					<InternalElement ID="AF138E59-0000-17AC-556E-BC0100003311" Name="030EKF370">
 						<Attribute Name="Frame">
@@ -5743,6 +5446,352 @@
 							<RoleRequirements RefBaseRoleClassPath="AutomationMLBaseRoleClassLib/AutomationMLBaseRole/Structure" />
 						</InternalElement>
 						<RoleRequirements RefBaseRoleClassPath="AutomationMLDMIRoleClassLib/DiscManufacturingEquipment/Robot" />
+						<ExternalInterface Name="rb100_j1_target" ID="io_rb100_j1_target" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/AnalogOutput">
+							<Attribute Name="address">
+								<Value>%QW100</Value>
+							</Attribute>
+							<Attribute Name="description">
+								<Value>关节位置指令（CSP 目标值）</Value>
+							</Attribute>
+							<Attribute Name="scale">
+								<Value>0.02</Value>
+							</Attribute>
+							<Attribute Name="range_min">
+								<Value>-655</Value>
+							</Attribute>
+							<Attribute Name="range_max">
+								<Value>655</Value>
+							</Attribute>
+							<Attribute Name="role">
+								<Value>target</Value>
+							</Attribute>
+							<Attribute Name="source_file">
+								<Value>dae_lib/KR240R2700prime_Product.dae</Value>
+							</Attribute>
+							<Attribute Name="source_id">
+								<Value>KR240R2700prime_010RB_100_KR240R2700prime__Joint_1</Value>
+							</Attribute>
+						</ExternalInterface>
+						<ExternalInterface Name="rb100_j2_target" ID="io_rb100_j2_target" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/AnalogOutput">
+							<Attribute Name="address">
+								<Value>%QW101</Value>
+							</Attribute>
+							<Attribute Name="description">
+								<Value>关节位置指令（CSP 目标值）</Value>
+							</Attribute>
+							<Attribute Name="scale">
+								<Value>0.02</Value>
+							</Attribute>
+							<Attribute Name="range_min">
+								<Value>-655</Value>
+							</Attribute>
+							<Attribute Name="range_max">
+								<Value>655</Value>
+							</Attribute>
+							<Attribute Name="role">
+								<Value>target</Value>
+							</Attribute>
+							<Attribute Name="source_file">
+								<Value>dae_lib/KR240R2700prime_Product.dae</Value>
+							</Attribute>
+							<Attribute Name="source_id">
+								<Value>KR240R2700prime_010RB_100_KR240R2700prime__Joint_2</Value>
+							</Attribute>
+						</ExternalInterface>
+						<ExternalInterface Name="rb100_j3_target" ID="io_rb100_j3_target" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/AnalogOutput">
+							<Attribute Name="address">
+								<Value>%QW102</Value>
+							</Attribute>
+							<Attribute Name="description">
+								<Value>关节位置指令（CSP 目标值）</Value>
+							</Attribute>
+							<Attribute Name="scale">
+								<Value>0.02</Value>
+							</Attribute>
+							<Attribute Name="range_min">
+								<Value>-655</Value>
+							</Attribute>
+							<Attribute Name="range_max">
+								<Value>655</Value>
+							</Attribute>
+							<Attribute Name="role">
+								<Value>target</Value>
+							</Attribute>
+							<Attribute Name="source_file">
+								<Value>dae_lib/KR240R2700prime_Product.dae</Value>
+							</Attribute>
+							<Attribute Name="source_id">
+								<Value>KR240R2700prime_010RB_100_KR240R2700prime__Joint_3</Value>
+							</Attribute>
+						</ExternalInterface>
+						<ExternalInterface Name="rb100_j4_target" ID="io_rb100_j4_target" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/AnalogOutput">
+							<Attribute Name="address">
+								<Value>%QW103</Value>
+							</Attribute>
+							<Attribute Name="description">
+								<Value>关节位置指令（CSP 目标值）</Value>
+							</Attribute>
+							<Attribute Name="scale">
+								<Value>0.02</Value>
+							</Attribute>
+							<Attribute Name="range_min">
+								<Value>-655</Value>
+							</Attribute>
+							<Attribute Name="range_max">
+								<Value>655</Value>
+							</Attribute>
+							<Attribute Name="role">
+								<Value>target</Value>
+							</Attribute>
+							<Attribute Name="source_file">
+								<Value>dae_lib/KR240R2700prime_Product.dae</Value>
+							</Attribute>
+							<Attribute Name="source_id">
+								<Value>KR240R2700prime_010RB_100_KR240R2700prime__Joint_4</Value>
+							</Attribute>
+						</ExternalInterface>
+						<ExternalInterface Name="rb100_j5_target" ID="io_rb100_j5_target" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/AnalogOutput">
+							<Attribute Name="address">
+								<Value>%QW104</Value>
+							</Attribute>
+							<Attribute Name="description">
+								<Value>关节位置指令（CSP 目标值）</Value>
+							</Attribute>
+							<Attribute Name="scale">
+								<Value>0.02</Value>
+							</Attribute>
+							<Attribute Name="range_min">
+								<Value>-655</Value>
+							</Attribute>
+							<Attribute Name="range_max">
+								<Value>655</Value>
+							</Attribute>
+							<Attribute Name="role">
+								<Value>target</Value>
+							</Attribute>
+							<Attribute Name="source_file">
+								<Value>dae_lib/KR240R2700prime_Product.dae</Value>
+							</Attribute>
+							<Attribute Name="source_id">
+								<Value>KR240R2700prime_010RB_100_KR240R2700prime__Joint_5</Value>
+							</Attribute>
+						</ExternalInterface>
+						<ExternalInterface Name="rb100_j6_target" ID="io_rb100_j6_target" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/AnalogOutput">
+							<Attribute Name="address">
+								<Value>%QW105</Value>
+							</Attribute>
+							<Attribute Name="description">
+								<Value>关节位置指令（CSP 目标值）</Value>
+							</Attribute>
+							<Attribute Name="scale">
+								<Value>0.02</Value>
+							</Attribute>
+							<Attribute Name="range_min">
+								<Value>-655</Value>
+							</Attribute>
+							<Attribute Name="range_max">
+								<Value>655</Value>
+							</Attribute>
+							<Attribute Name="role">
+								<Value>target</Value>
+							</Attribute>
+							<Attribute Name="source_file">
+								<Value>dae_lib/KR240R2700prime_Product.dae</Value>
+							</Attribute>
+							<Attribute Name="source_id">
+								<Value>KR240R2700prime_010RB_100_KR240R2700prime__Joint_6</Value>
+							</Attribute>
+						</ExternalInterface>
+						<ExternalInterface Name="rb100_j1_actual" ID="io_rb100_j1_actual" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/AnalogInput">
+							<Attribute Name="address">
+								<Value>%QW110</Value>
+							</Attribute>
+							<Attribute Name="description">
+								<Value>关节位置反馈（实际值）</Value>
+							</Attribute>
+							<Attribute Name="scale">
+								<Value>0.02</Value>
+							</Attribute>
+							<Attribute Name="range_min">
+								<Value>-655</Value>
+							</Attribute>
+							<Attribute Name="range_max">
+								<Value>655</Value>
+							</Attribute>
+							<Attribute Name="role">
+								<Value>actual</Value>
+							</Attribute>
+							<Attribute Name="source_file">
+								<Value>dae_lib/KR240R2700prime_Product.dae</Value>
+							</Attribute>
+							<Attribute Name="source_id">
+								<Value>KR240R2700prime_010RB_100_KR240R2700prime__Joint_1</Value>
+							</Attribute>
+						</ExternalInterface>
+						<ExternalInterface Name="rb100_j2_actual" ID="io_rb100_j2_actual" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/AnalogInput">
+							<Attribute Name="address">
+								<Value>%QW111</Value>
+							</Attribute>
+							<Attribute Name="description">
+								<Value>关节位置反馈（实际值）</Value>
+							</Attribute>
+							<Attribute Name="scale">
+								<Value>0.02</Value>
+							</Attribute>
+							<Attribute Name="range_min">
+								<Value>-655</Value>
+							</Attribute>
+							<Attribute Name="range_max">
+								<Value>655</Value>
+							</Attribute>
+							<Attribute Name="role">
+								<Value>actual</Value>
+							</Attribute>
+							<Attribute Name="source_file">
+								<Value>dae_lib/KR240R2700prime_Product.dae</Value>
+							</Attribute>
+							<Attribute Name="source_id">
+								<Value>KR240R2700prime_010RB_100_KR240R2700prime__Joint_2</Value>
+							</Attribute>
+						</ExternalInterface>
+						<ExternalInterface Name="rb100_j3_actual" ID="io_rb100_j3_actual" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/AnalogInput">
+							<Attribute Name="address">
+								<Value>%QW112</Value>
+							</Attribute>
+							<Attribute Name="description">
+								<Value>关节位置反馈（实际值）</Value>
+							</Attribute>
+							<Attribute Name="scale">
+								<Value>0.02</Value>
+							</Attribute>
+							<Attribute Name="range_min">
+								<Value>-655</Value>
+							</Attribute>
+							<Attribute Name="range_max">
+								<Value>655</Value>
+							</Attribute>
+							<Attribute Name="role">
+								<Value>actual</Value>
+							</Attribute>
+							<Attribute Name="source_file">
+								<Value>dae_lib/KR240R2700prime_Product.dae</Value>
+							</Attribute>
+							<Attribute Name="source_id">
+								<Value>KR240R2700prime_010RB_100_KR240R2700prime__Joint_3</Value>
+							</Attribute>
+						</ExternalInterface>
+						<ExternalInterface Name="rb100_j4_actual" ID="io_rb100_j4_actual" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/AnalogInput">
+							<Attribute Name="address">
+								<Value>%QW113</Value>
+							</Attribute>
+							<Attribute Name="description">
+								<Value>关节位置反馈（实际值）</Value>
+							</Attribute>
+							<Attribute Name="scale">
+								<Value>0.02</Value>
+							</Attribute>
+							<Attribute Name="range_min">
+								<Value>-655</Value>
+							</Attribute>
+							<Attribute Name="range_max">
+								<Value>655</Value>
+							</Attribute>
+							<Attribute Name="role">
+								<Value>actual</Value>
+							</Attribute>
+							<Attribute Name="source_file">
+								<Value>dae_lib/KR240R2700prime_Product.dae</Value>
+							</Attribute>
+							<Attribute Name="source_id">
+								<Value>KR240R2700prime_010RB_100_KR240R2700prime__Joint_4</Value>
+							</Attribute>
+						</ExternalInterface>
+						<ExternalInterface Name="rb100_j5_actual" ID="io_rb100_j5_actual" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/AnalogInput">
+							<Attribute Name="address">
+								<Value>%QW114</Value>
+							</Attribute>
+							<Attribute Name="description">
+								<Value>关节位置反馈（实际值）</Value>
+							</Attribute>
+							<Attribute Name="scale">
+								<Value>0.02</Value>
+							</Attribute>
+							<Attribute Name="range_min">
+								<Value>-655</Value>
+							</Attribute>
+							<Attribute Name="range_max">
+								<Value>655</Value>
+							</Attribute>
+							<Attribute Name="role">
+								<Value>actual</Value>
+							</Attribute>
+							<Attribute Name="source_file">
+								<Value>dae_lib/KR240R2700prime_Product.dae</Value>
+							</Attribute>
+							<Attribute Name="source_id">
+								<Value>KR240R2700prime_010RB_100_KR240R2700prime__Joint_5</Value>
+							</Attribute>
+						</ExternalInterface>
+						<ExternalInterface Name="rb100_j6_actual" ID="io_rb100_j6_actual" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/AnalogInput">
+							<Attribute Name="address">
+								<Value>%QW115</Value>
+							</Attribute>
+							<Attribute Name="description">
+								<Value>关节位置反馈（实际值）</Value>
+							</Attribute>
+							<Attribute Name="scale">
+								<Value>0.02</Value>
+							</Attribute>
+							<Attribute Name="range_min">
+								<Value>-655</Value>
+							</Attribute>
+							<Attribute Name="range_max">
+								<Value>655</Value>
+							</Attribute>
+							<Attribute Name="role">
+								<Value>actual</Value>
+							</Attribute>
+							<Attribute Name="source_file">
+								<Value>dae_lib/KR240R2700prime_Product.dae</Value>
+							</Attribute>
+							<Attribute Name="source_id">
+								<Value>KR240R2700prime_010RB_100_KR240R2700prime__Joint_6</Value>
+							</Attribute>
+						</ExternalInterface>
+						<ExternalInterface Name="rb100_enable" ID="io_rb100_enable" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/AnalogOutput">
+							<Attribute Name="address">
+								<Value>%QW106</Value>
+							</Attribute>
+							<Attribute Name="description">
+								<Value>驱动使能字</Value>
+							</Attribute>
+							<Attribute Name="range_min">
+								<Value>0</Value>
+							</Attribute>
+							<Attribute Name="range_max">
+								<Value>65535</Value>
+							</Attribute>
+							<Attribute Name="role">
+								<Value>enable</Value>
+							</Attribute>
+						</ExternalInterface>
+						<ExternalInterface Name="rb100_feedback_seq" ID="io_rb100_feedback_seq" RefBaseClassPath="AutomationMLInterfaceClassLib/AutomationMLBaseInterface/AnalogInput">
+							<Attribute Name="address">
+								<Value>%QW116</Value>
+							</Attribute>
+							<Attribute Name="description">
+								<Value>反馈序号（PLC 扫描计数，用于通讯活性判定）</Value>
+							</Attribute>
+							<Attribute Name="range_min">
+								<Value>0</Value>
+							</Attribute>
+							<Attribute Name="range_max">
+								<Value>65535</Value>
+							</Attribute>
+							<Attribute Name="role">
+								<Value>feedback_sequence</Value>
+							</Attribute>
+						</ExternalInterface>
 					</InternalElement>
 					<InternalElement ID="AF138E59-0000-17AC-556E-B155000031D6" Name="010RB_100">
 						<Attribute Name="Frame">
@@ -6320,29 +6369,20 @@
 				<RoleRequirements RefBaseRoleClassPath="AutomationMLBaseRoleClassLib/AutomationMLBaseRole/Structure" />
 			</InternalElement>
 			<RoleRequirements RefBaseRoleClassPath="AutomationMLBaseRoleClassLib/AutomationMLBaseRole/Structure" />
-			<InternalLink Name="wire_estop_ok" RefPartnerSideA="io_estop_ok" RefPartnerSideB="port_estop_ok" />
-			<InternalLink Name="wire_gate_closed" RefPartnerSideA="io_gate_closed" RefPartnerSideB="port_gate_closed" />
-			<InternalLink Name="wire_fence_ok" RefPartnerSideA="io_fence_ok" RefPartnerSideB="port_fence_ok" />
-			<InternalLink Name="wire_robot_home_fb" RefPartnerSideA="io_robot_home_fb" RefPartnerSideB="port_robot_home_fb" />
-			<InternalLink Name="wire_robot_prog_done" RefPartnerSideA="io_robot_prog_done" RefPartnerSideB="port_robot_prog_done" />
-			<InternalLink Name="wire_robot_fault" RefPartnerSideA="io_robot_fault" RefPartnerSideB="port_robot_fault" />
-			<InternalLink Name="wire_robot_enable" RefPartnerSideA="io_robot_enable" RefPartnerSideB="port_robot_enable" />
-			<InternalLink Name="wire_robot_home_cmd" RefPartnerSideA="io_robot_home_cmd" RefPartnerSideB="port_robot_home_cmd" />
-			<InternalLink Name="wire_robot_start_prog" RefPartnerSideA="io_robot_start_prog" RefPartnerSideB="port_robot_start_prog" />
-			<InternalLink Name="wire_robot_stop" RefPartnerSideA="io_robot_stop" RefPartnerSideB="port_robot_stop" />
-			<InternalLink Name="wire_robot_j1_pos" RefPartnerSideA="io_robot_j1_pos" RefPartnerSideB="port_robot_j1_pos" />
-			<InternalLink Name="wire_robot_j2_pos" RefPartnerSideA="io_robot_j2_pos" RefPartnerSideB="port_robot_j2_pos" />
-			<InternalLink Name="wire_robot_j3_pos" RefPartnerSideA="io_robot_j3_pos" RefPartnerSideB="port_robot_j3_pos" />
-			<InternalLink Name="wire_robot_j4_pos" RefPartnerSideA="io_robot_j4_pos" RefPartnerSideB="port_robot_j4_pos" />
-			<InternalLink Name="wire_robot_j5_pos" RefPartnerSideA="io_robot_j5_pos" RefPartnerSideB="port_robot_j5_pos" />
-			<InternalLink Name="wire_robot_j6_pos" RefPartnerSideA="io_robot_j6_pos" RefPartnerSideB="port_robot_j6_pos" />
-			<InternalLink Name="wire_gripper_part_held" RefPartnerSideA="io_gripper_part_held" RefPartnerSideB="port_gripper_part_held" />
-			<InternalLink Name="wire_gripper_close_cmd" RefPartnerSideA="io_gripper_close_cmd" RefPartnerSideB="port_gripper_close_cmd" />
-			<InternalLink Name="wire_conveyor_part_present" RefPartnerSideA="io_conveyor_part_present" RefPartnerSideB="port_conveyor_part_present" />
-			<InternalLink Name="wire_conveyor_run" RefPartnerSideA="io_conveyor_run" RefPartnerSideB="port_conveyor_run" />
-			<InternalLink Name="wire_conveyor_speed_fb" RefPartnerSideA="io_conveyor_speed_fb" RefPartnerSideB="port_conveyor_speed_fb" />
-			<InternalLink Name="wire_conveyor_speed_sp" RefPartnerSideA="io_conveyor_speed_sp" RefPartnerSideB="port_conveyor_speed_sp" />
-			<InternalLink Name="wire_prog_id" RefPartnerSideA="io_prog_id" RefPartnerSideB="port_prog_id" />
+			<InternalLink Name="wire_rb100_j1_target" RefPartnerSideA="io_rb100_j1_target" RefPartnerSideB="port_rb100_j1_target" />
+			<InternalLink Name="wire_rb100_j2_target" RefPartnerSideA="io_rb100_j2_target" RefPartnerSideB="port_rb100_j2_target" />
+			<InternalLink Name="wire_rb100_j3_target" RefPartnerSideA="io_rb100_j3_target" RefPartnerSideB="port_rb100_j3_target" />
+			<InternalLink Name="wire_rb100_j4_target" RefPartnerSideA="io_rb100_j4_target" RefPartnerSideB="port_rb100_j4_target" />
+			<InternalLink Name="wire_rb100_j5_target" RefPartnerSideA="io_rb100_j5_target" RefPartnerSideB="port_rb100_j5_target" />
+			<InternalLink Name="wire_rb100_j6_target" RefPartnerSideA="io_rb100_j6_target" RefPartnerSideB="port_rb100_j6_target" />
+			<InternalLink Name="wire_rb100_j1_actual" RefPartnerSideA="io_rb100_j1_actual" RefPartnerSideB="port_rb100_j1_actual" />
+			<InternalLink Name="wire_rb100_j2_actual" RefPartnerSideA="io_rb100_j2_actual" RefPartnerSideB="port_rb100_j2_actual" />
+			<InternalLink Name="wire_rb100_j3_actual" RefPartnerSideA="io_rb100_j3_actual" RefPartnerSideB="port_rb100_j3_actual" />
+			<InternalLink Name="wire_rb100_j4_actual" RefPartnerSideA="io_rb100_j4_actual" RefPartnerSideB="port_rb100_j4_actual" />
+			<InternalLink Name="wire_rb100_j5_actual" RefPartnerSideA="io_rb100_j5_actual" RefPartnerSideB="port_rb100_j5_actual" />
+			<InternalLink Name="wire_rb100_j6_actual" RefPartnerSideA="io_rb100_j6_actual" RefPartnerSideB="port_rb100_j6_actual" />
+			<InternalLink Name="wire_rb100_enable" RefPartnerSideA="io_rb100_enable" RefPartnerSideB="port_rb100_enable" />
+			<InternalLink Name="wire_rb100_feedback_seq" RefPartnerSideA="io_rb100_feedback_seq" RefPartnerSideB="port_rb100_feedback_seq" />
 		</InternalElement>
 	</InstanceHierarchy>
 	<InterfaceClassLib Name="AutomationMLInterfaceClassLib">

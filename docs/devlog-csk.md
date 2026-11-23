@@ -1,3 +1,20 @@
+## 2026-11-23 (2) AmlDocument_io.aml 改为 io.json 事实源驱动（负责人指正）
+
+- **指正**：io_list 应以 `examples/robotcell/010RB_100.io.json` 为准（gc 侧 2026-11-17
+  IO 职责拆分的产物，14 条关节级 CSP：6 target(%QW100~105) + 6 actual(%QW110~115) +
+  enable(%QW106) + feedback_seq(%QW116)，每条带 component_id/source_file/source_id
+  逐字指向 DAE 运动学关节）——此前自拟的 23 点"工艺级"io_list 弃用；
+- 注入脚本改为消费 io.json（+adapter.json+motion.json）：信号挂 component_id 定位
+  的 010RB_100_KR240R2700prime_；deg_per_count→scale、INT16 满域换算 range（无 scale
+  字量补 word 域 [0,65535]）；role/source_file/source_id 逐字保留（DAE 关节溯源）；
+  Dummy_SPS 注入通讯/运动约束属性（cycle_hz=30、command_timeout_s=2、
+  modbus_endpoint=192.168.12.131:1502、max_speed_deg_s=30）；
+- **视角坑**：aml_parser 的 dir = 接口类视角（AnalogInput→input），与 spec 一致
+  （motion3axis 的 run 挂 DigitalInput 且 spec dir=input），我初版按"设备收发"理解
+  映射反了致 14/14 全反——修正为 input→AnalogInput/output→AnalogOutput；
+- 终验：io_list 14 条全预填、pending 0、注入 problems 0、**逐条一致性 14/14**
+  （dir/type/address 与 io.json 完全复刻）；几何 106/原链接 15 零损失。
+
 ## 2026-11-23 AmlDocument_io.aml：真实几何 + 标准 IO 层合流实例
 
 ### 任务
