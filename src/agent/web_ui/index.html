@@ -10,6 +10,7 @@
   <script src="/app.js" defer></script>
   <script src="/device_tree.js" defer></script>
   <script src="/device_scene_i18n.js" defer></script>
+  <script src="/joint_preview.js" defer></script>
   <script src="/device_scene.js" defer></script>
 </head>
 <body>
@@ -156,43 +157,39 @@
     <div class="device-heading"><div><h2>设备场景生成</h2></div><button id="ds-new" type="button">新建场景</button></div>
     <p id="ds-error" class="device-error" role="alert" hidden></p>
     <div class="device-layout">
-      <aside class="device-sidebar">
-        <form id="ds-create-form" class="card device-form">
-          <h3>设备与要求</h3>
-          <label for="ds-aml-choose" class="sr-only">设备描述 AML</label>
-          <input id="ds-aml" type="file" accept=".aml" aria-label="选择设备描述 AML" hidden>
-          <div class="device-aml-source" aria-live="polite">
-            <span id="ds-aml-status" class="device-aml-status">未加载</span>
-            <p id="ds-aml-name">尚未加载设备文件</p>
-            <div class="device-aml-actions"><button id="ds-aml-choose" type="button" aria-describedby="ds-aml-name">选择 AML</button><button id="ds-aml-reset" type="button" hidden>取消选择</button><a id="ds-aml-download" download hidden>下载当前 AML</a></div>
-          </div>
-          <label for="ds-request">场景需求</label><textarea id="ds-request" rows="4" maxlength="12000" placeholder="描述要构建的设备、布局和需要验证的行为"></textarea>
-          <button id="ds-generate" class="primary" type="submit">生成设备场景</button>
-        </form>
-        <section id="ds-playback-card" class="card device-form device-playback-card" hidden>
-          <h3>测试效果</h3>
-          <label for="ds-test-replay">选择测试效果</label><select id="ds-test-replay"><option value="">整机行为测试</option></select>
-          <div id="ds-replay-controls" class="device-replay" hidden><button id="ds-play" type="button">播放测试回放</button><label for="ds-replay-time" class="sr-only">测试回放时间</label><input id="ds-replay-time" type="range" min="0" max="1" step="0.01" value="0"><output id="ds-replay-clock">0.00 s</output><select id="ds-replay-speed" aria-label="回放速度"><option value="1">1×</option><option value="2">2×</option><option value="4">4×</option></select><small id="ds-replay-note">MuJoCo 实际采样 · 独立设备测试</small></div>
-          <details class="device-live-signals"><summary>当前 IO 状态</summary><pre id="ds-test-signals" class="device-test-signals" aria-label="当前测试 IO 状态"></pre></details>
-        </section>
-        <section class="card device-form"><div class="device-edit-heading"><h3>场景记录</h3><button id="ds-history-open" type="button" aria-haspopup="dialog">清空历史 / 管理</button></div><label for="ds-tasks" class="sr-only">选择场景任务</label><select id="ds-tasks"><option value="">选择历史场景</option></select></section>
-      </aside>
       <div class="device-main">
-        <section class="card device-model-card"><div class="device-model-head"><div><strong id="ds-title">等待设备场景</strong><span id="ds-status" class="badge">未生成</span></div></div>
+        <section class="card device-model-card"><div class="device-model-head"><div><strong id="ds-title">等待设备场景</strong><button id="ds-settings-open" class="device-settings-entry" type="button" aria-haspopup="dialog" aria-controls="ds-settings">设备导入与场景记录</button><span id="ds-status" class="sr-only" role="status">未生成</span></div></div>
+          <details class="device-scene-info"><summary>装配信息与检查说明</summary>
           <div id="ds-metrics" class="device-metrics" hidden></div>
           <p id="ds-pipeline" class="device-help" aria-live="polite" hidden></p>
           <p id="ds-preview-note" class="device-preview-note" hidden></p>
+          </details>
           <div class="device-model-workspace">
             <div class="device-model-view">
-              <div class="device-viewer-wrap"><div id="ds-viewer" class="scene-preview" hidden></div><span id="ds-model-kind" class="device-model-kind" hidden></span></div><div id="ds-empty" class="device-empty">上传 AML，生成面向 PLC 验证的设备模型</div>
-              <p id="ds-pick-help" class="device-help" hidden>单击选中 · Ctrl / ⌘＋单击多选 · 空白处清空 · 拖动旋转 · 滚轮缩放</p>
-              <label id="ds-collision-control" class="device-check device-help" hidden><input id="ds-show-collision" type="checkbox">显示碰撞近似</label>
-              <label class="device-check device-help"><input id="ds-show-mechanism" type="checkbox" checked>显示接口与运动副（XYZ：红 / 绿 / 蓝，运动轴：橙色）</label>
+              <div class="device-viewer-wrap">
+                <div id="ds-viewer" class="scene-preview" hidden></div>
+                <div id="ds-visibility-toolbar" class="device-visibility-toolbar" hidden>
+                  <div class="device-visibility-modes"><button type="button" data-ds-visibility="all" aria-pressed="true">完整场景</button><button type="button" data-ds-visibility="station">当前工位</button><button type="button" data-ds-visibility="only">仅显所选</button></div>
+                  <label><input id="ds-linked-visibility" type="checkbox" checked>带上安装附件</label>
+                  <label><input id="ds-joint-leaders" type="checkbox" checked>关节引线</label>
+                  <button id="ds-fit-view" type="button">适应画面</button><button id="ds-fullscreen" type="button">全屏</button>
+                </div>
+                <svg id="ds-joint-lines" class="device-joint-lines" aria-hidden="true"></svg><div id="ds-joint-labels" class="device-joint-labels"></div>
+                <section id="ds-joint-preview" class="device-joint-preview" aria-label="关节位置预览" hidden></section>
+              </div><div id="ds-empty" class="device-empty">上传 AML，生成面向 PLC 验证的设备模型</div>
+              <div class="device-viewer-options">
+                <label id="ds-collision-control" class="device-check device-help" hidden><input id="ds-show-collision" type="checkbox">显示碰撞近似</label>
+                <label class="device-check device-help"><input id="ds-show-mechanism" type="checkbox" checked>显示接口与运动副（XYZ：红 / 绿 / 蓝，运动轴：橙色）</label>
+              </div>
             </div>
-            <section id="ds-edit-card" class="device-form device-edit-panel" hidden><div class="device-edit-heading"><h3>模型树与局部修改</h3><button id="ds-clear-selection" type="button" disabled>清空选择</button></div><p id="ds-selection-summary" class="device-help" role="status" aria-live="polite">未选择组件</p><div id="ds-components" class="device-component-picker device-model-tree" role="tree" aria-label="设备模型树"></div><p id="ds-tree-issues" class="device-error" hidden></p>
-              <details id="ds-properties" class="device-properties" hidden open><summary>组件属性与接口</summary><div id="ds-properties-content"></div></details>
-              <form id="ds-edit-form"><label for="ds-edit-request" class="sr-only">修改要求</label><textarea id="ds-edit-request" rows="3" maxlength="12000" placeholder="例如：把选中的低位光电传感器升高 10 mm，其他部分保持原样"></textarea><button id="ds-edit" class="primary" type="submit" disabled>让 Agent 调整所选组件</button></form>
-              <button id="ds-pose" type="button" disabled>直接调整单个组件的位置</button>
+            <section id="ds-edit-card" class="device-form device-edit-panel" hidden><div class="device-edit-heading"><h3>场景组件</h3><span id="ds-visible-count"></span><button id="ds-clear-selection" type="button" disabled>清空选择</button></div>
+              <input id="ds-component-search" type="search" placeholder="搜索组件名称…" aria-label="搜索组件">
+              <div class="device-tree-visibility"><button type="button" data-ds-visibility="all">全部显示</button><button type="button" data-ds-visibility="only">仅显所选</button><button type="button" data-ds-visibility="hide">隐藏所选</button></div>
+              <p id="ds-selection-summary" class="device-help" role="status" aria-live="polite">未选择组件</p><div id="ds-components" class="device-component-picker device-model-tree" role="tree" aria-label="设备模型树"></div><p id="ds-tree-issues" class="device-error" hidden></p>
+              <details id="ds-properties" class="device-properties" hidden><summary>组件属性与接口</summary><div id="ds-properties-content"></div></details>
+              <details class="device-component-edit"><summary>agent控制</summary>
+              <form id="ds-edit-form"><label for="ds-edit-request" class="sr-only">控制命令</label><textarea id="ds-edit-request" rows="3" maxlength="12000"></textarea><button id="ds-edit" class="primary" type="submit" disabled>下发命令</button></form>
+              </details>
             </section>
           </div>
           <p id="ds-stage" class="device-stage" role="status" aria-live="polite"></p>
@@ -206,15 +203,56 @@
     </div>
   </section>
 </main>
+<dialog id="ds-settings" class="asset-dialog device-settings-dialog" aria-labelledby="ds-settings-title">
+  <div class="asset-dialog-head"><h2 id="ds-settings-title">设备导入与场景记录</h2><button id="ds-settings-close" type="button" aria-label="关闭设备导入与场景记录">×</button></div>
+  <div class="asset-dialog-body">
+    <p id="ds-settings-error" class="device-error" role="alert" hidden></p>
+      <aside class="device-sidebar">
+        <form id="ds-create-form" class="card device-form">
+          <h3>设备与要求</h3>
+          <label for="ds-aml-choose" class="sr-only">设备描述 AML</label>
+          <input id="ds-aml" type="file" accept=".aml" aria-label="选择设备描述 AML" hidden>
+          <div class="device-aml-source" aria-live="polite">
+            <span id="ds-aml-status" class="device-aml-status">未加载</span>
+            <p id="ds-aml-name">尚未加载设备文件</p>
+            <div class="device-aml-actions"><button id="ds-aml-choose" type="button" aria-describedby="ds-aml-name">选择 AML</button><button id="ds-aml-reset" type="button" hidden>取消选择</button><a id="ds-aml-download" download hidden>下载当前 AML</a></div>
+          </div>
+          <label for="ds-request">场景需求</label><textarea id="ds-request" rows="4" maxlength="12000" placeholder="描述要构建的设备、布局和需要验证的行为"></textarea>
+          <button id="ds-generate" class="primary" type="submit">重新解析并装配场景</button>
+          <details><summary>从 AML 资源包导入组件</summary>
+            <label for="ds-package-path">后端主机上的 AML 完整路径</label>
+            <input id="ds-package-path" type="text" placeholder="E:/项目/资源包/AmlDocument.aml">
+            <p class="device-help">单独上传 AML 不会上传关联模型。若 AML 引用外部资源，请填写原始 AML 路径，并保留 DAE、XSD、LogicXML 的相对目录；缺失项会列入检查结果。</p>
+            <button id="ds-package-import" type="button">导入资源并装配</button>
+          </details>
+        </form>
+        <section id="ds-playback-card" class="card device-form device-playback-card" hidden>
+          <h3>测试效果</h3>
+          <label for="ds-test-replay">选择测试效果</label><select id="ds-test-replay"><option value="">整机行为测试</option></select>
+          <div id="ds-replay-controls" class="device-replay" hidden><button id="ds-play" type="button">播放测试回放</button><label for="ds-replay-time" class="sr-only">测试回放时间</label><input id="ds-replay-time" type="range" min="0" max="1" step="0.01" value="0"><output id="ds-replay-clock">0.00 s</output><select id="ds-replay-speed" aria-label="回放速度"><option value="1">1×</option><option value="2">2×</option><option value="4">4×</option></select><small id="ds-replay-note">MuJoCo 实际采样 · 独立设备测试</small></div>
+          <details class="device-live-signals"><summary>当前 IO 状态</summary><pre id="ds-test-signals" class="device-test-signals" aria-label="当前测试 IO 状态"></pre></details>
+        </section>
+        <section class="card device-form"><div class="device-edit-heading"><h3>场景记录</h3><button id="ds-history-open" type="button" aria-haspopup="dialog">清空历史 / 管理</button></div><label for="ds-tasks" class="sr-only">选择场景任务</label><select id="ds-tasks"><option value="">选择历史场景</option></select></section>
+      </aside>
+  </div>
+</dialog>
+
 <dialog id="ds-results-dialog" class="asset-dialog device-results-dialog" aria-labelledby="ds-results-title">
   <div class="asset-dialog-head"><h2 id="ds-results-title">设备场景详情</h2><button id="ds-results-close" type="button" aria-label="关闭设备场景详情">×</button></div>
   <nav class="device-result-tabs" aria-label="设备场景结果"><button type="button" data-ds-tab="library" aria-selected="true">人工审批</button><button type="button" data-ds-tab="checks" aria-selected="false">检查结果</button><button type="button" data-ds-tab="facts" aria-selected="false">设备与 IO</button><button type="button" data-ds-tab="files" aria-selected="false">产物与记录</button></nav>
   <div class="asset-dialog-body">
     <section id="ds-pane-library"><p id="ds-approval-summary" class="device-help"></p><div class="device-review-tools"><input id="ds-review-search" type="search" placeholder="搜索组件类型" aria-label="搜索组件类型"><select id="ds-review-filter" aria-label="审批状态筛选"><option value="all">全部状态</option><option value="pending">可审批</option><option value="approved">已审批</option><option value="blocked">需处理</option></select></div><div class="device-review-tools"><button id="ds-select-visible" type="button">选择当前可审批项</button><button id="ds-clear-reviews" type="button">清空选择</button><span id="ds-review-selection" role="status" aria-live="polite"></span><button id="ds-batch-review" class="primary" type="button" disabled>批量核对与审批</button></div><div id="ds-candidates"></div></section>
     <section id="ds-pane-checks" hidden>
+      <section id="ds-resource-resolution" hidden aria-label="组件资源补全"></section>
       <section id="ds-tests" class="device-tests" aria-label="仿真测试模块" hidden>
         <div class="device-edit-heading"><h3>仿真测试模块</h3><span id="ds-test-summary" role="status" aria-live="polite"></span></div>
         <p id="ds-test-scope" class="device-help"></p>
+        <details id="ds-plc-test" hidden><summary>隔离 OpenPLC IO 校验</summary>
+          <p class="device-help">下载本任务的 IO 测试程序并部署到专用测试 Runtime，填写连接地址后运行。连接时会核对程序身份，不部署或覆盖现有 PLC 程序。</p>
+          <label>主机 <input id="ds-plc-host" type="text" placeholder="测试 Runtime 主机"></label>
+          <label>端口 <input id="ds-plc-port" type="number" min="1" max="65535" value="502"></label>
+          <button id="ds-plc-run" type="button">连接并检查模型与 IO</button>
+        </details>
         <div class="device-actions"><button id="ds-tests-all" type="button">全选测试</button><button id="ds-tests-clear" type="button">清空测试选择</button><button id="ds-tests-run" type="button" disabled>运行所选测试</button><button id="ds-tests-view" type="button">查看所选测试效果</button></div>
         <div id="ds-test-modules" class="device-test-modules"></div>
       </section>

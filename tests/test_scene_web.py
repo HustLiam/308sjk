@@ -35,7 +35,9 @@ class FixtureAuthor:
     def repair_candidate(self,ir,request,rule,reports,evidence):return rule
 
 
-def fixture_manager(root):return SceneWorkbench(root,author_factory=lambda control:FixtureAuthor())
+def fixture_manager(root):
+    # Retain lifecycle/replay coverage for archived tasks under the original profile.
+    return SceneWorkbench(root,author_factory=lambda control:FixtureAuthor(),verification_profile='legacy')
 
 
 def fixture_input(**extra):

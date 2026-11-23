@@ -1,0 +1,167 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<COLLADA version="1.5.0" xmlns="http://www.collada.org/2008/03/COLLADASchema">
+	<asset>
+		<contributor>
+			<author>AutomationML e.V.</author>
+			<author_website>www.automationml.org</author_website>
+			<authoring_tool>"Notepad++" "6.8.6" "6.8.6"</authoring_tool>
+		</contributor>
+		<created>2015-12-15T13:12:06.7153453+01:00</created>
+		<modified>2015-12-15T13:12:06.7153453+01:00</modified>
+		<unit meter="0.001" name="mm" />
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_nodes>
+		<node id="F19721000063199800000_001.1" name="F19721000063199800000_001.1">
+			<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+			<node id="F19721000063199800000_001.1_fa.1" name="fa">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="fa_Product.dae#fa_visual_scene_node" />
+			</node>
+			<node id="F19721000063199800000_001.1_ba.1" name="ba">
+				<matrix>0.466507 -0.832106 -0.299952 3503.84 0.582108 0.033493 0.812422 -292.81 -0.665974 -0.553605 0.5 3460.24 0 0 0 1</matrix>
+				<translate>2299.51 2239.94 1377.56</translate>
+				<rotate>0.304739 0.94481 -0.120284 -45.3474</rotate>
+				<rotate sid="Revolute.1_axis">0 0 1 0</rotate>
+				<translate>-2973.79 -1823.32 186.581</translate>
+				<rotate>0.304739 0.94481 -0.120284 45.3474</rotate>
+				<instance_node url="ba_Product.dae#ba_visual_scene_node" />
+			</node>
+			<node name="FrameOfInterest_Base1" sid="F19721000063199800000_001.1_FrameOfInterest_Base1">
+				<matrix>0.965926 0.258819 0 2379.21 -0.258819 0.965926 0 2319.62 0 0 1 0 0 0 0 1</matrix>
+			</node>
+			<node name="FrameOfInterest_Tool1" sid="F19721000063199800000_001.1_FrameOfInterest_Tool1">
+				<matrix>0.730405 0 -0.683015 2233.05 0.171136 0.968101 0.18301 1377.79 0.661227 -0.25056 0.707105 1716.14 0 0 0 1</matrix>
+			</node>
+		</node>
+	</library_nodes>
+	<library_visual_scenes>
+		<visual_scene id="F19721000063199800000_001.1_visual_scene">
+			<node id="F19721000063199800000_001.1_visual_scene_node" name="F19721000063199800000_001.1">
+				<instance_node url="#F19721000063199800000_001.1" />
+			</node>
+		</visual_scene>
+	</library_visual_scenes>
+	<library_joints>
+		<joint id="F19721000063199800000_001.1_030EKF321_Revolute.1" name="Revolute.1">
+			<revolute sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>-360</min>
+					<max>360</max>
+				</limits>
+			</revolute>
+		</joint>
+	</library_joints>
+	<library_kinematics_models>
+		<kinematics_model id="F19721000063199800000_001.1_kin_model.0" name="030EKF321">
+			<technique_common>
+				<instance_joint sid="Revolute.1" url="#F19721000063199800000_001.1_030EKF321_Revolute.1" />
+				<link name="fa.1" sid="fa.1">
+					<attachment_full joint="F19721000063199800000_001.1_kin_model.0/Revolute.1">
+						<translate>2299.51 2239.94 1377.56</translate>
+						<rotate>0.304739 0.94481 -0.120284 -45.3474</rotate>
+						<link name="ba.1" sid="ba.1">
+							<translate>-2973.79 -1823.32 186.581</translate>
+							<rotate>0.304739 0.94481 -0.120284 45.3474</rotate>
+						</link>
+					</attachment_full>
+				</link>
+			</technique_common>
+			<extra>
+				<technique profile="POSES">
+					<poses>
+						<pose count="1" name="FraesPos">
+							<pose_joint joint="F19721000063199800000_001.1_kin_model.0/Revolute.1">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+						</pose>
+						<pose count="1" name="HOME">
+							<pose_joint joint="F19721000063199800000_001.1_kin_model.0/Revolute.1">
+								<value>
+									<double>90</double>
+								</value>
+							</pose_joint>
+						</pose>
+					</poses>
+				</technique>
+			</extra>
+		</kinematics_model>
+	</library_kinematics_models>
+	<library_articulated_systems>
+		<articulated_system id="F19721000063199800000_001.1_art_system.0">
+			<kinematics>
+				<instance_kinematics_model sid="inst_F19721000063199800000_001.1_kin_model.0" url="#F19721000063199800000_001.1_kin_model.0">
+					<newparam sid="F19721000063199800000_001.1_art_system.0_inst_F19721000063199800000_001.1_kin_model.0">
+						<SIDREF>F19721000063199800000_001.1_art_system.0/inst_F19721000063199800000_001.1_kin_model.0</SIDREF>
+					</newparam>
+					<newparam sid="F19721000063199800000_001.1_art_system.0_inst_F19721000063199800000_001.1_kin_model.0_Revolute.1_axis">
+						<SIDREF>F19721000063199800000_001.1_art_system.0/inst_F19721000063199800000_001.1_kin_model.0/Revolute.1/axis</SIDREF>
+					</newparam>
+					<newparam sid="F19721000063199800000_001.1_art_system.0_inst_F19721000063199800000_001.1_kin_model.0_Revolute.1_axis_value">
+						<float>0</float>
+					</newparam>
+				</instance_kinematics_model>
+				<technique_common>
+					<axis_info axis="F19721000063199800000_001.1_art_system.0/inst_F19721000063199800000_001.1_kin_model.0/Revolute.1/axis" name="Command.1" sid="F19721000063199800000_001.1_art_system.0_inst_F19721000063199800000_001.1_kin_model.0_Command.1">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>1</int>
+						</index>
+						<limits>
+							<min>
+								<float>0</float>
+							</min>
+							<max>
+								<float>90</float>
+							</max>
+						</limits>
+					</axis_info>
+					<frame_origin link="inst_F19721000063199800000_001.1_kin_model.0/fa.1" />
+					<frame_tip link="inst_F19721000063199800000_001.1_kin_model.0/ba.1">
+						<translate>3503.84 -292.81 3460.24</translate>
+						<rotate>-0.683013 0.183011 0.707107 90</rotate>
+					</frame_tip>
+				</technique_common>
+			</kinematics>
+		</articulated_system>
+	</library_articulated_systems>
+	<library_kinematics_scenes>
+		<kinematics_scene id="F19721000063199800000_001.1_kin_scene">
+			<instance_articulated_system sid="inst_F19721000063199800000_001.1_art_system.0" url="#F19721000063199800000_001.1_art_system.0">
+				<bind symbol="F19721000063199800000_001.1_kin_scene_inst_F19721000063199800000_001.1_art_system.0_inst_F19721000063199800000_001.1_kin_model.0">
+					<param ref="F19721000063199800000_001.1_art_system.0_inst_F19721000063199800000_001.1_kin_model.0" />
+				</bind>
+				<bind symbol="F19721000063199800000_001.1_kin_scene_inst_F19721000063199800000_001.1_art_system.0_inst_F19721000063199800000_001.1_kin_model.0_Revolute.1_axis">
+					<param ref="F19721000063199800000_001.1_art_system.0_inst_F19721000063199800000_001.1_kin_model.0_Revolute.1_axis" />
+				</bind>
+				<bind symbol="F19721000063199800000_001.1_kin_scene_inst_F19721000063199800000_001.1_art_system.0_inst_F19721000063199800000_001.1_kin_model.0_Revolute.1_axis_value">
+					<param ref="F19721000063199800000_001.1_art_system.0_inst_F19721000063199800000_001.1_kin_model.0_Revolute.1_axis_value" />
+				</bind>
+			</instance_articulated_system>
+		</kinematics_scene>
+	</library_kinematics_scenes>
+	<scene>
+		<instance_visual_scene url="#F19721000063199800000_001.1_visual_scene" />
+		<instance_kinematics_scene url="#F19721000063199800000_001.1_kin_scene">
+			<bind_kinematics_model node="F19721000063199800000_001.1_fa.1">
+				<param>F19721000063199800000_001.1_kin_scene_inst_F19721000063199800000_001.1_art_system.0_inst_F19721000063199800000_001.1_kin_model.0</param>
+			</bind_kinematics_model>
+			<bind_joint_axis target="F19721000063199800000_001.1_ba.1/Revolute.1_axis">
+				<axis>
+					<param>F19721000063199800000_001.1_kin_scene_inst_F19721000063199800000_001.1_art_system.0_inst_F19721000063199800000_001.1_kin_model.0_Revolute.1_axis</param>
+				</axis>
+				<value>
+					<param>F19721000063199800000_001.1_kin_scene_inst_F19721000063199800000_001.1_art_system.0_inst_F19721000063199800000_001.1_kin_model.0_Revolute.1_axis_value</param>
+				</value>
+			</bind_joint_axis>
+		</instance_kinematics_scene>
+	</scene>
+</COLLADA>

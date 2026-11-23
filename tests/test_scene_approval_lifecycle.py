@@ -10,8 +10,13 @@ from src.agent.scene_agent.common import SceneError,digest,read_json,write_json
 from src.agent.scene_agent.inventory import component_inventory
 from src.agent.scene_agent.rules import ApprovalRequired,ComponentLibrary
 from src.agent.scene_agent.device_ir import parse_device_ir
-from src.agent.scene_agent.web import SceneWorkbench
+from src.agent.scene_agent.web import SceneWorkbench as CurrentSceneWorkbench
 from test_scene_source import FixtureAuthor,source,rule,wait
+
+
+def SceneWorkbench(*args,**kwargs):
+    """Approval compatibility for the original archived-task profile."""
+    return CurrentSceneWorkbench(*args,verification_profile='legacy',**kwargs)
 
 
 def files(root):

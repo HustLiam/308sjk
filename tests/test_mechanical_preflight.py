@@ -69,3 +69,23 @@ def test_preflight_restores_measured_state_on_rejection_and_cancellation(robot):
     with pytest.raises(RuntimeError,match='cancelled'):
         preflight_joint_path(runtime,ir['joints'][0],[-.5],probe,cancel)
     assert np.array_equal(runtime.data.qpos,saved) and float(runtime.data.time)==time
+
+
+def test_successful_fk_does_not_claim_actuator_response_validation(robot):
+    ir,meta,xml=robot;plan=generate_test_plan(ir)
+    module=run_test_plan(ir,meta,xml,plan,[plan['modules'][0]['id']])['modules'][0]
+    assert module['mechanical_relationship_status']=='passed'
+    assert module['full_travel_status']=='passed' and module['scenario_status']=='clear'
+    assert module['response_status']=='not_assessed'
+
+
+def test_agent_path_rejection_separates_definition_errors_from_unsafe_stimuli(robot):
+    for reverse_axis in (False,True):
+        ir,meta,xml=obstructed(robot,reverse_axis=reverse_axis);plan=generate_test_plan(ir)
+        module=plan['modules'][0];home={j['id']:j['initial'] for j in ir['joints']}
+        module['steps']=[{'op':'joint_configuration','positions':{**home,'joint1':q}} for q in (-.5,.5,0)]
+        result=run_test_plan(ir,meta,xml,plan,[module['id']])['modules'][0]
+        assert result['full_travel_status']=='not_covered' and result['scenario_status']=='blocked'
+        assert result['mechanical_relationship_status']==('failed' if reverse_axis else 'inconclusive')
+        assert result['failure_category']==('mechanical_relationship_error' if reverse_axis else 'motion_plan_rejected')
+        assert result['response_status']=='not_assessed' and result['frame_count']==0

@@ -10,6 +10,7 @@ from .properties import apply_property_patch as apply_patch, interface_propertie
 from .rules import BEHAVIORS, NAME, RULE_FORMAT, validate_rule
 from .blender import validate_script
 from .requirements import MODEL_REQUIREMENTS, IO_KERNEL_QUANTITIES, RUNTIME_KERNEL_CONTRACTS
+from .requirements import for_device, kernels_for_device
 
 
 SYSTEM='''You author executable industrial device models for PLC verification, not PLC programs.
@@ -195,8 +196,36 @@ class SceneGenerationAgent:
         control=getattr(self.client,'control',None)
         if control:control.check()
 
+    def author_resource_component(self, component, evidence):
+        """User-selected simple geometry only; never author the surrounding scene."""
+        import json
+        system = ('Select the fixed geometry tool for ONE user-selected missing AML component. '
+                  'Return exactly {"tool":"box","size_parameters":["size_x_m","size_y_m","size_z_m"]}. '
+                  'Use only the supplied AML facts. No code, dimensions, mechanics, IO, acceptance changes, '
+                  'or extra components. The host checks the shape, dimensions, origin and interfaces before execution.')
+        request = {'id': component['id'], 'name': component['name'], 'attributes': component['attributes'],
+                   'mechanical_definition': component.get('mechanical_definition')}
+        payload = {'model': self.model, 'messages': [{'role':'system','content':system},
+                    {'role':'user','content':json.dumps(request, ensure_ascii=False)}],
+                   **generation_options(1024)}
+        evidence = Path(evidence); evidence.mkdir(parents=True, exist_ok=True)
+        write_json(evidence/'request.json', payload)
+        self.check_cancelled()
+        response = self.client.chat_completions(payload, prefer_stream=True)
+        write_json(evidence/'response.json', response)
+        if response['choices'][0].get('finish_reason') == 'length':
+            raise SceneError('补件生成输出被截断', 'component_model')
+        text = response['choices'][0]['message'].get('content') or ''
+        proposal = json.loads(extract_json(text) or 'null')
+        write_json(evidence/'proposal.json', proposal)
+        return proposal
+
     @staticmethod
     def _component_summary(component,ir):
+        from .verification import enabled,PHYSICAL_KEYS,PROFILE
+        if enabled(ir):
+            component=__import__('copy').deepcopy(component)
+            component['parameters']={k:v for k,v in component['parameters'].items() if k not in PHYSICAL_KEYS}
         parameters=component.get('parameters',{});raw=values(component)
         units={name:p.get('unit') for name,p in parameters.items()}
         sources={name:('normalized_caex_unit' if p.get('original_unit') else
@@ -223,7 +252,13 @@ class SceneGenerationAgent:
                               if values(c).get(name)==component['id']],
                 'io':[p for p in ir.get('io',[]) if p['component_id']==component['id']],
                 'interfaces':[f for f in ir.get('interfaces',[]) if f['component_id']==component['id']],
-                'pose':component.get('pose',{})}
+                'pose':component.get('pose',{}),
+                **({'verification_profile':PROFILE} if enabled(ir) else {})}
+
+    @staticmethod
+    def verification_parameters(ir):
+        from .verification import parameters
+        return parameters(ir)
 
     def draft_collision_free_tests(self,ir,metadata,xml,plan,evidence):
         from .test_author import draft_collision_free_tests
@@ -432,6 +467,10 @@ class SceneGenerationAgent:
                 if component['parameters'].get('collision_enabled') is False and any(
                         g.get('collision',True) for g in evaluated.get('geoms',[])+evaluated.get('blender_bodies',[])):
                     raise SceneError('AML collision_enabled=false: geometry must not introduce blocking colliders')
+                if component.get('verification_profile')=='fixed_model_io/1':
+                    # Host-owned profile supplies physics; the author is checked
+                    # here for geometry, references and supported IO quantities.
+                    continue
                 if evaluated.get('behavior')=='conveyor':
                     for geom in root_colliders:
                         for parameter,field in (('collision_friction','friction'),('collision_priority','priority')):
@@ -479,8 +518,8 @@ class SceneGenerationAgent:
         missing=set(missing)
         if not missing:return []
         summary=[self._component_summary(c,ir) for c in ir['components'] if c['type'] in missing]
-        message={'request':request,'model_requirements':MODEL_REQUIREMENTS,'simulation_requirements':ir.get('simulation_requirements'),
-                 'runtime_kernel_contracts':RUNTIME_KERNEL_CONTRACTS,
+        message={'request':request,'model_requirements':for_device(ir),'simulation_requirements':ir.get('simulation_requirements'),
+                 'runtime_kernel_contracts':kernels_for_device(ir),
                  'missing_component_types':sorted(missing),'components':summary,
                  'instances_by_type':{kind:[c['id'] for c in summary if c['type']==kind] for kind in sorted(missing)},
                  'joints':ir['joints'],'io':[{k:p[k] for k in ('name','dir','type','address','component_id','quantity','writer')} for p in ir['io']],
@@ -490,7 +529,12 @@ class SceneGenerationAgent:
                     'parameter_bounds':'Numeric parameters only; never boolean/string/null. One rule per type, covering every instance.',
                     'provenance_location':'At rule level, never inside model',
                     'generation_budget':'Initial generation plus at most '+str(self.max_rounds-1)+' correction calls; preserve validated types.'}}
-        messages=[{'role':'system','content':SYSTEM},{'role':'user','content':json.dumps(message,ensure_ascii=False)}]
+        from .verification import enabled,SIMPLIFICATION,PHYSICS
+        system=SYSTEM
+        if enabled(ir):
+            system+='\nCURRENT PROFILE OVERRIDE: Generate model rules only, NEVER test scripts. The host supplies physical mass, inertia approximation, damping, friction and servo gain; omit physical_parameters or use {}. These are not AML requirements. Preserve geometry, interfaces, limits, velocity and acceleration and IO. No whole-machine functional tests are requested.'
+            message['fixed_verification']={'profile':ir['verification_profile'],'simplification':SIMPLIFICATION,'physics_profile':PHYSICS}
+        messages=[{'role':'system','content':system},{'role':'user','content':json.dumps(message,ensure_ascii=False)}]
         accepted={};accepted_rounds={};last=''
         for attempt in range(1,self.max_rounds+1):
             text='';errors=[];ignored=[]
@@ -574,12 +618,15 @@ class SceneGenerationAgent:
         """Repair this unapproved type from deterministic checks, retaining AML facts."""
         import json
         kind=rule['component_type']
-        message={'request':request,'model_requirements':MODEL_REQUIREMENTS,'simulation_requirements':ir.get('simulation_requirements'),
-                 'runtime_kernel_contracts':RUNTIME_KERNEL_CONTRACTS,
+        message={'request':request,'model_requirements':for_device(ir),'simulation_requirements':ir.get('simulation_requirements'),
+                 'runtime_kernel_contracts':kernels_for_device(ir),
             'previous_candidate':rule,'deterministic_reports':reports,
             'components':[self._component_summary(c,ir) for c in ir['components'] if c['type']==kind],
             'instruction':'Return {rules:[one revised candidate for the same type]}. Repair modeling errors only. Do not alter input facts, IO or test thresholds.'}
-        result,_=self._json([{'role':'system','content':SYSTEM},{'role':'user','content':json.dumps(message,ensure_ascii=False)}],evidence)
+        from .verification import enabled
+        system=SYSTEM
+        if enabled(ir):system+='\nCURRENT PROFILE OVERRIDE: Repair model only. Uniform mass, inertia approximation, damping, friction and servo gain are supplied by the host. Omit physical parameter bounds/tuning. Preserve velocity, acceleration, geometry, mounting interfaces and IO. No test script generation or whole-machine functional tests.'
+        result,_=self._json([{'role':'system','content':system},{'role':'user','content':json.dumps(message,ensure_ascii=False)}],evidence)
         result=self._candidate_envelope(result,evidence)
         if len(result['rules'])!=1:
             raise SceneError('Repair must return exactly one candidate rule')

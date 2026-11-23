@@ -17,11 +17,15 @@ FORMAT = '308sjk.simulation_tests/1'
 
 def checker_digest():
     return digest({name: hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()
-        for name in ('simulation_tests.py', 'mechanics.py', 'robot_io.py', 'test_safety.py')})
+        for name in ('simulation_tests.py', 'mechanics.py', 'robot_io.py', 'test_safety.py','verification.py','fixed_tests.py','plc_test.py')})
 
 
 def generate_test_plan(ir):
     """Compile mandatory coverage from facts; every upload gets a fresh plan."""
+    from .verification import enabled
+    if enabled(ir):
+        from .fixed_tests import plan
+        return plan(ir)
     modules = []
     req = ir.get('simulation_requirements') or {}
     def add(kind, target, label, steps):
@@ -60,6 +64,10 @@ def generate_test_plan(ir):
 def validate_test_plan(ir, plan):
     """Validate Agent IO programs/extra poses without losing targets or oracles."""
     baseline = generate_test_plan(ir)
+    from .verification import enabled
+    if enabled(ir):
+        if digest(plan)!=digest(baseline):raise SceneError('固定校验计划不可由 Agent 或前端修改','simulation_test')
+        return plan
     if set(plan) != set(baseline) or any(plan[k] != baseline[k] for k in baseline if k != 'modules'):
         raise SceneError('Test plan identity/requirements changed', 'simulation_test')
     original = {m['id']: m for m in baseline['modules']}
@@ -508,7 +516,11 @@ def _io_probe(ir, runtime, module, check, capture, cancelled):
     capture(max(float(runtime.data.time), .01))
 
 
-def run_test_plan(ir, metadata, xml, plan, selected=None, *, output=None, cancelled=None):
+def run_test_plan(ir, metadata, xml, plan, selected=None, *, output=None, cancelled=None, transport=None):
+    from .verification import enabled
+    if enabled(ir):
+        from .fixed_tests import run
+        return run(ir,metadata,xml,plan,selected,output=output,cancelled=cancelled,transport=transport)
     from runtime.device_scene import DeviceRuntime
     from .mechanics import RobotCollisionProbe
     from .robot_io import ScenarioBlocked
@@ -601,13 +613,23 @@ def run_test_plan(ir, metadata, xml, plan, selected=None, *, output=None, cancel
                 response_status='failed' if response_errors else 'incomplete' if blocked else 'passed',
                 scenario_status='blocked' if blocked else 'clear', mechanical_relationship_status='not_assessed',
                 failure_category='io_binding_error' if binding_errors else 'scenario_blocked' if blocked else 'response_failed' if response_errors else None)
-        elif rejected_motion:
-            relationship_checks = [c for c in checks if c['domain']=='mechanical']
+        elif module['kind']=='mechanical_joint':
+            # FK/definition evidence, path validity and numerical health answer
+            # different questions. A rejected stimulus is not a broken joint.
+            relationship_checks = [c for c in checks if c['domain']=='mechanical'
+                                   and c['name'] not in ('physics_state','execution','collision_free_path')]
             posed = any(c['name'].startswith('actual_pose:') for c in checks)
             relationship_failed = any(not c['passed'] for c in relationship_checks)
-            result.update(failure_category='mechanical_relationship_error' if relationship_failed else 'motion_plan_rejected',full_travel_status='not_covered',
+            scenario_failed = bool(blocked) or any(c['domain']=='scenario' and not c['passed'] for c in checks)
+            numerical_failed = any(c['name']=='physics_state' and not c['passed'] for c in checks)
+            result.update(failure_category='mechanical_relationship_error' if relationship_failed else
+                'motion_plan_rejected' if scenario_failed else 'numerical_error' if numerical_failed else
+                'execution_error' if status=='failed' else None,
+                full_travel_status='passed' if status=='passed' else 'not_covered',
                 mechanical_relationship_status='failed' if relationship_failed else 'passed' if posed else 'inconclusive',
-                motion_scope='local_relationship_only')
+                scenario_status='blocked' if scenario_failed else 'clear',
+                response_status='not_assessed')
+            if rejected_motion:result['motion_scope']='local_relationship_only'
         elif any(not c['passed'] and c['domain']=='scenario' for c in checks):
             result['failure_category']='scenario_blocked'
         if module['kind']=='mechanical_joint' and module['steps'][0]['op']=='joint_configuration':

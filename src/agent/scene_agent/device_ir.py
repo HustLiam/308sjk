@@ -5,6 +5,7 @@ from pathlib import Path
 import re
 import uuid
 import xml.etree.ElementTree as ET
+import numpy as np
 
 from .common import SceneError, digest, vector
 from ..aml_parser import parse_aml, build_io_list
@@ -181,6 +182,23 @@ def parse_device_ir(source):
                  'parent_anchor_m':[p.get('parent_anchor_'+a+'_m',0) for a in 'xyz'],
                  'child_anchor_m':[p.get('child_anchor_'+a+'_m',0) for a in 'xyz'],
                  'source':c['source']})
+    # New AML may derive the joint axis/anchors entirely from linked interface
+    # frames. Explicit legacy axes remain readable and are labelled as such.
+    from .verification import joint_from_interfaces
+    for joint in ir['joints']:
+        component=next(c for c in ir['components'] if c['id']==joint['id'])
+        p=values(component)
+        use_frames=joint['type'] in ('slide','hinge') and (p.get('joint_frame_source')=='interfaces' or not any('joint_axis_'+a in p for a in 'xyz'))
+        if use_frames:
+            derived=joint_from_interfaces(ir,joint,required=True)
+            for key in ('axis','parent_anchor_m','child_anchor_m'):
+                prefix={'axis':'joint_axis_','parent_anchor_m':'parent_anchor_','child_anchor_m':'child_anchor_'}[key]
+                names=[prefix+a+('' if key=='axis' else '_m') for a in 'xyz']
+                if all(n in p for n in names) and not np.allclose([p[n] for n in names],derived[key],atol=1e-9):
+                    raise SceneError('显式轴向/锚点与安装接口坐标系冲突','assembly')
+            joint.update(derived)
+            joint['definition_source']='interfaces'
+        else:joint['definition_source']='legacy_explicit'
     couplings=[]
     for c in ir['components']:
         p=values(c)
@@ -195,7 +213,7 @@ def parse_device_ir(source):
 
 def facts_digest(ir):
     keys=['source','components','joints','assemblies','interfaces','connections','io','pending']
-    keys.extend(k for k in ('simulation_requirements','couplings') if k in ir)
+    keys.extend(k for k in ('simulation_requirements','couplings','verification_profile') if k in ir)
     return digest({k:ir.get(k,[]) for k in keys})
 
 
@@ -245,6 +263,13 @@ def validate_device_ir(ir):
             raise SceneError('Invalid INT initial/range','device_description')
     joint_children=set()
     for j in ir['joints']:
+        if j.get('definition_source')=='interfaces':
+            from .verification import joint_from_interfaces
+            derived=joint_from_interfaces(ir,j,required=True)
+            for key in ('parent_body','child_body','parent_interface','child_interface'):
+                if j.get(key)!=derived[key]:raise SceneError('运动副与安装接口引用不一致','assembly')
+            for key in ('axis','parent_anchor_m','child_anchor_m'):
+                if not np.allclose(j[key],derived[key],atol=1e-9):raise SceneError('运动副轴向/锚点与安装接口不一致','assembly')
         if j['parent_body'] not in comps or j['child_body'] not in comps or j['parent_body']==j['child_body']:
             raise SceneError('Joint has unresolved/same bodies','assembly')
         if j['type'] not in ('slide','hinge','ball','free'):raise SceneError('Unsupported joint kind','assembly')

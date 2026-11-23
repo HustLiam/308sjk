@@ -1,6 +1,15 @@
 'use strict';
 // Component ownership and joint references are distinct: constraints never own their endpoints.
 globalThis.DeviceTree={
+  componentSet(ir, ids, mechanical={}){
+    const valid=new Set((ir?.components||[]).map(c=>c.id)),children=new Map();
+    for(const c of ir?.components||[]){if(!children.has(c.parent_id))children.set(c.parent_id,[]);children.get(c.parent_id).push(c.id);}
+    const found=new Set([...ids].filter(id=>valid.has(id))),queue=[...found];
+    while(queue.length){const id=queue.shift();for(const child of [...(children.get(id)||[]),...(mechanical[id]||[])]){
+      if(valid.has(child)&&!found.has(child)){found.add(child);queue.push(child);}
+    }}
+    return found;
+  },
   build(ir){
     const joints=new Map((ir.joints||[]).map(j=>[j.id,j]));
     const source=new Map(ir.components.map(c=>[c.id,c]));

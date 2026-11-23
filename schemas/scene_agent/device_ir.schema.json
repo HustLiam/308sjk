@@ -6,6 +6,7 @@
   "required": ["format", "source", "station", "coordinate_system", "units", "components", "joints", "interfaces", "connections", "io", "pending", "revision", "changes"],
   "properties": {
     "format": {"const": "308sjk.device_ir/0.1-draft"},
+    "verification_profile": {"const": "fixed_model_io/1"},
     "source": {"type": "object", "required": ["file", "sha256"]},
     "station": {"type": "string"},
     "coordinate_system": {"const": "right_handed_z_up"},

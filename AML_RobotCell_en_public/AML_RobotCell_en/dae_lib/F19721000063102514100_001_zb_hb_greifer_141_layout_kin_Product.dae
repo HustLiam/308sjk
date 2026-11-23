@@ -1,0 +1,708 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<COLLADA version="1.5.0" xmlns="http://www.collada.org/2008/03/COLLADASchema">
+	<asset>
+		<contributor>
+			<author>AutomationML e.V.</author>
+			<author_website>www.automationml.org</author_website>
+			<authoring_tool>"Notepad++" "6.8.6" "6.8.6"</authoring_tool>
+		</contributor>
+		<created>2015-12-15T13:12:06.7153453+01:00</created>
+		<modified>2015-12-15T13:12:06.7153453+01:00</modified>
+		<unit meter="0.001" name="mm" />
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_nodes>
+		<node id="F19721000063102514100_001_zb_hb_greifer_141_layout_kin" name="F19721000063102514100_001_zb_hb_greifer_141_layout_kin">
+			<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+			<node id="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_F19721000063102514100_001_zb_hb_greifer_141_layout_Festanteile.1" name="F19721000063102514100_001_zb_hb_greifer_141_layout_Festanteile">
+				<matrix>1 0 0 6.36646e-012 0 1 0 1.36424e-012 0 0 1 -5.45697e-012 0 0 0 1</matrix>
+				<instance_node url="F19721000063102514100_001_zb_hb_greifer_141_layout_Festanteile_Product.dae#F19721000063102514100_001_zb_hb_greifer_141_layout_Festanteile_visual_scene_node" />
+			</node>
+			<node id="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_F19721000063102514111_001_zb_ub_stiftzieher_11_ba.1" name="F19721000063102514111_001_zb_ub_stiftzieher_11_ba">
+				<matrix>1 0 0 6.36646e-012 0 1 0 1.36424e-012 0 0 1 -5.45697e-012 0 0 0 1</matrix>
+				<translate>-403.157 -588.163 936</translate>
+				<rotate>0 1 0 180</rotate>
+				<rotate sid="01_41_11_ba_tra_axis">0 0 1 0</rotate>
+				<translate>-403.157 588.163 936</translate>
+				<rotate>0 1 0 180</rotate>
+				<instance_node url="F19721000063102514111_001_zb_ub_stiftzieher_11_ba_Product.dae#F19721000063102514111_001_zb_ub_stiftzieher_11_ba_visual_scene_node" />
+			</node>
+			<node id="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_F19721000063102514112_001_zb_ub_stiftzieher_12_ba.1" name="F19721000063102514112_001_zb_ub_stiftzieher_12_ba">
+				<matrix>1 0 0 6.36646e-012 0 1 0 1.36424e-012 0 0 1 -5.45697e-012 0 0 0 1</matrix>
+				<translate>825.402 469.035 908</translate>
+				<rotate>0 1 -4.83377e-008 180</rotate>
+				<rotate sid="02_41_12_ba_tra_axis">0 0 1 0</rotate>
+				<translate>825.402 -469.035 908</translate>
+				<rotate>0 1 -4.83377e-008 180</rotate>
+				<instance_node url="F19721000063102514112_001_zb_ub_stiftzieher_12_ba_Product.dae#F19721000063102514112_001_zb_ub_stiftzieher_12_ba_visual_scene_node" />
+			</node>
+			<node id="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_F19721000063102514121_001_zb_ub_spanner_21_ba.1" name="F19721000063102514121_001_zb_ub_spanner_21_ba">
+				<matrix>1 0 0 6.36646e-012 0 1 0 1.36424e-012 0 0 1 -5.45697e-012 0 0 0 1</matrix>
+				<translate>-206 -835 589</translate>
+				<rotate>0.57735 0.57735 0.57735 120</rotate>
+				<rotate sid="03_41_21_ba_rot_axis">0 0 1 0</rotate>
+				<translate>835 -589 206</translate>
+				<rotate>0.57735 0.57735 0.57735 -120</rotate>
+				<instance_node url="F19721000063102514121_001_zb_ub_spanner_21_ba_Product.dae#F19721000063102514121_001_zb_ub_spanner_21_ba_visual_scene_node" />
+			</node>
+			<node id="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_F19721000063102514121_001_zb_ub_spanner_22_ba.1" name="F19721000063102514121_001_zb_ub_spanner_22_ba">
+				<matrix>1 0 0 6.36646e-012 0 1 0 1.36424e-012 0 0 1 -5.45697e-012 0 0 0 1</matrix>
+				<translate>-206 805 589</translate>
+				<rotate>-0.57735 0.57735 0.57735 -120</rotate>
+				<rotate sid="04_41_22_ba_rot_axis">0 0 1 0</rotate>
+				<translate>805 -589 -206</translate>
+				<rotate>-0.57735 0.57735 0.57735 120</rotate>
+				<instance_node url="F19721000063102514121_001_zb_ub_spanner_22_ba_Product.dae#F19721000063102514121_001_zb_ub_spanner_22_ba_visual_scene_node" />
+			</node>
+			<node id="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_F19721000063102514121_001_zb_ub_spanner_23_ba.1" name="F19721000063102514121_001_zb_ub_spanner_23_ba">
+				<matrix>1 0 0 6.36646e-012 0 1 0 1.36424e-012 0 0 1 -5.45697e-012 0 0 0 1</matrix>
+				<translate>574 -835 589</translate>
+				<rotate>0.357407 0.862856 0.357407 98.4211</rotate>
+				<rotate sid="05_41_23_ba_rot_axis">0 0 1 0</rotate>
+				<translate>1006.92 173.948 -574</translate>
+				<rotate>0.357407 0.862856 0.357407 -98.4211</rotate>
+				<instance_node url="F19721000063102514121_001_zb_ub_spanner_23_ba_Product.dae#F19721000063102514121_001_zb_ub_spanner_23_ba_visual_scene_node" />
+			</node>
+			<node id="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_F19721000063102514121_001_zb_ub_spanner_24_ba1.1" name="F19721000063102514121_001_zb_ub_spanner_24_ba1">
+				<matrix>1 0 0 6.36646e-012 0 1 0 1.36424e-012 0 0 1 -5.45697e-012 0 0 0 1</matrix>
+				<translate>574 805 589</translate>
+				<rotate>-0.357407 0.862856 0.357407 -98.4211</rotate>
+				<rotate sid="06_41_24_ba_rot_axis">0 0 1 0</rotate>
+				<translate>152.735 -985.707 574</translate>
+				<rotate>-0.357407 0.862856 0.357407 98.4211</rotate>
+				<instance_node url="F19721000063102514121_001_zb_ub_spanner_24_ba1_Product.dae#F19721000063102514121_001_zb_ub_spanner_24_ba1_visual_scene_node" />
+			</node>
+			<node id="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_F19721000063102514121_001_zb_ub_spanner_25_ba.1" name="F19721000063102514121_001_zb_ub_spanner_25_ba">
+				<matrix>1 0 0 6.36646e-012 0 1 0 1.36424e-012 0 0 1 -5.45697e-012 0 0 0 1</matrix>
+				<translate>-88.0016 -19.5001 723</translate>
+				<rotate>1.92073e-009 0.707107 0.707107 180</rotate>
+				<rotate sid="07_41_25_ba_rot_axis">0 0 1 0</rotate>
+				<translate>-88.0016 -723 19.5001</translate>
+				<rotate>1.92073e-009 0.707107 0.707107 180</rotate>
+				<instance_node url="F19721000063102514121_001_zb_ub_spanner_25_ba_Product.dae#F19721000063102514121_001_zb_ub_spanner_25_ba_visual_scene_node" />
+			</node>
+			<node name="FrameOfInterest_Base1" sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_FrameOfInterest_Base1">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 100 0 0 0 1</matrix>
+			</node>
+			<node name="FrameOfInterest_Zentrierstift1" sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_FrameOfInterest_Zentrierstift1">
+				<matrix>1 0 0 -424.735 0 1 0 -572.998 0 0 1 605.999 0 0 0 1</matrix>
+			</node>
+			<node name="FrameOfInterest_FZG0" sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_FrameOfInterest_FZG0">
+				<matrix>1 0 0 -1195 0 1 0 -15 0 0 1 697 0 0 0 1</matrix>
+			</node>
+			<node name="AttachmentPoint_020GRF141_A2136160067_SFK-HAB-010" sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_AttachmentPoint_020GRF141_A2136160067_SFK-HAB-010">
+				<matrix>1 0 0 540.163 0 1 0 -678.001 0 0 1 579.276 0 0 0 1</matrix>
+			</node>
+			<node name="AttachmentPoint_KRxxxRultra.6.1" sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_AttachmentPoint_KRxxxRultra.6.1">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 100 0 0 0 1</matrix>
+			</node>
+		</node>
+	</library_nodes>
+	<library_visual_scenes>
+		<visual_scene id="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_visual_scene">
+			<node id="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_visual_scene_node" name="F19721000063102514100_001_zb_hb_greifer_141_layout_kin">
+				<instance_node url="#F19721000063102514100_001_zb_hb_greifer_141_layout_kin" />
+			</node>
+		</visual_scene>
+	</library_visual_scenes>
+	<library_joints>
+		<joint id="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_020RB_141_01_41_11_ba_tra" name="01_41_11_ba_tra">
+			<prismatic sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>-100</min>
+					<max>100</max>
+				</limits>
+			</prismatic>
+		</joint>
+		<joint id="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_020RB_141_02_41_12_ba_tra" name="02_41_12_ba_tra">
+			<prismatic sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>-100</min>
+					<max>100</max>
+				</limits>
+			</prismatic>
+		</joint>
+		<joint id="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_020RB_141_03_41_21_ba_rot" name="03_41_21_ba_rot">
+			<revolute sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>-360</min>
+					<max>360</max>
+				</limits>
+			</revolute>
+		</joint>
+		<joint id="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_020RB_141_04_41_22_ba_rot" name="04_41_22_ba_rot">
+			<revolute sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>-360</min>
+					<max>360</max>
+				</limits>
+			</revolute>
+		</joint>
+		<joint id="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_020RB_141_05_41_23_ba_rot" name="05_41_23_ba_rot">
+			<revolute sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>-360</min>
+					<max>360</max>
+				</limits>
+			</revolute>
+		</joint>
+		<joint id="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_020RB_141_06_41_24_ba_rot" name="06_41_24_ba_rot">
+			<revolute sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>-360</min>
+					<max>360</max>
+				</limits>
+			</revolute>
+		</joint>
+		<joint id="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_020RB_141_07_41_25_ba_rot" name="07_41_25_ba_rot">
+			<revolute sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>-360</min>
+					<max>360</max>
+				</limits>
+			</revolute>
+		</joint>
+	</library_joints>
+	<library_kinematics_models>
+		<kinematics_model id="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0" name="020RB_141">
+			<technique_common>
+				<instance_joint sid="01_41_11_ba_tra" url="#F19721000063102514100_001_zb_hb_greifer_141_layout_kin_020RB_141_01_41_11_ba_tra" />
+				<instance_joint sid="02_41_12_ba_tra" url="#F19721000063102514100_001_zb_hb_greifer_141_layout_kin_020RB_141_02_41_12_ba_tra" />
+				<instance_joint sid="03_41_21_ba_rot" url="#F19721000063102514100_001_zb_hb_greifer_141_layout_kin_020RB_141_03_41_21_ba_rot" />
+				<instance_joint sid="04_41_22_ba_rot" url="#F19721000063102514100_001_zb_hb_greifer_141_layout_kin_020RB_141_04_41_22_ba_rot" />
+				<instance_joint sid="05_41_23_ba_rot" url="#F19721000063102514100_001_zb_hb_greifer_141_layout_kin_020RB_141_05_41_23_ba_rot" />
+				<instance_joint sid="06_41_24_ba_rot" url="#F19721000063102514100_001_zb_hb_greifer_141_layout_kin_020RB_141_06_41_24_ba_rot" />
+				<instance_joint sid="07_41_25_ba_rot" url="#F19721000063102514100_001_zb_hb_greifer_141_layout_kin_020RB_141_07_41_25_ba_rot" />
+				<link name="F19721000063102514100_001_zb_hb_greifer_141_layout_Festanteile.1" sid="F19721000063102514100_001_zb_hb_greifer_141_layout_Festanteile.1">
+					<translate>6.36646e-012 1.36424e-012 -5.45697e-012</translate>
+					<attachment_full joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/01_41_11_ba_tra">
+						<translate>-403.157 -588.163 936</translate>
+						<rotate>0 1 0 180</rotate>
+						<link name="F19721000063102514111_001_zb_ub_stiftzieher_11_ba.1" sid="F19721000063102514111_001_zb_ub_stiftzieher_11_ba.1">
+							<translate>-403.157 588.163 936</translate>
+							<rotate>0 1 0 180</rotate>
+						</link>
+					</attachment_full>
+					<attachment_full joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/02_41_12_ba_tra">
+						<translate>825.402 469.035 908</translate>
+						<rotate>0 1 -4.83377e-008 180</rotate>
+						<link name="F19721000063102514112_001_zb_ub_stiftzieher_12_ba.1" sid="F19721000063102514112_001_zb_ub_stiftzieher_12_ba.1">
+							<translate>825.402 -469.035 908</translate>
+							<rotate>0 1 -4.83377e-008 180</rotate>
+						</link>
+					</attachment_full>
+					<attachment_full joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/03_41_21_ba_rot">
+						<translate>-206 -835 589</translate>
+						<rotate>0.57735 0.57735 0.57735 120</rotate>
+						<link name="F19721000063102514121_001_zb_ub_spanner_21_ba.1" sid="F19721000063102514121_001_zb_ub_spanner_21_ba.1">
+							<translate>835 -589 206</translate>
+							<rotate>0.57735 0.57735 0.57735 -120</rotate>
+						</link>
+					</attachment_full>
+					<attachment_full joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/04_41_22_ba_rot">
+						<translate>-206 805 589</translate>
+						<rotate>-0.57735 0.57735 0.57735 -120</rotate>
+						<link name="F19721000063102514121_001_zb_ub_spanner_22_ba.1" sid="F19721000063102514121_001_zb_ub_spanner_22_ba.1">
+							<translate>805 -589 -206</translate>
+							<rotate>-0.57735 0.57735 0.57735 120</rotate>
+						</link>
+					</attachment_full>
+					<attachment_full joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/05_41_23_ba_rot">
+						<translate>574 -835 589</translate>
+						<rotate>0.357407 0.862856 0.357407 98.4211</rotate>
+						<link name="F19721000063102514121_001_zb_ub_spanner_23_ba.1" sid="F19721000063102514121_001_zb_ub_spanner_23_ba.1">
+							<translate>1006.92 173.948 -574</translate>
+							<rotate>0.357407 0.862856 0.357407 -98.4211</rotate>
+						</link>
+					</attachment_full>
+					<attachment_full joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/06_41_24_ba_rot">
+						<translate>574 805 589</translate>
+						<rotate>-0.357407 0.862856 0.357407 -98.4211</rotate>
+						<link name="F19721000063102514121_001_zb_ub_spanner_24_ba1.1" sid="F19721000063102514121_001_zb_ub_spanner_24_ba1.1">
+							<translate>152.735 -985.707 574</translate>
+							<rotate>-0.357407 0.862856 0.357407 98.4211</rotate>
+						</link>
+					</attachment_full>
+					<attachment_full joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/07_41_25_ba_rot">
+						<translate>-88.0016 -19.5001 723</translate>
+						<rotate>1.92073e-009 0.707107 0.707107 180</rotate>
+						<link name="F19721000063102514121_001_zb_ub_spanner_25_ba.1" sid="F19721000063102514121_001_zb_ub_spanner_25_ba.1">
+							<translate>-88.0016 -723 19.5001</translate>
+							<rotate>1.92073e-009 0.707107 0.707107 180</rotate>
+						</link>
+					</attachment_full>
+				</link>
+			</technique_common>
+			<extra>
+				<technique profile="POSES">
+					<poses>
+						<pose count="7" name="01_Fixierstifte_vor">
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/01_41_11_ba_tra">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/02_41_12_ba_tra">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/03_41_21_ba_rot">
+								<value>
+									<double>90</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/04_41_22_ba_rot">
+								<value>
+									<double>90</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/05_41_23_ba_rot">
+								<value>
+									<double>90</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/06_41_24_ba_rot">
+								<value>
+									<double>90</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/07_41_25_ba_rot">
+								<value>
+									<double>90</double>
+								</value>
+							</pose_joint>
+						</pose>
+						<pose count="7" name="CLOSE_ALL">
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/01_41_11_ba_tra">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/02_41_12_ba_tra">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/03_41_21_ba_rot">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/04_41_22_ba_rot">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/05_41_23_ba_rot">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/06_41_24_ba_rot">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/07_41_25_ba_rot">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+						</pose>
+						<pose count="7" name="02_Fixierstifte_zurueck">
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/01_41_11_ba_tra">
+								<value>
+									<double>40</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/02_41_12_ba_tra">
+								<value>
+									<double>40</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/03_41_21_ba_rot">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/04_41_22_ba_rot">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/05_41_23_ba_rot">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/06_41_24_ba_rot">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/07_41_25_ba_rot">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+						</pose>
+						<pose count="7" name="OPEN_ALL">
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/01_41_11_ba_tra">
+								<value>
+									<double>40</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/02_41_12_ba_tra">
+								<value>
+									<double>40</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/03_41_21_ba_rot">
+								<value>
+									<double>90</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/04_41_22_ba_rot">
+								<value>
+									<double>90</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/05_41_23_ba_rot">
+								<value>
+									<double>90</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/06_41_24_ba_rot">
+								<value>
+									<double>90</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/07_41_25_ba_rot">
+								<value>
+									<double>90</double>
+								</value>
+							</pose_joint>
+						</pose>
+					</poses>
+				</technique>
+			</extra>
+		</kinematics_model>
+	</library_kinematics_models>
+	<library_articulated_systems>
+		<articulated_system id="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0">
+			<kinematics>
+				<instance_kinematics_model sid="inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0" url="#F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0">
+					<newparam sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0">
+						<SIDREF>F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0/inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0</SIDREF>
+					</newparam>
+					<newparam sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_01_41_11_ba_tra_axis">
+						<SIDREF>F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0/inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/01_41_11_ba_tra/axis</SIDREF>
+					</newparam>
+					<newparam sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_01_41_11_ba_tra_axis_value">
+						<float>0</float>
+					</newparam>
+					<newparam sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_02_41_12_ba_tra_axis">
+						<SIDREF>F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0/inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/02_41_12_ba_tra/axis</SIDREF>
+					</newparam>
+					<newparam sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_02_41_12_ba_tra_axis_value">
+						<float>0</float>
+					</newparam>
+					<newparam sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_03_41_21_ba_rot_axis">
+						<SIDREF>F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0/inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/03_41_21_ba_rot/axis</SIDREF>
+					</newparam>
+					<newparam sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_03_41_21_ba_rot_axis_value">
+						<float>0</float>
+					</newparam>
+					<newparam sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_04_41_22_ba_rot_axis">
+						<SIDREF>F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0/inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/04_41_22_ba_rot/axis</SIDREF>
+					</newparam>
+					<newparam sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_04_41_22_ba_rot_axis_value">
+						<float>0</float>
+					</newparam>
+					<newparam sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_05_41_23_ba_rot_axis">
+						<SIDREF>F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0/inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/05_41_23_ba_rot/axis</SIDREF>
+					</newparam>
+					<newparam sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_05_41_23_ba_rot_axis_value">
+						<float>0</float>
+					</newparam>
+					<newparam sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_06_41_24_ba_rot_axis">
+						<SIDREF>F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0/inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/06_41_24_ba_rot/axis</SIDREF>
+					</newparam>
+					<newparam sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_06_41_24_ba_rot_axis_value">
+						<float>0</float>
+					</newparam>
+					<newparam sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_07_41_25_ba_rot_axis">
+						<SIDREF>F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0/inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/07_41_25_ba_rot/axis</SIDREF>
+					</newparam>
+					<newparam sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_07_41_25_ba_rot_axis_value">
+						<float>0</float>
+					</newparam>
+				</instance_kinematics_model>
+				<technique_common>
+					<axis_info axis="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0/inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/01_41_11_ba_tra/axis" name="01_41_11_ba_tra" sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_01_41_11_ba_tra">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>1</int>
+						</index>
+						<limits>
+							<min>
+								<float>0</float>
+							</min>
+							<max>
+								<float>40</float>
+							</max>
+						</limits>
+					</axis_info>
+					<axis_info axis="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0/inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/02_41_12_ba_tra/axis" name="02_41_12_ba_tra" sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_02_41_12_ba_tra">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>2</int>
+						</index>
+						<limits>
+							<min>
+								<float>0</float>
+							</min>
+							<max>
+								<float>40</float>
+							</max>
+						</limits>
+					</axis_info>
+					<axis_info axis="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0/inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/03_41_21_ba_rot/axis" name="03_41_21_ba_rot" sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_03_41_21_ba_rot">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>3</int>
+						</index>
+						<limits>
+							<min>
+								<float>0</float>
+							</min>
+							<max>
+								<float>90</float>
+							</max>
+						</limits>
+					</axis_info>
+					<axis_info axis="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0/inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/04_41_22_ba_rot/axis" name="04_41_22_ba_rot" sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_04_41_22_ba_rot">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>4</int>
+						</index>
+						<limits>
+							<min>
+								<float>0</float>
+							</min>
+							<max>
+								<float>90</float>
+							</max>
+						</limits>
+					</axis_info>
+					<axis_info axis="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0/inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/05_41_23_ba_rot/axis" name="05_41_23_ba_rot" sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_05_41_23_ba_rot">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>5</int>
+						</index>
+						<limits>
+							<min>
+								<float>0</float>
+							</min>
+							<max>
+								<float>90</float>
+							</max>
+						</limits>
+					</axis_info>
+					<axis_info axis="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0/inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/06_41_24_ba_rot/axis" name="06_41_24_ba_rot" sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_06_41_24_ba_rot">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>6</int>
+						</index>
+						<limits>
+							<min>
+								<float>0</float>
+							</min>
+							<max>
+								<float>90</float>
+							</max>
+						</limits>
+					</axis_info>
+					<axis_info axis="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0/inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/07_41_25_ba_rot/axis" name="07_41_25_ba_rot" sid="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_07_41_25_ba_rot">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>7</int>
+						</index>
+						<limits>
+							<min>
+								<float>0</float>
+							</min>
+							<max>
+								<float>90</float>
+							</max>
+						</limits>
+					</axis_info>
+					<frame_origin link="inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/F19721000063102514100_001_zb_hb_greifer_141_layout_Festanteile.1">
+						<translate>6.36646e-012 1.36424e-012 -5.45697e-012</translate>
+					</frame_origin>
+					<frame_tip link="inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0/F19721000063102514121_001_zb_ub_spanner_25_ba.1">
+						<translate>6.36646e-012 1.36424e-012 -5.45697e-012</translate>
+					</frame_tip>
+				</technique_common>
+			</kinematics>
+		</articulated_system>
+	</library_articulated_systems>
+	<library_kinematics_scenes>
+		<kinematics_scene id="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene">
+			<instance_articulated_system sid="inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0" url="#F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0">
+				<bind symbol="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0">
+					<param ref="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0" />
+				</bind>
+				<bind symbol="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_01_41_11_ba_tra_axis">
+					<param ref="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_01_41_11_ba_tra_axis" />
+				</bind>
+				<bind symbol="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_01_41_11_ba_tra_axis_value">
+					<param ref="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_01_41_11_ba_tra_axis_value" />
+				</bind>
+				<bind symbol="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_02_41_12_ba_tra_axis">
+					<param ref="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_02_41_12_ba_tra_axis" />
+				</bind>
+				<bind symbol="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_02_41_12_ba_tra_axis_value">
+					<param ref="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_02_41_12_ba_tra_axis_value" />
+				</bind>
+				<bind symbol="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_03_41_21_ba_rot_axis">
+					<param ref="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_03_41_21_ba_rot_axis" />
+				</bind>
+				<bind symbol="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_03_41_21_ba_rot_axis_value">
+					<param ref="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_03_41_21_ba_rot_axis_value" />
+				</bind>
+				<bind symbol="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_04_41_22_ba_rot_axis">
+					<param ref="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_04_41_22_ba_rot_axis" />
+				</bind>
+				<bind symbol="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_04_41_22_ba_rot_axis_value">
+					<param ref="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_04_41_22_ba_rot_axis_value" />
+				</bind>
+				<bind symbol="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_05_41_23_ba_rot_axis">
+					<param ref="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_05_41_23_ba_rot_axis" />
+				</bind>
+				<bind symbol="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_05_41_23_ba_rot_axis_value">
+					<param ref="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_05_41_23_ba_rot_axis_value" />
+				</bind>
+				<bind symbol="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_06_41_24_ba_rot_axis">
+					<param ref="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_06_41_24_ba_rot_axis" />
+				</bind>
+				<bind symbol="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_06_41_24_ba_rot_axis_value">
+					<param ref="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_06_41_24_ba_rot_axis_value" />
+				</bind>
+				<bind symbol="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_07_41_25_ba_rot_axis">
+					<param ref="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_07_41_25_ba_rot_axis" />
+				</bind>
+				<bind symbol="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_07_41_25_ba_rot_axis_value">
+					<param ref="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_07_41_25_ba_rot_axis_value" />
+				</bind>
+			</instance_articulated_system>
+		</kinematics_scene>
+	</library_kinematics_scenes>
+	<scene>
+		<instance_visual_scene url="#F19721000063102514100_001_zb_hb_greifer_141_layout_kin_visual_scene" />
+		<instance_kinematics_scene url="#F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene">
+			<bind_kinematics_model node="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_F19721000063102514100_001_zb_hb_greifer_141_layout_Festanteile.1">
+				<param>F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0</param>
+			</bind_kinematics_model>
+			<bind_joint_axis target="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_F19721000063102514111_001_zb_ub_stiftzieher_11_ba.1/01_41_11_ba_tra_axis">
+				<axis>
+					<param>F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_01_41_11_ba_tra_axis</param>
+				</axis>
+				<value>
+					<param>F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_01_41_11_ba_tra_axis_value</param>
+				</value>
+			</bind_joint_axis>
+			<bind_joint_axis target="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_F19721000063102514112_001_zb_ub_stiftzieher_12_ba.1/02_41_12_ba_tra_axis">
+				<axis>
+					<param>F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_02_41_12_ba_tra_axis</param>
+				</axis>
+				<value>
+					<param>F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_02_41_12_ba_tra_axis_value</param>
+				</value>
+			</bind_joint_axis>
+			<bind_joint_axis target="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_F19721000063102514121_001_zb_ub_spanner_21_ba.1/03_41_21_ba_rot_axis">
+				<axis>
+					<param>F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_03_41_21_ba_rot_axis</param>
+				</axis>
+				<value>
+					<param>F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_03_41_21_ba_rot_axis_value</param>
+				</value>
+			</bind_joint_axis>
+			<bind_joint_axis target="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_F19721000063102514121_001_zb_ub_spanner_22_ba.1/04_41_22_ba_rot_axis">
+				<axis>
+					<param>F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_04_41_22_ba_rot_axis</param>
+				</axis>
+				<value>
+					<param>F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_04_41_22_ba_rot_axis_value</param>
+				</value>
+			</bind_joint_axis>
+			<bind_joint_axis target="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_F19721000063102514121_001_zb_ub_spanner_23_ba.1/05_41_23_ba_rot_axis">
+				<axis>
+					<param>F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_05_41_23_ba_rot_axis</param>
+				</axis>
+				<value>
+					<param>F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_05_41_23_ba_rot_axis_value</param>
+				</value>
+			</bind_joint_axis>
+			<bind_joint_axis target="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_F19721000063102514121_001_zb_ub_spanner_24_ba1.1/06_41_24_ba_rot_axis">
+				<axis>
+					<param>F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_06_41_24_ba_rot_axis</param>
+				</axis>
+				<value>
+					<param>F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_06_41_24_ba_rot_axis_value</param>
+				</value>
+			</bind_joint_axis>
+			<bind_joint_axis target="F19721000063102514100_001_zb_hb_greifer_141_layout_kin_F19721000063102514121_001_zb_ub_spanner_25_ba.1/07_41_25_ba_rot_axis">
+				<axis>
+					<param>F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_07_41_25_ba_rot_axis</param>
+				</axis>
+				<value>
+					<param>F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_scene_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_art_system.0_inst_F19721000063102514100_001_zb_hb_greifer_141_layout_kin_kin_model.0_07_41_25_ba_rot_axis_value</param>
+				</value>
+			</bind_joint_axis>
+		</instance_kinematics_scene>
+	</scene>
+</COLLADA>

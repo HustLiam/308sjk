@@ -140,7 +140,8 @@ def test_full_regeneration_never_resolves_old_rules_and_uses_new_asset_directori
         left,right=first['candidates'][0],second['candidates'][0]
         assert left['directory']!=right['directory'] and left['directory']!=str(old)
         assert left['version']!=right['version'] and not left['approved'] and not right['approved']
-        assert left['rule']['model']==right['rule']['model']==rule()['model']
+        from src.agent.scene_agent.verification import apply_physics
+        assert left['rule']['model']==right['rule']['model']==apply_physics(rule())['model']
         for state in (first,second):
             task=read_json(manager.directory(state['id'])/'task.json')
             assert task['force_regenerate'] and all(c['origin']=='author_required' for c in task['component_resolution'])

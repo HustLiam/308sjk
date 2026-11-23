@@ -15,17 +15,23 @@ def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--library',default='E:/chagpt/scene_component_library')
     sub=parser.add_subparsers(dest='command',required=True)
+    p=sub.add_parser('import-package',help='按 AML 外部资源引用导入并装配，不调用 Agent')
+    p.add_argument('--aml',required=True);p.add_argument('--out',required=True)
+    p.add_argument('--aliases',help='显式资源路径修正 JSON；不修改源文件')
     p=sub.add_parser('prepare');source=p.add_mutually_exclusive_group(required=True)
     source.add_argument('--aml');source.add_argument('--device-ir');p.add_argument('--request',required=True)
     p.add_argument('--out',required=True);p.add_argument('--candidate-rules');p.add_argument('--offline',action='store_true')
     p.add_argument('--blender',default='E:/Blender/blender.exe')
+    p.add_argument('--verification-profile',choices=['fixed_model_io/1','legacy'],default='fixed_model_io/1')
     p=sub.add_parser('build');p.add_argument('--task',required=True);p.add_argument('--candidate-validation',action='store_true')
     p.add_argument('--blender',default='E:/Blender/blender.exe')
     p=sub.add_parser('check');p.add_argument('--task',required=True);p.add_argument('--candidate-validation',action='store_true')
     p.add_argument('--freeze',action='store_true')
+    p.add_argument('--plc-host');p.add_argument('--plc-port',type=int,default=502)
     p=sub.add_parser('review');p.add_argument('--task',required=True)
     p=sub.add_parser('tests');p.add_argument('--task',required=True);p.add_argument('--test-id',action='append')
     p.add_argument('--candidate-validation',action='store_true')
+    p.add_argument('--plc-host');p.add_argument('--plc-port',type=int,default=502)
     p=sub.add_parser('run');p.add_argument('--scene',required=True);p.add_argument('--host',required=True)
     p.add_argument('--port',type=int,default=502);p.add_argument('--prog-id',type=int,required=True)
     p.add_argument('--seconds',type=float,default=30);p.add_argument('--schedule')
@@ -35,7 +41,15 @@ def main(argv=None):
     p.add_argument('--patch');p.add_argument('--request');p.add_argument('--editable-id',action='append',default=[])
     args=parser.parse_args(argv);library=ComponentLibrary(args.library)
     try:
-        if args.command=='prepare':
+        if args.command=='import-package':
+            from .package_import import import_package
+            report=import_package(args.aml,args.out,aliases=read_json(args.aliases) if args.aliases else None,
+                                  progress=lambda message:print(message,flush=True))
+            result={k:report[k] for k in ('status','counts','issues','gaps','simulation_acceptance')}
+            if not report['assembly']['compiled']:
+                result['assembly']=report['assembly']
+                print(json.dumps(result,ensure_ascii=False,indent=2));return 2
+        elif args.command=='prepare':
             candidates=read_json(args.candidate_rules)['rules'] if args.candidate_rules else None
             author=None
             if not args.offline and candidates is None:
@@ -43,16 +57,19 @@ def main(argv=None):
                 from ..client import BigModelClient
                 from .author import SceneGenerationAgent
                 if get_api_key():author=SceneGenerationAgent(BigModelClient(get_api_key()))
-            result=prepare(read_json(args.device_ir) if args.device_ir else args.aml,args.request,args.out,library,candidate_rules=candidates,author=author,blender=args.blender)
+            result=prepare(read_json(args.device_ir) if args.device_ir else args.aml,args.request,args.out,library,candidate_rules=candidates,author=author,blender=args.blender,verification_profile=args.verification_profile)
         elif args.command=='build':result=build_task(args.task,library,isolated_candidates=args.candidate_validation,blender=args.blender)
-        elif args.command=='check':result=check_task(args.task,isolated_candidates=args.candidate_validation,freeze=args.freeze)
+        elif args.command=='check':
+            result=check_task(args.task,isolated_candidates=args.candidate_validation,freeze=args.freeze,
+                plc_config={'host':args.plc_host,'port':args.plc_port} if args.plc_host else None)
+            if result['status']!='passed':print(json.dumps(result,ensure_ascii=False,indent=2));return 2
         elif args.command=='review':result=review_pack(args.task)
         elif args.command=='tests':
             from .simulation_tests import run_test_plan
             task=Path(args.task);scene=task/('candidate_scene' if args.candidate_validation else 'scene')
-            result=run_test_plan(read_json(task/'device_ir.json'),read_json(scene/'scene.physical.json'),
-                (scene/'scene.xml').read_text(encoding='utf-8'),read_json(task/'simulation_tests.json'),
-                args.test_id,output=scene/'selected_tests')
+            from .workflow import test_task
+            result=test_task(task,isolated_candidates=args.candidate_validation,selected=args.test_id,
+                plc_config={'host':args.plc_host,'port':args.plc_port} if args.plc_host else None)
             if result['status']!='passed':
                 print(json.dumps(result,ensure_ascii=False,indent=2));return 2
         elif args.command=='run':

@@ -1,0 +1,10 @@
+{
+  "cycle_hz": 30,
+  "command_timeout_s": 2,
+  "scene_dir": "../../workspace/frontend/data/device-scenes/tasks/61831a5482b14d44a93004d26370571d/imported_scene_2aeefc93ede14732a519e819a3b44a28",
+  "runtime": {
+    "host": "192.168.12.131",
+    "port": 1502,
+    "web_url": "http://192.168.12.131:8081"
+  }
+}

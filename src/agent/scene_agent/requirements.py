@@ -19,6 +19,30 @@ MODEL_REQUIREMENTS={
     'acceptance_boundary':'组件审批与设备独立检查通过，不表示 PLC 闭环验收通过。'
 }
 
+def for_device(ir):
+    from .verification import enabled,SIMPLIFICATION,PROFILE
+    if not enabled(ir):return MODEL_REQUIREMENTS
+    return {'profile':PROFILE,'purpose':'隔离装配模型的结构与逐点 IO 校验',
+        'required':['保留组件关键尺寸、位姿、层级、安装接口和运动副。',
+                    '安装接口使用完整局部坐标系；保留初值、上下限、速度和加速度。',
+                    '逐点检查 IO 声明与实际物理量；PLC 输入和输出均需真实扫描证据。',
+                    'Agent 提供模型和 AML 参数 JSON；固定检查器执行检查并判定。',
+                    '测试动作须通过实际模型的碰撞与限位预检；不要求全行程扫动或额外整机功能测试。'],
+        'simplification':SIMPLIFICATION,'blocking_policy':'缺失必要事实、未覆盖或未连接正确的隔离 OpenPLC 测试程序均不能判定通过。',
+        'limitations_policy':'质量、惯量、摩擦和阻尼采用统一近似配置，不做真实动力学精度验收。',
+        'acceptance_boundary':'本轮仅检查模型结构和 IO 链路，不执行生产 PLC 控制逻辑验收。'}
+
+
+def kernels_for_device(ir):
+    import copy
+    from .verification import enabled
+    result=copy.deepcopy(RUNTIME_KERNEL_CONTRACTS)
+    if enabled(ir):
+        result['joint_position']['physical']='Host supplies uniform mass, damping, friction and gain; omit authored physical tuning.'
+        result['binary_prismatic']['physical_parameters_location']='Host-owned approximation; author only geometry, interfaces and binding.'
+        result['conveyor']['collision_contract']='Keep collision geometry; host supplies uniform friction.'
+    return result
+
 # These are implemented quantities, not capabilities an author may invent.
 IO_KERNEL_QUANTITIES={
     'robot_control':{'enable_cmd','reset_cmd','ready','fault'},

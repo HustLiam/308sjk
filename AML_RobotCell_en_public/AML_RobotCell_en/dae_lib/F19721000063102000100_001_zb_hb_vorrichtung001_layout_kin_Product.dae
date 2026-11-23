@@ -1,0 +1,875 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<COLLADA version="1.5.0" xmlns="http://www.collada.org/2008/03/COLLADASchema">
+	<asset>
+		<contributor>
+			<author>AutomationML e.V.</author>
+			<author_website>www.automationml.org</author_website>
+			<authoring_tool>"Notepad++" "6.8.6" "6.8.6"</authoring_tool>
+		</contributor>
+		<created>2015-12-15T13:12:06.7153453+01:00</created>
+		<modified>2015-12-15T13:12:06.7153453+01:00</modified>
+		<unit meter="0.001" name="mm" />
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_nodes>
+		<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin" name="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin">
+			<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile.1" name="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_Product.dae#F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_F19721000063102000115_001_zb_ub_stiftzieher_15.1" name="F19721000063102000115_001_zb_ub_stiftzieher_15">
+				<matrix>1 0 0 2.61521 0 1 0 0 0 0 1 39.9144 0 0 0 1</matrix>
+				<translate>538.244 -154.523 -3.35503</translate>
+				<rotate>0.0327076 0 0.999465 180</rotate>
+				<rotate sid="01_01_15_ba_tra_axis">0 0 1 0</rotate>
+				<translate>537.311 -154.523 -31.8426</translate>
+				<rotate>0.0327076 0 0.999465 180</rotate>
+				<instance_node url="F19721000063102000115_001_zb_ub_stiftzieher_15_Product.dae#F19721000063102000115_001_zb_ub_stiftzieher_15_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_F19721000063102000115_001_zb_ub_stiftzieher_17.1" name="F19721000063102000115_001_zb_ub_stiftzieher_17">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 40 0 0 0 1</matrix>
+				<translate>-173.369 -18.7513 0</translate>
+				<rotate>0 0 1 180</rotate>
+				<rotate sid="02_01_17_ba_tra_axis">0 0 1 0</rotate>
+				<translate>-173.369 -18.7513 0</translate>
+				<rotate>0 0 1 180</rotate>
+				<instance_node url="F19721000063102000115_001_zb_ub_stiftzieher_17_Product.dae#F19721000063102000115_001_zb_ub_stiftzieher_17_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_F19721000063102000115_001_zb_ub_stiftzieher_13.1" name="F19721000063102000115_001_zb_ub_stiftzieher_13">
+				<matrix>1 0 0 -0.000221213 0 1 0 0 0 0 1 40 0 0 0 1</matrix>
+				<translate>-454.307 -190.243 -2.30454e-008</translate>
+				<rotate>-2.76516e-006 0 1 180</rotate>
+				<rotate sid="03_01_13_ba_tra_axis">0 0 1 0</rotate>
+				<translate>-454.307 -190.243 -0.00251244</translate>
+				<rotate>-2.76516e-006 0 1 180</rotate>
+				<instance_node url="F19721000063102000115_001_zb_ub_stiftzieher_13_Product.dae#F19721000063102000115_001_zb_ub_stiftzieher_13_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_F19721000063102000115_001_zb_ub_stiftzieher_11.1" name="F19721000063102000115_001_zb_ub_stiftzieher_11">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 80 0 0 0 1</matrix>
+				<translate>512.07 -371.191 0</translate>
+				<rotate>0 0 1 180</rotate>
+				<rotate sid="04_01_11_ba_tra_axis">0 0 1 0</rotate>
+				<translate>512.07 -371.191 0</translate>
+				<rotate>0 0 1 180</rotate>
+				<instance_node url="F19721000063102000115_001_zb_ub_stiftzieher_11_Product.dae#F19721000063102000115_001_zb_ub_stiftzieher_11_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_F19721000063102000153_001_zb_ub_verriegelung_53.1" name="F19721000063102000153_001_zb_ub_verriegelung_53">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<translate>-846 -650 -2001</translate>
+				<rotate>-0.57735 0.57735 0.57735 -120</rotate>
+				<rotate sid="05_01_53_ba_rot_axis">0 0 1 0</rotate>
+				<translate>-650 2001 -846</translate>
+				<rotate>-0.57735 0.57735 0.57735 120</rotate>
+				<instance_node url="F19721000063102000153_001_zb_ub_verriegelung_53_Product.dae#F19721000063102000153_001_zb_ub_verriegelung_53_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_F19721000063102000153_001_zb_ub_verriegelung_54.1" name="F19721000063102000153_001_zb_ub_verriegelung_54">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<translate>-846.001 649.999 -2001</translate>
+				<rotate>0.485526 0.727 0.485526 107.966</rotate>
+				<rotate sid="06_01_54_ba_rot_axis">0 0 1 0</rotate>
+				<translate>-1367 1599.32 846.001</translate>
+				<rotate>0.485526 0.727 0.485526 -107.966</rotate>
+				<instance_node url="F19721000063102000153_001_zb_ub_verriegelung_54_Product.dae#F19721000063102000153_001_zb_ub_verriegelung_54_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_F19721000063102000152_001_zb_ub_schwenkrahmen_52.1" name="F19721000063102000152_001_zb_ub_schwenkrahmen_52">
+				<matrix>1 0 0 -1.81899e-012 0 1 0 0 0 0 1 1.55431e-012 0 0 0 1</matrix>
+				<translate>775 -667.502 -1395</translate>
+				<rotate>1 -1.15785e-007 -1.15785e-007 90</rotate>
+				<rotate sid="07_01_52_ba_rot_axis">0 0 1 0</rotate>
+				<translate>-775.001 1395 -667.502</translate>
+				<rotate>1 -1.15785e-007 -1.15785e-007 -90</rotate>
+				<instance_node url="F19721000063102000152_001_zb_ub_schwenkrahmen_52_Product.dae#F19721000063102000152_001_zb_ub_schwenkrahmen_52_visual_scene_node" />
+			</node>
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_F19721000063102000112_001_sym_of_zb_ub_stiftzieher_11.1" name="F19721000063102000112_001_sym_of_zb_ub_stiftzieher_11">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 80 0 0 0 1</matrix>
+				<translate>503.129 310.231 0</translate>
+				<rotate>0 0 1 180</rotate>
+				<rotate sid="08_01_12_ba_tra_axis">0 0 1 0</rotate>
+				<translate>503.129 310.231 0</translate>
+				<rotate>0 0 1 180</rotate>
+				<instance_node url="F19721000063102000112_001_sym_of_zb_ub_stiftzieher_11_Product.dae#F19721000063102000112_001_sym_of_zb_ub_stiftzieher_11_visual_scene_node" />
+			</node>
+			<node name="FrameOfInterest_Fahrzeug0" sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_FrameOfInterest_Fahrzeug0">
+				<matrix>1 0 0 -1365 0 1 0 0.000183105 0 0 1 -1795 0 0 0 1</matrix>
+			</node>
+			<node name="AttachmentPoint_020RB_100_BA_020R1_030_W" sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_AttachmentPoint_020RB_100_BA_020R1_030_W">
+				<matrix>1 0 0 7500 0 1 0 4870 0 0 1 0 0 0 0 1</matrix>
+			</node>
+			<node name="AttachmentPoint_030RB_100_SWP_030R1_030_W" sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_AttachmentPoint_030RB_100_SWP_030R1_030_W">
+				<matrix>1 0 0 7500 0 1 0 4870 0 0 1 0 0 0 0 1</matrix>
+			</node>
+			<node name="AttachmentPoint_030RB_100_FG_030R1_030_W" sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_AttachmentPoint_030RB_100_FG_030R1_030_W">
+				<matrix>1 0 0 7500 0 1 0 4870 0 0 1 0 0 0 0 1</matrix>
+			</node>
+			<node name="AttachmentPoint_030RB_300_BH_030R3_030_W" sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_AttachmentPoint_030RB_300_BH_030R3_030_W">
+				<matrix>1 0 0 7500 0 1 0 4870 0 0 1 0 0 0 0 1</matrix>
+			</node>
+		</node>
+	</library_nodes>
+	<library_visual_scenes>
+		<visual_scene id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_visual_scene">
+			<node id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_visual_scene_node" name="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin">
+				<instance_node url="#F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin" />
+			</node>
+		</visual_scene>
+	</library_visual_scenes>
+	<library_joints>
+		<joint id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_030GST100_01_01_15_ba_tra" name="01_01_15_ba_tra">
+			<prismatic sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>-100</min>
+					<max>100</max>
+				</limits>
+			</prismatic>
+		</joint>
+		<joint id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_030GST100_02_01_17_ba_tra" name="02_01_17_ba_tra">
+			<prismatic sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>-100</min>
+					<max>100</max>
+				</limits>
+			</prismatic>
+		</joint>
+		<joint id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_030GST100_03_01_13_ba_tra" name="03_01_13_ba_tra">
+			<prismatic sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>-100</min>
+					<max>100</max>
+				</limits>
+			</prismatic>
+		</joint>
+		<joint id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_030GST100_04_01_11_ba_tra" name="04_01_11_ba_tra">
+			<prismatic sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>-100</min>
+					<max>100</max>
+				</limits>
+			</prismatic>
+		</joint>
+		<joint id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_030GST100_05_01_53_ba_rot" name="05_01_53_ba_rot">
+			<revolute sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>-360</min>
+					<max>360</max>
+				</limits>
+			</revolute>
+		</joint>
+		<joint id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_030GST100_06_01_54_ba_rot" name="06_01_54_ba_rot">
+			<revolute sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>-360</min>
+					<max>360</max>
+				</limits>
+			</revolute>
+		</joint>
+		<joint id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_030GST100_07_01_52_ba_rot" name="07_01_52_ba_rot">
+			<revolute sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>-360</min>
+					<max>360</max>
+				</limits>
+			</revolute>
+		</joint>
+		<joint id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_030GST100_08_01_12_ba_tra" name="08_01_12_ba_tra">
+			<prismatic sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>-100</min>
+					<max>100</max>
+				</limits>
+			</prismatic>
+		</joint>
+	</library_joints>
+	<library_kinematics_models>
+		<kinematics_model id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0" name="030GST100">
+			<technique_common>
+				<instance_joint sid="01_01_15_ba_tra" url="#F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_030GST100_01_01_15_ba_tra" />
+				<instance_joint sid="02_01_17_ba_tra" url="#F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_030GST100_02_01_17_ba_tra" />
+				<instance_joint sid="03_01_13_ba_tra" url="#F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_030GST100_03_01_13_ba_tra" />
+				<instance_joint sid="04_01_11_ba_tra" url="#F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_030GST100_04_01_11_ba_tra" />
+				<instance_joint sid="05_01_53_ba_rot" url="#F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_030GST100_05_01_53_ba_rot" />
+				<instance_joint sid="06_01_54_ba_rot" url="#F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_030GST100_06_01_54_ba_rot" />
+				<instance_joint sid="07_01_52_ba_rot" url="#F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_030GST100_07_01_52_ba_rot" />
+				<instance_joint sid="08_01_12_ba_tra" url="#F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_030GST100_08_01_12_ba_tra" />
+				<link name="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile.1" sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile.1">
+					<attachment_full joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/01_01_15_ba_tra">
+						<translate>538.244 -154.523 -3.35503</translate>
+						<rotate>0.0327076 0 0.999465 180</rotate>
+						<link name="F19721000063102000115_001_zb_ub_stiftzieher_15.1" sid="F19721000063102000115_001_zb_ub_stiftzieher_15.1">
+							<translate>537.311 -154.523 -31.8426</translate>
+							<rotate>0.0327076 0 0.999465 180</rotate>
+						</link>
+					</attachment_full>
+					<attachment_full joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/02_01_17_ba_tra">
+						<translate>-173.369 -18.7513 0</translate>
+						<rotate>0 0 1 180</rotate>
+						<link name="F19721000063102000115_001_zb_ub_stiftzieher_17.1" sid="F19721000063102000115_001_zb_ub_stiftzieher_17.1">
+							<translate>-173.369 -18.7513 0</translate>
+							<rotate>0 0 1 180</rotate>
+						</link>
+					</attachment_full>
+					<attachment_full joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/03_01_13_ba_tra">
+						<translate>-454.307 -190.243 -2.30455e-008</translate>
+						<rotate>-2.76516e-006 0 1 180</rotate>
+						<link name="F19721000063102000115_001_zb_ub_stiftzieher_13.1" sid="F19721000063102000115_001_zb_ub_stiftzieher_13.1">
+							<translate>-454.307 -190.243 -0.00251244</translate>
+							<rotate>-2.76516e-006 0 1 180</rotate>
+						</link>
+					</attachment_full>
+					<attachment_full joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/04_01_11_ba_tra">
+						<translate>512.07 -371.191 0</translate>
+						<rotate>0 0 1 180</rotate>
+						<link name="F19721000063102000115_001_zb_ub_stiftzieher_11.1" sid="F19721000063102000115_001_zb_ub_stiftzieher_11.1">
+							<translate>512.07 -371.191 0</translate>
+							<rotate>0 0 1 180</rotate>
+						</link>
+					</attachment_full>
+					<attachment_full joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/05_01_53_ba_rot">
+						<translate>-846 -650 -2001</translate>
+						<rotate>-0.57735 0.57735 0.57735 -120</rotate>
+						<link name="F19721000063102000153_001_zb_ub_verriegelung_53.1" sid="F19721000063102000153_001_zb_ub_verriegelung_53.1">
+							<translate>-650 2001 -846</translate>
+							<rotate>-0.57735 0.57735 0.57735 120</rotate>
+						</link>
+					</attachment_full>
+					<attachment_full joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/06_01_54_ba_rot">
+						<translate>-846.001 649.999 -2001</translate>
+						<rotate>0.485526 0.727 0.485526 107.966</rotate>
+						<link name="F19721000063102000153_001_zb_ub_verriegelung_54.1" sid="F19721000063102000153_001_zb_ub_verriegelung_54.1">
+							<translate>-1367 1599.32 846.001</translate>
+							<rotate>0.485526 0.727 0.485526 -107.966</rotate>
+						</link>
+					</attachment_full>
+					<attachment_full joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/07_01_52_ba_rot">
+						<translate>775 -667.502 -1395</translate>
+						<rotate>1 -1.15785e-007 -1.15785e-007 90</rotate>
+						<link name="F19721000063102000152_001_zb_ub_schwenkrahmen_52.1" sid="F19721000063102000152_001_zb_ub_schwenkrahmen_52.1">
+							<translate>-775.001 1395 -667.502</translate>
+							<rotate>1 -1.15785e-007 -1.15785e-007 -90</rotate>
+						</link>
+					</attachment_full>
+					<attachment_full joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/08_01_12_ba_tra">
+						<translate>503.129 310.231 0</translate>
+						<rotate>0 0 1 180</rotate>
+						<link name="F19721000063102000112_001_sym_of_zb_ub_stiftzieher_11.1" sid="F19721000063102000112_001_sym_of_zb_ub_stiftzieher_11.1">
+							<translate>503.129 310.231 0</translate>
+							<rotate>0 0 1 180</rotate>
+						</link>
+					</attachment_full>
+				</link>
+			</technique_common>
+			<extra>
+				<technique profile="POSES">
+					<poses>
+						<pose count="8" name="01_Fixierstifte_vor">
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/01_01_15_ba_tra">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/02_01_17_ba_tra">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/03_01_13_ba_tra">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/04_01_11_ba_tra">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/05_01_53_ba_rot">
+								<value>
+									<double>120</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/06_01_54_ba_rot">
+								<value>
+									<double>120</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/07_01_52_ba_rot">
+								<value>
+									<double>90</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/08_01_12_ba_tra">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+						</pose>
+						<pose count="8" name="02_Rahmen_zu">
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/01_01_15_ba_tra">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/02_01_17_ba_tra">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/03_01_13_ba_tra">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/04_01_11_ba_tra">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/05_01_53_ba_rot">
+								<value>
+									<double>120</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/06_01_54_ba_rot">
+								<value>
+									<double>120</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/07_01_52_ba_rot">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/08_01_12_ba_tra">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+						</pose>
+						<pose count="8" name="CLOSE_ALL">
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/01_01_15_ba_tra">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/02_01_17_ba_tra">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/03_01_13_ba_tra">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/04_01_11_ba_tra">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/05_01_53_ba_rot">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/06_01_54_ba_rot">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/07_01_52_ba_rot">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/08_01_12_ba_tra">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+						</pose>
+						<pose count="8" name="03_Fixierstifte_zurueck">
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/01_01_15_ba_tra">
+								<value>
+									<double>40</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/02_01_17_ba_tra">
+								<value>
+									<double>40</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/03_01_13_ba_tra">
+								<value>
+									<double>40</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/04_01_11_ba_tra">
+								<value>
+									<double>80</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/05_01_53_ba_rot">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/06_01_54_ba_rot">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/07_01_52_ba_rot">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/08_01_12_ba_tra">
+								<value>
+									<double>80</double>
+								</value>
+							</pose_joint>
+						</pose>
+						<pose count="8" name="04_Spanner_auf">
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/01_01_15_ba_tra">
+								<value>
+									<double>40</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/02_01_17_ba_tra">
+								<value>
+									<double>40</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/03_01_13_ba_tra">
+								<value>
+									<double>40</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/04_01_11_ba_tra">
+								<value>
+									<double>80</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/05_01_53_ba_rot">
+								<value>
+									<double>120</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/06_01_54_ba_rot">
+								<value>
+									<double>120</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/07_01_52_ba_rot">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/08_01_12_ba_tra">
+								<value>
+									<double>80</double>
+								</value>
+							</pose_joint>
+						</pose>
+						<pose count="8" name="OPEN_ALL">
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/01_01_15_ba_tra">
+								<value>
+									<double>40</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/02_01_17_ba_tra">
+								<value>
+									<double>40</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/03_01_13_ba_tra">
+								<value>
+									<double>40</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/04_01_11_ba_tra">
+								<value>
+									<double>80</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/05_01_53_ba_rot">
+								<value>
+									<double>120</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/06_01_54_ba_rot">
+								<value>
+									<double>120</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/07_01_52_ba_rot">
+								<value>
+									<double>90</double>
+								</value>
+							</pose_joint>
+							<pose_joint joint="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/08_01_12_ba_tra">
+								<value>
+									<double>80</double>
+								</value>
+							</pose_joint>
+						</pose>
+					</poses>
+				</technique>
+			</extra>
+		</kinematics_model>
+	</library_kinematics_models>
+	<library_articulated_systems>
+		<articulated_system id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0">
+			<kinematics>
+				<instance_kinematics_model sid="inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0" url="#F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0">
+					<newparam sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0">
+						<SIDREF>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0/inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0</SIDREF>
+					</newparam>
+					<newparam sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_01_01_15_ba_tra_axis">
+						<SIDREF>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0/inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/01_01_15_ba_tra/axis</SIDREF>
+					</newparam>
+					<newparam sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_01_01_15_ba_tra_axis_value">
+						<float>40</float>
+					</newparam>
+					<newparam sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_02_01_17_ba_tra_axis">
+						<SIDREF>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0/inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/02_01_17_ba_tra/axis</SIDREF>
+					</newparam>
+					<newparam sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_02_01_17_ba_tra_axis_value">
+						<float>40</float>
+					</newparam>
+					<newparam sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_03_01_13_ba_tra_axis">
+						<SIDREF>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0/inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/03_01_13_ba_tra/axis</SIDREF>
+					</newparam>
+					<newparam sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_03_01_13_ba_tra_axis_value">
+						<float>40</float>
+					</newparam>
+					<newparam sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_04_01_11_ba_tra_axis">
+						<SIDREF>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0/inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/04_01_11_ba_tra/axis</SIDREF>
+					</newparam>
+					<newparam sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_04_01_11_ba_tra_axis_value">
+						<float>80</float>
+					</newparam>
+					<newparam sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_05_01_53_ba_rot_axis">
+						<SIDREF>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0/inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/05_01_53_ba_rot/axis</SIDREF>
+					</newparam>
+					<newparam sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_05_01_53_ba_rot_axis_value">
+						<float>0</float>
+					</newparam>
+					<newparam sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_06_01_54_ba_rot_axis">
+						<SIDREF>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0/inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/06_01_54_ba_rot/axis</SIDREF>
+					</newparam>
+					<newparam sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_06_01_54_ba_rot_axis_value">
+						<float>0</float>
+					</newparam>
+					<newparam sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_07_01_52_ba_rot_axis">
+						<SIDREF>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0/inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/07_01_52_ba_rot/axis</SIDREF>
+					</newparam>
+					<newparam sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_07_01_52_ba_rot_axis_value">
+						<float>0</float>
+					</newparam>
+					<newparam sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_08_01_12_ba_tra_axis">
+						<SIDREF>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0/inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/08_01_12_ba_tra/axis</SIDREF>
+					</newparam>
+					<newparam sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_08_01_12_ba_tra_axis_value">
+						<float>80</float>
+					</newparam>
+				</instance_kinematics_model>
+				<technique_common>
+					<axis_info axis="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0/inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/01_01_15_ba_tra/axis" name="01_01_15_ba_tra" sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_01_01_15_ba_tra">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>1</int>
+						</index>
+						<limits>
+							<min>
+								<float>0</float>
+							</min>
+							<max>
+								<float>40</float>
+							</max>
+						</limits>
+					</axis_info>
+					<axis_info axis="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0/inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/02_01_17_ba_tra/axis" name="02_01_17_ba_tra" sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_02_01_17_ba_tra">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>2</int>
+						</index>
+						<limits>
+							<min>
+								<float>0</float>
+							</min>
+							<max>
+								<float>40</float>
+							</max>
+						</limits>
+					</axis_info>
+					<axis_info axis="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0/inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/03_01_13_ba_tra/axis" name="03_01_13_ba_tra" sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_03_01_13_ba_tra">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>3</int>
+						</index>
+						<limits>
+							<min>
+								<float>0</float>
+							</min>
+							<max>
+								<float>40</float>
+							</max>
+						</limits>
+					</axis_info>
+					<axis_info axis="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0/inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/04_01_11_ba_tra/axis" name="04_01_11_ba_tra" sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_04_01_11_ba_tra">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>4</int>
+						</index>
+						<limits>
+							<min>
+								<float>0</float>
+							</min>
+							<max>
+								<float>80</float>
+							</max>
+						</limits>
+					</axis_info>
+					<axis_info axis="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0/inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/05_01_53_ba_rot/axis" name="05_01_53_ba_rot" sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_05_01_53_ba_rot">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>5</int>
+						</index>
+						<limits>
+							<min>
+								<float>0</float>
+							</min>
+							<max>
+								<float>120</float>
+							</max>
+						</limits>
+					</axis_info>
+					<axis_info axis="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0/inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/06_01_54_ba_rot/axis" name="06_01_54_ba_rot" sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_06_01_54_ba_rot">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>6</int>
+						</index>
+						<limits>
+							<min>
+								<float>0</float>
+							</min>
+							<max>
+								<float>120</float>
+							</max>
+						</limits>
+					</axis_info>
+					<axis_info axis="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0/inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/07_01_52_ba_rot/axis" name="07_01_52_ba_rot" sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_07_01_52_ba_rot">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>7</int>
+						</index>
+						<limits>
+							<min>
+								<float>0</float>
+							</min>
+							<max>
+								<float>90</float>
+							</max>
+						</limits>
+					</axis_info>
+					<axis_info axis="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0/inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/08_01_12_ba_tra/axis" name="08_01_12_ba_tra" sid="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_08_01_12_ba_tra">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>8</int>
+						</index>
+						<limits>
+							<min>
+								<float>0</float>
+							</min>
+							<max>
+								<float>80</float>
+							</max>
+						</limits>
+					</axis_info>
+					<frame_origin link="inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile.1" />
+					<frame_tip link="inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0/F19721000063102000112_001_sym_of_zb_ub_stiftzieher_11.1">
+						<translate>0 0 80</translate>
+					</frame_tip>
+				</technique_common>
+			</kinematics>
+		</articulated_system>
+	</library_articulated_systems>
+	<library_kinematics_scenes>
+		<kinematics_scene id="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene">
+			<instance_articulated_system sid="inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0" url="#F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0">
+				<bind symbol="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0">
+					<param ref="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0" />
+				</bind>
+				<bind symbol="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_01_01_15_ba_tra_axis">
+					<param ref="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_01_01_15_ba_tra_axis" />
+				</bind>
+				<bind symbol="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_01_01_15_ba_tra_axis_value">
+					<param ref="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_01_01_15_ba_tra_axis_value" />
+				</bind>
+				<bind symbol="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_02_01_17_ba_tra_axis">
+					<param ref="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_02_01_17_ba_tra_axis" />
+				</bind>
+				<bind symbol="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_02_01_17_ba_tra_axis_value">
+					<param ref="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_02_01_17_ba_tra_axis_value" />
+				</bind>
+				<bind symbol="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_03_01_13_ba_tra_axis">
+					<param ref="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_03_01_13_ba_tra_axis" />
+				</bind>
+				<bind symbol="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_03_01_13_ba_tra_axis_value">
+					<param ref="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_03_01_13_ba_tra_axis_value" />
+				</bind>
+				<bind symbol="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_04_01_11_ba_tra_axis">
+					<param ref="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_04_01_11_ba_tra_axis" />
+				</bind>
+				<bind symbol="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_04_01_11_ba_tra_axis_value">
+					<param ref="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_04_01_11_ba_tra_axis_value" />
+				</bind>
+				<bind symbol="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_05_01_53_ba_rot_axis">
+					<param ref="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_05_01_53_ba_rot_axis" />
+				</bind>
+				<bind symbol="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_05_01_53_ba_rot_axis_value">
+					<param ref="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_05_01_53_ba_rot_axis_value" />
+				</bind>
+				<bind symbol="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_06_01_54_ba_rot_axis">
+					<param ref="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_06_01_54_ba_rot_axis" />
+				</bind>
+				<bind symbol="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_06_01_54_ba_rot_axis_value">
+					<param ref="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_06_01_54_ba_rot_axis_value" />
+				</bind>
+				<bind symbol="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_07_01_52_ba_rot_axis">
+					<param ref="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_07_01_52_ba_rot_axis" />
+				</bind>
+				<bind symbol="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_07_01_52_ba_rot_axis_value">
+					<param ref="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_07_01_52_ba_rot_axis_value" />
+				</bind>
+				<bind symbol="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_08_01_12_ba_tra_axis">
+					<param ref="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_08_01_12_ba_tra_axis" />
+				</bind>
+				<bind symbol="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_08_01_12_ba_tra_axis_value">
+					<param ref="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_08_01_12_ba_tra_axis_value" />
+				</bind>
+			</instance_articulated_system>
+		</kinematics_scene>
+	</library_kinematics_scenes>
+	<scene>
+		<instance_visual_scene url="#F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_visual_scene" />
+		<instance_kinematics_scene url="#F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene">
+			<bind_kinematics_model node="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_F19721000063102000100_001_zb_hb_vorrichtung001_layout_Festanteile.1">
+				<param>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0</param>
+			</bind_kinematics_model>
+			<bind_joint_axis target="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_F19721000063102000115_001_zb_ub_stiftzieher_15.1/01_01_15_ba_tra_axis">
+				<axis>
+					<param>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_01_01_15_ba_tra_axis</param>
+				</axis>
+				<value>
+					<param>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_01_01_15_ba_tra_axis_value</param>
+				</value>
+			</bind_joint_axis>
+			<bind_joint_axis target="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_F19721000063102000115_001_zb_ub_stiftzieher_17.1/02_01_17_ba_tra_axis">
+				<axis>
+					<param>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_02_01_17_ba_tra_axis</param>
+				</axis>
+				<value>
+					<param>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_02_01_17_ba_tra_axis_value</param>
+				</value>
+			</bind_joint_axis>
+			<bind_joint_axis target="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_F19721000063102000115_001_zb_ub_stiftzieher_13.1/03_01_13_ba_tra_axis">
+				<axis>
+					<param>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_03_01_13_ba_tra_axis</param>
+				</axis>
+				<value>
+					<param>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_03_01_13_ba_tra_axis_value</param>
+				</value>
+			</bind_joint_axis>
+			<bind_joint_axis target="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_F19721000063102000115_001_zb_ub_stiftzieher_11.1/04_01_11_ba_tra_axis">
+				<axis>
+					<param>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_04_01_11_ba_tra_axis</param>
+				</axis>
+				<value>
+					<param>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_04_01_11_ba_tra_axis_value</param>
+				</value>
+			</bind_joint_axis>
+			<bind_joint_axis target="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_F19721000063102000153_001_zb_ub_verriegelung_53.1/05_01_53_ba_rot_axis">
+				<axis>
+					<param>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_05_01_53_ba_rot_axis</param>
+				</axis>
+				<value>
+					<param>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_05_01_53_ba_rot_axis_value</param>
+				</value>
+			</bind_joint_axis>
+			<bind_joint_axis target="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_F19721000063102000153_001_zb_ub_verriegelung_54.1/06_01_54_ba_rot_axis">
+				<axis>
+					<param>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_06_01_54_ba_rot_axis</param>
+				</axis>
+				<value>
+					<param>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_06_01_54_ba_rot_axis_value</param>
+				</value>
+			</bind_joint_axis>
+			<bind_joint_axis target="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_F19721000063102000152_001_zb_ub_schwenkrahmen_52.1/07_01_52_ba_rot_axis">
+				<axis>
+					<param>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_07_01_52_ba_rot_axis</param>
+				</axis>
+				<value>
+					<param>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_07_01_52_ba_rot_axis_value</param>
+				</value>
+			</bind_joint_axis>
+			<bind_joint_axis target="F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_F19721000063102000112_001_sym_of_zb_ub_stiftzieher_11.1/08_01_12_ba_tra_axis">
+				<axis>
+					<param>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_08_01_12_ba_tra_axis</param>
+				</axis>
+				<value>
+					<param>F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_scene_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_art_system.0_inst_F19721000063102000100_001_zb_hb_vorrichtung001_layout_kin_kin_model.0_08_01_12_ba_tra_axis_value</param>
+				</value>
+			</bind_joint_axis>
+		</instance_kinematics_scene>
+	</scene>
+</COLLADA>

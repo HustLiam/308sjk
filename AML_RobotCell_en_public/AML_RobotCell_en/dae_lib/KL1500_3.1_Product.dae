@@ -1,0 +1,258 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<COLLADA version="1.5.0" xmlns="http://www.collada.org/2008/03/COLLADASchema">
+	<asset>
+		<contributor>
+			<author>AutomationML e.V.</author>
+			<author_website>www.automationml.org</author_website>
+			<authoring_tool>"Notepad++" "6.8.6" "6.8.6"</authoring_tool>
+		</contributor>
+		<created>2015-12-15T13:12:06.7153453+01:00</created>
+		<modified>2015-12-15T13:12:06.7153453+01:00</modified>
+		<unit meter="0.001" name="mm" />
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_nodes>
+		<node id="KL1500_3.1" name="KL1500_3.1">
+			<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+			<node id="KL1500_3.1_Kabel_Base" name="Kabel_Base">
+				<matrix>-1 0 0 -1352.74 0 -1 0 0 0 0 1 57 0 0 0 1</matrix>
+				<instance_node url="Kabel_Base_Product.dae#Kabel_Base_visual_scene_node" />
+			</node>
+			<node id="KL1500_3.1_Base" name="Base">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 75 0 0 0 1</matrix>
+				<translate>-1577.47 -438.812 39.8135</translate>
+				<rotate sid="Rigid.3_axis">0 0 1 0</rotate>
+				<translate>1577.47 438.812 -39.8135</translate>
+				<instance_node url="Base_Product.dae#Base_visual_scene_node" />
+			</node>
+			<node id="KL1500_3.1_Schlitten" name="Schlitten">
+				<matrix>1 0 0 -7187.83 0 1 0 0 0 0 1 75 0 0 0 1</matrix>
+				<translate>5462.48 0 0</translate>
+				<rotate>0 1 0 90</rotate>
+				<rotate sid="Prismatic.1_axis">0 0 1 0</rotate>
+				<translate>1.00341e-012 0 -5462.48</translate>
+				<rotate>0 1 0 -90</rotate>
+				<instance_node url="Schlitten_Product.dae#Schlitten_visual_scene_node" />
+			</node>
+			<node id="KL1500_3.1_Kabel" name="Kabel">
+				<matrix>1 0 0 -7187.83 0 1 0 0 0 0 1 75 0 0 0 1</matrix>
+				<translate>4043.52 -335 258.5</translate>
+				<rotate sid="Rigid.2_axis">0 0 1 0</rotate>
+				<translate>-4043.52 335 -258.5</translate>
+				<instance_node url="Kabel_Product.dae#Kabel_visual_scene_node" />
+			</node>
+			<node id="KL1500_3.1_Anschlussplatte_hor" name="Anschlussplatte_hor">
+				<matrix>1 0 0 -5436 0 1 0 2 0 0 1 78 0 0 0 1</matrix>
+				<instance_node url="Anschlussplatte_hor_Product.dae#Anschlussplatte_hor_visual_scene_node" />
+			</node>
+			<node id="KL1500_3.1_Anschlussplatte_ver" name="Anschlussplatte_ver">
+				<matrix>1 0 0 -7200 0 1 0 0 0 0 1 76 0 0 0 1</matrix>
+				<instance_node url="Anschlussplatte_ver_Product.dae#Anschlussplatte_ver_visual_scene_node" />
+			</node>
+			<node name="FrameOfInterest_OKF_Standard" sid="KL1500_3.1_FrameOfInterest_OKF_Standard">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+			</node>
+			<node name="FrameOfInterest_OKF_Dehnfuge" sid="KL1500_3.1_FrameOfInterest_OKF_Dehnfuge">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 -25 0 0 0 1</matrix>
+			</node>
+		</node>
+	</library_nodes>
+	<library_visual_scenes>
+		<visual_scene id="KL1500_3.1_visual_scene">
+			<node id="KL1500_3.1_visual_scene_node" name="KL1500_3.1">
+				<instance_node url="#KL1500_3.1" />
+			</node>
+		</visual_scene>
+	</library_visual_scenes>
+	<library_joints>
+		<joint id="KL1500_3.1_KL1500_Rigid.3" name="Rigid.3">
+			<prismatic sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>0</min>
+					<max>0</max>
+				</limits>
+			</prismatic>
+		</joint>
+		<joint id="KL1500_3.1_KL1500_Prismatic.1" name="Prismatic.1">
+			<prismatic sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>-2555</min>
+					<max>445</max>
+				</limits>
+			</prismatic>
+		</joint>
+		<joint id="KL1500_3.1_KL1500_Rigid.2" name="Rigid.2">
+			<prismatic sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>0</min>
+					<max>0</max>
+				</limits>
+			</prismatic>
+		</joint>
+	</library_joints>
+	<library_kinematics_models>
+		<kinematics_model id="KL1500_3.1_kin_model.0" name="KL1500">
+			<technique_common>
+				<instance_joint sid="Rigid.3" url="#KL1500_3.1_KL1500_Rigid.3" />
+				<instance_joint sid="Prismatic.1" url="#KL1500_3.1_KL1500_Prismatic.1" />
+				<instance_joint sid="Rigid.2" url="#KL1500_3.1_KL1500_Rigid.2" />
+				<link name="Kabel_Base" sid="Kabel_Base">
+					<translate>-1352.74 0 57</translate>
+					<rotate>0 0 1 180</rotate>
+					<attachment_full joint="KL1500_3.1_kin_model.0/Rigid.3">
+						<translate>224.73 438.812 57.8135</translate>
+						<rotate>0 0 1 180</rotate>
+						<link name="Base" sid="Base">
+							<translate>1577.47 438.812 -39.8135</translate>
+							<attachment_full joint="KL1500_3.1_kin_model.0/Prismatic.1">
+								<rotate>0 1 0 90</rotate>
+								<link name="Schlitten" sid="Schlitten">
+									<translate>1.00341e-012 0 -5462.48</translate>
+									<rotate>0 1 0 -90</rotate>
+									<attachment_full joint="KL1500_3.1_kin_model.0/Rigid.2">
+										<translate>4043.52 -335 258.5</translate>
+										<link name="Kabel" sid="Kabel">
+											<translate>-4043.52 335 -258.5</translate>
+										</link>
+									</attachment_full>
+								</link>
+							</attachment_full>
+						</link>
+					</attachment_full>
+				</link>
+			</technique_common>
+			<extra>
+				<technique profile="POSES">
+					<poses>
+						<pose count="1" name="Null">
+							<pose_joint joint="KL1500_3.1_kin_model.0/Prismatic.1">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+						</pose>
+					</poses>
+				</technique>
+			</extra>
+		</kinematics_model>
+	</library_kinematics_models>
+	<library_articulated_systems>
+		<articulated_system id="KL1500_3.1_art_system.0">
+			<kinematics>
+				<instance_kinematics_model sid="inst_KL1500_3.1_kin_model.0" url="#KL1500_3.1_kin_model.0">
+					<newparam sid="KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0">
+						<SIDREF>KL1500_3.1_art_system.0/inst_KL1500_3.1_kin_model.0</SIDREF>
+					</newparam>
+					<newparam sid="KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0_Rigid.3_axis">
+						<SIDREF>KL1500_3.1_art_system.0/inst_KL1500_3.1_kin_model.0/Rigid.3/axis</SIDREF>
+					</newparam>
+					<newparam sid="KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0_Rigid.3_axis_value">
+						<float>0</float>
+					</newparam>
+					<newparam sid="KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0_Prismatic.1_axis">
+						<SIDREF>KL1500_3.1_art_system.0/inst_KL1500_3.1_kin_model.0/Prismatic.1/axis</SIDREF>
+					</newparam>
+					<newparam sid="KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0_Prismatic.1_axis_value">
+						<float>-1725.352</float>
+					</newparam>
+					<newparam sid="KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0_Rigid.2_axis">
+						<SIDREF>KL1500_3.1_art_system.0/inst_KL1500_3.1_kin_model.0/Rigid.2/axis</SIDREF>
+					</newparam>
+					<newparam sid="KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0_Rigid.2_axis_value">
+						<float>0</float>
+					</newparam>
+				</instance_kinematics_model>
+				<technique_common>
+					<axis_info axis="KL1500_3.1_art_system.0/inst_KL1500_3.1_kin_model.0/Prismatic.1/axis" name="Command.1" sid="KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0_Command.1">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>1</int>
+						</index>
+						<limits>
+							<min>
+								<float>-7055</float>
+							</min>
+							<max>
+								<float>445</float>
+							</max>
+						</limits>
+					</axis_info>
+					<frame_origin link="inst_KL1500_3.1_kin_model.0/Kabel_Base">
+						<translate>-1352.74 0 57</translate>
+						<rotate>0 0 1 180</rotate>
+					</frame_origin>
+					<frame_tip link="inst_KL1500_3.1_kin_model.0/Schlitten">
+						<translate>-7187.83 0 75</translate>
+					</frame_tip>
+				</technique_common>
+			</kinematics>
+		</articulated_system>
+	</library_articulated_systems>
+	<library_kinematics_scenes>
+		<kinematics_scene id="KL1500_3.1_kin_scene">
+			<instance_articulated_system sid="inst_KL1500_3.1_art_system.0" url="#KL1500_3.1_art_system.0">
+				<bind symbol="KL1500_3.1_kin_scene_inst_KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0">
+					<param ref="KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0" />
+				</bind>
+				<bind symbol="KL1500_3.1_kin_scene_inst_KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0_Rigid.3_axis">
+					<param ref="KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0_Rigid.3_axis" />
+				</bind>
+				<bind symbol="KL1500_3.1_kin_scene_inst_KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0_Rigid.3_axis_value">
+					<param ref="KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0_Rigid.3_axis_value" />
+				</bind>
+				<bind symbol="KL1500_3.1_kin_scene_inst_KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0_Prismatic.1_axis">
+					<param ref="KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0_Prismatic.1_axis" />
+				</bind>
+				<bind symbol="KL1500_3.1_kin_scene_inst_KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0_Prismatic.1_axis_value">
+					<param ref="KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0_Prismatic.1_axis_value" />
+				</bind>
+				<bind symbol="KL1500_3.1_kin_scene_inst_KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0_Rigid.2_axis">
+					<param ref="KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0_Rigid.2_axis" />
+				</bind>
+				<bind symbol="KL1500_3.1_kin_scene_inst_KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0_Rigid.2_axis_value">
+					<param ref="KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0_Rigid.2_axis_value" />
+				</bind>
+			</instance_articulated_system>
+		</kinematics_scene>
+	</library_kinematics_scenes>
+	<scene>
+		<instance_visual_scene url="#KL1500_3.1_visual_scene" />
+		<instance_kinematics_scene url="#KL1500_3.1_kin_scene">
+			<bind_kinematics_model node="KL1500_3.1_Kabel_Base">
+				<param>KL1500_3.1_kin_scene_inst_KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0</param>
+			</bind_kinematics_model>
+			<bind_joint_axis target="KL1500_3.1_Base/Rigid.3_axis">
+				<axis>
+					<param>KL1500_3.1_kin_scene_inst_KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0_Rigid.3_axis</param>
+				</axis>
+				<value>
+					<param>KL1500_3.1_kin_scene_inst_KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0_Rigid.3_axis_value</param>
+				</value>
+			</bind_joint_axis>
+			<bind_joint_axis target="KL1500_3.1_Schlitten/Prismatic.1_axis">
+				<axis>
+					<param>KL1500_3.1_kin_scene_inst_KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0_Prismatic.1_axis</param>
+				</axis>
+				<value>
+					<param>KL1500_3.1_kin_scene_inst_KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0_Prismatic.1_axis_value</param>
+				</value>
+			</bind_joint_axis>
+			<bind_joint_axis target="KL1500_3.1_Kabel/Rigid.2_axis">
+				<axis>
+					<param>KL1500_3.1_kin_scene_inst_KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0_Rigid.2_axis</param>
+				</axis>
+				<value>
+					<param>KL1500_3.1_kin_scene_inst_KL1500_3.1_art_system.0_inst_KL1500_3.1_kin_model.0_Rigid.2_axis_value</param>
+				</value>
+			</bind_joint_axis>
+		</instance_kinematics_scene>
+	</scene>
+</COLLADA>

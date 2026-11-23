@@ -6,7 +6,7 @@ from .common import SceneError, digest, read_json, write_json
 from .device_ir import parse_device_ir, values, facts_digest, validate_device_ir
 from .rules import ComponentLibrary, ApprovalRequired
 from .validation import validate_candidate, check_assembly
-from .requirements import MODEL_REQUIREMENTS
+from .requirements import MODEL_REQUIREMENTS,for_device
 from .approval_state import candidate_version, TaskApprovedLibrary
 
 
@@ -23,7 +23,7 @@ def default_output(task):
 
 
 def prepare(aml,request,output,library, *, candidate_rules=None,author=None,blender='E:/Blender/blender.exe',
-            reusable_candidates=None,progress=None,force_regenerate=False):
+            reusable_candidates=None,progress=None,force_regenerate=False,verification_profile='fixed_model_io/1'):
     output=Path(output)
     if (output/'task.json').exists():raise SceneError('Task already exists; use a new output directory')
     output.mkdir(parents=True,exist_ok=True)
@@ -34,7 +34,17 @@ def prepare(aml,request,output,library, *, candidate_rules=None,author=None,blen
         target=output/'implementation_snapshot'/name;target.parent.mkdir(parents=True,exist_ok=True)
         shutil.copyfile(repository/name,target)
     ir=validate_device_ir(aml) if isinstance(aml,dict) else parse_device_ir(aml)
+    from .verification import PROFILE,configure,enabled,parameters,validate_parameters,apply_physics
+    if verification_profile not in (PROFILE,'legacy'):raise SceneError('未知设备校验配置')
+    if verification_profile==PROFILE:ir=configure(ir)
     write_json(output/'device_ir.json',ir)
+    if enabled(ir):
+        producer=getattr(author,'verification_parameters',None)
+        contract=producer(ir) if producer else parameters(ir)
+        validate_parameters(ir,contract)
+        write_json(output/'verification_parameters.json',contract)
+        from .plc_test import save_harness
+        save_harness(ir,output)
     from .simulation_tests import write_test_plan
     write_test_plan(ir,output)
     (output/'request.txt').write_text(request,encoding='utf-8')
@@ -80,7 +90,7 @@ def prepare(aml,request,output,library, *, candidate_rules=None,author=None,blen
             resolution.append({'component_id':c['id'],'type':c['type'],
                 'origin':'reused_candidate' if c['type'] in reused else 'author_required','reason':reason})
     task={'status':'device_ir_generated','plc_generation':'unchanged','plc_acceptance':'not_run',
-          'model_requirements':MODEL_REQUIREMENTS,
+          'model_requirements':for_device(ir),
           'device_ir_sha256':facts_digest(ir),'missing_types':sorted(missing),'pending':ir['pending'],
           'candidate_origin':'supplied_candidate_rules' if candidate_rules is not None else 'llm',
           'candidates':list(reused.values()),'request':request,'library':str(library.root),
@@ -99,6 +109,7 @@ def prepare(aml,request,output,library, *, candidate_rules=None,author=None,blen
             instruction='\nFull regeneration: author ALL requested types from AML. No previous rules or assets are supplied. Existing version identifiers are naming metadata only.' if force_regenerate else ''
             candidate_rules=author.draft_rules(ir,request+instruction+'\nExisting approved versions (new rules must increment these): '+str(versions),missing,output/'model_calls')
         available={r['component_type']:r for r in candidate_rules}
+        if enabled(ir):available={kind:apply_physics(rule) for kind,rule in available.items()}
         if not missing.issubset(available):raise SceneError('Supplied rules do not cover missing component types')
         for kind in sorted(missing):
             progress('正在构建和检查候选组件：'+kind)
@@ -107,6 +118,7 @@ def prepare(aml,request,output,library, *, candidate_rules=None,author=None,blen
             samples=[values(c) for c in components]
             history=[]
             for attempt in range(1,4):
+                if enabled(ir):rule=apply_physics(rule)
                 rule,allocation=candidate_version(library,rule,force_new=force_regenerate)
                 if allocation:write_json(output/'candidate_history'/kind/('version_%03d.json'%attempt),allocation)
                 if force_regenerate and (library.root/'candidates'/kind/rule['version']/digest(rule)).exists():
@@ -136,7 +148,10 @@ def prepare(aml,request,output,library, *, candidate_rules=None,author=None,blen
             write_json(output/'task.json',task)
         task['status']='awaiting_component_approval'
     else:task['status']='awaiting_component_approval' if reused else 'approved_components_available'
-    if author is not None and hasattr(author,'draft_collision_free_tests') and not any(c['validation_status']!='passed' for c in task['candidates']):
+    if enabled(ir):
+        task['verification_profile']=PROFILE
+        progress('模型参数已与 AML 核对；使用固定结构与 OpenPLC IO 校验，不生成 Agent 测试脚本')
+    elif author is not None and hasattr(author,'draft_collision_free_tests') and not any(c['validation_status']!='passed' for c in task['candidates']):
         from runtime.device_scene import build_device_scene
         from .simulation_tests import validate_test_plan,run_test_plan
         from .test_safety import safety_issues
@@ -198,7 +213,8 @@ def build_task(output,library, *, isolated_candidates=False,geometry_only=False,
             geometry_only=True,io_execution_status='not_implemented_or_not_validated')
         write_json(folder/'device_ir.json',ir);write_json(folder/'scene.physical.json',metadata);write_json(folder/'io_map.json',declared)
     else:metadata,xml=build_device_scene(ir,library,folder,candidates=entries,blender=blender)
-    report=check_assembly(metadata,xml,steps=0 if geometry_only else 500,preview=folder/'preview.png')
+    from .verification import enabled
+    report=check_assembly(metadata,xml,steps=0 if geometry_only or enabled(ir) else 500,preview=folder/'preview.png')
     if geometry_only:
         report['checks']=[check for check in report['checks'] if check['name']!='physics_smoke']
         for check in report['checks']:
@@ -215,7 +231,16 @@ def build_task(output,library, *, isolated_candidates=False,geometry_only=False,
     return task
 
 
-def check_task(output, *, isolated_candidates=False,freeze=False,capture_replay=False):
+def _reset_fixed_results(output,folder):
+    """A failed new connection/check cannot keep an old passed badge or freeze."""
+    for name in ('simulation_test_results.json','selected_tests/simulation_test_results.json','behavior_checks.json','model.freeze.json'):
+        (folder/name).unlink(missing_ok=True)
+    if (output/'task.json').exists():
+        task=read_json(output/'task.json');task.setdefault('scene',{}).update(model_frozen=False,behavior_checks='not_run')
+        write_json(output/'task.json',task)
+
+
+def check_task(output, *, isolated_candidates=False,freeze=False,capture_replay=False,plc_config=None,cancelled=None):
     from runtime.device_scene import DeviceRuntime
     from .validation import check_device_behaviors
     output=Path(output);task=read_json(output/'task.json')
@@ -223,6 +248,33 @@ def check_task(output, *, isolated_candidates=False,freeze=False,capture_replay=
         raise SceneError('候选仅完成几何预览；请先解决组件行为问题并重新检查，不能运行设备验收或冻结')
     folder=output/('candidate_scene' if isolated_candidates else 'scene')
     metadata=read_json(folder/'scene.physical.json');xml=(folder/'scene.xml').read_text(encoding='utf-8')
+    from .verification import enabled,validate_parameters
+    ir=read_json(output/'device_ir.json') if (output/'device_ir.json').exists() else {}
+    if enabled(ir):
+        _reset_fixed_results(output,folder)
+        task=read_json(output/'task.json')
+        validate_parameters(ir,read_json(output/'verification_parameters.json'))
+        from .simulation_tests import run_test_plan
+        transport=None
+        if plc_config is None and (output/'plc_test_connection.json').exists():plc_config=read_json(output/'plc_test_connection.json')
+        try:
+            if plc_config:
+                from .plc_test import connect
+                transport=connect(ir,plc_config,cancelled)
+            tests=run_test_plan(ir,metadata,xml,read_json(output/'simulation_tests.json'),output=folder,transport=transport,cancelled=cancelled)
+        finally:
+            if transport:transport.close()
+        report={'status':tests['status'],'scope':tests['scope'],'behavior_checks_complete':tests['complete'],
+            'scene_sha256':metadata['model_xml_sha256'],'definition_sha256':digest(metadata),'plc_acceptance':'not_run',
+            'plc_io_validation':tests['plc_io_validation'],'whole_machine_functional_tests':'not_requested',
+            'simulation_tests':{k:tests[k] for k in ('status','complete','plan_sha256','checker_sha256')},
+            'checks':[{'name':m['label'],'passed':m['status']=='passed','status':m['status'],'uncovered':m['uncovered']} for m in tests['modules']]}
+        write_json(folder/'behavior_checks.json',report)
+        task.setdefault('scene',{})['behavior_checks']=report['status']
+        if freeze:
+            DeviceRuntime(metadata,xml).freeze(folder,report);task['scene'].update(model_frozen=True,status='model_frozen')
+        write_json(output/'task.json',task)
+        return report
     # An approved legacy rule can still have the wrong material semantics.
     # Diagnose source references before a fixture tries to dereference an absent item.
     pools={p['product_id'] for p in metadata['products']};missing=[]
@@ -309,3 +361,23 @@ def review_pack(output):
                 '','简化与适用范围（不阻断当前验证）：'+str(r['limitations'])]
     (output/'REVIEW.md').write_text('\n'.join(lines)+'\n',encoding='utf-8')
     return pack
+
+
+def test_task(output,*,isolated_candidates=False,selected=None,plc_config=None,cancelled=None):
+    """Public selected-test entry; parameter contract is checked before any connection."""
+    from .simulation_tests import run_test_plan
+    from .verification import enabled,validate_parameters
+    output=Path(output);folder=output/('candidate_scene' if isolated_candidates else 'scene')
+    ir=read_json(output/'device_ir.json');transport=None
+    if enabled(ir):
+        _reset_fixed_results(output,folder)
+        validate_parameters(ir,read_json(output/'verification_parameters.json'))
+        if plc_config is None and (output/'plc_test_connection.json').exists():plc_config=read_json(output/'plc_test_connection.json')
+    try:
+        if enabled(ir) and plc_config:
+            from .plc_test import connect
+            transport=connect(ir,plc_config,cancelled)
+        return run_test_plan(ir,read_json(folder/'scene.physical.json'),(folder/'scene.xml').read_text(encoding='utf-8'),
+            read_json(output/'simulation_tests.json'),selected,output=folder/'selected_tests',cancelled=cancelled,transport=transport)
+    finally:
+        if transport:transport.close()

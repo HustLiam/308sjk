@@ -33,12 +33,15 @@ class SceneWebError(SceneError):
 
 
 class SceneWorkbench:
-    def __init__(self,root,author_factory=None):
+    def __init__(self,root,author_factory=None,*,verification_profile='fixed_model_io/1'):
+        if verification_profile not in ('fixed_model_io/1','legacy'):raise ValueError('Unknown verification profile')
+        self.verification_profile=verification_profile
         self.root=Path(root).resolve();self.root.mkdir(parents=True,exist_ok=True)
         self.library=ComponentLibrary(self.root/'component_library')
         self.author_factory=author_factory or self._default_author
         self.lock=threading.RLock();self.executor=ThreadPoolExecutor(max_workers=1,thread_name_prefix='device-scene')
-        self.active=None;self.control=None;self.geometry_cache={}
+        self.active=None;self.control=None;self.geometry_cache={};self.joint_previews={};self.mesh_buffers={}
+        self.assembly_previews={}
         for p in self.root.glob('tasks/*/web.json'):
             record=read_json(p)
             if record.get('busy'):
@@ -58,6 +61,11 @@ class SceneWorkbench:
         with self.lock:
             if self.control:self.control.request()
         self.executor.shutdown(wait=True)
+        for _, preview in self.joint_previews.values():
+            preview.close()
+        self.joint_previews.clear()
+        self.assembly_previews.clear()
+        self.mesh_buffers.clear()
 
     def directory(self,ident):
         if not isinstance(ident,str) or not IDENT.fullmatch(ident):raise SceneWebError('场景任务不存在',404)
@@ -83,8 +91,36 @@ class SceneWorkbench:
             record=self._record(ident);record['logs'].append({'time':time.time(),'message':message})
             record['logs']=record['logs'][-800:];record['stage']=message;self._save(record)
 
+    def assembly_publisher(self, ident):
+        from .assembly_preview import AssemblyPreview
+        preview = AssemblyPreview(ident)
+        with self.lock:
+            self.assembly_previews = {ident: preview}
+        def publish(report, nodes, meshes):
+            if self.control:self.control.check()
+            preview.publish(report, nodes, meshes)
+        return publish
+
+    def assembly_view(self, ident):
+        with self.lock:
+            self._record(ident)
+            preview = self.assembly_previews.get(ident)
+            result = preview.read() if preview else None
+            if result is None:raise SceneWebError('装配预览尚未就绪',404)
+            return result
+
+    def assembly_mesh(self, ident, token, mesh):
+        with self.lock:
+            self._record(ident)
+            preview = self.assembly_previews.get(ident)
+            if preview is None:raise SceneWebError('装配预览已释放',404)
+            try:return preview.mesh(token, mesh)
+            except KeyError:raise SceneWebError('装配预览版本已过期',409)
+
     def _editable(self,ident,revision):
         record=self._record(ident)
+        if record.get('resource_package'):
+            raise SceneWebError('资源包场景请通过 AML 和源资源修改后重新导入；当前尚不能执行生成、冻结或 IO 测试',409)
         if type(revision) is not int or record['revision']!=revision:raise SceneWebError('场景版本已更新，请刷新后再操作',409)
         if self.active or record['busy']:raise SceneWebError('设备场景正在处理，请等待完成或停止当前任务',409)
         return record
@@ -115,6 +151,67 @@ class SceneWorkbench:
         """Parse a new source and inventory all types for fresh authoring; no LLM."""
         if data.get('source_task') or not data.get('aml'):raise SceneWebError('请上传新的 AML 文件')
         return self.create(data,parse_only=True)
+
+    def import_package(self,data):
+        from .package_import import import_package
+        from .resource_workflow import persist_source, restore_bindings
+        path=None;content=None;source_record=None
+        if data.get('source_task'):
+            source_record=self._record(data['source_task'])
+            if not source_record.get('resource_package'):raise SceneWebError('请选择资源装配任务')
+            source_report=read_json(self.directory(source_record['id'])/source_record['scene_kind']/'package_manifest.json')
+            path=self.directory(source_record['id'])/'package_source'/Path(source_report['source']['file']).name
+            if not path.is_file():
+                path=self.directory(source_record['id'])/source_record['scene_kind']/'source'/Path(source_report['source']['file']).name
+        elif data.get('aml'):
+            upload=data['aml'];name=Path(str(upload.get('name','')).replace('\\','/')).name
+            if not name.lower().endswith('.aml'):raise SceneWebError('请选择 AML 文件')
+            try:content=base64.b64decode(upload.get('data',''),validate=True)
+            except (ValueError,TypeError) as exc:raise SceneWebError('AML 上传数据无效') from exc
+            if not content or len(content)>2*1024*1024:raise SceneWebError('AML 文件须非空且不超过2 MiB')
+        else:
+            path=Path(str(data.get('path',''))).expanduser().resolve()
+        if path is not None and (not path.is_file() or path.suffix.lower()!='.aml'):raise SceneWebError('请输入后端主机上的 AML 文件完整路径，关联资源须保留在同一目录中')
+        aliases=data.get('aliases') or {}
+        if not isinstance(aliases,dict) or any(not isinstance(k,str) or not isinstance(v,str) for k,v in aliases.items()):
+            raise SceneWebError('资源路径修正必须是字符串映射')
+        with self.lock:
+            if self.active:raise SceneWebError('另一个设备场景正在处理，请稍后重试',409)
+            ident=uuid.uuid4().hex;folder=self.directory(ident);folder.mkdir(parents=True)
+            if content is not None:
+                source=folder/'upload_source';source.mkdir();path=source/name;path.write_bytes(content)
+            if source_record:
+                aliases=source_record.get('resource_aliases') or {
+                    r['uri'].split('#')[0].removeprefix('file:///'):r['alias']
+                    for r in source_report.get('references',[]) if r.get('alias')}
+            (folder/'input.aml').write_bytes(path.read_bytes())
+            record={'id':ident,'revision':0,'name':path.name,'created_at':time.time(),'parent':None,
+                    'request':'按 AML 引用导入组件并装配','method':'resource_import','resource_package':True,
+                    'busy':False,'phase':'draft','logs':[],'scene_kind':'imported_scene','error':None,'preview_revision':0,
+                    'resource_aliases':aliases,'generation_policy':'resource_first_user_selected_missing_geometry'}
+            write_json(folder/'web.json',record)
+            def run():
+                result=import_package(path,folder/'imported_scene',aliases=aliases,progress=lambda message:self._log(ident,message),
+                                      preview=self.assembly_publisher(ident))
+                persist_source(folder,folder/'imported_scene')
+                choices=restore_bindings(self,folder,result)
+                if choices:
+                    name='imported_scene_bound'
+                    result=import_package(folder/'package_source'/path.name,folder/name,aliases=aliases,resolutions=choices,
+                                          progress=lambda message:self._log(ident,message),preview=self.assembly_publisher(ident))
+                    write_json(folder/'resource_choices.json',choices)
+                    self._update(ident,scene_kind=name)
+                self._update(ident,preview_revision=1)
+                if result.get('assembly',{}).get('compiled') and not result['assembly'].get('actual_geoms',0):
+                    self._log(ident,'AML 已解析，但未加载三维几何；请通过原始 AML 完整路径导入关联资源，或在检查结果中补充模型')
+                else:
+                    self._log(ident,'资源导入完成：'+result['status']+'；缺项请查看检查结果')
+            self._start(record,'importing',run)
+            return self.state(ident)
+
+    def resolve_resource(self,data):
+        from .resource_workflow import resolve
+        return resolve(self,data)
 
     def create(self,data, *, parse_only=False):
         source_ir=None;source_parent=None
@@ -157,7 +254,7 @@ class SceneWorkbench:
             write_json(folder/'web.json',record)
             if parse_only:
                 def inspect_source():
-                    prepare(ir,request,folder,self.library,force_regenerate=True,progress=lambda message:self._log(ident,message))
+                    prepare(ir,request,folder,self.library,force_regenerate=True,verification_profile=self.verification_profile,progress=lambda message:self._log(ident,message))
                     self._log(ident,'AML 已重新解析；全部组件等待 Agent 重新生成规则、几何与装配')
                 self._start(record,'parsing',inspect_source)
             else:self._start(record,'generating',lambda:self._generate(ident,ir))
@@ -172,6 +269,10 @@ class SceneWorkbench:
         factory=self.author_factory;control=self.control
         class LazyAuthor:
             instance=None
+            @staticmethod
+            def verification_parameters(ir):
+                from .verification import parameters
+                return parameters(ir)
             def check_cancelled(self):control.check()
             def get(self):
                 if self.instance is None:self.instance=factory(control)
@@ -186,7 +287,7 @@ class SceneWorkbench:
                 return method(ir,metadata,xml,plan,evidence) if method else self.draft_test_sequences(ir,plan,evidence)
         author=LazyAuthor()
         task=prepare(ir,record['request'],folder,self.library,author=author,
-            reusable_candidates=reusable,force_regenerate=fresh,progress=lambda message:self._log(ident,message))
+            reusable_candidates=reusable,force_regenerate=fresh,verification_profile=self.verification_profile,progress=lambda message:self._log(ident,message))
         self.control.check()
         if task['pending']:
             self._log(ident,'设备描述存在待确认项，请先修订 AML');return
@@ -253,13 +354,29 @@ class SceneWorkbench:
                     or len(set(selected))!=len(selected)):
                 raise SceneWebError('请选择当前设备的有效测试模块',400,'simulation_test')
             def run():
-                from .simulation_tests import run_test_plan
+                from .workflow import test_task
                 folder=self.directory(ident);scene=folder/record['scene_kind']
                 self._log(ident,'正在运行所选 '+str(len(selected))+' 个测试模块；每项使用独立模型状态')
-                report=run_test_plan(read_json(folder/'device_ir.json'),read_json(scene/'scene.physical.json'),
-                    (scene/'scene.xml').read_text(encoding='utf-8'),read_json(folder/'simulation_tests.json'),
-                    selected,output=scene/'selected_tests',cancelled=self.control.check)
+                report=test_task(folder,isolated_candidates=record['scene_kind']=='candidate_scene',selected=selected,cancelled=self.control.check)
                 self._log(ident,'所选测试'+('通过' if report['status']=='passed' else '存在失败或未覆盖项')+'；结果与各模块回放已保存')
+            self._start(record,'testing',run);return self.state(ident)
+
+    def plc_test(self,data):
+        """Connect an already deployed, identity-checked isolated PLC harness."""
+        ident=data.get('task')
+        with self.lock:
+            record=self._editable(ident,data.get('revision'));folder=self.directory(ident)
+            from .verification import enabled
+            if not enabled(read_json(folder/'device_ir.json')):raise SceneWebError('此任务使用旧校验配置，请重新生成场景',409)
+            if not self.state(ident)['scene_ready']:raise SceneWebError('请先构建隔离模型',409)
+            config={'host':data.get('host'),'port':data.get('port')}
+            if not isinstance(config['host'],str) or not config['host'].strip() or type(config['port']) is not int or not 1<=config['port']<=65535:
+                raise SceneWebError('请输入隔离 OpenPLC 的主机和端口')
+            write_json(folder/'plc_test_connection.json',config)
+            def run():
+                self._log(ident,'正在核对 OpenPLC 测试程序身份并运行固定结构与双向 IO 校验')
+                report=check_task(folder,isolated_candidates=record['scene_kind']=='candidate_scene',plc_config=config,cancelled=self.control.check)
+                self._log(ident,'固定模型与 IO 校验：'+report['status'])
             self._start(record,'testing',run);return self.state(ident)
 
     def _revalidate(self,ident):
@@ -401,6 +518,10 @@ class SceneWorkbench:
                 for ident,path in reversed(moved):(staging/ident).rename(path)
                 staging.rmdir();raise
             self.geometry_cache={k:v for k,v in self.geometry_cache.items() if k[0] not in ids}
+            for ident in ids:
+                if ident in self.joint_previews:self.joint_previews[ident][1].close()
+            self.joint_previews={k:v for k,v in self.joint_previews.items() if k not in ids}
+            self.mesh_buffers={k:v for k,v in self.mesh_buffers.items() if k[0] not in ids}
             reset=self.root/'cache_reset.json'
             retired=set(read_json(reset).get('retired_tasks',[])) if reset.is_file() else set()
             write_json(reset,{'retired_tasks':sorted(retired|set(ids)),'updated_at':time.time(),'source':'user_selected_history_cleanup'})
@@ -413,9 +534,22 @@ class SceneWorkbench:
     def state(self,ident):
         with self.lock:
             record=self._record(ident);folder=self.directory(ident)
+            if record.get('resource_package'):
+                from .package_web import state
+                cached=self.joint_previews.get(ident)
+                preview=cached[1] if cached and cached[0]==self._preview_signature(folder/record['scene_kind']) else None
+                result=state(copy.deepcopy(record),folder,bool(self.active and self.active!=ident),preview)
+                from .resource_resolution import ResourceLibrary
+                result['resource_library']=ResourceLibrary(self.root/'resource_library').entries()
+                assembly=self.assembly_previews.get(ident)
+                if assembly and assembly.read():
+                    result['assembly_preview']={'token':assembly.token,'revision':assembly.revision}
+                return result
             result={**copy.deepcopy(record),'occupied':bool(self.active and self.active!=ident),'plc_acceptance':'not_run',
                     'model_requirements':copy.deepcopy(MODEL_REQUIREMENTS)}
             ir=read_json(folder/'device_ir.json') if (folder/'device_ir.json').exists() else None
+            from .requirements import for_device
+            result['model_requirements']=copy.deepcopy(for_device(ir or {}))
             task=read_json(folder/'task.json') if (folder/'task.json').exists() else None
             result.update(device_ir=ir,candidates=[],reports={},scene_ready=False,all_approved=False,model_frozen=False)
             result['interface_properties']=interface_properties(ir) if ir else {}
@@ -470,11 +604,12 @@ class SceneWorkbench:
                     result['test_modules'].append({**module,'status':'not_run','replay':None,**statuses.get(module['id'],{}),
                         'available':result['scene_ready'] and not result['geometry_only'] and result['can_build']})
             result['test_plan_sha256']=digest(plan) if plan else None
+            result['plc_test_connection']=read_json(folder/'plc_test_connection.json') if (folder/'plc_test_connection.json').exists() else None
             result['scene_definition_sha256']=digest(read_json(scene/'scene.physical.json')) if result['scene_ready'] else None
             safety=read_json(folder/'test_safety.json') if (folder/'test_safety.json').exists() else None
             result['test_safety']=safety if safety and result['scene_ready'] and safety.get('model_xml_sha256')==result['model_xml_sha256'] and safety.get('plan_sha256')==result['test_plan_sha256'] and safety.get('checker_sha256')==checker_sha else None
             result['has_preview']=(scene/'preview.png').exists()
-            result['files']=[name for name in ('input.aml','device_ir.json','task.json','patch.json','simulation_tests.json','robot_io_rules.json','test_safety.json',
+            result['files']=[name for name in ('input.aml','device_ir.json','task.json','patch.json','simulation_tests.json','robot_io_rules.json','test_safety.json','verification_parameters.json','io_test.xml','plc_test_contract.json',
                 record['scene_kind']+'/scene.xml',record['scene_kind']+'/scene.physical.json',record['scene_kind']+'/io_map.json',
                 record['scene_kind']+'/assembly_checks.json',record['scene_kind']+'/behavior_checks.json',record['scene_kind']+'/model.freeze.json',
                 record['scene_kind']+'/simulation_test_results.json',record['scene_kind']+'/selected_tests/simulation_test_results.json') if (folder/name).exists()]
@@ -488,8 +623,11 @@ class SceneWorkbench:
             allowed=allowed or bool(re.fullmatch(r'geometry/bodies/[A-Za-z][A-Za-z0-9_-]{0,63}\.obj',relative or ''))
         else:
             root=self.directory(ident)
-            allowed=relative in {'input.aml','device_ir.json','task.json','patch.json','simulation_tests.json','robot_io_rules.json','test_safety.json'} or bool(re.fullmatch(
+            allowed=relative in {'input.aml','device_ir.json','task.json','patch.json','simulation_tests.json','robot_io_rules.json','test_safety.json','verification_parameters.json','io_test.xml','plc_test_contract.json'} or bool(re.fullmatch(
                 r'(?:candidate_scene|scene)/(?:scene\.xml|scene\.physical\.json|io_map\.json|assembly_checks\.json|behavior_checks\.json|behavior_replay\.json|model\.freeze\.json|preview\.png|validated_preview\.png|(?:selected_tests/)?(?:simulation_test_results\.json|test_replays/test_[a-f0-9]{20}\.json))',relative or ''))
+            if self._record(ident).get('resource_package'):
+                from .package_web import FILES
+                allowed=relative=='input.aml' or relative in {self._record(ident)['scene_kind']+'/'+f for f in FILES}
         if not allowed:raise SceneWebError('此产物不可下载',403)
         path=confined(root,relative)
         if not path.is_file():raise SceneWebError('产物尚未生成',404)
@@ -503,23 +641,77 @@ class SceneWorkbench:
             record=self._record(ident)
             if record['busy']:raise SceneWebError('请等待当前场景操作完成后再下载完整模型包',409)
             folder=self.directory(ident);scene=folder/record['scene_kind'];files={}
-            for name in ('input.aml','device_ir.json','task.json','patch.json','simulation_tests.json','robot_io_rules.json','test_safety.json'):
+            for name in ('input.aml','device_ir.json','task.json','patch.json','simulation_tests.json','robot_io_rules.json','test_safety.json','verification_parameters.json','io_test.xml','plc_test_contract.json'):
                 if (folder/name).is_file():files[name]=folder/name
             if not (scene/'scene.xml').is_file():raise SceneWebError('场景尚未构建',404)
+            extensions={'.xml','.json','.obj','.blend','.py','.png','.log'}
+            if record.get('resource_package'):extensions.update({'.dae','.aml','.xsd'})
             for path in scene.rglob('*'):
-                if path.is_file() and path.suffix in {'.xml','.json','.obj','.blend','.py','.png','.log'}:
+                if path.is_file() and path.suffix in extensions:
                     safe=confined(folder,path.relative_to(folder))
                     files[path.relative_to(folder).as_posix()]=safe
-            if sum(p.stat().st_size for p in files.values())>256*1024*1024:
-                raise SceneWebError('模型包超过256 MiB，请使用分项下载')
+            limit=1024 if record.get('resource_package') else 256
+            if sum(p.stat().st_size for p in files.values())>limit*1024*1024:
+                raise SceneWebError('模型包超过'+str(limit)+' MiB，请使用分项下载')
             stream=io.BytesIO()
             with zipfile.ZipFile(stream,'w',zipfile.ZIP_DEFLATED) as archive:
                 for name,path in files.items():archive.write(path,name)
-                archive.writestr('README.txt',
+                archive.writestr('README.txt',(
+                    'AML resource assembly preview\nOpen '+record['scene_kind']+'/scene.xml with meshes/ intact.\n'
+                    'Original AML/DAE/XSD/logic snapshots and mapping reports are included.\n'
+                    'Web display simplification is not applied to these meshes.\n'
+                    'Collision, IO and installation gaps remain; no simulation acceptance or freeze is granted.\n'
+                    if record.get('resource_package') else
                     'Device scene model package\nOpen '+record['scene_kind']+'/scene.xml in MuJoCo with its assets directory intact.\n'
                     'This package includes actual generated geometry and model checks. PLC acceptance is not implied.\n'
-                    'For DeviceRuntime, rebuild from DeviceIR on the target machine before freezing: manifest paths retain original provenance.\n')
+                    'For DeviceRuntime, rebuild from DeviceIR on the target machine before freezing: manifest paths retain original provenance.\n'))
             return stream.getvalue()
+
+    def _preview_signature(self, folder):
+        """Invalidate runtime indices when the model or its source ownership changes."""
+        from .plc_preview import profile_signature
+        return (profile_signature(),) + tuple((name, p.stat().st_mtime_ns, p.stat().st_size) for name in
+                     ('scene.xml', 'assembly_checks.json', 'body_mapping.json', 'package_manifest.json', 'scene.physical.json')
+                     if (p := folder/name).is_file())
+
+    def joint_preview(self, ident, client, components, version, *, command=None, metadata=False):
+        with self.lock:
+            record = self._record(ident)
+            if record.get('busy') or self.active:
+                raise SceneWebError('模型正在处理，请等待完成后再控制关节', 409)
+            folder = self.directory(ident)/record['scene_kind']
+            cached = self.joint_previews.get(ident)
+            if not cached or cached[0] != self._preview_signature(folder) or cached[1].version != version:
+                if cached and cached[0] != self._preview_signature(folder):cached[1].close()
+                raise SceneWebError('模型版本已变化，请重新加载关节预览', 409)
+            preview = cached[1]
+            if command is not None:
+                return preview.command(client, components, command.get('action'), command.get('targets'), command.get('duration', 2))
+            return preview.snapshot(client, components, metadata=metadata)
+
+    def agent_command(self, data):
+        with self.lock:
+            ident = data.get('task')
+            record = self._record(ident)
+            folder = self.directory(ident)/record['scene_kind']
+            cached = self.joint_previews.get(ident)
+            if self.active or record.get('busy'):
+                raise SceneWebError('模型正在处理，请等待完成',409)
+            if not cached or cached[0] != self._preview_signature(folder) or cached[1].version != data.get('version'):
+                raise SceneWebError('模型版本已变化，请刷新场景后重试',409)
+            if not cached[1].agent:
+                raise SceneWebError('当前场景没有可用的 Agent 控制器')
+            return cached[1].agent.start(data.get('client'), data.get('request'))
+
+    def mesh_asset(self,ident,version,mesh):
+        with self.lock:
+            record=self._record(ident)
+            cached=self.joint_previews.get(ident)
+            if not cached or cached[1].version!=version or cached[0]!=self._preview_signature(self.directory(ident)/record['scene_kind']):
+                raise SceneWebError('模型版本已变化，请重新加载',409)
+            data=self.mesh_buffers.get((ident,version,mesh))
+            if data is None:raise SceneWebError('网格不存在',404)
+            return data
 
     def geometry(self,ident):
         """Use the actual compiled MuJoCo model, including exported mesh triangles."""
@@ -528,12 +720,24 @@ class SceneWorkbench:
         import numpy as np
         with self.lock:
             record=self._record(ident);folder=self.directory(ident)/record['scene_kind']
-            meta=read_json(folder/'scene.physical.json');xml=(folder/'scene.xml').read_text(encoding='utf-8')
-            key=(ident,meta['model_xml_sha256'],digest(meta))
-            if key in self.geometry_cache:return self.geometry_cache[key]
-            runtime=DeviceRuntime(meta,xml);m,d=runtime.model,runtime.data;geoms=[];positions=[]
-            owners={c['body']:cid for cid,c in meta['components'].items()}
-            owners.update({p['body']:p['product_id'] for p in meta['products']})
+            signature=self._preview_signature(folder)
+            if record.get('resource_package'):
+                from .package_web import model
+                meta=read_json(folder/'assembly_checks.json')
+                key=(ident,meta['model_xml_sha256'],digest(meta),signature)
+                if key in self.geometry_cache:return self.geometry_cache[key]
+                m,d,owners,meta=model(self.directory(ident),record['scene_kind'])
+            else:
+                meta=read_json(folder/'scene.physical.json');xml=(folder/'scene.xml').read_text(encoding='utf-8')
+                key=(ident,meta['model_xml_sha256'],digest(meta),signature)
+                if key in self.geometry_cache:return self.geometry_cache[key]
+                runtime=DeviceRuntime(meta,xml);m,d=runtime.model,runtime.data
+                owners={c['body']:cid for cid,c in meta['components'].items()}
+                owners.update({p['body']:p['product_id'] for p in meta['products']})
+            geoms=[];positions=[];preview_assets=None;preview_quality=None
+            if record.get('resource_package'):
+                from .package_preview import assets
+                preview_assets,preview_quality=assets(m)
             visual_mesh_bodies={int(m.geom_bodyid[i]) for i in range(m.ngeom)
                 if int(m.geom_type[i])==int(mujoco.mjtGeom.mjGEOM_MESH) and not m.geom_contype[i] and not m.geom_conaffinity[i]}
             for i in range(m.ngeom):
@@ -549,11 +753,19 @@ class SceneWorkbench:
                 if g['type']==int(mujoco.mjtGeom.mjGEOM_MESH):
                     mesh=int(m.geom_dataid[i]);start=int(m.mesh_vertadr[mesh]);count=int(m.mesh_vertnum[mesh])
                     verts=m.mesh_vert[start:start+count];fstart=int(m.mesh_faceadr[mesh]);fcount=int(m.mesh_facenum[mesh])
-                    if fcount>200000:raise SceneWebError('网格超过当前预览预算，请查看 Blender 预览',400,'component_model')
-                    g['vertices']=verts[m.mesh_face[fstart:fstart+fcount]].reshape(-1).tolist()
+                    if preview_assets is not None:g['mesh_asset']=str(mesh)
+                    else:
+                        if fcount>200000:raise SceneWebError('网格超过当前预览预算，请查看 Blender 预览',400,'component_model')
+                        g['vertices']=verts[m.mesh_face[fstart:fstart+fcount]].reshape(-1).tolist()
                 geoms.append(g)
                 name=mujoco.mj_id2name(m,mujoco.mjtObj.mjOBJ_GEOM,i) or ''
-                if g['type']!=0 and not name.startswith('item_'):positions.append(d.geom_xpos[i].tolist())
+                if g['type']!=0 and not name.startswith('item_'):
+                    if record.get('resource_package'):
+                        rotation=d.geom_xmat[i].reshape(3,3)
+                        center=d.geom_xpos[i]+rotation@m.geom_aabb[i,:3]
+                        half=np.abs(rotation)@m.geom_aabb[i,3:]
+                        positions.extend([(center-half).tolist(),(center+half).tolist()])
+                    else:positions.append(d.geom_xpos[i].tolist())
             p=np.asarray(positions or [[0,0,0]],dtype=float);low=p.min(axis=0);high=p.max(axis=0)
             from .mechanics import describe_mechanism, body_transforms
             ir_path=self.directory(ident)/'device_ir.json'
@@ -562,4 +774,30 @@ class SceneWorkbench:
                 'geoms':geoms,'transforms':[list(map(float,p))+list(map(float,r.ravel())) for p,r in zip(d.geom_xpos,d.geom_xmat)],
                 'mechanism':describe_mechanism(ir,m) if ir else {'frames':[],'joints':[]},'body_transforms':body_transforms(d),
                 'source':'mujoco_compiled_device_model','candidate':meta['candidate']}
-            self.geometry_cache={key:result};return result
+            if preview_assets is not None:result.update(mesh_assets=preview_assets,preview_quality=preview_quality)
+            from .joint_preview import JointPreview
+            from .plc_preview import load_profile
+            if record.get('resource_package'):
+                components=read_json(folder/'package_manifest.json')['components']
+                records=read_json(folder/'assembly_checks.json').get('joint_records', [])
+            else:
+                components=(ir or {}).get('components', [])
+                records=[]
+            for _, old_preview in self.joint_previews.values():old_preview.close()
+            preview=JointPreview(m,d,owners,components,records,include_bodies=not record.get('resource_package'),
+                                 plc_config=load_profile() if record.get('resource_package') else None)
+            from .agent_control import AgentControl
+            preview.agent=AgentControl(preview,folder,owners,records,self.author_factory)
+            self.joint_previews={ident:(signature,preview)}
+            result['joint_preview_version']=preview.version
+            result['component_children']=preview.mechanical_children
+            self.mesh_buffers={}
+            if preview_assets is not None:
+                for mesh,item in preview_assets.items():
+                    payload=item.pop('data')
+                    self.mesh_buffers[(ident,preview.version,mesh)]=payload
+                    item['byte_length']=len(payload)
+                    item['url']=f'/api/device-scene/mesh?task={ident}&version={preview.version}&mesh={mesh}'
+            self.geometry_cache={key:result}
+            self.assembly_previews.pop(ident,None)
+            return result

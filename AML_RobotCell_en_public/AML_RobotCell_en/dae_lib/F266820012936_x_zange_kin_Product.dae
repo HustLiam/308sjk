@@ -1,0 +1,348 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<COLLADA version="1.5.0" xmlns="http://www.collada.org/2008/03/COLLADASchema">
+	<asset>
+		<contributor>
+			<author>AutomationML e.V.</author>
+			<author_website>www.automationml.org</author_website>
+			<authoring_tool>"Notepad++" "6.8.6" "6.8.6"</authoring_tool>
+		</contributor>
+		<created>2015-12-15T13:12:06.7153453+01:00</created>
+		<modified>2015-12-15T13:12:06.7153453+01:00</modified>
+		<unit meter="0.001" name="mm" />
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_nodes>
+		<node id="F266820012936_x_zange_kin" name="F266820012936_x_zange_kin">
+			<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+			<node id="F266820012936_x_zange_kin_F266820012936_kin_grundkoerper" name="F266820012936_kin_grundkoerper">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+				<instance_node url="F266820012936_kin_grundkoerper_Product.dae#F266820012936_kin_grundkoerper_visual_scene_node" />
+			</node>
+			<node id="F266820012936_x_zange_kin_F266820012936_kin_bew_arm" name="F266820012936_kin_bew_arm">
+				<matrix>1 0 0 -2.72848e-012 0 0.96898 0.247138 -121.672 0 -0.247138 0.96898 19.8699 0 0 0 1</matrix>
+				<translate>-240.5 18.317 494.622</translate>
+				<rotate>0.173404 0.969465 -0.173404 -91.7765</rotate>
+				<rotate sid="bew_arm_axis">0 0 1 0</rotate>
+				<translate>-470.303 154.275 -240.5</translate>
+				<rotate>0.173404 0.969465 -0.173404 91.7765</rotate>
+				<instance_node url="F266820012936_kin_bew_arm_Product.dae#F266820012936_kin_bew_arm_visual_scene_node" />
+			</node>
+			<node id="F266820012936_x_zange_kin_F266820012936_kin_fester_arm" name="F266820012936_kin_fester_arm">
+				<matrix>1 0 0 0 0 0.99995 -0.01004 4.96694 0 0.01004 0.99995 -0.158973 0 0 0 1</matrix>
+				<translate>-240.5 18.317 494.622</translate>
+				<rotate>0.173404 0.969465 -0.173404 -91.7765</rotate>
+				<rotate sid="fester_arm_axis">0 0 1 0</rotate>
+				<translate>-470.303 154.275 -240.5</translate>
+				<rotate>0.173404 0.969465 -0.173404 91.7765</rotate>
+				<instance_node url="F266820012936_kin_fester_arm_Product.dae#F266820012936_kin_fester_arm_visual_scene_node" />
+			</node>
+			<node id="F266820012936_x_zange_kin_F266820012936_kin_dummy" name="F266820012936_kin_dummy">
+				<matrix>1 0 0 2.83762e-010 0 1 0 -91.2168 0 0 1 91.2168 0 0 0 1</matrix>
+				<translate>-157 407.288 883.468</translate>
+				<rotate>0.357407 -0.357407 0.862856 98.4211</rotate>
+				<rotate sid="Zangenoeffnung_axis">0 0 1 0</rotate>
+				<translate>-912.702 -157 -336.71</translate>
+				<rotate>0.357407 -0.357407 0.862856 -98.4211</rotate>
+				<instance_node url="F266820012936_kin_dummy_Rep.dae#F266820012936_kin_dummy_visual_scene_node" />
+			</node>
+			<node id="F266820012936_x_zange_kin_F266820012936_kin_antrieb" name="F266820012936_kin_antrieb">
+				<matrix>1 0 0 0 0 0.990545 0.137191 -61.5734 0 -0.137191 0.990545 -44.4217 0 0 0 1</matrix>
+				<translate>-237 -328.165 430.982</translate>
+				<rotate>-0.57735 -0.57735 0.57735 120</rotate>
+				<rotate sid="antrieb_festerarm_axis">0 0 1 0</rotate>
+				<translate>328.166 430.982 -237</translate>
+				<rotate>-0.57735 -0.57735 0.57735 -120</rotate>
+				<instance_node url="F266820012936_kin_antrieb_Product.dae#F266820012936_kin_antrieb_visual_scene_node" />
+			</node>
+			<node id="F266820012936_x_zange_kin_F266820012936_kin_spindel" name="F266820012936_kin_spindel">
+				<matrix>1 0 0 -1.81899e-012 0 0.990545 0.137191 -109.242 0 -0.137191 0.990545 18.5745 0 0 0 1</matrix>
+				<translate>-195.187 -155.065 288.713</translate>
+				<rotate>1 0 0 -135</rotate>
+				<rotate sid="sprindelhub_axis">0 0 1 0</rotate>
+				<translate>195.187 94.5032 313.798</translate>
+				<rotate>1 0 0 135</rotate>
+				<instance_node url="F266820012936_kin_spindel_Product.dae#F266820012936_kin_spindel_visual_scene_node" />
+			</node>
+			<node name="FrameOfInterest_Base1" sid="F266820012936_x_zange_kin_FrameOfInterest_Base1">
+				<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+			</node>
+			<node name="FrameOfInterest_Tool1" sid="F266820012936_x_zange_kin_FrameOfInterest_Tool1">
+				<matrix>0 1 0 -152 0.707107 0 0.707107 370.5 0.707107 0 -0.707107 846.8 0 0 0 1</matrix>
+			</node>
+			<node name="AttachmentPoint_030WZD121" sid="F266820012936_x_zange_kin_AttachmentPoint_030WZD121">
+				<matrix>1 0 0 -39.3171 0 1 0 30.6898 0 0 1 -1.05303 0 0 0 1</matrix>
+			</node>
+		</node>
+	</library_nodes>
+	<library_visual_scenes>
+		<visual_scene id="F266820012936_x_zange_kin_visual_scene">
+			<node id="F266820012936_x_zange_kin_visual_scene_node" name="F266820012936_x_zange_kin">
+				<instance_node url="#F266820012936_x_zange_kin" />
+			</node>
+		</visual_scene>
+	</library_visual_scenes>
+	<library_joints>
+		<joint id="F266820012936_x_zange_kin_F266820012936_x_zange_bew_arm" name="bew_arm">
+			<revolute sid="axis">
+				<axis>0 0 1</axis>
+			</revolute>
+		</joint>
+		<joint id="F266820012936_x_zange_kin_F266820012936_x_zange_fester_arm" name="fester_arm">
+			<revolute sid="axis">
+				<axis>0 0 1</axis>
+			</revolute>
+		</joint>
+		<joint id="F266820012936_x_zange_kin_F266820012936_x_zange_Zangenoeffnung" name="Zangenoeffnung">
+			<prismatic sid="axis">
+				<axis>0 0 1</axis>
+				<limits>
+					<min>-134</min>
+					<max>20</max>
+				</limits>
+			</prismatic>
+		</joint>
+		<joint id="F266820012936_x_zange_kin_F266820012936_x_zange_antrieb_festerarm" name="antrieb_festerarm">
+			<revolute sid="axis">
+				<axis>0 0 1</axis>
+			</revolute>
+		</joint>
+		<joint id="F266820012936_x_zange_kin_F266820012936_x_zange_sprindelhub" name="sprindelhub">
+			<prismatic sid="axis">
+				<axis>0 0 1</axis>
+			</prismatic>
+		</joint>
+	</library_joints>
+	<library_kinematics_models>
+		<kinematics_model id="F266820012936_x_zange_kin_kin_model.0" name="F266820012936_x_zange">
+			<technique_common>
+				<instance_joint sid="bew_arm" url="#F266820012936_x_zange_kin_F266820012936_x_zange_bew_arm" />
+				<instance_joint sid="fester_arm" url="#F266820012936_x_zange_kin_F266820012936_x_zange_fester_arm" />
+				<instance_joint sid="Zangenoeffnung" url="#F266820012936_x_zange_kin_F266820012936_x_zange_Zangenoeffnung" />
+				<instance_joint sid="antrieb_festerarm" url="#F266820012936_x_zange_kin_F266820012936_x_zange_antrieb_festerarm" />
+				<instance_joint sid="sprindelhub" url="#F266820012936_x_zange_kin_F266820012936_x_zange_sprindelhub" />
+				<link name="F266820012936_kin_grundkoerper" sid="F266820012936_kin_grundkoerper">
+					<attachment_full joint="F266820012936_x_zange_kin_kin_model.0/bew_arm">
+						<translate>-240.5 18.317 494.622</translate>
+						<rotate>0.173404 0.969465 -0.173404 -91.7765</rotate>
+						<link name="F266820012936_kin_bew_arm" sid="F266820012936_kin_bew_arm">
+							<translate>-470.303 154.275 -240.5</translate>
+							<rotate>0.173404 0.969465 -0.173404 91.7765</rotate>
+						</link>
+					</attachment_full>
+					<attachment_full joint="F266820012936_x_zange_kin_kin_model.0/fester_arm">
+						<translate>-240.5 18.317 494.622</translate>
+						<rotate>0.173404 0.969465 -0.173404 -91.7765</rotate>
+						<link name="F266820012936_kin_fester_arm" sid="F266820012936_kin_fester_arm">
+							<translate>-470.303 154.275 -240.5</translate>
+							<rotate>0.173404 0.969465 -0.173404 91.7765</rotate>
+							<attachment_full joint="F266820012936_x_zange_kin_kin_model.0/antrieb_festerarm">
+								<translate>-237 -328.165 430.982</translate>
+								<rotate>-0.57735 -0.57735 0.57735 120</rotate>
+								<link name="F266820012936_kin_antrieb" sid="F266820012936_kin_antrieb">
+									<translate>328.166 430.982 -237</translate>
+									<rotate>-0.57735 -0.57735 0.57735 -120</rotate>
+									<attachment_full joint="F266820012936_x_zange_kin_kin_model.0/sprindelhub">
+										<translate>-195.187 -155.065 288.713</translate>
+										<rotate>1 0 0 -135</rotate>
+										<link name="F266820012936_kin_spindel" sid="F266820012936_kin_spindel">
+											<translate>195.187 94.5032 313.798</translate>
+											<rotate>1 0 0 135</rotate>
+										</link>
+									</attachment_full>
+								</link>
+							</attachment_full>
+						</link>
+					</attachment_full>
+					<attachment_full joint="F266820012936_x_zange_kin_kin_model.0/Zangenoeffnung">
+						<translate>-157 407.288 883.468</translate>
+						<rotate>0.357407 -0.357407 0.862856 98.4211</rotate>
+						<link name="F266820012936_kin_dummy" sid="F266820012936_kin_dummy">
+							<translate>-912.702 -157 -336.71</translate>
+							<rotate>0.357407 -0.357407 0.862856 -98.4211</rotate>
+						</link>
+					</attachment_full>
+				</link>
+			</technique_common>
+			<extra>
+				<technique profile="POSES">
+					<poses>
+						<pose count="1" name="close">
+							<pose_joint joint="F266820012936_x_zange_kin_kin_model.0/Zangenoeffnung">
+								<value>
+									<double>0</double>
+								</value>
+							</pose_joint>
+						</pose>
+						<pose count="1" name="open_-5mm">
+							<pose_joint joint="F266820012936_x_zange_kin_kin_model.0/Zangenoeffnung">
+								<value>
+									<double>-129</double>
+								</value>
+							</pose_joint>
+						</pose>
+						<pose count="1" name="burned">
+							<pose_joint joint="F266820012936_x_zange_kin_kin_model.0/Zangenoeffnung">
+								<value>
+									<double>20</double>
+								</value>
+							</pose_joint>
+						</pose>
+					</poses>
+				</technique>
+			</extra>
+		</kinematics_model>
+	</library_kinematics_models>
+	<library_articulated_systems>
+		<articulated_system id="F266820012936_x_zange_kin_art_system.0">
+			<kinematics>
+				<instance_kinematics_model sid="inst_F266820012936_x_zange_kin_kin_model.0" url="#F266820012936_x_zange_kin_kin_model.0">
+					<newparam sid="F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0">
+						<SIDREF>F266820012936_x_zange_kin_art_system.0/inst_F266820012936_x_zange_kin_kin_model.0</SIDREF>
+					</newparam>
+					<newparam sid="F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_bew_arm_axis">
+						<SIDREF>F266820012936_x_zange_kin_art_system.0/inst_F266820012936_x_zange_kin_kin_model.0/bew_arm/axis</SIDREF>
+					</newparam>
+					<newparam sid="F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_bew_arm_axis_value">
+						<float>0</float>
+					</newparam>
+					<newparam sid="F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_fester_arm_axis">
+						<SIDREF>F266820012936_x_zange_kin_art_system.0/inst_F266820012936_x_zange_kin_kin_model.0/fester_arm/axis</SIDREF>
+					</newparam>
+					<newparam sid="F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_fester_arm_axis_value">
+						<float>0</float>
+					</newparam>
+					<newparam sid="F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_Zangenoeffnung_axis">
+						<SIDREF>F266820012936_x_zange_kin_art_system.0/inst_F266820012936_x_zange_kin_kin_model.0/Zangenoeffnung/axis</SIDREF>
+					</newparam>
+					<newparam sid="F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_Zangenoeffnung_axis_value">
+						<float>-129</float>
+					</newparam>
+					<newparam sid="F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_antrieb_festerarm_axis">
+						<SIDREF>F266820012936_x_zange_kin_art_system.0/inst_F266820012936_x_zange_kin_kin_model.0/antrieb_festerarm/axis</SIDREF>
+					</newparam>
+					<newparam sid="F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_antrieb_festerarm_axis_value">
+						<float>0</float>
+					</newparam>
+					<newparam sid="F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_sprindelhub_axis">
+						<SIDREF>F266820012936_x_zange_kin_art_system.0/inst_F266820012936_x_zange_kin_kin_model.0/sprindelhub/axis</SIDREF>
+					</newparam>
+					<newparam sid="F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_sprindelhub_axis_value">
+						<float>0</float>
+					</newparam>
+				</instance_kinematics_model>
+				<technique_common>
+					<axis_info axis="F266820012936_x_zange_kin_art_system.0/inst_F266820012936_x_zange_kin_kin_model.0/Zangenoeffnung/axis" name="oeffnungsweite" sid="F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_oeffnungsweite">
+						<active>
+							<bool>true</bool>
+						</active>
+						<locked>
+							<bool>false</bool>
+						</locked>
+						<index>
+							<int>1</int>
+						</index>
+						<limits>
+							<min>
+								<float>-134</float>
+							</min>
+							<max>
+								<float>20</float>
+							</max>
+						</limits>
+					</axis_info>
+					<frame_origin link="inst_F266820012936_x_zange_kin_kin_model.0/F266820012936_kin_grundkoerper" />
+					<frame_tip link="inst_F266820012936_x_zange_kin_kin_model.0/F266820012936_kin_dummy">
+						<translate>2.83762e-010 -91.2168 91.2168</translate>
+					</frame_tip>
+				</technique_common>
+			</kinematics>
+		</articulated_system>
+	</library_articulated_systems>
+	<library_kinematics_scenes>
+		<kinematics_scene id="F266820012936_x_zange_kin_kin_scene">
+			<instance_articulated_system sid="inst_F266820012936_x_zange_kin_art_system.0" url="#F266820012936_x_zange_kin_art_system.0">
+				<bind symbol="F266820012936_x_zange_kin_kin_scene_inst_F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0">
+					<param ref="F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0" />
+				</bind>
+				<bind symbol="F266820012936_x_zange_kin_kin_scene_inst_F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_bew_arm_axis">
+					<param ref="F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_bew_arm_axis" />
+				</bind>
+				<bind symbol="F266820012936_x_zange_kin_kin_scene_inst_F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_bew_arm_axis_value">
+					<param ref="F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_bew_arm_axis_value" />
+				</bind>
+				<bind symbol="F266820012936_x_zange_kin_kin_scene_inst_F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_fester_arm_axis">
+					<param ref="F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_fester_arm_axis" />
+				</bind>
+				<bind symbol="F266820012936_x_zange_kin_kin_scene_inst_F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_fester_arm_axis_value">
+					<param ref="F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_fester_arm_axis_value" />
+				</bind>
+				<bind symbol="F266820012936_x_zange_kin_kin_scene_inst_F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_Zangenoeffnung_axis">
+					<param ref="F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_Zangenoeffnung_axis" />
+				</bind>
+				<bind symbol="F266820012936_x_zange_kin_kin_scene_inst_F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_Zangenoeffnung_axis_value">
+					<param ref="F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_Zangenoeffnung_axis_value" />
+				</bind>
+				<bind symbol="F266820012936_x_zange_kin_kin_scene_inst_F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_antrieb_festerarm_axis">
+					<param ref="F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_antrieb_festerarm_axis" />
+				</bind>
+				<bind symbol="F266820012936_x_zange_kin_kin_scene_inst_F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_antrieb_festerarm_axis_value">
+					<param ref="F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_antrieb_festerarm_axis_value" />
+				</bind>
+				<bind symbol="F266820012936_x_zange_kin_kin_scene_inst_F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_sprindelhub_axis">
+					<param ref="F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_sprindelhub_axis" />
+				</bind>
+				<bind symbol="F266820012936_x_zange_kin_kin_scene_inst_F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_sprindelhub_axis_value">
+					<param ref="F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_sprindelhub_axis_value" />
+				</bind>
+			</instance_articulated_system>
+		</kinematics_scene>
+	</library_kinematics_scenes>
+	<scene>
+		<instance_visual_scene url="#F266820012936_x_zange_kin_visual_scene" />
+		<instance_kinematics_scene url="#F266820012936_x_zange_kin_kin_scene">
+			<bind_kinematics_model node="F266820012936_x_zange_kin_F266820012936_kin_grundkoerper">
+				<param>F266820012936_x_zange_kin_kin_scene_inst_F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0</param>
+			</bind_kinematics_model>
+			<bind_joint_axis target="F266820012936_x_zange_kin_F266820012936_kin_bew_arm/bew_arm_axis">
+				<axis>
+					<param>F266820012936_x_zange_kin_kin_scene_inst_F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_bew_arm_axis</param>
+				</axis>
+				<value>
+					<param>F266820012936_x_zange_kin_kin_scene_inst_F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_bew_arm_axis_value</param>
+				</value>
+			</bind_joint_axis>
+			<bind_joint_axis target="F266820012936_x_zange_kin_F266820012936_kin_fester_arm/fester_arm_axis">
+				<axis>
+					<param>F266820012936_x_zange_kin_kin_scene_inst_F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_fester_arm_axis</param>
+				</axis>
+				<value>
+					<param>F266820012936_x_zange_kin_kin_scene_inst_F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_fester_arm_axis_value</param>
+				</value>
+			</bind_joint_axis>
+			<bind_joint_axis target="F266820012936_x_zange_kin_F266820012936_kin_dummy/Zangenoeffnung_axis">
+				<axis>
+					<param>F266820012936_x_zange_kin_kin_scene_inst_F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_Zangenoeffnung_axis</param>
+				</axis>
+				<value>
+					<param>F266820012936_x_zange_kin_kin_scene_inst_F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_Zangenoeffnung_axis_value</param>
+				</value>
+			</bind_joint_axis>
+			<bind_joint_axis target="F266820012936_x_zange_kin_F266820012936_kin_antrieb/antrieb_festerarm_axis">
+				<axis>
+					<param>F266820012936_x_zange_kin_kin_scene_inst_F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_antrieb_festerarm_axis</param>
+				</axis>
+				<value>
+					<param>F266820012936_x_zange_kin_kin_scene_inst_F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_antrieb_festerarm_axis_value</param>
+				</value>
+			</bind_joint_axis>
+			<bind_joint_axis target="F266820012936_x_zange_kin_F266820012936_kin_spindel/sprindelhub_axis">
+				<axis>
+					<param>F266820012936_x_zange_kin_kin_scene_inst_F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_sprindelhub_axis</param>
+				</axis>
+				<value>
+					<param>F266820012936_x_zange_kin_kin_scene_inst_F266820012936_x_zange_kin_art_system.0_inst_F266820012936_x_zange_kin_kin_model.0_sprindelhub_axis_value</param>
+				</value>
+			</bind_joint_axis>
+		</instance_kinematics_scene>
+	</scene>
+</COLLADA>

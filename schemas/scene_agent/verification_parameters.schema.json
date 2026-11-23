@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:308sjk:verification-parameters:1",
+  "title": "AML facts for fixed model and IO verification; host checks exact equality to parsed AML",
+  "type": "object",
+  "required": ["format", "profile", "device_ir_sha256", "source", "units", "components", "interfaces", "connections", "assemblies", "joints", "couplings", "io", "requirements", "simplification", "physics_profile"],
+  "properties": {
+    "format": {"const": "308sjk.verification_parameters/1"},
+    "profile": {"const": "fixed_model_io/1"},
+    "device_ir_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "source": {"type": "object", "required": ["file", "sha256"]},
+    "units": {"const": {"length": "m", "angle": "rad", "time": "s", "mass": "kg"}},
+    "components": {"type": "array", "items": {"type": "object", "required": ["id", "name", "type", "parent_id", "pose", "interfaces", "parameters"], "properties": {
+      "id": {"type": "string"}, "name": {"type": "string"}, "type": {"type": "string"},
+      "parent_id": {"type": ["string", "null"]}, "pose": {"type": "object"},
+      "interfaces": {"type": "array", "items": {"type": "string"}}, "parameters": {"type": "object"}
+    }, "additionalProperties": false}},
+    "interfaces": {"type": "array"}, "connections": {"type": "array"}, "assemblies": {"type": "array"},
+    "joints": {"type": "array"}, "couplings": {"type": "array"}, "io": {"type": "array"},
+    "requirements": {"type": ["object", "null"], "description": "Null permits import/preview only; checks cannot pass."},
+    "simplification": {"type": "string"},
+    "physics_profile": {"type": "object", "required": ["version"], "properties": {"version": {"const": "308sjk.basic_physics/1"}}}
+  },
+  "additionalProperties": false
+}

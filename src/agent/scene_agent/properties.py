@@ -43,6 +43,8 @@ def interface_properties(ir):
                 anchors=[joints[b['joint_id']][b['side']+'_anchor_m'] for b in bindings]
                 record.update(editable=all(a==anchors[0] for a in anchors),position_m=copy.deepcopy(anchors[0]),
                               required_ids=sorted(required),joint_bindings=bindings)
+                if all(joints[b['joint_id']].get('definition_source')=='interfaces' for b in bindings):
+                    record['rpy_rad']=[_angle(frame,a) for a in 'xyz']
         result[fid]=record
     return result
 
@@ -109,7 +111,12 @@ def apply_property_patch(ir,patch):
             description=interface_properties(result)[fid]
             if not description['editable']:raise SceneError('Signal/topology interfaces are read-only','assembly')
             if not set(description['required_ids']).issubset(scope):raise SceneError('Interface edit requires connected nodes in explicit scope','assembly')
-            if frame['type']=='MechanicalMount':_write_frame(frame,position,_vec(op.get('rpy_rad')),patch.get('reason'))
+            derived=[j for j in result['joints'] if j.get('definition_source')=='interfaces' and fid in (j.get('parent_interface'),j.get('child_interface'))]
+            if derived:
+                _write_frame(frame,position,_vec(op.get('rpy_rad',description['rpy_rad'] or [0,0,0])),patch.get('reason'))
+                from .verification import joint_from_interfaces
+                for joint in derived:joint.update(joint_from_interfaces(result,joint,required=True))
+            elif frame['type']=='MechanicalMount':_write_frame(frame,position,_vec(op.get('rpy_rad')),patch.get('reason'))
             else:
                 if op.get('rpy_rad') is not None:raise SceneError('Joint direction is defined by its axis, not interface rotation','assembly')
                 # Anchor position is canonical in DeviceIR.joints; update it rather than unused attributes.

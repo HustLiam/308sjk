@@ -230,6 +230,15 @@ class PLCGenerator:
         return messages
 
     # ---------------- 主入口 ----------------
+    def generate_bound_motion(self, config, capability, plan):
+        """Validated bound-device plan -> PLCopen; reuse the existing static gates."""
+        from .scene_agent.motion_agent import compile_motion
+        result = compile_motion(config, capability, plan)
+        ok, errors = self.gate(result['xml'], result['io_list'])
+        if not ok:
+            raise ValueError('PLC 代码静态校验失败：' + '; '.join(errors))
+        return result
+
     def generate(self, spec, feedback=None, trajectory=None, experience_hint=None, test_plan=None):
         """生成并过闸。返回 {ok, xml, rounds, history, errors}。"""
         self._trajectory = trajectory if self.seed_xml is None else None

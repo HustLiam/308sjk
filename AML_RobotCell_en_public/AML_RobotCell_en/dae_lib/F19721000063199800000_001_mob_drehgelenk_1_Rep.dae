@@ -1,0 +1,139 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<COLLADA version="1.5.0" xmlns="http://www.collada.org/2008/03/COLLADASchema">
+	<asset>
+		<contributor>
+			<author>AutomationML e.V.</author>
+			<author_website>www.automationml.org</author_website>
+			<authoring_tool>"Notepad++" "6.8.6" "6.8.6"</authoring_tool>
+		</contributor>
+		<created>2015-12-15T13:12:06.7153453+01:00</created>
+		<modified>2015-12-15T13:12:06.7153453+01:00</modified>
+		<unit meter="0.001" name="mm" />
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_nodes>
+		<node id="F19721000063199800000_001_mob_drehgelenk_1" name="F19721000063199800000_001_mob_drehgelenk_1">
+			<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>
+			<instance_geometry url="#F19721000063199800000_001_mob_drehgelenk_1_R255_G128_B128_A255">
+				<bind_material>
+					<technique_common>
+						<instance_material symbol="F19721000063199800000_001_mob_drehgelenk_1_MATERIAL_R255_G128_B128_A255" target="#F19721000063199800000_001_mob_drehgelenk_1_MATERIAL_R255_G128_B128_A255" />
+					</technique_common>
+				</bind_material>
+			</instance_geometry>
+		</node>
+	</library_nodes>
+	<library_visual_scenes>
+		<visual_scene id="F19721000063199800000_001_mob_drehgelenk_1_visual_scene">
+			<node id="F19721000063199800000_001_mob_drehgelenk_1_visual_scene_node" name="F19721000063199800000_001_mob_drehgelenk_1">
+				<instance_node url="#F19721000063199800000_001_mob_drehgelenk_1" />
+			</node>
+		</visual_scene>
+	</library_visual_scenes>
+	<library_effects>
+		<effect id="F19721000063199800000_001_mob_drehgelenk_1_EFFECT_R255_G128_B128_A255">
+			<profile_COMMON>
+				<technique sid="common">
+					<phong>
+						<diffuse>
+							<color>1 0.501961 0.501961 1</color>
+						</diffuse>
+					</phong>
+				</technique>
+			</profile_COMMON>
+		</effect>
+	</library_effects>
+	<library_materials>
+		<material id="F19721000063199800000_001_mob_drehgelenk_1_MATERIAL_R255_G128_B128_A255">
+			<instance_effect url="#F19721000063199800000_001_mob_drehgelenk_1_EFFECT_R255_G128_B128_A255" />
+		</material>
+	</library_materials>
+	<library_geometries>
+		<geometry id="F19721000063199800000_001_mob_drehgelenk_1_R255_G128_B128_A255" name="F19721000063199800000_001_mob_drehgelenk_1_R255_G128_B128_A255">
+			<mesh>
+				<source id="F19721000063199800000_001_mob_drehgelenk_1_R255_G128_B128_A255_positions">
+					<float_array count="264" id="F19721000063199800000_001_mob_drehgelenk_1_R255_G128_B128_A255_positions_array">72 785.5 106.47 53 785.5 95.5 72 805.5 106.47 53 805.5 95.5 88.5 785.5 58.2568 117.5 785.5 75 88.5 805.5 58.2568 117.5 805.5 75 117.5 785.5 95 117.5 805.5 95 88.5 785.5 111.743 88.5 805.5 111.743 53 785.5 74.5 53 805.5 74.5 72 785.5 63.5303 72 805.5 63.5303 32 765.5 25 32 765.5 57.2872 32 805.5 25 32 784.5 68.2568 32 805.5 145 32 784.5 101.743 32 765.5 145 32 765.5 112.713 32 745.5 145 32 745.5 112.713 32 705.5 145 32 726.5 101.743 32 705.5 25 32 726.5 68.2568 32 745.5 25 32 745.5 57.2872 138.5 705.5 25 138.5 725.5 25 138.5 705.5 145 138.5 725.5 145 138.5 785.5 25 138.5 805.5 25 138.5 785.5 145 138.5 805.5 145 52 784.5 101.743 52 784.5 68.2568 52 765.5 112.713 52 726.5 101.743 52 745.5 112.713 52 726.5 68.2568 52 745.5 57.2872 52 765.5 57.2872 88.5 805.5 25 88.5 805.5 145 72 805.5 145 72 805.5 25 88.5 705.5 25 88.5 725.5 25 52 745.5 25 52 725.5 25 72 705.5 25 72 725.5 25 72 785.5 25 52 785.5 25 52 765.5 25 88.5 785.5 25 88.5 705.5 145 88.5 705.5 111.743 117.5 705.5 95 117.5 705.5 75 88.5 705.5 58.2568 72 705.5 63.5303 53 705.5 74.5 53 705.5 95.5 72 705.5 145 72 705.5 106.47 88.5 785.5 145 52 765.5 145 52 785.5 145 72 785.5 145 72 725.5 145 52 725.5 145 52 745.5 145 88.5 725.5 145 72 725.5 63.5303 53 725.5 74.5 53 725.5 95.5 72 725.5 106.47 117.5 725.5 95 88.5 725.5 111.743 117.5 725.5 75 88.5 725.5 58.2568</float_array>
+					<technique_common>
+						<accessor count="88" source="#F19721000063199800000_001_mob_drehgelenk_1_R255_G128_B128_A255_positions_array" stride="3">
+							<param name="X" type="float" />
+							<param name="Y" type="float" />
+							<param name="Z" type="float" />
+						</accessor>
+					</technique_common>
+				</source>
+				<source id="F19721000063199800000_001_mob_drehgelenk_1_R255_G128_B128_A255_normals">
+					<float_array count="42" id="F19721000063199800000_001_mob_drehgelenk_1_R255_G128_B128_A255_normals_array">0.5 0 -0.866025 -0.5 0 0.866025 -1 0 0 -0.5 0 -0.866025 1 0 0 0.5 0 0.866025 0 -1 0 0 -0.5 -0.866025 0 0.5 -0.866025 0 1 0 0 0.5 0.866025 0 -0.5 0.866025 0 0 -1 0 0 1</float_array>
+					<technique_common>
+						<accessor count="14" source="#F19721000063199800000_001_mob_drehgelenk_1_R255_G128_B128_A255_normals_array" stride="3">
+							<param name="X" type="float" />
+							<param name="Y" type="float" />
+							<param name="Z" type="float" />
+						</accessor>
+					</technique_common>
+				</source>
+				<vertices id="F19721000063199800000_001_mob_drehgelenk_1_R255_G128_B128_A255_vertices">
+					<input semantic="POSITION" source="#F19721000063199800000_001_mob_drehgelenk_1_R255_G128_B128_A255_positions" />
+				</vertices>
+				<tristrips count="52" material="F19721000063199800000_001_mob_drehgelenk_1_MATERIAL_R255_G128_B128_A255">
+					<input offset="0" semantic="VERTEX" source="#F19721000063199800000_001_mob_drehgelenk_1_R255_G128_B128_A255_vertices" />
+					<input offset="1" semantic="NORMAL" source="#F19721000063199800000_001_mob_drehgelenk_1_R255_G128_B128_A255_normals" />
+					<p>3 0 2 0 1 0 0 0</p>
+					<p>7 1 6 1 5 1 4 1</p>
+					<p>9 2 7 2 8 2 5 2</p>
+					<p>11 3 9 3 10 3 8 3</p>
+					<p>13 4 3 4 12 4 1 4</p>
+					<p>15 5 13 5 14 5 12 5</p>
+					<p>23 2 22 2 21 2 20 2 19 2 18 2 17 2 16 2</p>
+					<p>31 2 30 2 29 2 28 2 27 2 26 2 25 2 24 2</p>
+					<p>35 4 34 4 33 4 32 4</p>
+					<p>39 4 38 4 37 4 36 4</p>
+					<p>41 6 40 6 19 6 21 6</p>
+					<p>40 7 42 7 21 7 23 7</p>
+					<p>44 8 43 8 25 8 27 8</p>
+					<p>43 9 45 9 27 9 29 9</p>
+					<p>45 10 46 10 29 10 31 10</p>
+					<p>47 11 41 11 17 11 19 11</p>
+					<p>11 9 49 9 9 9 39 9 7 9 37 9 6 9 48 9</p>
+					<p>15 9 51 9 13 9 18 9 3 9 20 9 2 9 50 9</p>
+					<p>33 12 32 12 53 12 52 12</p>
+					<p>57 12 56 12 55 12 28 12 54 12 30 12</p>
+					<p>60 12 16 12 59 12 18 12 58 12 51 12</p>
+					<p>37 12 36 12 48 12 61 12</p>
+					<p>66 6 52 6 65 6 32 6 64 6 34 6 63 6 62 6</p>
+					<p>71 6 70 6 69 6 26 6 68 6 28 6 67 6 56 6</p>
+					<p>38 13 39 13 72 13 49 13</p>
+					<p>75 13 50 13 74 13 20 13 73 13 22 13</p>
+					<p>78 13 24 13 77 13 26 13 76 13 70 13</p>
+					<p>34 13 35 13 62 13 79 13</p>
+					<p>58 4 51 4 14 4 15 4</p>
+					<p>4 2 6 2 61 2 48 2</p>
+					<p>56 4 57 4 67 4 80 4</p>
+					<p>80 5 81 5 67 5 68 5</p>
+					<p>81 4 82 4 68 4 69 4</p>
+					<p>82 0 83 0 69 0 71 0</p>
+					<p>85 3 84 3 63 3 64 3</p>
+					<p>84 2 86 2 64 2 65 2</p>
+					<p>86 1 87 1 65 1 66 1</p>
+					<p>66 2 87 2 52 2 53 2</p>
+					<p>72 2 49 2 10 2 11 2</p>
+					<p>62 2 79 2 63 2 85 2</p>
+					<p>71 4 83 4 70 4 76 4</p>
+					<p>0 4 2 4 75 4 50 4</p>
+					<p>54 4 46 4 55 4 45 4 77 4 43 4 78 4 44 4</p>
+					<p>80 9 57 9 81 9 55 9 82 9 77 9 83 9 76 9</p>
+					<p>53 9 87 9 33 9 86 9 35 9 84 9 79 9 85 9</p>
+					<p>72 6 10 6 38 6 8 6 36 6 5 6 61 6 4 6</p>
+					<p>58 6 14 6 59 6 12 6 74 6 1 6 75 6 0 6</p>
+					<p>73 4 42 4 74 4 40 4 59 4 41 4 60 4 47 4</p>
+					<p>24 9 78 9 25 9 44 9</p>
+					<p>31 9 46 9 30 9 54 9</p>
+					<p>47 6 17 6 60 6 16 6</p>
+					<p>73 6 22 6 42 6 23 6</p>
+				</tristrips>
+			</mesh>
+		</geometry>
+	</library_geometries>
+	<scene>
+		<instance_visual_scene url="#F19721000063199800000_001_mob_drehgelenk_1_visual_scene" />
+	</scene>
+</COLLADA>

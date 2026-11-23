@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:308sjk:simulation-tests:1",
-  "title": "Agent stimuli only; fixed checker binds mandatory coverage and AML oracles",
+  "title": "Fixed model/IO checks, with archived Agent-stimuli compatibility",
   "type": "object",
   "required": ["format", "device_ir_sha256", "generator", "requirements_source", "assumptions", "modules"],
   "properties": {
     "format": {"const": "308sjk.simulation_tests/1"},
     "device_ir_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
-    "generator": {"const": "scene_agent_fixed_templates/1"},
+    "generator": {"enum": ["scene_agent_fixed_templates/1", "fixed_model_io/1"]},
     "requirements_source": {"enum": ["aml", "inferred_legacy_facts"]},
     "assumptions": {"type": "array", "items": {"type": "string"}},
     "modules": {"type": "array", "items": {
@@ -15,12 +15,12 @@
       "required": ["id", "kind", "target", "label", "requirements", "steps"],
       "properties": {
         "id": {"type": "string", "pattern": "^test_[a-f0-9]{20}$"},
-        "kind": {"enum": ["mechanical_joint", "fixed_mount", "joint_coupling", "io_binding", "missing_requirement"]},
+        "kind": {"enum": ["component_structure", "mechanical_joint", "fixed_mount", "joint_coupling", "io_binding", "missing_requirement"]},
         "target": {"type": "string"}, "label": {"type": "string"},
         "requirements": {"type": "array", "items": {"type": "string"}},
         "ruleset": {"const": "308sjk.robot_io_rules/1"},
         "rules_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
-        "script_origin": {"enum": ["baseline", "agent"]},
+        "script_origin": {"enum": ["baseline", "agent", "fixed_checker"]},
         "steps": {"type": "array", "maxItems": 40, "items": {"oneOf": [
           {"type": "object", "required": ["op", "positions"], "properties": {
             "op": {"const": "joint_configuration"}, "positions": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "number"}}
@@ -32,7 +32,7 @@
             "op": {"const": "io_sample"}, "value": {"type": ["boolean", "integer"]}
           }, "additionalProperties": false},
           {"type": "object", "required": ["op"], "properties": {
-            "op": {"enum": ["mount_probe", "coupling_probe"]}
+            "op": {"enum": ["mount_probe", "coupling_probe", "inspect_structure"]}
           }, "additionalProperties": false},
           {"type": "object", "required": ["op", "value"], "properties": {
             "op": {"enum": ["drive", "reject"]}, "value": {"type": "integer"}

@@ -12,7 +12,7 @@ REPO=Path(__file__).resolve().parents[1]
 def render_text(body):
     node=shutil.which('node')
     if not node:pytest.skip('Node is needed for scene presentation checks')
-    script="require('./src/agent/web_ui/device_scene_i18n.js');const t=globalThis.DeviceSceneText;"+body
+    script="require('./src/agent/web_ui/device_scene_i18n.js');require('./src/agent/web_ui/joint_preview.js');const t=globalThis.DeviceSceneText;"+body
     result=subprocess.run([node,'-e',script],cwd=REPO,capture_output=True,text=True,encoding='utf-8',check=True)
     return json.loads(result.stdout)
 

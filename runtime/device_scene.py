@@ -44,6 +44,10 @@ def _mass_geometries(geoms,physical):
 
 def build_device_scene(ir, library, output, *, candidates=None, pool_per_product=4, blender='E:/Blender/blender.exe'):
     validate_device_ir(ir)
+    from src.agent.scene_agent.verification import enabled,apply_physics,PHYSICS,PROFILE
+    fixed_profile=enabled(ir)
+    def evaluated(entry,component):
+        return validate_rule(apply_physics(entry['rule']) if fixed_profile else entry['rule'],values(component))
     if ir.get('pending'):raise SceneError('DeviceIR has unresolved items','device_description',{'pending':ir['pending']})
     if not 1<=pool_per_product<=32:raise SceneError('Pool size must be 1..32')
     output=Path(output);output.mkdir(parents=True,exist_ok=True)
@@ -83,7 +87,7 @@ def build_device_scene(ir, library, output, *, candidates=None, pool_per_product
                 rec=frame['parameters'].get('rotation_'+a+'_deg',{})
                 angles.append(rec.get('value',0) if rec.get('original_unit') else math.radians(rec.get('value',0)))
             return transform([p['position_'+a+'_m'] for a in 'xyz'],angles)
-        recipe=validate_rule(resolved[cid]['rule'],values(components[cid]))
+        recipe=evaluated(resolved[cid],components[cid])
         found=[f for f in recipe.get('interfaces',[]) if f['name']==frame['name']]
         if len(found)!=1:raise SceneError('Mount frame missing or ambiguous: '+frame['name'],'assembly')
         return pose_matrix(found[0])
@@ -115,6 +119,7 @@ def build_device_scene(ir, library, output, *, candidates=None, pool_per_product
               'material_flow':[]}
     import platform
     metadata['software_versions']={'python':platform.python_version(),'mujoco':mujoco.__version__,'numpy':np.__version__}
+    if fixed_profile:metadata.update(verification_profile=PROFILE,physics_profile=copy.deepcopy(PHYSICS))
     for a in ir.get('assemblies',[]):
         actual=wt(a['child_component'])@mount_frame(a['child_component'],a['child_interface'])
         expected=wt(a['parent_component'])@mount_frame(a['parent_component'],a['parent_interface'])@pose_matrix(a.get('offset',{}))
@@ -154,7 +159,10 @@ def build_device_scene(ir, library, output, *, candidates=None, pool_per_product
         if cid in body_nodes:return body_nodes[cid]
         if cid in active:raise SceneError('Joint hierarchy cycle','assembly')
         active.add(cid)
-        c=components[cid];entry=resolved[cid];p=values(c);rule=entry['rule'];model=validate_rule(rule,p)
+        c=components[cid];entry=resolved[cid];p=values(c);rule=entry['rule'];model=evaluated(entry,c)
+        if fixed_profile:
+            p['gravity_compensation']=PHYSICS['gravity_compensation']
+            if 'surface_friction' in p:p['surface_friction']=PHYSICS['friction'][0]
         j=physical_joints.get(cid)
         mount=assembly_by_child.get(cid)
         parent_id=j['parent_body'] if j else (mount['parent_component'] if mount else c['parent_id'])
@@ -229,7 +237,7 @@ def build_device_scene(ir, library, output, *, candidates=None, pool_per_product
     for cid in resolved:
         if cid not in products:add_component(cid)
     for cid in products:
-        c=components[cid];p=values(c);entry=resolved[cid];model=validate_rule(entry['rule'],p)
+        c=components[cid];p=values(c);entry=resolved[cid];model=evaluated(entry,c)
         if model.get('bodies') or model.get('joints'):raise SceneError('Articulated product spawning needs a separate behavior kernel')
         metadata['rules'].append({'component_id':cid,'directory':entry['directory'],'rule_sha256':digest(entry['rule']),
                                   'approval':entry.get('approval')})

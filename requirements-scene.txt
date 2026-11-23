@@ -4,3 +4,4 @@
 mujoco==3.3.1
 numpy>=1.24,<3
 Pillow>=10,<13
+lxml>=5,<7

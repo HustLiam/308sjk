@@ -1267,9 +1267,9 @@ def make_server(workbench, port=8765):
             try:
                 self._check_host()
                 parsed = urlsplit(self.path)
-                if parsed.path in ("/", "/app.js", "/style.css", "/scene_view.js", "/device_scene.js", "/device_scene.css", "/device_tree.js", "/device_scene_i18n.js"):
+                if parsed.path in ("/", "/app.js", "/style.css", "/scene_view.js", "/device_scene.js", "/device_scene.css", "/device_tree.js", "/device_scene_i18n.js", "/joint_preview.js"):
                     filename = "index.html" if parsed.path=="/" else parsed.path[1:]
-                    content_type = {"index.html":"text/html", "app.js":"text/javascript", "scene_view.js":"text/javascript", "device_scene.js":"text/javascript", "device_tree.js":"text/javascript", "device_scene_i18n.js":"text/javascript", "style.css":"text/css", "device_scene.css":"text/css"}[filename]
+                    content_type = {"index.html":"text/html", "app.js":"text/javascript", "scene_view.js":"text/javascript", "device_scene.js":"text/javascript", "device_tree.js":"text/javascript", "device_scene_i18n.js":"text/javascript", "joint_preview.js":"text/javascript", "style.css":"text/css", "device_scene.css":"text/css"}[filename]
                     self._send(200, (UI_DIR/filename).read_bytes(), content_type+"; charset=utf-8")
                 elif parsed.path=="/api/config":
                     self._send(200, workbench.config())
@@ -1278,6 +1278,22 @@ def make_server(workbench, port=8765):
                 elif parsed.path in ('/api/device-scene/state','/api/device-scene/view'):
                     query=parse_qs(parsed.query);ident=query.get('task',[''])[0];scenes=workbench.device_scenes()
                     self._send(200,scenes.geometry(ident) if parsed.path.endswith('/view') else scenes.state(ident))
+                elif parsed.path=='/api/device-scene/mesh':
+                    query=parse_qs(parsed.query)
+                    self._send(200,workbench.device_scenes().mesh_asset(query.get('task',[''])[0],
+                        query.get('version',[''])[0],query.get('mesh',[''])[0]),'application/octet-stream')
+                elif parsed.path=='/api/device-scene/assembly-view':
+                    query=parse_qs(parsed.query)
+                    self._send(200,workbench.device_scenes().assembly_view(query.get('task',[''])[0]))
+                elif parsed.path=='/api/device-scene/assembly-mesh':
+                    query=parse_qs(parsed.query)
+                    self._send(200,workbench.device_scenes().assembly_mesh(query.get('task',[''])[0],
+                        query.get('version',[''])[0],query.get('mesh',[''])[0]),'application/octet-stream')
+                elif parsed.path=='/api/device-scene/joint-state':
+                    query=parse_qs(parsed.query)
+                    self._send(200,workbench.device_scenes().joint_preview(query.get('task',[''])[0],
+                        query.get('client',[''])[0],query.get('component',[]),query.get('version',[''])[0],
+                        metadata=query.get('metadata',['0'])[0]=='1'))
                 elif parsed.path=='/device-scene-file':
                     query=parse_qs(parsed.query)
                     path=workbench.device_scenes().file(query.get('task',[''])[0],query.get('path',[''])[0],query.get('type',[None])[0])
@@ -1350,12 +1366,18 @@ def make_server(workbench, port=8765):
                     scenes=workbench.device_scenes();action=route.rsplit('/',1)[-1]
                     if action=='create':result=scenes.create(data)
                     elif action=='upload':result=scenes.upload(data)
+                    elif action=='import-package':result=scenes.import_package(data)
+                    elif action=='resolve-resource':result=scenes.resolve_resource(data)
                     elif action=='edit':result=scenes.edit(data)
                     elif action=='approve':result=scenes.approve(data)
                     elif action=='operate':result=scenes.operate(data.get('task'),data.get('revision'),data.get('action'))
                     elif action=='tests':result=scenes.run_tests(data)
+                    elif action=='plc-test':result=scenes.plc_test(data)
                     elif action=='delete-history':result=scenes.delete_history(data)
                     elif action=='stop':result=scenes.stop(data.get('task'))
+                    elif action=='joint-command':result=scenes.joint_preview(data.get('task'),data.get('client'),
+                        data.get('components'),data.get('version'),command=data)
+                    elif action=='agent-command':result=scenes.agent_command(data)
                     else:raise WorkbenchError('未知设备场景操作',404)
                 elif route=="/api/import":
                     content = base64.b64decode(data.get("data", ""), validate=True)

@@ -3,10 +3,14 @@
   const $=id=>document.getElementById(id);
   const sceneText=globalThis.DeviceSceneText;
   let config=null,current=null,working=false,loading=false,timer=null,viewer=null;
+  let agentSubmitting=false;
   let chosen=new Set(),componentKey='',resultKey='',listingKey='',replay=null,playing=false,replayStart=0,replayOffset=0;
   let tree=null,activeComponent=null,collapsed=new Set(),interfaceChoices=new Map(),editingInterface=null,treeInitialized=false;
   let reviewSelection=new Map(),reviewContext=null;
   let publishedFrozenKey='',previewTask='';
+  let visibilityMode='only',visibleComponents=null,visibilityModel='';
+  const jointPanel=new JointPreviewPanel($('ds-joint-preview'),api,()=>{playing=false;replay=null;$('ds-play').textContent='播放测试回放';});
+  jointPanel.onChange=()=>controls();
   let sourceVersion=0,publishedSourceKey='';
   let testSelection=new Set(),testModulesKey='',testReplayVersion=0;
   let historyRecords=[],historySelection=new Set();
@@ -31,6 +35,8 @@
   const phaseNames={draft:'待生成',generating:'生成中',editing:'调整中',build:'构建中',check:'检查中',freeze:'冻结中',testing:'测试中',revalidate:'组件复查中',stopping:'停止中',ready:'已生成',failed:'失败',cancelled:'已停止',interrupted:'已中断'};
   const fileNames={'input.aml':'设备 AML','device_ir.json':'DeviceIR','task.json':'任务清单','patch.json':'局部修改补丁','scene.xml':'MuJoCo 模型 XML','scene.physical.json':'设备场景 JSON','io_map.json':'AML IO 绑定','assembly_checks.json':'装配检查报告','behavior_checks.json':'设备行为报告','model.freeze.json':'模型冻结清单'};
   Object.assign(fileNames,{'simulation_tests.json':'生成的仿真测试脚本','simulation_test_results.json':'仿真测试模块结果','robot_io_rules.json':'六轴 IO 绑定校验规则','test_safety.json':'测试防碰撞预检'});
+  Object.assign(fileNames,{'verification_parameters.json':'模型校验参数 JSON','io_test.xml':'OpenPLC IO 测试程序','plc_test_contract.json':'PLC 测试通道配置'});
+  Object.assign(fileNames,{'package_manifest.json':'AML 资源总清单与缺项','data_destinations.json':'数据去向与节点映射','mesh_manifest.json':'网格尺寸与来源','logic_models.json':'保留的行为模型','body_mapping.json':'仿真组件映射'});
   const layerNames={device_description:'设备描述',component_model:'组件模型',assembly:'装配关系',plc_logic:'PLC 逻辑'};
   layerNames.simulation_test='仿真测试';
   const qs=object=>new URLSearchParams(object).toString();
@@ -48,7 +54,7 @@
     const node=$(id),original=String(message??''),text=sceneText.errorMessage(original);
     node.textContent=prefix+text;node.title=text===original?'':original;node.hidden=!original&&!prefix;
   }
-  function error(message=''){showError('ds-error',message);}
+  function error(message=''){showError('ds-error',message);showError('ds-settings-error',message);}
   function element(tag,text,className){const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(className)node.className=className;return node;}
   function link(host,label,path,type){const a=element('a',label);a.href=fileUrl(path,type);a.download='';host.append(a);}
   function table(host,headers,rows){const t=element('table'),head=element('thead'),tr=element('tr');for(const h of headers)tr.append(element('th',h));head.append(tr);t.append(head);const body=element('tbody');for(const row of rows){const r=element('tr');for(const value of row)r.append(element('td',typeof value==='object'?JSON.stringify(value):String(value??'—')));body.append(r);}t.append(body);host.append(t);}
@@ -57,7 +63,46 @@
     const response=await fetch(path,data===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json','X-Agent-Token':config.token},body:JSON.stringify(data)});
     const result=await response.json();if(!response.ok)throw Error(result.error||'设备场景请求失败');return result;
   }
-  function blocked(){return working||!!current?.busy||!!current?.occupied;}
+  function blocked(){return working||agentSubmitting||!!current?.busy||!!current?.occupied||!!viewer?.assemblyPromise||!!(jointPanel.plcActive&&jointPanel.frame?.agent);}
+  function visibilitySelection(ids=chosen,linked=true){
+    const expanded=new Set(ids);
+    for(const j of current?.device_ir?.joints||[])if(expanded.has(j.id)){expanded.add(j.parent_body);expanded.add(j.child_body);}
+    return DeviceTree.componentSet(current?.device_ir,expanded,linked&&$('ds-linked-visibility').checked?viewer?.componentChildren:{});
+  }
+  function syncVisibility(){
+    if(!viewer)return;
+    if(viewer.jointPreviewVersion!==visibilityModel){visibilityModel=viewer.jointPreviewVersion;visibleComponents=null;if(visibilityMode==='custom')visibilityMode='only';}
+    if(visibilityMode==='all')visibleComponents=null;
+    else if(visibilityMode==='only')visibleComponents=chosen.size?visibilitySelection():null;
+    else if(visibilityMode==='station'){
+      const byId=new Map((current?.device_ir?.components||[]).map(c=>[c.id,c])),stations=new Set();
+      for(const id of chosen){let c=byId.get(id),candidate=c,seen=new Set();while(c&&!seen.has(c.id)){seen.add(c.id);candidate=c;if(/^ST\d/i.test(c.name))break;c=byId.get(c.parent_id);}if(candidate)stations.add(candidate.id);}
+      visibleComponents=stations.size?visibilitySelection(stations,false):null;
+    }
+    viewer.setVisibleComponents(visibleComponents);
+    const total=current?.device_ir?.components.length||0;
+    $('ds-visible-count').textContent=(visibleComponents?.size??total)+' / '+total;
+    for(const button of document.querySelectorAll('[data-ds-visibility]')){const on=button.dataset.dsVisibility===(visibleComponents===null?'all':visibilityMode);button.classList.toggle('is-active',on);button.setAttribute('aria-pressed',String(on));button.disabled=button.dataset.dsVisibility!=='all'&&!chosen.size;}
+    for(const button of $('ds-components').querySelectorAll('[data-visibility-component]')){
+      const id=button.dataset.visibilityComponent,shown=visibleComponents===null||[...visibilitySelection([id],false)].some(k=>visibleComponents.has(k));
+      button.setAttribute('aria-pressed',String(shown));button.title=(shown?'隐藏 ':'显示 ')+(tree?.nodes.get(id)?.name||id);button.setAttribute('aria-label',button.title);button.classList.toggle('is-off',!shown);
+    }
+  }
+  function fitSelection(){if(viewer?.meshes.length)viewer.fitVisible({top:110,bottom:jointPanel.host.hidden?45:jointPanel.host.offsetHeight+50});}
+  function changeVisibility(mode){
+    if(!current?.scene_ready)return;
+    if(mode==='hide'){visibleComponents=new Set(visibleComponents??current.device_ir.components.map(c=>c.id));for(const id of visibilitySelection())visibleComponents.delete(id);visibilityMode='custom';}
+    else visibilityMode=mode;
+    syncVisibility();fitSelection();
+  }
+  function filterComponents(){
+    const query=$('ds-component-search').value.trim().toLowerCase();
+    for(const item of [...$('ds-components').querySelectorAll('[role=treeitem]')].reverse()){
+      const own=(tree?.nodes.get(item.dataset.nodeId)?.name||'').toLowerCase().includes(query),descendant=[...item.querySelectorAll(':scope > ul > li')].some(n=>!n.hidden);
+      item.hidden=!!query&&!own&&!descendant;
+      const group=item.querySelector(':scope > ul');if(group)group.hidden=query?false:collapsed.has(item.dataset.nodeId);
+    }
+  }
   function syncSelection(scrollId){
     const components=current?.device_ir?.components||[],joints=current?.device_ir?.joints||[],byId=new Map([...components,...joints].map(c=>[c.id,c]));
     const preparing=!!current?.busy&&!current?.device_ir;
@@ -67,6 +112,8 @@
     for(const c of components){const seen=new Set();let parent=tree?.parents.get(c.id);
       while(parent&&!seen.has(parent)){if(highlighted.has(parent)){highlighted.add(c.id);break;}seen.add(parent);parent=tree.parents.get(parent);}}
     if(viewer)viewer.setSelection(highlighted);
+    syncVisibility();
+    jointPanel.sync(current,chosen,viewer);
     if(scrollId&&chosen.has(scrollId))activeComponent=scrollId;
     if(!chosen.has(activeComponent))activeComponent=[...chosen].at(-1)||null;
     for(const input of $('ds-components').querySelectorAll('input')){input.checked=chosen.has(input.value);input.closest('label').classList.toggle('is-selected',input.checked);input.closest('[role=treeitem]').setAttribute('aria-selected',String(input.checked));}
@@ -102,7 +149,7 @@
   function renderTree(){
     const ir=current?.device_ir,host=$('ds-components');host.replaceChildren();if(!ir){tree=null;return;}
     tree=DeviceTree.build(ir);
-    if(!treeInitialized){for(const id of tree.roots)if(tree.nodes.get(id).kind==='component')collapsed.add(id);treeInitialized=true;}
+    if(!treeInitialized){for(const [id,children] of tree.children)if(children.length)collapsed.add(id);treeInitialized=true;}
     const build=id=>{const data=tree.nodes.get(id),c=data.component,j=data.joint,children=tree.children.get(id),name=data.name;
       const item=element('li');item.role='treeitem';item.dataset.nodeId=id;item.dataset.nodeKind=data.kind;item.setAttribute('aria-selected',String(chosen.has(id)));
       const row=element('div',undefined,'device-tree-row'),toggle=element('button',children.length?(collapsed.has(id)?'▸':'▾'):'·','device-tree-toggle');toggle.type='button';toggle.disabled=!children.length;toggle.tabIndex=-1;toggle.onclick=()=>setExpanded(id,collapsed.has(id));row.append(toggle);
@@ -111,12 +158,15 @@
       else if(data.kind==='joint_class'){const button=element('button',name,'device-tree-class');button.type='button';button.onclick=()=>setExpanded(id,collapsed.has(id));row.append(button);}
       else{const label=element('label'),input=document.createElement('input');input.type='checkbox';input.value=id;input.checked=chosen.has(id);
         input.onchange=()=>{if(input.checked)chosen.add(id);else chosen.delete(id);syncSelection(input.checked?id:null);};
-        const text=element('span',undefined,'device-tree-caption');text.append(element('span',name),element('small',j?'运动副实例':c.type));label.append(input,text);row.append(label);}
+        const text=element('span',undefined,'device-tree-caption');text.append(element('span',name),element('small',j?'运动副实例':c.type));text.title=name;text.onclick=e=>{e.preventDefault();selectFromView(id,{additive:e.ctrlKey||e.metaKey});};label.append(input,text);row.append(label);
+        if(data.kind==='component'){const eye=element('button','◉','device-tree-eye');eye.type='button';eye.dataset.visibilityComponent=id;
+          eye.onclick=()=>{const branch=visibilitySelection([id],false),shown=visibleComponents===null||[...branch].some(k=>visibleComponents.has(k));visibleComponents=new Set(visibleComponents??current.device_ir.components.map(c=>c.id));for(const k of branch)shown?visibleComponents.delete(k):visibleComponents.add(k);visibilityMode='custom';syncVisibility();};row.append(eye);}}
       item.append(row);
       if(children.length){item.setAttribute('aria-expanded',String(!collapsed.has(id)));toggle.setAttribute('aria-label',(collapsed.has(id)?'展开 ':'收起 ')+name);const list=element('ul');list.role='group';list.hidden=collapsed.has(id);for(const child of children)list.append(build(child));item.append(list);}
       return item;};
-    const roots=element('ul');roots.role='group';for(const id of tree.roots)roots.append(build(id));host.append(roots);
+    const roots=element('ul');roots.role='group';for(const id of tree.roots){if(current.resource_package&&tree.nodes.get(id).kind==='joint_class'&&!tree.children.get(id).length)continue;roots.append(build(id));}host.append(roots);
     $('ds-tree-issues').hidden=!tree.issues.length;$('ds-tree-issues').textContent=tree.issues.length?'组件层级或运动副引用存在错误，请检查设备描述。':'';
+    filterComponents();
   }
   function renderProperties(){
     const ir=current?.device_ir,c=ir?.components.find(c=>c.id===activeComponent),joint=ir?.joints.find(j=>j.id===activeComponent),host=$('ds-properties-content');$('ds-properties').hidden=!c&&!joint;host.replaceChildren();if(!c&&!joint)return;
@@ -150,14 +200,14 @@
         action('ds-properties-edit','设置接口位置',!missing.length,()=>openInterface(c,frame,p));
       }
     }else host.append(element('p','当前组件没有接口。','device-help'));
-    action('ds-properties-add','新增机械安装接口',!joint,()=>openInterface(c,null,null));
+    if(!current.resource_package)action('ds-properties-add','新增机械安装接口',!joint,()=>openInterface(c,null,null));
     const params=element('details');params.className='device-property-parameters';params.append(element('summary','参数与来源'));table(params,['参数','当前值'],Object.entries(c.parameters).map(([k,v])=>[k,typeof v.value==='object'?JSON.stringify(v.value):v.value]));params.append(element('p','来源：'+(c.source?.locator||c.source?.kind||'设备描述'),'device-help'));host.append(params);
   }
   function openInterface(component,frame,description){
     if(blocked())return;
-    editingInterface={componentId:component.id,interfaceId:frame?.id||crypto.randomUUID(),adding:!frame,rotatable:!frame||frame.type==='MechanicalMount',taskId:current.id,base:current.device_ir.facts_sha256};
+    editingInterface={componentId:component.id,interfaceId:frame?.id||crypto.randomUUID(),adding:!frame,rotatable:!frame||frame.type==='MechanicalMount'||!!description?.rpy_rad,taskId:current.id,base:current.device_ir.facts_sha256};
     $('ds-interface-title').textContent=component.name+' · '+(frame?'接口局部坐标':'新增机械接口');$('ds-interface-name').value=frame?.name||'mount';$('ds-interface-name').readOnly=!!frame;
-    $('ds-interface-context').textContent=editingInterface.rotatable?'接口类型：MechanicalMount；局部坐标相对于 '+component.name:'运动副安装点相对于 '+component.name+'；方向由运动副轴向定义，旋转角不可在此修改。';
+    $('ds-interface-context').textContent=editingInterface.rotatable?'完整接口坐标相对于 '+component.name+'；接口定义的运动副使用局部 +Z 作为正轴向。':'运动副安装点相对于 '+component.name+'；方向由运动副轴向定义，旋转角不可在此修改。';
     for(const [i,a] of ['x','y','z'].entries()){$('ds-interface-'+a).value=description?.position_m?.[i]??'';const field=$('ds-interface-r'+a);field.disabled=!editingInterface.rotatable;field.required=editingInterface.rotatable;field.value=(description?.rpy_rad?.[i]||0)*180/Math.PI;}
     $('ds-interface-error').hidden=true;$('ds-interface-save').disabled=false;$('ds-interface-dialog').showModal();
   }
@@ -173,6 +223,7 @@
   }
   function controls(){
     const busy=blocked(),ready=!!current?.scene_ready;
+    $('ds-package-import').disabled=busy;
     $('ds-tests-run').disabled=busy||!testSelection.size||![...testSelection].every(id=>current?.test_modules?.some(m=>m.id===id&&m.available));
     $('ds-tests-all').disabled=busy||!current?.test_modules?.some(m=>m.available);$('ds-tests-clear').disabled=busy||!testSelection.size;
     $('ds-test-replay').disabled=busy;
@@ -188,8 +239,7 @@
     $('ds-freeze').title=!current?.all_approved?'全部组件审批后可用':!current?.can_build?'当前组件复查未通过，请先修复':'通过整机行为检查后冻结';
     $('ds-stop').hidden=!current?.busy;$('ds-stop').disabled=working||current?.phase==='stopping';
     $('ds-tasks').disabled=working;$('ds-review-close').disabled=working;
-    const editable=[...chosen].every(id=>current?.device_ir?.components.some(c=>c.id===id));
-    $('ds-edit').disabled=busy||!chosen.size||!editable||!$('ds-edit-request').value.trim();$('ds-pose').disabled=busy||chosen.size!==1||tree?.nodes.get([...chosen][0])?.kind!=='component';
+    $('ds-edit').disabled=busy||jointPanel.active||!viewer?.jointPreviewVersion||!$('ds-edit-request').value.trim();
     $('ds-clear-selection').disabled=busy||!chosen.size;if(viewer)viewer.selectionEnabled=!busy;
     for(const checkbox of $('ds-components').querySelectorAll('input'))checkbox.disabled=busy||checkbox.dataset.readonly==='true';
     for(const button of $('ds-properties-content').querySelectorAll('[data-ds-property-action]'))button.disabled=busy||button.dataset.available!=='true';
@@ -205,10 +255,12 @@
   }
   function tab(name){for(const item of ['library','checks','facts','files']){$('ds-pane-'+item).hidden=item!==name;document.querySelector('[data-ds-tab="'+item+'"]').setAttribute('aria-selected',String(item===name));}$('ds-results-title').textContent={library:'人工审批',checks:'检查结果',facts:'设备与 IO',files:'产物与记录'}[name];$('ds-results-dialog').querySelector('.asset-dialog-body').scrollTop=0;}
   for(const button of document.querySelectorAll('[data-ds-tab]'))button.onclick=()=>tab(button.dataset.dsTab);
-  for(const button of document.querySelectorAll('[data-ds-open]'))button.onclick=()=>{tab(button.dataset.dsOpen);$('ds-results-dialog').showModal();};
+  for(const button of document.querySelectorAll('[data-ds-open]'))button.onclick=()=>{tab(button.dataset.dsOpen);$('ds-results-dialog').showModal();if(button.dataset.dsOpen==='checks'&&current?.resource_package)poll();};
   $('ds-results-close').onclick=()=>$('ds-results-dialog').close();
   function syncDialogScroll(){document.documentElement.classList.toggle('device-dialog-open',!!document.querySelector('dialog[open]'));}
-  for(const dialog of [$('ds-results-dialog'),$('ds-review-dialog'),$('ds-history-dialog')]){dialog.addEventListener('close',syncDialogScroll);new MutationObserver(syncDialogScroll).observe(dialog,{attributes:true,attributeFilter:['open']});}
+  $('ds-settings-open').onclick=()=>$('ds-settings').showModal();
+  $('ds-settings-close').onclick=()=>$('ds-settings').close();
+  for(const dialog of [$('ds-settings'),$('ds-results-dialog'),$('ds-review-dialog'),$('ds-history-dialog')]){dialog.addEventListener('close',syncDialogScroll);new MutationObserver(syncDialogScroll).observe(dialog,{attributes:true,attributeFilter:['open']});}
   async function loadListing(){
     const result=await api('/api/device-scenes'),key=JSON.stringify(result.tasks);
     historyRecords=result.tasks;historySelection=new Set([...historySelection].filter(id=>historyRecords.some(r=>r.id===id)));renderHistory();
@@ -240,7 +292,7 @@
     const version=++sourceVersion;
     playing=false;replay=null;chosen.clear();componentKey='';resultKey='';
     const record=await api('/api/device-scene/state?'+qs({task:id}));if(version!==sourceVersion)return;
-    render(record);await loadListing();
+    render(record);$('ds-settings').close();await loadListing();
   }
   function schedule(){clearTimeout(timer);timer=null;if(current?.busy)timer=setTimeout(poll,1000);}
   async function poll(){
@@ -252,14 +304,14 @@
   async function post(action,data={}){
     const version=sourceVersion;
     working=true;controls();error();
-    try{const result=await api('/api/device-scene/'+action,{task:current?.id,revision:current?.revision,...data});if(version!==sourceVersion)return false;render(result);await loadListing();return true;}
+    try{const result=await api('/api/device-scene/'+action,{task:current?.id,revision:current?.revision,...data});if(version!==sourceVersion)return false;render(result);if(action==='import-package'||action==='create')$('ds-settings').close();await loadListing();return true;}
     catch(exc){error(exc.message);return false;}
     finally{working=false;controls();}
   }
   function render(record){
     const changed=current?.id!==record?.id;if(changed){reviewSelection.clear();reviewContext=null;$('ds-results-dialog').close();$('ds-review-dialog').close();$('ds-review-search').value='';$('ds-review-filter').value='all';playing=false;replay=null;resultKey='';componentKey='';$('ds-aml').value='';$('ds-edit-request').value='';$('ds-replay-time').value=0;$('ds-replay-clock').textContent='0.00 s';$('ds-play').textContent='播放测试回放';}
     if(changed){testSelection.clear();testModulesKey='';testReplayVersion++;$('ds-test-replay').value='';$('ds-test-signals').textContent='';}
-    if(changed&&viewer)viewer.reset();
+    if(changed){visibilityMode='only';visibleComponents=null;visibilityModel='';$('ds-component-search').value='';if(viewer)viewer.reset();}
     current=record;if(current)localStorage.setItem('device-scene-task',current.id);else localStorage.removeItem('device-scene-task');
     if(changed){const url=new URL(location.href);if(current)url.searchParams.set('scene_task',current.id);else url.searchParams.delete('scene_task');history.replaceState(null,'',url);}
     renderAmlSource();
@@ -267,9 +319,10 @@
     $('ds-playback-card').hidden=!current?.scene_ready;
     const modelTreeReady=!!(current?.device_ir&&current?.scene_ready);
     $('ds-results').hidden=!current;$('ds-edit-card').hidden=!modelTreeReady;
+    $('ds-visibility-toolbar').hidden=!modelTreeReady;
     $('ds-edit-card').parentElement?.classList.toggle('is-awaiting-model',!modelTreeReady);
     $('ds-pipeline').hidden=!current?.device_ir;
-    $('ds-preview-note').hidden=!current?.scene_ready;$('ds-model-kind').hidden=!current?.scene_ready;$('ds-pick-help').hidden=!current?.scene_ready;
+    $('ds-preview-note').hidden=!current?.scene_ready;
     if(!current){chosen.clear();tree=null;$('ds-components').replaceChildren();syncSelection();}
     if(!current){$('ds-title').textContent='等待设备场景';$('ds-status').textContent='未生成';$('ds-stage').textContent='';$('ds-viewer').hidden=true;$('ds-empty').hidden=false;$('ds-metrics').hidden=true;$('ds-replay-controls').hidden=true;$('ds-collision-control').hidden=true;controls();return;}
     $('ds-title').textContent=current.device_ir?.station||current.name;
@@ -278,23 +331,48 @@
     const leaves=current.device_ir?leafIds(current):new Set(),reused=(current.component_resolution||[]).filter(c=>c.origin==='approved_library'&&leaves.has(c.component_id)).length;
     const fresh=current.generation_policy==='full_regeneration_no_reuse';
     $('ds-pipeline').textContent='AML '+(current.source_sha256||'').slice(0,8)+' → DeviceIR 已解析 → '+(fresh?'完整重生成':'组件库匹配 '+reused+' 个最小组件')+' → '+(current.candidates?.length?'已生成 '+current.candidates.length+' 类候选规则':current.missing_types?.length?'待生成 '+current.missing_types.length+' 类规则':current.busy?'准备规则中':'无需新增规则')+' → '+(current.scene_ready?'已实例化并装配':'等待实例化与装配')+' → '+(current.model_frozen?'已冻结':'待冻结');
-    $('ds-model-kind').textContent=current.model_frozen?'已冻结设备模型':current.geometry_only?'候选几何预览 · 待完善':current.all_approved?'组件已审批 · 待冻结':'候选预览 · 待组件审批';
     $('ds-preview-note').textContent=current.model_frozen?'设备模型已冻结，可用于后续 PLC 验收；PLC 验收结果单独记录。':current.geometry_only?'当前仅显示候选几何与运动副。组件行为仍有未解决问题，未执行整机动态检查，不能冻结或用于 PLC 验收。':current.all_approved?'组件已审批，仍需通过整机行为检查并冻结，才能用于 PLC 验收。':'当前显示未全部审批的候选模型，用于核对几何、装配和运动；审批并冻结后才能用于 PLC 验收。';
-    for(const id of ['ds-model-kind','ds-preview-note'])$(id).dataset.frozen=String(current.model_frozen);
+    if(current.resource_package){
+      $('ds-status').textContent=current.busy?'正在导入资源':current.scene_ready?'资源装配预览':current.resource_preview_issue?.code==='no_geometry'?'AML 已解析 · 缺少三维资源':'导入未完成';
+      $('ds-pipeline').textContent='AML → 资源引用解析 → DAE 组件导入 → MuJoCo 装配 → 数据对账';
+      $('ds-preview-note').textContent='使用已导入的组件模型及声明的机械关系。IO、碰撞配置及待确认装配项详见检查结果，当前未冻结。';
+    }
+    $('ds-preview-note').dataset.frozen=String(current.model_frozen);
     $('ds-stage').textContent=current.stage||'';
     if(current.error)error((layerNames[current.error.layer]||'设备场景')+'：'+current.error.message);else error();
     const metrics=$('ds-metrics');metrics.hidden=!current.device_ir;metrics.replaceChildren();
     if(current.device_ir){for(const [value,label] of [[leafCount(current),'组件'],[current.device_ir.joints.length,'运动副'],[current.device_ir.io.length,'IO'],[current.candidates.filter(c=>c.approved).length+'/'+current.candidates.length,'组件审批']]){const span=element('span');span.append(element('strong',value),document.createTextNode(label));if(label==='组件')span.title='仅统计没有子组件的最小组件；复合组件和运动副不重复计数';metrics.append(span);}}
-    $('ds-viewer').hidden=!current.scene_ready;$('ds-empty').hidden=current.scene_ready;
+    if(current.resource_package&&current.device_ir){metrics.replaceChildren();for(const [value,label] of [[current.package_counts.components,'AML 组件'],[current.package_counts.imported_meshes,'网格资源'],[current.package_assembly.movable_joints,'可动关节'],[current.package_counts.connections,'安装连接']]){const span=element('span');span.append(element('strong',value),document.createTextNode(label));metrics.append(span);}}
+    if(current.resource_package)$('ds-playback-card').hidden=true;
+    const showAssembly=current.scene_ready||current.busy||!!current.assembly_preview;
+    $('ds-viewer').hidden=!showAssembly;$('ds-empty').hidden=showAssembly;
     $('ds-empty').textContent=current.busy?'正在构建设备场景，可在下方查看进度':current.parse_only?'AML 已解析，请点击“生成设备场景”':'模型尚未生成，请查看组件检查或错误记录';
-    if(current.scene_ready){
-      if(!viewer){viewer=new SceneViewer($('ds-viewer'));viewer.camera=[120,-32,1.05,0,0];viewer.onSelect=selectFromView;viewer.canvas.setAttribute('aria-label','设备三维场景：单击选中组件，Ctrl 或 Command 加单击多选，Escape 清空；拖动旋转，右键平移，滚轮缩放');}
-      if(previewTask!==current.id){previewTask=current.id;viewer.camera=[120,-32,current.geometry_only||current.device_ir.joints.length>1?1.9:1.05,0,0];}
-      const id=current.id;viewer.active=false;viewer.load('/api/device-scene/view?'+qs({task:current.id,v:current.preview_revision})).then(()=>{
+    if(!current.busy&&current.resource_preview_issue){
+      $('ds-empty').textContent=current.resource_preview_issue.message;
+      $('ds-package-path').closest('details').open=true;
+      $('ds-stage').textContent='未加载三维几何，尚无可显示的装配场景';
+    }
+    if(showAssembly){
+      if(!viewer){viewer=new SceneViewer($('ds-viewer'));viewer.camera=[120,-32,1.05,0,0];viewer.onSelect=selectFromView;viewer.litSelection=true;viewer.background=[.937,.953,.968,1];viewer.onDraw=vp=>jointPanel.drawLabels(vp);viewer.canvas.setAttribute('aria-label','设备三维场景：单击选中组件，Ctrl 或 Command 加单击多选，Escape 清空；拖动旋转，右键平移，滚轮缩放');}
+      if(!viewer.appearance)viewer.appearance=new SceneAppearance(viewer);
+      viewer.assemblyEnabled=true;viewer.frameRate=30;
+      viewer.appearance.setComponents(current.device_ir?.components||[],!!current.resource_package);
+      if(previewTask!==current.id){previewTask=current.id;viewer.camera=[120,-32,current.resource_package ? 2.2 : (current.geometry_only||current.device_ir?.joints.length>1?1.9:1.05),0,0];}
+      if(current.assembly_preview&&(current.busy||!current.scene_ready)){
+        const id=current.id,preview=current.assembly_preview;
+        viewer.load('/api/device-scene/assembly-view?'+qs({task:id,v:preview.token,revision:preview.revision})).then(()=>{
+          if(current?.id===id){if(current.error){viewer.status.textContent=current.error.message;if(viewer.assembly)viewer.assembly.failed=true;viewer.host.dataset.assembling='false';}controls();}
+        });
+      }else if(current.scene_ready){
+      const id=current.id,previousVersion=viewer.jointPreviewVersion;viewer.active=false;viewer.load('/api/device-scene/view?'+qs({task:current.id,v:current.preview_revision})).then(()=>{
         if(current?.id!==id)return;
         $('ds-collision-control').hidden=!viewer.meshes.some(m=>m.collisionProxy);
         syncSelection();
+        if(previousVersion!==viewer.jointPreviewVersion)fitSelection();
+        if(current.resource_package&&previousVersion!==viewer.jointPreviewVersion)poll();
+        controls();
       });
+      }else{viewer.status.textContent=current.stage||'正在装配…';viewer.host.classList.add('assembly-wait');}
     }
     $('ds-replay-controls').hidden=!current.has_replay&&!current.test_modules?.some(m=>m.replay);
     const ckey=JSON.stringify([current.id,current.device_ir?.facts_sha256,modelTreeReady]);
@@ -303,7 +381,7 @@
       if(modelTreeReady)renderTree();else{tree=null;chosen.clear();}
     }
     syncSelection();
-    const rkey=JSON.stringify([current.id,current.candidates,current.reports,current.files,current.pending,current.model_frozen]);
+    const rkey=JSON.stringify([current.id,current.candidates,current.reports,current.files,current.pending,current.independent_io,current.model_frozen]);
     if(rkey!==resultKey){resultKey=rkey;renderResults();}
     $('ds-logs').textContent=(current.logs||[]).map(row=>new Date(row.time*1000).toLocaleTimeString()+'  '+row.message).join('\n');
     if(changed){$('ds-tasks').value=current.id;$('ds-request').value=current.request;}
@@ -315,6 +393,12 @@
     }
   }
   function renderTestModules(){
+    const fixed=current?.test_plan?.generator==='fixed_model_io/1';
+    $('ds-plc-test').hidden=!fixed;
+    $('ds-plc-run').disabled=blocked()||!current?.scene_ready;
+    if(fixed&&current.plc_test_connection&&document.activeElement!==$('ds-plc-host')&&document.activeElement!==$('ds-plc-port')){
+      $('ds-plc-host').value=current.plc_test_connection.host;$('ds-plc-port').value=current.plc_test_connection.port;
+    }
     const modules=current?.test_modules||[];
     $('ds-tests').hidden=!modules.length;
     const key=JSON.stringify([current?.id,modules]);if(key===testModulesKey)return;testModulesKey=key;
@@ -328,12 +412,13 @@
     $('ds-test-scope').textContent=current?.test_plan?.requirements_source==='aml'?'测试范围与容差来自 AML。勾选模块可独立运行，冻结前仍须全部检查通过。':'当前 AML 未声明仿真验证要求；按现有设备事实生成测试，请补充验证范围和容差。';
     if(robotIO.length)$('ds-test-scope').textContent+=' IO 绑定采用局部合法激励；越界值只验证拒绝，反馈注入只验证读数。工况受阻和响应未达标分别记录，不推断机械关系错误。';
     if(current?.test_safety?.collision_free_preflight)$('ds-test-scope').textContent+=' 测试脚本已通过当前模型的部件干涉采样预检，执行中仍检查干涉。';
+    if(fixed)$('ds-test-scope').textContent='固定程序检查实际模型尺寸、装配和运动副，以及 OpenPLC 双向 IO。Agent 提供模型与校验参数，不生成测试脚本；未连接测试 Runtime 的 IO 项保持未完成。全行程和额外整机功能测试不在本次范围。';
     for(const module of modules){
       const row=element('details',undefined,'device-test-row'),summary=element('summary'),label=element('label',undefined,'device-check'),input=document.createElement('input');
       input.type='checkbox';input.value=module.id;input.checked=testSelection.has(module.id);input.disabled=blocked()||!module.available;
       input.onchange=()=>{if(input.checked)testSelection.add(module.id);else testSelection.delete(module.id);controls();};
       label.onclick=event=>event.stopPropagation();label.append(input,document.createTextNode(module.label));summary.append(label,element('span',outcome(module),'badge'));row.append(summary);
-      if(module.ruleset){row.append(element('p',(module.script_origin==='agent'?'Agent 生成脚本':'规则基线脚本')+' · IO 绑定：'+({passed:'通过',failed:'错误',inconclusive:'未完成'}[module.binding_status]||'待验证')+' · 机械关系未由此测试判定','device-help'));
+      if(module.ruleset){row.append(element('p',(fixed?'固定检查器':module.script_origin==='agent'?'Agent 生成脚本':'规则基线脚本')+' · IO 绑定：'+({passed:'通过',failed:'错误',inconclusive:'未完成'}[module.binding_status]||'待验证')+' · 机械关系未由此测试判定','device-help'));
         const script=element('details');script.append(element('summary','查看 IO 校验脚本'),element('pre',JSON.stringify(module.steps,null,2)));row.append(script);}
       if(module.motion_scope==='local_relationship_only')row.append(element('p','局部连接关系：'+({passed:'通过',failed:'失败',inconclusive:'未完成'}[module.mechanical_relationship_status]||'未完成')+'；全行程未覆盖。有干涉的测试动作未执行。','device-help'));
       if(module.steps?.[0]?.op==='joint_configuration'){
@@ -351,6 +436,7 @@
     $('ds-test-signals').textContent='';
   }
   function renderResults(){
+    renderResourceResolution();
     for(const [kind,sha] of reviewSelection)if(!current.candidates.some(c=>c.type===kind&&c.review_sha256===sha&&c.can_approve))reviewSelection.delete(kind);
     renderCandidates();
     const pending=current.candidates.filter(c=>!c.approved).length;
@@ -359,11 +445,32 @@
     document.querySelector('[data-ds-open="checks"]').textContent='检查结果'+(checked?' · '+checked.checks.filter(c=>c.passed).length+'/'+checked.checks.length:'');
     const host=$('ds-checks');host.replaceChildren();
     const behavior=current.reports.behavior,assembly=current.reports.assembly;
+    const fixed=current.test_plan?.generator==='fixed_model_io/1';
     $('ds-check-summary').replaceChildren(element('p',current.model_frozen?'设备模型已冻结；PLC 验收尚未运行。':current.geometry_only?'仅完成初始几何与装配检查，未执行整机动态检查。请在人工审批中查看并解决组件问题。':behavior?.status==='passed'?'独立设备检查通过；PLC 验收尚未运行。':'独立设备检查与 PLC 验收分别记录。','device-help'));
-    for(const pending of current.pending||[])host.append(element('p','待确认：'+JSON.stringify(pending),'device-error'));
-    for(const [label,report] of [['设备行为检查',behavior],['装配检查',assembly]]){
+    if(current.resource_package){
+      const io=current.independent_io;
+      if(io){
+        const row=element('section',undefined,'device-io-status');row.dataset.status=io.status;
+        row.append(element('h3','独立 IO 绑定 · '+({bound:'已绑定',configured:'配置已匹配',mismatch:'绑定需修复',not_applicable:'未覆盖当前场景',unavailable:'配置不可用'}[io.status]||'待确认')));
+        for(const c of io.components||[])row.append(element('p',c.name+' · '+c.joint_count+' 个关节 · '+c.variable_count+' 个 PLC 变量'));
+        row.append(element('p',io.message),element('p','当前连接状态未在此检查；组件 IO 绑定不代表整场景验收通过。','device-help'));host.append(row);
+      }
+      host.append(element('h3','场景待确认项'),element('p','数量按各类问题分别统计，同一组件或连接可能重复出现。','device-help'));
+      for(const pending of current.pending||[]){
+        const row=element('details',undefined,'device-pending-row');row.dataset.code=pending.code;
+        row.append(element('summary',(pending.title||pending.code)+(pending.count!==undefined?' · '+pending.count+' 项':'')));
+        row.append(element('p',pending.message||'请查看原始记录。'),element('p','处理要求：'+(pending.action||'核对来源与缺项。')));
+        if(pending.affected_examples?.length){
+          row.append(element('p','涉及对象示例：','device-help'));const list=element('ul');
+          for(const item of pending.affected_examples){const entry=element('li',item.path||item.name);if(item.detail)entry.append(element('p',item.detail,'device-help'));list.append(entry);}row.append(list);
+        }
+        const raw=element('details',undefined,'device-pending-raw');raw.append(element('summary','查看原始记录'),element('pre',JSON.stringify(pending.raw||pending,null,2)));row.append(raw);host.append(row);
+      }
+    }else for(const pending of current.pending||[])host.append(element('p','待确认：'+JSON.stringify(pending),'device-error'));
+    if(fixed)$('ds-check-summary').replaceChildren(element('p',current.model_frozen?'模型已通过结构与双向 IO 校验并冻结。':'先检查隔离装配模型，再连接专用 OpenPLC Runtime 完成逐点 IO 校验。缺失事实、通信异常或未覆盖项均不能判定通过。','device-help'));
+    for(const [label,report] of [[fixed?'结构与 IO 校验':'设备行为检查',behavior],['装配检查',assembly]]){
       if(!report)continue;host.append(element('h3',label+' · '+report.checks.filter(c=>c.passed).length+'/'+report.checks.length));
-      for(const check of report.checks){const row=element('details',undefined,'device-check-row');row.append(element('summary',(check.passed?'✓ ':'✕ ')+sceneText.checkName(check.name)),element('pre',JSON.stringify(check,null,2)));host.append(row);}
+      for(const check of report.checks){const row=element('details',undefined,'device-check-row');row.append(element('summary',(check.status==='not_evaluated'?'待确认 · ':check.passed?'✓ ':'✕ ')+sceneText.checkName(check.name)),element('pre',JSON.stringify(check,null,2)));host.append(row);}
     }
     const facts=$('ds-facts');facts.replaceChildren();const ir=current.device_ir;
     if(ir){facts.append(element('p','最小组件 '+leafCount(current)+' · 运动副 '+ir.joints.length+' · 安装连接 '+(ir.assemblies||[]).length+'。IO 名称、方向、类型和地址来自 AML。','device-help'));table(facts,['IO 名称','方向','类型','地址','物理量','写入者'],ir.io.map(p=>[p.name,sceneText.direction(p.dir),p.type,p.address,p.quantity,sceneText.writer(p.writer)]));}
@@ -371,6 +478,47 @@
     if(current.scene_ready){const bundle=element('a','完整模型包（含网格）');bundle.href='/device-scene-bundle?'+qs({task:current.id});bundle.download='';$('ds-files').append(bundle);}
     for(const path of current.files)link($('ds-files'),fileNames[path.split('/').at(-1)]||path,path);
     $('ds-boundary').textContent=current.model_frozen?'设备模型已冻结，PLC 验收尚未执行。':current.geometry_only?'候选几何已生成；行为问题尚未解决，当前不能审批冻结或连接 PLC。':'候选模型可预览和独立检查；全部组件审批、整机行为检查通过后才能冻结。';
+    if(fixed)$('ds-boundary').textContent=current.model_frozen?'结构与 IO 校验通过，模型已冻结；未执行额外整机功能测试。':'隔离模型完成结构和双向 IO 校验、组件审批后才能冻结导入。';
+    if(current.resource_package){
+      $('ds-check-summary').replaceChildren(element('p','导入检查与组件独立 IO 绑定分别记录；整场景尚未完成验收。安装接口未声明容差时不判定通过。','device-help'));
+      facts.replaceChildren(element('p','AML 组件、接口、源属性和资源去向保存在下方 package_manifest 与 data_destinations 报告中。PLCopen 行为保留，不自动执行。','device-help'));
+      const joints=(current.package_assembly.joint_records||[]).filter(j=>!j.locked);
+      const jointDetails=element('details');jointDetails.append(element('summary','查看导入的 '+joints.length+' 个可动关节'));
+      table(jointDetails,['名称','类型','范围（m / rad）','初值','源文件'],joints.map(j=>[j.name,j.type,j.range,j.initial,j.source_file]));facts.append(jointDetails);
+      $('ds-boundary').textContent='资源装配预览；补齐缺项并完成结构、碰撞和 IO 校验后才能冻结。';
+    }
+  }
+  function renderResourceResolution(){
+    const host=$('ds-resource-resolution');host.hidden=!current?.resource_package;host.replaceChildren();
+    if(!current?.resource_package)return;
+    const rows=current.resource_resolution||[],missing=rows.filter(r=>r.options.length);
+    host.append(element('h3','组件资源补全 · '+missing.length+' 项待处理'),element('p','已有资源直接装配。缺模型由你逐项选择导入或临时生成；临时模型仅用于本次任务，新任务不会自动复用。','device-help'));
+    const statuses={resolved:'已有几何',structural:'结构节点',missing_geometry:'缺少三维模型',needs_classification:'需确认用途'};
+    for(const item of rows.filter(r=>r.options.length||['temporary','import','library'].includes(r.source))){
+      const row=element('details'),summary=element('summary',item.name+' · '+statuses[item.status]);row.append(summary);
+      row.append(element('p','关键尺寸（m）：'+JSON.stringify(item.dimensions_m)+'；'+item.simplifications,'device-help'));
+      const button=(label,action,extra=()=>({}))=>{const b=element('button',label);b.type='button';b.disabled=blocked();b.onclick=()=>{if(!blocked())post('resolve-resource',{component_id:item.component_id,action,...extra()});};return b;};
+      if(item.status==='needs_classification')row.append(button('作为实体组件补充模型','physical'),button('确认为纯结构节点','structural'));
+      if(item.status==='missing_geometry'){
+        const field=(label,node)=>{const wrap=element('label',label);wrap.append(node);row.append(wrap);return node;};
+        const path=field('补充模型路径（DAE / 三角化 OBJ）',element('input'));path.type='text';
+        const unit=field('OBJ 长度单位',element('select'));for(const [v,t] of [['','请选择'],['m','m'],['mm','mm'],['cm','cm']])unit.add(new Option(t,v));
+        const up=field('OBJ 向上轴',element('select'));for(const [v,t] of [['','请选择'],['Z_UP','Z'],['Y_UP','Y'],['X_UP','X']])up.add(new Option(t,v));
+        const matrix=field('模型坐标到组件坐标的 4×4 矩阵（平移单位 m；相同坐标时使用单位矩阵）',element('textarea'));matrix.rows=3;matrix.value=JSON.stringify([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]);
+        const take=element('button','确认坐标并导入');take.type='button';take.disabled=blocked();take.onclick=()=>{try{const model_to_component=JSON.parse(matrix.value);post('resolve-resource',{component_id:item.component_id,action:'import',path:path.value.trim(),unit:unit.value,up_axis:up.value,model_to_component});}catch{error('坐标矩阵必须是 JSON 二维数组');}};
+        row.append(take,button('Agent 调用工具临时生成','temporary'));
+        row.append(element('p','临时生成目前支持 AML 明确声明的简单方盒；缺少尺寸、原点、接口或连接定义时，会列出缺项。','device-help'));
+        const library=current.resource_library||[];
+        if(library.length){const select=field('选择共享库资源',element('select'));select.add(new Option('请选择',''));for(const e of library)select.add(new Option(e.name+' · '+e.version+' · '+e.kind,e.id));
+          const diff=element('pre');row.append(diff);select.onchange=()=>{const e=library.find(e=>e.id===select.value);diff.textContent=e?JSON.stringify({AML尺寸:item.dimensions_m,候选尺寸:e.dimensions_m,候选接口:e.interfaces,候选机械定义:e.mechanics,适用范围:e.scope},null,2):'';};
+          row.append(button('选定并绑定该资源','library',()=>({library_id:select.value})));}
+      }
+      if(item.status==='resolved'&&item.decision?.asset){
+        const version=element('input');version.placeholder='版本，例如 1.0.0';version.setAttribute('aria-label','共享库组件版本');
+        const scope=element('input');scope.placeholder='适用范围';scope.setAttribute('aria-label','共享库组件适用范围');row.append(version,scope,button('单独加入共享组件库','publish',()=>({version:version.value,scope:scope.value})));
+      }
+      host.append(row);
+    }
   }
   function visibleCandidates(){
     const search=$('ds-review-search').value.trim().toLowerCase(),status=$('ds-review-filter').value;
@@ -458,8 +606,8 @@
     $('ds-aml-name').textContent=file.name;$('ds-aml-status').textContent='正在重新解析';working=true;controls();error();
     try{
       const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));
-      const record=await api('/api/device-scene/upload',{aml:{name:file.name,data:btoa(binary)},request});
-      if(version!==sourceVersion)return false;render(record);await loadListing();return true;
+      const record=await api('/api/device-scene/import-package',{aml:{name:file.name,data:btoa(binary)},request});
+      if(version!==sourceVersion)return false;render(record);$('ds-settings').close();await loadListing();return true;
     }catch(exc){if(version===sourceVersion){error('新 AML 解析失败：'+exc.message);$('ds-aml-name').textContent=file.name;$('ds-aml-status').textContent='解析失败';publishSource(null,file.name,exc.message);}return false;}
     finally{working=false;controls();}
   }
@@ -472,15 +620,20 @@
     if(file){if(!file.name.toLowerCase().endsWith('.aml')||!file.size||file.size>2*1024*1024){error('请选择非空且不超过2 MiB的 AML 文件');return;}
       const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));payload.aml={name:file.name,data:btoa(binary)};
     }else if(current)payload.source_task=current.id;else{error('请先选择 AML 文件');return;}
-    chosen.clear();await post('create',payload);
+    chosen.clear();await post(current?.resource_package||file?'import-package':'create',payload);
   };
-  $('ds-new').onclick=()=>{sourceVersion++;clearTimeout(timer);playing=false;replay=null;chosen.clear();$('ds-create-form').reset();localStorage.removeItem('device-scene-task');render(null);publishSource(null);$('ds-tasks').value='';};
+  $('ds-package-import').onclick=async()=>{
+    const path=$('ds-package-path').value.trim();if(!path){error('请输入后端主机上的 AML 完整路径');return;}
+    await post('import-package',{path});
+  };
+  $('ds-new').onclick=()=>{sourceVersion++;clearTimeout(timer);playing=false;replay=null;chosen.clear();$('ds-create-form').reset();localStorage.removeItem('device-scene-task');render(null);publishSource(null);$('ds-tasks').value='';$('ds-settings').showModal();};
   $('ds-tasks').onchange=()=>{if($('ds-tasks').value)selectTask($('ds-tasks').value).catch(exc=>error(exc.message));};
   for(const action of ['build','check','freeze','revalidate'])$('ds-'+action).onclick=()=>{playing=false;replay=null;return post('operate',{action});};
   $('ds-tests-all').onclick=()=>{testSelection=new Set((current?.test_modules||[]).filter(m=>m.available).map(m=>m.id));for(const input of $('ds-test-modules').querySelectorAll('input'))input.checked=testSelection.has(input.value);controls();};
   $('ds-tests-clear').onclick=()=>{testSelection.clear();for(const input of $('ds-test-modules').querySelectorAll('input'))input.checked=false;controls();};
   $('ds-tests-run').onclick=()=>{playing=false;replay=null;return post('tests',{test_ids:[...testSelection]});};
-  $('ds-tests-view').onclick=async()=>{const module=current?.test_modules?.find(m=>testSelection.has(m.id)&&m.replay);if(!module)return;$('ds-results-dialog').close();$('ds-test-replay').value=module.id;await $('ds-test-replay').onchange();$('ds-playback-card').scrollIntoView({block:'nearest',behavior:'smooth'});};
+  $('ds-plc-run').onclick=()=>post('plc-test',{host:$('ds-plc-host').value.trim(),port:Number($('ds-plc-port').value)});
+  $('ds-tests-view').onclick=async()=>{const module=current?.test_modules?.find(m=>testSelection.has(m.id)&&m.replay);if(!module)return;$('ds-results-dialog').close();$('ds-test-replay').value=module.id;await $('ds-test-replay').onchange();$('ds-settings').showModal();$('ds-playback-card').scrollIntoView({block:'nearest',behavior:'smooth'});};
   $('ds-history-open').onclick=async()=>{try{await loadListing();historySelection.clear();$('ds-history-search').value='';showError('ds-history-error');renderHistory();$('ds-history-dialog').showModal();controls();}catch(exc){error(exc.message);}};
   $('ds-history-close').onclick=()=>$('ds-history-dialog').close();
   $('ds-history-search').oninput=()=>{renderHistory();controls();};
@@ -499,6 +652,11 @@
   $('ds-stop').onclick=()=>post('stop');
   $('ds-edit-request').oninput=controls;
   $('ds-clear-selection').onclick=()=>{if(blocked())return;chosen.clear();syncSelection();};
+  for(const button of document.querySelectorAll('[data-ds-visibility]'))button.onclick=()=>changeVisibility(button.dataset.dsVisibility);
+  $('ds-component-search').oninput=filterComponents;
+  $('ds-linked-visibility').onchange=()=>{syncVisibility();fitSelection();};
+  $('ds-fit-view').onclick=fitSelection;
+  $('ds-fullscreen').onclick=()=>{const stage=$('ds-edit-card').parentElement;if(document.fullscreenElement)document.exitFullscreen();else stage.requestFullscreen().catch(e=>error(e.message));};
   $('ds-components').onkeydown=event=>{if(!tree)return;const item=event.target.closest('[role=treeitem]'),id=item?.dataset.nodeId;if(!id)return;
     const visible=[...$('ds-components').querySelectorAll('input:not(:disabled),.device-tree-class,.device-tree-reference:not(:disabled)')].filter(n=>n.getClientRects().length),index=visible.indexOf(event.target);let target=null;
     if(event.key==='ArrowDown')target=visible[index+1];else if(event.key==='ArrowUp')target=visible[index-1];else if(event.key==='Home')target=visible[0];else if(event.key==='End')target=visible.at(-1);
@@ -513,8 +671,18 @@
     const scope=[...chosen],patch={base_sha256:e.base,editable_ids:scope,reason:'用户在组件属性中'+(e.adding?'新增机械接口':'设置接口位置'),operations:[op]};
     $('ds-interface-save').disabled=true;try{if(await post('edit',{editable_ids:scope,request:patch.reason,patch}))$('ds-interface-dialog').close();}finally{$('ds-interface-save').disabled=false;}
   };
-  $('ds-edit-form').onsubmit=async event=>{event.preventDefault();if($('ds-edit').disabled)return;playing=false;replay=null;if(await post('edit',{editable_ids:[...chosen],request:$('ds-edit-request').value.trim()}))$('ds-edit-request').value='';};
-  $('ds-pose').onclick=()=>{const c=current.device_ir.components.find(c=>chosen.has(c.id));$('ds-pose-title').textContent=c.name+' · 局部位置';for(const [i,a] of ['x','y','z'].entries()){$('ds-pose-'+a).value=c.pose.position_m[i];$('ds-pose-r'+a).value=c.pose.rpy_rad[i]*180/Math.PI;}$('ds-pose-dialog').showModal();};
+  $('ds-edit-form').onsubmit=async event=>{
+    event.preventDefault();if($('ds-edit').disabled)return;
+    const task=current.id,version=viewer.jointPreviewVersion;
+    agentSubmitting=true;controls();error();playing=false;replay=null;
+    try{
+      const result=await api('/api/device-scene/agent-command',{task,version,client:jointPanel.client,request:$('ds-edit-request').value.trim()});
+      if(current?.id!==task)return;
+      chosen=new Set(result.components);syncSelection(result.components[0]);
+      jointPanel.renderRows(result.frame.joints,result.frame.positions);jointPanel.apply(result.frame);jointPanel.schedule();
+    }catch(exc){error(exc.message);}
+    finally{agentSubmitting=false;controls();}
+  };
   $('ds-pose-close').onclick=()=>$('ds-pose-dialog').close();
   $('ds-pose-form').onsubmit=async event=>{event.preventDefault();const c=current.device_ir.components.find(c=>chosen.has(c.id));const position=['x','y','z'].map(a=>Number($('ds-pose-'+a).value)),angles=['x','y','z'].map(a=>Number($('ds-pose-r'+a).value)*Math.PI/180);if([...position,...angles].some(v=>!Number.isFinite(v)))return;
     const patch={base_sha256:current.device_ir.facts_sha256,editable_ids:[c.id],reason:'用户在前端调整组件局部位置',operations:[{op:'set_pose',component_id:c.id,position_m:position,rpy_rad:angles}]};
@@ -529,6 +697,7 @@
     $('ds-replay-time').value=time;$('ds-replay-clock').textContent=time.toFixed(2)+' s';
   }
   async function loadReplay(){
+    await jointPanel.suspend();
     if(replay)return;const id=current.id,version=testReplayVersion,testId=$('ds-test-replay').value,module=current.test_modules?.find(m=>m.id===testId);
     const path=testId?module?.replay:'behavior_replay.json';if(!path)throw Error('此模块尚无测试回放，请先运行');
     const url=fileUrl(current.scene_kind+'/'+path),response=await fetch(url);if(!response.ok)throw Error('测试回放尚未生成');const data=await response.json();if(current?.id!==id||version!==testReplayVersion)return;
@@ -537,7 +706,7 @@
     if(testId&&(data.plan_sha256!==current.test_plan_sha256||data.definition_sha256!==current.scene_definition_sha256))throw Error('测试脚本或模型绑定已改变，请重新运行此模块');
     replay=data;if(!replay.frames.length)throw Error('此设备尚无完整行为测试回放');$('ds-replay-time').max=replay.frames.at(-1).time_s;
   }
-  $('ds-play').onclick=async()=>{try{await loadReplay();if(!replay)return;playing=!playing;replayOffset=Number($('ds-replay-time').value);if(replayOffset>=replay.frames.at(-1).time_s)replayOffset=0;replayStart=performance.now();$('ds-play').textContent=playing?'暂停回放':'播放测试回放';}catch(exc){error(exc.message);}};
+  $('ds-play').onclick=async()=>{try{await loadReplay();if(!replay)return;playing=!playing;if(playing)$('ds-settings').close();replayOffset=Number($('ds-replay-time').value);if(replayOffset>=replay.frames.at(-1).time_s)replayOffset=0;replayStart=performance.now();$('ds-play').textContent=playing?'暂停回放':'播放测试回放';}catch(exc){error(exc.message);}};
   $('ds-replay-time').oninput=async()=>{playing=false;$('ds-play').textContent='播放测试回放';try{await loadReplay();applyFrame(Number($('ds-replay-time').value));}catch(exc){error(exc.message);}};
   $('ds-replay-speed').onchange=()=>{replayOffset=Number($('ds-replay-time').value);replayStart=performance.now();};
   $('ds-show-collision').onchange=()=>{if(viewer)viewer.showCollision=$('ds-show-collision').checked;};

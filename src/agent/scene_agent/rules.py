@@ -19,7 +19,8 @@ def implementation_hashes():
            'src/agent/scene_agent/common.py','src/agent/scene_agent/blender.py',
            'src/agent/scene_agent/blender_worker.py','src/agent/scene_agent/validation.py',
            'src/agent/scene_agent/rules.py','src/agent/scene_agent/simulation_contract.py',
-           'src/agent/scene_agent/simulation_tests.py','src/agent/scene_agent/mechanics.py','src/agent/scene_agent/robot_io.py','src/agent/scene_agent/test_safety.py']
+           'src/agent/scene_agent/simulation_tests.py','src/agent/scene_agent/mechanics.py','src/agent/scene_agent/robot_io.py','src/agent/scene_agent/test_safety.py',
+           'src/agent/scene_agent/verification.py','src/agent/scene_agent/fixed_tests.py','src/agent/scene_agent/plc_test.py']
     return {name:hashlib.sha256((root/name).read_bytes()).hexdigest() for name in files}
 
 
