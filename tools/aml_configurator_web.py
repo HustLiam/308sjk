@@ -190,9 +190,11 @@ def api_assemble(sid, answers):
         parts = aml_parts.load_parts(work)
         assets = os.path.join(d, "assets")
         dae_refs = aml_parts.convert_geometries(parts, work, assets)
-        base = aml_parts.build_base(parts, dae_refs)
+        kin = aml_parts.build_kin_dae(parts, assets, root_name="cell")
+        base = aml_parts.build_base(parts, dae_refs, kin_ref=kin)
         aml_for_audit = work
     else:
+        kin = None
         base = cfg.ET.parse(inputs["aml"])
         root_el = base.getroot()
         if root_el.get("SchemaVersion") != "2.15":
@@ -212,10 +214,12 @@ def api_assemble(sid, answers):
     tree_out = base if hasattr(base, "write") else cfg.ET.ElementTree(base)
     cfg.ET.indent(tree_out, space="\t")
     tree_out.write(out, encoding="utf-8", xml_declaration=True)
-    v = cfg.verify(out, io2, xsd_path=XSD)
+    v = cfg.verify(out, io2, xsd_path=XSD, kin=kin)
     report = {"assembly": stats, "normalized": notes, "audit_warnings": warnings, "verify": v}
     ok = bool(v.get("well_formed") and v.get("roundtrip", {}).get("ok")
-              and (v.get("xsd") is None or v["xsd"]["ok"]))
+              and (v.get("xsd") is None or v["xsd"]["ok"])
+              and v.get("self_contained", {}).get("ok", True)
+              and v.get("kinematics", {}).get("ok", True))
     return {"ok": ok, "report": report, "download": f"/api/download?sid={sid}",
             "output_file": "standard.aml"}
 

@@ -225,6 +225,24 @@ def _insert_ordered(parent, child):
     return child
 
 
+def _stamp_writer(root):
+    """WriterHeader 反映实际写出工具（IEC 62714 建议；保留基座时间戳保持确定性）。"""
+    import aml_parts
+    wh = next((e for e in root.iter("WriterHeader")), None)
+    if wh is None:                            # 散装模式由 build_base 创建；此处兜底
+        return
+    for k, val in (("WriterName", aml_parts.TOOL_NAME),
+                   ("WriterID", aml_parts.TOOL_NAME),
+                   ("WriterVendor", aml_parts.TOOL_NAME),
+                   ("WriterVendorURL", "https://github.com/HustLiam/308sjk"),
+                   ("WriterVersion", aml_parts.TOOL_VERSION),
+                   ("WriterRelease", aml_parts.TOOL_VERSION)):
+        e = wh.find(k)
+        if e is None:
+            e = ET.SubElement(wh, k)
+        e.text = val
+
+
 def _attr(parent, name, value, unit=None):
     a = ET.SubElement(parent, "Attribute", {"Name": name})
     if unit:
@@ -276,7 +294,10 @@ def _requirements_el(requirements):
 
 
 def assemble(base_tree, io_items, adapter, motion, requirements, inputs_meta):
+    import aml_parts
     root = base_tree.getroot() if hasattr(base_tree, "getroot") else base_tree
+    aml_parts.ensure_signal_classes(root)      # 自包含：内联库补声明引用的信号类
+    _stamp_writer(root)                        # WriterHeader=实际写出工具
     station = next((e for e in root.iter()
                     if e.tag == "InternalElement" and e.get("Name") == "Station"), None)
     ih = root.find("InstanceHierarchy")
@@ -352,8 +373,24 @@ def assemble(base_tree, io_items, adapter, motion, requirements, inputs_meta):
 
 # ================================================================ 4. verify
 
-def verify(out_path, io_items, xsd_path=None):
-    """well-formed + XSD + ⓪ 回读逐字比对。返回 verify dict。"""
+def _declared_class_paths(root):
+    """内联类库 → 全路径集合（Lib/Class/子Class…）。"""
+    declared = set()
+    for lib_tag, cls_tag in (("InterfaceClassLib", "InterfaceClass"),
+                             ("RoleClassLib", "RoleClass")):
+        for lib in root.iter(lib_tag):
+            def walk(cls, prefix):
+                path = prefix + "/" + (cls.get("Name") or "")
+                declared.add(path)
+                for c in cls.findall(cls_tag):
+                    walk(c, path)
+            for c in lib.findall(cls_tag):
+                walk(c, lib.get("Name") or "")
+    return declared
+
+
+def verify(out_path, io_items, xsd_path=None, kin=None):
+    """well-formed + XSD + ⓪ 回读逐字比对 + 自包含/kin DAE 审查。返回 verify dict。"""
     v = {"well_formed": False, "xsd": None, "roundtrip": None}
     try:
         root = ET.parse(out_path).getroot()
@@ -368,6 +405,39 @@ def verify(out_path, io_items, xsd_path=None):
     except ET.ParseError as e:
         v["error"] = str(e)
         return v
+
+    # 自包含：全路径类引用（含 /）须能被文件内声明的类库解析
+    # （短路径=scoped ref，CAEX 合法；SystemUnit 短引用同理，均跳过）
+    declared = _declared_class_paths(root)
+    refs = set()
+    for e in root.iter():
+        for k in ("RefBaseClassPath", "RefBaseRoleClassPath"):
+            r = e.get(k)
+            if r and "/" in r and not r.startswith("http"):
+                refs.add(r)
+    unresolved = sorted(r for r in refs if r not in declared)
+    v["self_contained"] = {"ok": not unresolved,
+                           "declared_classes": len(declared),
+                           "unresolved": unresolved}
+
+    # kin DAE：存在性 + 关节数一致 + fragment 目标模型存在
+    if kin:
+        k = {"ok": False, "rel": kin["rel"]}
+        kpath = os.path.join(os.path.dirname(os.path.abspath(out_path)), kin["rel"])
+        if not os.path.isfile(kpath):
+            k["error"] = f"{kin['rel']} 不在标准 AML 旁（应与产物同目录结构）"
+        else:
+            try:
+                kroot = ET.parse(kpath).getroot()
+                local = lambda t: t.split("}")[-1]
+                n_joint = sum(1 for e in kroot.iter() if local(e.tag) == "joint")
+                models = [e for e in kroot.iter() if local(e.tag) == "kinematics_model"]
+                k["dae_joints"] = n_joint
+                k["model_found"] = any(m.get("id") == kin["model_id"] for m in models)
+                k["ok"] = n_joint == kin["joints"] and k["model_found"]
+            except ET.ParseError as e:
+                k["error"] = str(e)
+        v["kinematics"] = k
 
     if xsd_path and os.path.isfile(xsd_path):
         try:
@@ -432,13 +502,15 @@ def main(argv=None):
     io_items = _load(args.io)["io_list"]
     adapter, motion, requirements = _load(args.adapter), _load(args.motion), _load(args.requirements)
 
-    if args.parts_dir:                       # 散装四件 → 基座树（含 STL→DAE）
+    if args.parts_dir:                       # 散装四件 → 基座树（含 STL→DAE + kin DAE）
         import aml_parts
         parts = aml_parts.load_parts(args.parts_dir)
         assets = args.assets_dir or os.path.join(
             os.path.dirname(os.path.abspath(args.out)) or ".", "assets")
         dae_refs = aml_parts.convert_geometries(parts, args.parts_dir, assets)
-        base_root = aml_parts.build_base(parts, dae_refs)
+        kin = aml_parts.build_kin_dae(
+            parts, assets, root_name=os.path.splitext(os.path.basename(args.out))[0])
+        base_root = aml_parts.build_base(parts, dae_refs, kin_ref=kin)
         base_tree = base_root
         aml_for_audit = os.path.join(assets, "..")       # source_file 相对资产目录
     else:
@@ -448,6 +520,7 @@ def main(argv=None):
             print(f"FAIL：基座 SchemaVersion={base_root.get('SchemaVersion')}，本配置器约定 2.15")
             return 1
         aml_for_audit = args.aml
+        kin = None
 
     report = {"format": STD_FORMAT, "inputs": {
         "aml": _rel(args.aml), "io": _rel(args.io), "adapter": _rel(args.adapter),
@@ -475,6 +548,9 @@ def main(argv=None):
     stats = assemble(base_tree, io2, adapter2, motion2, req2, {
         "aml": args.parts_dir or args.aml, "io": args.io, "adapter": args.adapter,
         "motion": args.motion, "requirements": args.requirements})
+    if kin:
+        stats["kinematics_dae"] = {"rel": kin["rel"], "model_id": kin["model_id"],
+                                   "joints": kin["joints"]}
     report["assembly"] = stats
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     tree_out = base_tree if hasattr(base_tree, "write") else ET.ElementTree(base_tree)
@@ -485,11 +561,13 @@ def main(argv=None):
     xsd = args.xsd or os.path.join(
         os.path.dirname(os.path.abspath(args.parts_dir if args.parts_dir else args.aml)),
         "CAEX_ClassModel_V2.15.xsd")
-    v = verify(args.out, io2, xsd_path=xsd)
+    v = verify(args.out, io2, xsd_path=xsd, kin=kin)
     report["verify"] = v
     rt_ok = v["roundtrip"]["ok"] if v.get("roundtrip") else False
     report["ok"] = bool(v["well_formed"] and rt_ok
-                        and (v.get("xsd") is None or v["xsd"]["ok"]))
+                        and (v.get("xsd") is None or v["xsd"]["ok"])
+                        and v.get("self_contained", {}).get("ok", True)
+                        and v.get("kinematics", {}).get("ok", True))
 
     if args.report:
         os.makedirs(os.path.dirname(args.report) or ".", exist_ok=True)
@@ -498,6 +576,15 @@ def main(argv=None):
     print(("OK " if report["ok"] else "FAIL ") + args.out)
     print(f"  信号 {stats['signals']}（端子 {stats['terminals']} / 接线 {stats['links']}）"
           f" | 审查 warnings {len(warnings)} | 补充 {len(notes)}")
+    if kin:
+        k = v.get("kinematics", {})
+        print(f"  kin DAE {kin['rel']}（{kin['joints']} 关节，COLLADA 1.5）"
+              f" {'过' if k.get('ok') else '不过'}审查")
+    if v.get("self_contained"):
+        sc = v["self_contained"]
+        print(f"  自包含类引用 {'过' if sc['ok'] else '不过'}"
+              f"（内联类 {sc['declared_classes']}"
+              + (f"，未解析 {sc['unresolved']}" if sc["unresolved"] else "") + "）")
     if v.get("roundtrip"):
         r = v["roundtrip"]
         print(f"  ⓪回读 {r['io_readback']}/{r['expected']} 逐字一致={r['ok']}"

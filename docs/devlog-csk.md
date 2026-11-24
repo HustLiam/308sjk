@@ -722,3 +722,39 @@ venv(pymodbus 3.8.6 + usd-core)：`pytest runtime/tests/ -q` → 8 passed
 
 - 本机另有一份 09-01 上午的旧文档草稿（OpenPLC Modbus 主链路 + Isaac Sim 6.0 方向），与 master 现行双链路架构（matiec lockstep 主链路 A + Isaac Sim 4.5）不一致，已 `git stash`（含原文件名 `仿真环境与IO闭环详细设计.md`），待与现行架构对齐后再决定是否合流；
 - 本地未跟踪的 `scenegen/`（schema/components/validate/build_usd/iomap/cli + agent 半环）与 `runtime/`（isaac_opcua_server、gantry_jog_gui）为本侧早期实现，其目录结构与 master 的 `src/` 布局归并方案 = 共同议题区"仓库策略确认"，待三方决议后再决定迁入路径。
+
+## 2026-11-23 标准 AML 符合性复查与整改（用户质询"输入信息太少"后续）
+
+### 复查方法与实锤
+- 对照官方 AML_RobotCell（CAEX 2.15 + COLLADA 1.5 kin DAE）逐项核对本产物：
+  1. 运动学只有 AML Kinematics:* 属性（项目约定），缺 IEC 62714 Part 3 标准载体（官方在
+     独立 COLLADA 1.5 文件里：library_joints/kinematics_models/articulated_systems/
+     kinematics_scenes + SIDREF/bind 参数链；刚体子件折叠进最近关节祖先 link）；
+  2. 产物引用 AnalogInput/AnalogOutput/PortInterface 等类但未内联声明（官方内联库也不含
+     信号类）→ 第三方工具不可解析；
+  3. WriterHeader：散装无、打包沿用基座（写出者错标 AutomationML e.V.）。
+- gc 互操作约束确认：package_import.py 只加载 refType=explicit 的 COLLADAInterface →
+  kin 引用标 implicit 即安全；内联库追加类声明不影响 ⓪ 解析（实例无变化）。
+
+### 整改（全部落码）
+- aml_parts.py：build_kin_dae（COLLADA 1.5 生成器，rpy→矩阵→axis-angle 组合路径变换）、
+  append_std_libs（最小内联库+WriterHeader 固定纪元保持确定性）、ensure_signal_classes
+  （打包基座补声明）、build_base 增 kin 接口/Physical 属性/torque/RoleRequirements；
+- aml_configurator.py：_stamp_writer、verify 增自包含（全路径类引用解析）与 kin DAE
+  （存在/关节数/fragment）审查并计入 ok 门禁；web 后端同步；
+- aml_to_mjcf.py：extract_physical + inertial/forcerange；
+- 前轮遗留的"输入信息少"三项中物理属性两项落地（mass/com/inertia、torque），
+  铭牌走 L2 param 问答（文档说明）。
+- 坑：web 后端 else 分支改出双 else 语法错（服务起不来，测试暴露）；refURI Windows
+  反斜杠规范化；append_std_libs 链式 insert().text 属性错。
+
+### 验证
+- 本机缺 trimesh/mujoco/pytest 等 → Python312 pip 补装（scipy 也缺，trimesh 软警告）；
+- tools/tests 12/12（新增散装 kin/自包含/物理专项 1 项；agent 测试 refURI 计数口径改
+  geom 接口=5，内联库类定义自带 refURI 属性属官方建模不算）；
+- 打包产物重生成：XSD 过/⓪回读 14/14/自包含 101 类；MJCF 回归 body=7 joint=6 闭环 0.0°；
+- kin DAE 结构与官方逐元素对齐（link 树 attachment_full、revolute+limits、参数链）。
+
+### 文档
+- 新增 docs/标准AML配置器与四侧消费.md（应然形态/符合度矩阵/输入获取审查/四侧流转图/
+  迭代记录）；changelog 登记（跨侧产物格式增强，冻结契约不变）。

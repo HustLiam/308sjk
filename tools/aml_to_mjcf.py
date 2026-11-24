@@ -23,23 +23,48 @@ import xml.etree.ElementTree as ET
 
 
 def extract_aml_joints(aml_path):
-    """标准 AML 组件 Kinematics:* 属性 → {关节名: {type/axis/anchor/range/velocity}}。"""
+    """标准 AML 组件 Kinematics:* 属性 → {关节名: {component/type/axis/range/velocity/torque}}。"""
     root = ET.parse(aml_path).getroot()
     joints = {}
-    for a in root.iter("Attribute"):
-        name = a.get("Name") or ""
-        if not name.startswith("Kinematics:"):
-            continue
-        attrs = {x.get("Name"): x.findtext(".//Value") for x in a.iter("Attribute")}
-        jn = name.split(":", 1)[1]
-        joints[jn] = {
-            "type": attrs.get("type", "hinge"),
-            "axis": [float(x) for x in attrs["axis"].split()] if attrs.get("axis") else [0, 0, 1],
-            "range": ([float(attrs["range_min"]), float(attrs["range_max"])]
-                      if attrs.get("range_min") is not None else None),
-            "velocity": float(attrs["velocity"]) if attrs.get("velocity") else None,
-        }
+    for ie in root.iter("InternalElement"):
+        for a in ie.findall("Attribute"):
+            name = a.get("Name") or ""
+            if not name.startswith("Kinematics:"):
+                continue
+            attrs = {x.get("Name"): x.findtext(".//Value") for x in a.iter("Attribute")}
+            jn = name.split(":", 1)[1]
+            joints[jn] = {
+                "component": ie.get("ID"),
+                "type": attrs.get("type", "hinge"),
+                "axis": [float(x) for x in attrs["axis"].split()] if attrs.get("axis") else [0, 0, 1],
+                "range": ([float(attrs["range_min"]), float(attrs["range_max"])]
+                          if attrs.get("range_min") is not None else None),
+                "velocity": float(attrs["velocity"]) if attrs.get("velocity") else None,
+                "torque": float(attrs["torque"]) if attrs.get("torque") else None,
+            }
     return joints
+
+
+def extract_physical(aml_path):
+    """标准 AML 组件 Physical 属性 → {component_id: {mass/com[m]/inertia[kg·m²]/density}}。"""
+    root = ET.parse(aml_path).getroot()
+    out = {}
+    for ie in root.iter("InternalElement"):
+        for a in ie.findall("Attribute"):
+            if a.get("Name") != "Physical":
+                continue
+            attrs = {x.get("Name"): x.findtext(".//Value") for x in a.iter("Attribute")}
+            rec = {}
+            if attrs.get("mass"):
+                rec["mass"] = float(attrs["mass"])
+            if attrs.get("density"):
+                rec["density"] = float(attrs["density"])
+            for k in ("com", "inertia"):
+                if attrs.get(k):
+                    rec[k] = [float(v) for v in attrs[k].split()]
+            if rec:
+                out[ie.get("ID")] = rec
+    return out
 
 
 def extract_io(aml_path):
@@ -83,11 +108,13 @@ def dae_joint_axis(resource_root, source_file, source_id):
     return None
 
 
-def build_mjcf(io_items, resource_root, aml_joints=None):
-    """六轴串联链 MJCF：hinge 轴向=DAE、限位=AML range、命名=target/actual 变量名。"""
+def build_mjcf(io_items, resource_root, aml_joints=None, physical=None):
+    """六轴串联链 MJCF：hinge 轴向=DAE、限位=AML range、命名=target/actual 变量名。
+    物理属性（可选）：mass/com/inertia → body inertial；torque → actuator forcerange。"""
     targets = [it for it in io_items if it.get("role") == "target"]
     actuals = {it["name"]: it for it in io_items if it.get("role") == "actual"}
     targets.sort(key=lambda it: it["source_id"] or "")          # Joint_1..6 稳定排序
+    physical = physical or {}
 
     m = ET.Element("mujoco", {"model": "standard_aml_robotcell"})
     ET.SubElement(m, "compiler", {"angle": "degree", "coordinate": "local"})
@@ -115,6 +142,15 @@ def build_mjcf(io_items, resource_root, aml_joints=None):
         body = ET.SubElement(parent, "body", {
             "name": f"link{i}",
             "pos": f"0 0 {0.45 if i == 1 else 0.35}"})
+        ph = physical.get((aml_joints or {}).get(t.get("source_id"), {}).get("component")) \
+            if aml_joints else None
+        if ph and ph.get("mass"):
+            inert = {"mass": str(ph["mass"])}
+            if ph.get("com"):
+                inert["pos"] = " ".join(str(v) for v in ph["com"])
+            if ph.get("inertia"):
+                inert["fullinertia"] = " ".join(str(v) for v in ph["inertia"])
+            ET.SubElement(body, "inertial", inert)
         ET.SubElement(body, "joint", {
             "name": t["name"], "type": "hinge",
             "axis": " ".join(str(x) for x in axis),
@@ -127,8 +163,11 @@ def build_mjcf(io_items, resource_root, aml_joints=None):
 
     act = ET.SubElement(m, "actuator")
     for t in targets:
-        ET.SubElement(act, "position", {
-            "name": t["name"], "joint": t["name"], "kp": "120"})
+        attr = {"name": t["name"], "joint": t["name"], "kp": "120"}
+        tq = (aml_joints or {}).get(t.get("source_id"), {}).get("torque")
+        if tq:
+            attr["forcerange"] = f"-{tq:g} {tq:g}"
+        ET.SubElement(act, "position", attr)
 
     sen = ET.SubElement(m, "sensor")
     for t in targets:
@@ -185,7 +224,8 @@ def main(argv=None):
 
     io_items = extract_io(args.aml)
     mjcf, axes_note = build_mjcf(io_items, args.resource_root,
-                                 aml_joints=extract_aml_joints(args.aml))
+                                 aml_joints=extract_aml_joints(args.aml),
+                                 physical=extract_physical(args.aml))
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     ET.ElementTree(mjcf).write(args.out, encoding="utf-8", xml_declaration=True)
     print(f"OK 组装 {args.out}（{len(axes_note)} 关节，轴向均取自 DAE）")

@@ -10,12 +10,12 @@
 	<AdditionalInformation AutomationMLVersion="2.0" />
 	<AdditionalInformation>
 		<WriterHeader>
-			<WriterName>AutomationML e.V.</WriterName>
-			<WriterID>AutomationML e.V.</WriterID>
-			<WriterVendor>AutomationML e.V.</WriterVendor>
-			<WriterVendorURL>www.automationml.org</WriterVendorURL>
-			<WriterVersion>1.0</WriterVersion>
-			<WriterRelease>1.0</WriterRelease>
+			<WriterName>308sjk aml_configurator</WriterName>
+			<WriterID>308sjk aml_configurator</WriterID>
+			<WriterVendor>308sjk aml_configurator</WriterVendor>
+			<WriterVendorURL>https://github.com/HustLiam/308sjk</WriterVendorURL>
+			<WriterVersion>1.1</WriterVersion>
+			<WriterRelease>1.1</WriterRelease>
 			<LastWritingDateTime>2015-12-15T13:12:06.7153453+01:00</LastWritingDateTime>
 			<WriterProjectTitle>AutomationML Tutorial Examples</WriterProjectTitle>
 			<WriterProjectID>AutomationML Tutorial Examples</WriterProjectID>
@@ -6475,6 +6475,11 @@
 				<InterfaceClass Name="SignalInterface" RefBaseClassPath="Communication" />
 			</InterfaceClass>
 			<InterfaceClass Name="AttachmentInterface" RefBaseClassPath="AutomationMLBaseInterface" />
+			<InterfaceClass Name="PortInterface" RefBaseClassPath="AutomationMLBaseInterface" />
+			<InterfaceClass Name="AnalogInput" RefBaseClassPath="AutomationMLBaseInterface" />
+			<InterfaceClass Name="AnalogOutput" RefBaseClassPath="AutomationMLBaseInterface" />
+			<InterfaceClass Name="DigitalInput" RefBaseClassPath="AutomationMLBaseInterface" />
+			<InterfaceClass Name="DigitalOutput" RefBaseClassPath="AutomationMLBaseInterface" />
 		</InterfaceClass>
 	</InterfaceClassLib>
 	<RoleClassLib Name="AutomationMLBaseRoleClassLib">

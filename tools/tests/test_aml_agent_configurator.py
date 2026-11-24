@@ -51,14 +51,16 @@ def test_parts_full_pipeline():
         s = src[it["name"]]
         assert (it["dir"], it["type"], it.get("address")) == (s["dir"], s["type"], s["address"])
 
-    # 结构：PLC 自动创建 / 6 关节属性 / 5 DAE 引用（link6 无几何）
+    # 结构：PLC 自动创建 / 6 关节属性 / 5 DAE 引用（link6 无几何；kin 接口另算）
     import xml.etree.ElementTree as ET
     root = ET.parse(out).getroot()
     assert any(e.get("Name") == "PLC_Main" for e in root.iter("InternalElement"))
     kin = [a.get("Name") for a in root.iter("Attribute")
            if (a.get("Name") or "").startswith("Kinematics:")]
     assert len(kin) == 6
-    dae = [a for a in root.iter() if a.get("Name") == "refURI"]
+    dae = [e for e in root.iter("ExternalInterface")
+           if e.get("Name") == "geom"
+           and any(a.get("Name") == "refURI" for a in e.findall("Attribute"))]
     assert len(dae) == 5
 
 

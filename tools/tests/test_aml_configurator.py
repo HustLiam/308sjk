@@ -115,6 +115,69 @@ def test_full_pipeline_and_deterministic():
     assert v["well_formed"]
     assert v["xsd"]["ok"]
     assert v["roundtrip"]["ok"] and v["roundtrip"]["io_readback"] == 14
+    assert v["self_contained"]["ok"], v["self_contained"]["unresolved"]   # 打包模式同样自包含
+
+
+def test_parts_mode_kin_self_contained_physical():
+    """散装四件 → 标准 AML：COLLADA 1.5 kin DAE、内联类库自包含、物理/扭矩落产物。"""
+    import xml.etree.ElementTree as ET
+    parts_dir = os.path.join(HERE, "fixtures", "parts")
+    xsd = os.path.join(os.path.dirname(BASE), "CAEX_ClassModel_V2.15.xsd")
+    out_dir = tempfile.mkdtemp(prefix="aml_parts_")
+    out = os.path.join(out_dir, "std.aml")
+    r = subprocess.run([sys.executable, os.path.join(REPO, "tools", "aml_configurator.py"),
+                        "--parts-dir", parts_dir, "--io", os.path.join(parts_dir, "io.json"),
+                        "-o", out, "--xsd", xsd], capture_output=True, text=True)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "kin DAE" in r.stdout and "自包含类引用 过" in r.stdout
+
+    io_list = json.load(open(os.path.join(parts_dir, "io.json"), encoding="utf-8"))["io_list"]
+    v = cfg.verify(out, io_list, xsd_path=xsd,
+                   kin={"rel": "assets/kinematics.dae", "model_id": "kinematics_model",
+                        "joints": 6})
+    assert v["xsd"]["ok"]
+    assert v["roundtrip"]["ok"] and v["roundtrip"]["io_readback"] == 14
+    assert v["self_contained"]["ok"], v["self_contained"]["unresolved"]
+    assert v["kinematics"]["ok"] and v["kinematics"]["dae_joints"] == 6
+
+    root = ET.parse(out).getroot()
+    libs = [e.get("Name") for e in root if e.tag in ("InterfaceClassLib", "RoleClassLib")]
+    assert "AutomationMLInterfaceClassLib" in libs and "AutomationMLBaseRoleClassLib" in libs
+    wh = next(e for e in root.iter("WriterHeader"))
+    assert wh.findtext("WriterName") == "308sjk aml_configurator"
+
+    # kin DAE：COLLADA 1.5，6 关节，link 树覆盖全部组件，AML 侧 implicit 引用
+    kroot = ET.parse(os.path.join(out_dir, "assets", "kinematics.dae")).getroot()
+    assert kroot.get("version") == "1.5.0"
+    local = lambda e: e.tag.split("}")[-1]  # noqa: E731
+    assert sum(1 for e in kroot.iter() if local(e) == "joint") == 6
+    km = next(e for e in kroot.iter() if local(e) == "kinematics_model")
+    links = {e.get("name") for e in km.iter() if local(e) == "link"}
+    assert links == {"rb_base"} | {f"rb_link{i}" for i in range(1, 7)}
+    kin_if = next(e for e in root.iter("ExternalInterface") if e.get("Name") == "Kinematics")
+    assert kin_if.find("Attribute[@Name='refType']/Value").text == "implicit"
+    assert "#kinematics_model" in kin_if.find("Attribute[@Name='refURI']/Value").text
+
+    # 物理/扭矩：AML 属性 + MJCF inertial/forcerange
+    ph = next(a for a in root.iter("Attribute") if a.get("Name") == "Physical")
+    vals = {x.get("Name"): x.findtext("Value") for x in ph.iter("Attribute")}
+    assert vals["mass"] == "12.5" and vals["com"] == "0.0 0.0 0.15"
+    j1 = next(a for a in root.iter("Attribute") if a.get("Name") == "Kinematics:rb_joint1")
+    assert {x.get("Name"): x.findtext("Value") for x in j1.iter("Attribute")}["torque"] == "450"
+
+    import aml_to_mjcf as m2j  # noqa: E402
+    joints_aml = m2j.extract_aml_joints(out)
+    assert joints_aml["rb_joint1"]["torque"] == 450.0
+    assert joints_aml["rb_joint1"]["component"] == "rb_link1"
+    phys = m2j.extract_physical(out)
+    assert phys["rb_link1"]["mass"] == 12.5 and phys["rb_link1"]["com"] == [0.0, 0.0, 0.15]
+    mjcf, _ = m2j.build_mjcf(m2j.extract_io(out), out_dir,
+                             aml_joints=joints_aml, physical=phys)
+    inert = mjcf.find("worldbody/body/inertial")
+    assert inert is not None and inert.get("mass") == "12.5"
+    assert inert.get("fullinertia") == "0.35 0.28 0.12 0.0 0.0 0.0"
+    pos_act = mjcf.find("actuator/position")
+    assert pos_act.get("forcerange") == "-450 450"
 
 
 def test_mjcf_and_exports():

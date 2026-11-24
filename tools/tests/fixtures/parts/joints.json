@@ -17,7 +17,8 @@
       -185,
       185
     ],
-    "velocity": 30
+    "velocity": 30,
+    "torque": 450
   },
   {
     "name": "rb_joint2",
