@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>标准 AML 配置器</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+  <h1>标准 AML 配置器</h1>
+  <p class="sub">任意子集文件 → 审查问答 → 补充 → 标准 AML（几何 + IO + 通讯 + 验证 同源）</p>
+</header>
+
+<main>
+  <!-- ① 上传 -->
+  <section id="step1" class="card">
+    <h2><span class="stepno">1</span> 上传文件（任意子集）</h2>
+    <div id="drop" class="drop">
+      <p>把文件拖到这里，或点击选择</p>
+      <p class="hint">基座 <b>.aml</b> 或散装 <b>tree/geometry/poses/joints.json + .stl/.dae/.obj</b>；
+        <b>io.json 必需</b>；adapter / motion / requirements.json 可选</p>
+      <input type="file" id="file" multiple accept=".aml,.json,.stl,.dae,.obj">
+    </div>
+    <ul id="filelist" class="files"></ul>
+    <div class="row">
+      <button id="btnUpload" class="primary" disabled>上传并审查</button>
+      <span id="uploadMsg" class="msg"></span>
+    </div>
+  </section>
+
+  <!-- ② 审查问答 -->
+  <section id="step2" class="card hidden">
+    <h2><span class="stepno">2</span> 审查问答</h2>
+    <div id="llmBadge" class="badge"></div>
+    <div id="clsView" class="clsview"></div>
+    <div id="questions"></div>
+    <div class="row">
+      <button id="btnAssemble" class="primary">生成标准 AML</button>
+      <span id="asmMsg" class="msg"></span>
+    </div>
+  </section>
+
+  <!-- ③ 产物 -->
+  <section id="step3" class="card hidden">
+    <h2><span class="stepno">3</span> 标准 AML 产物</h2>
+    <div id="result"></div>
+    <div class="row">
+      <a id="dl" class="button" href="#" download>下载 standard.aml</a>
+      <button id="btnRestart" class="ghost">重新开始</button>
+    </div>
+  </section>
+</main>
+
+<script src="/app.js"></script>
+</body>
+</html>

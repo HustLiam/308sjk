@@ -1,3 +1,33 @@
+## 2026-11-24 (5) Web 前端（独立服务 :8766）
+
+### 架构
+
+独立轻量服务（不动 gc 的 8765 工作台——1471 行主文件零改动零回归风险）：
+tools/aml_configurator_web.py（原生 BaseHTTPRequestHandler 同款技术栈）+
+tools/aml_configurator_ui/（index.html/style.css/app.js 原生 JS 无依赖）。
+三步交互：上传任意子集（multipart，无依赖手写解析）→ /api/analyze（L1 红条 + LLM/Mock
+出题卡片）→ /api/assemble（supplement 应用 + 进程内组装器）→ /api/download 产物。
+会话目录 workspace/aml_configurator/web/<sid>/（upload/work/assets/supplement/standard.aml）。
+
+### bug（Web 分类）
+
+classify 的 KNOWN_JSON 查找键写错（low="tree" vs 库键 "tree.json"）→ 四件全落 unknown
+→ tree_missing 误报 + 18 题膨胀 + link6 无处挂。修：low+".json" 查找。服务级测试固化
+该回归（断言 parts_files 四件齐全、题数 ≤6）。
+
+### 验证
+
+- Web 服务级测试 2/2（全链 Mock：分类/出题/组装 14/14 回读/XSD 过/下载 200；
+  缺 io.json 拒绝路径）；
+- 真实 LLM 通道 Web 验证：llm_used=True、6 题、assemble ok、回读 14/14；
+- tools/tests 全套 11 项绿。
+
+### 使用
+
+python tools/aml_configurator_web.py            # 真实 LLM（读 .env）
+python tools/aml_configurator_web.py --mock     # 离线
+浏览器 http://127.0.0.1:8766
+
 ## 2026-11-24 (4) 真实 LLM 通道接通（deepseek-flash）+ 两个 LLM 协作缺陷修复
 
 - .env 写入 key（gitignore 确认不入库）；第一个 key 402 余额不足（降级机制按设计兜住），
