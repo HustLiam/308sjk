@@ -117,8 +117,20 @@ Modbus 寄存器、MuJoCo 执行器/传感器三者名称天然一致。
 - **前端**（http://127.0.0.1:8767）：three.js 3D 装配链（含关节轴向箭头/自动取景/选中
   高亮）、组件树+详情、信号绑定表+接线、raw 滑杆发指令实时看反馈与 feedback_seq、
   一键验收报告、七类产物下载。浏览器实测通过（滑杆闭环/验收 6/6/3D 渲染）。
+- **RobotCell 打包模式演示（2026-11-23 三）**：前端第二个示例按钮直接消费
+  `examples/aml/standard/010RB_100_standard.aml`（= 原 AmlDocument.aml + 14 点 IO，
+  几何装配 100% 来自官方原件）。适配要点：官方运动学在 COLLADA 1.5 DAE 里——装配器
+  按信号 source_file/source_id 从 DAE library_joints 提取关节规格；同组件多关节 →
+  链式子 body（首关节挂组件体，后续 0.35m 链）；Attachment_COLLADA 的 fragment 引用
+  甄别为运动学引用不当几何；106 个显式几何中 77 个真实网格装载（确定性降采样：编译
+  ≤4000 面/网格、前端 ≤1000 面/网格+全局面数上限，磁盘缓存加速复跑）、COLLADA 1.5
+  Product 网格 pycollada 不支持→胶囊占位并记待确认项；IO/运动学验证场景关闭碰撞+
+  gravcomp 重力补偿+伺服 kp=4000/damping=50（动力学/碰撞保真归 gc 资源导入器，如实
+  记录）。302 组件/308 body 编译、验收 6/6、浏览器实测真实工厂单元（围栏/工位/机械臂）
+  渲染与滑杆闭环。
 - 输入样例：`examples/aml/standard/parts_demo/`（散装六轴 → 标准产物 → assembled/ 全套）。
-  测试：`tools/tests/test_aml_assembly.py` 5 项（解析/编译/PLCopen+ST/闭环验收/服务级）。
+  测试：`tools/tests/test_aml_assembly.py` 6 项（解析/编译/PLCopen+ST/闭环验收/打包
+  RobotCell/服务级）。
 
 ## 6. 迭代记录
 

@@ -20,6 +20,8 @@ sys.path.insert(0, os.path.join(REPO, "tools"))
 sys.path.insert(0, os.path.join(REPO, "src", "pipeline"))
 
 DEMO = os.path.join(REPO, "examples", "aml", "standard", "parts_demo")
+PACKED = os.path.join(REPO, "examples", "aml", "standard", "010RB_100_standard.aml")
+RC_ROOT = os.path.join(REPO, "AML_RobotCell_en_public", "AML_RobotCell_en")
 
 import aml_assembly as asm                                    # noqa: E402
 
@@ -116,6 +118,38 @@ def test_io_session_and_acceptance():
     rep = asm.run_acceptance(s, os.path.join(out, "report.json"))
     assert rep["ok"] and all(j["pass"] for j in rep["joints"])
     assert all(j["feedback_raw"] is not None for j in rep["joints"])
+    shutil.rmtree(out, ignore_errors=True)
+
+
+def test_packed_robotcell():
+    """打包模式（原 AmlDocument.aml 的标准 AML 版）：DAE 关节提取 + 真实网格 + 闭环。"""
+    try:
+        import mujoco  # noqa: F401
+        import trimesh  # noqa: F401
+    except ImportError:
+        print("SKIP：缺 mujoco/trimesh，打包模式跳过")
+        return
+    m = asm.parse_standard_aml(PACKED, RC_ROOT)
+    assert len(m["components"]) > 290                     # 官方 302 组件树
+    # 关节从信号溯源的 DAE library_joints 提取（官方运动学在 COLLADA 1.5 里）
+    assert len(m["joints"]) == 6
+    j1 = m["joints"][0]
+    assert j1["axis"] == [0.0, 0.0, -1.0] and j1["range"] == [-185.0, 185.0]
+    assert j1.get("from_dae", "").endswith("KR240R2700prime_Product.dae")
+    # Attachment_COLLADA fragment 引用不当几何；机器人 Representation 是显式几何
+    assert m["kin_dae"] and "#" in (m["kin_dae"] or "")
+    robot = next(c for c in m["components"]
+                 if c["id"] == "AF138E59-0000-17AC-556E-B124000031B5")
+    assert robot["geom_uri"].endswith("KR240R2700prime_Product.dae")
+    # 装配 + 编译 + 闭环验收（真实网格降采样、碰撞关闭、gravcomp、伺服收敛）
+    out = tempfile.mkdtemp(prefix="rc_")
+    r = asm.full_run(PACKED, out, RC_ROOT)
+    s = r["scene_stats"]
+    assert s["compile"], s.get("error")
+    assert s["njnt"] == 6 and s["nu"] == 6 and s["nsensor"] == 6
+    assert s["meshes"] > 60                               # 真实 DAE 网格批量装载
+    assert any("降采样" in p for p in r["model"]["pending"])   # 如实记录降采样
+    assert r["acceptance"]["ok"] and len(r["acceptance"]["joints"]) == 6
     shutil.rmtree(out, ignore_errors=True)
 
 

@@ -104,15 +104,18 @@ def _rpy_matrix(rpy_deg):
                    [[1, 0, 0], [0, cx, -sx], [0, sx, cx]]))
 
 
-def parse_standard_aml(aml_path):
+def parse_standard_aml(aml_path, resource_root=None):
     """标准 AML → 装配模型（组件树/关节/信号/接线/要求/待确认项）。
 
+    resource_root 给定时，额外从信号 source_file 指向的 DAE library_joints 提取
+    关节规格（打包模式：官方运动学在 COLLADA 1.5 DAE 里，AML 无 Kinematics 属性）。
     返回 dict；pending 列出关系不明确项（原说明 1.2(3) 的"待确认项"）。
     """
     root = ET.parse(aml_path).getroot()
     ih = root.find("InstanceHierarchy")
     if ih is None:
         raise ValueError("标准 AML 无 InstanceHierarchy")
+    resource_root = resource_root or os.path.dirname(os.path.abspath(aml_path))
 
     model = {"source": os.path.basename(aml_path),
              "components": [], "joints": [], "signals": [], "links": [],
@@ -141,14 +144,18 @@ def parse_standard_aml(aml_path):
         for ei in ie.findall("ExternalInterface"):
             cls = ei.get("RefBaseClassPath") or ""
             ea = _attrs_of(ei)
-            if "COLLADAInterface" in cls and ea.get("refType", "explicit") == "explicit":
-                if comp["geom_uri"]:
-                    model["pending"].append(
-                        f"组件 {cid} 有多个显式几何接口（{ei.get('Name')}），取首个")
+            uri = ea.get("refURI", "")
+            if "COLLADAInterface" in cls:
+                if "#" in uri:                     # fragment=运动学模型引用（Attachment_COLLADA_*）
+                    model["kin_dae"] = model["kin_dae"] or uri
+                elif ea.get("refType", "explicit") == "explicit":
+                    if comp["geom_uri"]:
+                        model["pending"].append(
+                            f"组件 {cid} 有多个显式几何接口（{ei.get('Name')}），取首个")
+                    else:
+                        comp["geom_uri"] = uri
                 else:
-                    comp["geom_uri"] = ea.get("refURI", "")
-            elif "COLLADAInterface" in cls and ea.get("refType") == "implicit":
-                model["kin_dae"] = ea.get("refURI")          # 标准运动学载体引用
+                    model["kin_dae"] = uri         # 标准运动学载体引用（implicit）
             elif "input" in cls.rsplit("/", 1)[-1].lower() or \
                     "output" in cls.rsplit("/", 1)[-1].lower():
                 seg = cls.rsplit("/", 1)[-1].lower()
@@ -215,6 +222,53 @@ def parse_standard_aml(aml_path):
             "a": {"id": a, "name": (ifaces.get(a) or ("?", ""))[0]},
             "b": {"id": b, "name": (ifaces.get(b) or ("?", ""))[0]}})
 
+    # 打包模式：信号溯源的 DAE library_joints → 关节规格（官方运动学在 COLLADA 1.5 里）
+    have = {j["name"] for j in model["joints"]}
+    dae_cache = {}
+    for s in model["signals"]:
+        if not (s.get("source_file") and s.get("source_id")) or s["source_id"] in have:
+            continue
+        path = os.path.join(resource_root, s["source_file"])
+        if s["source_file"] not in dae_cache:
+            try:
+                kroot = ET.parse(path).getroot()
+                dae_cache[s["source_file"]] = {
+                    (e.get("id") or "", e.get("name") or ""): e
+                    for e in kroot.iter() if _local(e.tag) == "joint"}
+            except (ET.ParseError, OSError) as e:
+                model["pending"].append(
+                    f"信号 {s['name']} 的关节源 DAE 不可解析（{type(e).__name__}）")
+                dae_cache[s["source_file"]] = {}
+        je = dae_cache[s["source_file"]].get((s["source_id"], s["source_id"])) \
+            or next((v for k, v in dae_cache[s["source_file"]].items()
+                     if s["source_id"] in k), None)
+        if je is None:
+            model["pending"].append(
+                f"信号 {s['name']} 的关节 {s['source_id']} 不在 {s['source_file']} 中")
+            continue
+        rev = next((c for c in je if _local(c.tag) in ("revolute", "prismatic")), None)
+        kind = _local(rev.tag) if rev is not None else None
+        axis_el = next((c for c in rev if _local(c.tag) == "axis"), None) if rev is not None else None
+        lim = next((c for c in rev if _local(c.tag) == "limits"), None) if rev is not None else None
+        rng = None
+        if lim is not None:
+            lo, hi = lim.find("{*}min"), lim.find("{*}max")
+            if lo is not None and hi is not None:
+                rng = [float(lo.text), float(hi.text)]
+        model["joints"].append({
+            "name": s["source_id"], "component": s["component_id"],
+            "type": "hinge" if kind == "revolute" else "slide",
+            "axis": ([float(x) for x in axis_el.text.split()]
+                     if axis_el is not None else [0, 0, 1]),
+            "anchor": [0, 0, 0], "range": rng,
+            "velocity": None, "torque": None, "from_dae": s["source_file"]})
+        have.add(s["source_id"])
+    comp_by_id = {c["id"]: c for c in model["components"]}
+    for j in model["joints"]:                    # 组件关节清单补齐（前端链构建用）
+        c = comp_by_id.get(j["component"])
+        if c and j["name"] not in c["joints"]:
+            c["joints"].append(j["name"])
+
     # 待确认项（原说明 1.2(3)：关系不明确的项目记录）
     for c in model["components"]:
         if not c["geom_uri"] and c["joints"]:
@@ -233,23 +287,72 @@ def parse_standard_aml(aml_path):
     return model
 
 
-def mesh_payload(model, resource_root):
-    """组件几何 → 前端渲染载荷 {component_id: {vertices, faces}}（失败记 pending）。"""
+MESH_CACHE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                          "workspace", "aml_assembly", "_meshcache")
+MESH_FACES_SCENE = 4000      # mujoco/OBJ 每网格面数上限（降采样保持结构可辨识）
+MESH_FACES_UI = 1000         # 前端载荷每网格上限
+MESH_FACES_UI_TOTAL = 60000  # 前端载荷全局上限
+
+
+def _mesh_cached(rel, resource_root, cap):
+    """加载并降采样（stride 确定性）；磁盘缓存 key=uri+mtime+cap。返回 mesh 或 None。"""
+    import hashlib
     import trimesh
-    out = {}
-    for c in model["components"]:
-        if not c["geom_uri"]:
-            continue
-        rel = c["geom_uri"].replace("file:///", "").replace("file://", "")
-        path = os.path.join(resource_root, rel)
-        try:
-            m = trimesh.load(path, force="mesh")
-            out[c["id"]] = {
-                "vertices": [[round(float(x), 5) for x in vtx] for vtx in m.vertices],
-                "faces": [[int(i) for i in f] for f in m.faces],
-                "extents": [round(float(x), 4) for x in m.extents]}
-        except Exception as e:                                  # noqa: BLE001
-            model["pending"].append(f"组件 {c['id']} 几何不可解析（{type(e).__name__}）")
+    path = os.path.join(resource_root, rel)
+    if not os.path.isfile(path):
+        return None
+    key = hashlib.sha1(f"{rel}|{os.path.getmtime(path):.0f}|{cap}".encode()).hexdigest()[:16]
+    os.makedirs(MESH_CACHE, exist_ok=True)
+    cf = os.path.join(MESH_CACHE, key + ".json")
+    if os.path.isfile(cf):
+        return json.load(open(cf, encoding="utf-8"))
+    try:
+        m = trimesh.load(path, force="mesh")
+    except Exception:                                         # noqa: BLE001
+        m = None
+    if m is None or not len(m.faces):
+        data = None
+    else:
+        stride = max(1, len(m.faces) // cap + 1)
+        f = m.faces[::stride]
+        seen, verts, faces = {}, [], []
+        for tri in f:
+            idx = []
+            for v in tri:
+                i = seen.get(int(v))
+                if i is None:
+                    i = len(verts)
+                    seen[int(v)] = i
+                    verts.append([round(float(x), 5) for x in m.vertices[v]])
+                idx.append(i)
+            faces.append(idx)
+        data = {"vertices": verts, "faces": faces,
+                "full_faces": int(len(m.faces))}
+    json.dump(data, open(cf, "w", encoding="utf-8"))
+    return data
+
+
+def mesh_payload(model, resource_root):
+    """组件几何 → 前端渲染载荷 {component_id: {vertices, faces}}（并行+缓存+全局面数上限）。"""
+    from concurrent.futures import ThreadPoolExecutor
+    targets = [(c["id"], c["geom_uri"]) for c in model["components"] if c["geom_uri"]]
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        results = list(ex.map(
+            lambda t: (t[0], _mesh_cached(
+                t[1].replace("file:///", "").replace("file://", ""),
+                resource_root, MESH_FACES_UI)), targets))
+    out = {cid: d for cid, d in results if d}
+    total = sum(len(d["faces"]) for d in out.values())
+    if total > MESH_FACES_UI_TOTAL:              # 全局超限 → 确定性再抽稀
+        stride = total // MESH_FACES_UI_TOTAL + 1
+        for d in out.values():
+            d["faces"] = d["faces"][::stride]
+    for cid, (rel, d) in zip([t[0] for t in targets],
+                             [(t[1], out.get(t[0])) for t in targets]):
+        if d is None:
+            model["pending"].append(
+                f"组件 {cid} 几何不可解析/为空（{rel.rsplit('/', 1)[-1]}；"
+                f"COLLADA 1.5 Product 网格 pycollada 不支持）")
     return out
 
 
@@ -258,25 +361,36 @@ def mesh_payload(model, resource_root):
 def build_scene(model, out_dir, resource_root):
     """装配模型 → scene.xml + meshes/ + mapping + mujoco 编译统计。
 
-    层级→body（Frame→pos/euler）；可动→joint（axis/range/anchor）；
-    几何→geom(mesh OBJ，几何缺失用 capsule 占位并记 pending)；IO 接口→site；
+    层级→body（Frame→pos/euler）；可动→joint（axis/range/anchor）；同一组件多关节
+    （打包模式 DAE 溯源）→ 链式子 body；几何→geom(mesh OBJ，降采样上限
+    MESH_FACES_SCENE，几何缺失用 capsule 占位并记 pending)；IO 接口→site；
     target→position actuator、actual→jointpos sensor（命名=AML 信号名）。
     """
-    import trimesh
     os.makedirs(os.path.join(out_dir, "meshes"), exist_ok=True)
     mesh_name = {}
+    decimated = 0
     for c in model["components"]:
         if not c["geom_uri"]:
             continue
         rel = c["geom_uri"].replace("file:///", "").replace("file://", "")
-        try:
-            m = trimesh.load(os.path.join(resource_root, rel), force="mesh")
-            obj = os.path.join(out_dir, "meshes", c["id"] + ".obj")
-            m.export(obj)
-            mesh_name[c["id"]] = c["id"]
-        except Exception as e:                                  # noqa: BLE001
+        d = _mesh_cached(rel, resource_root, MESH_FACES_SCENE)
+        if d is None:
             model["pending"].append(
-                f"组件 {c['id']} 几何不可解析（{type(e).__name__}: {str(e)[:60]}），用胶囊占位")
+                f"组件 {c['id']} 几何不可解析/为空（{rel.rsplit('/', 1)[-1]}），用胶囊占位")
+            continue
+        obj = os.path.join(out_dir, "meshes", c["id"] + ".obj")
+        with open(obj, "w", encoding="utf-8") as f:
+            for v in d["vertices"]:
+                f.write("v %g %g %g\n" % tuple(v))
+            for t in d["faces"]:
+                f.write("f " + " ".join(str(i + 1) for i in t) + "\n")
+        mesh_name[c["id"]] = c["id"]
+        if d["full_faces"] > MESH_FACES_SCENE:
+            decimated += 1
+    if decimated:
+        model["pending"].append(
+            f"{decimated} 个网格超过 {MESH_FACES_SCENE} 面，已确定性降采样用于编译"
+            f"（全分辨率导入归 gc 资源导入器）")
 
     joints_by_comp = {}
     for j in model["joints"]:
@@ -291,7 +405,7 @@ def build_scene(model, out_dir, resource_root):
     ET.SubElement(m, "option", {"timestep": "0.002", "gravity": "0 0 -9.81",
                                 "integrator": "implicitfast"})
     d = ET.SubElement(m, "default")
-    ET.SubElement(d, "joint", {"damping": "3", "armature": "0.1"})
+    ET.SubElement(d, "joint", {"damping": "50", "armature": "0.1"})
     if mesh_name:
         asset = ET.SubElement(m, "asset")
         for cid, name in mesh_name.items():
@@ -308,10 +422,13 @@ def build_scene(model, out_dir, resource_root):
         (children.setdefault(c["parent"], []) if c["parent"] in comp_by_id
          else roots).append(c)
 
+    chain_tail = {}                     # 多关节链的最深 body（子组件挂靠点=法兰端）
+
     def make_body(parent_el, c):
         attrs = {"name": c["id"], "pos": " ".join("%g" % v for v in c["frame"]["pos"])}
         if any(abs(v) > 1e-9 for v in c["frame"]["rpy_deg"]):
             attrs["euler"] = " ".join("%g" % v for v in c["frame"]["rpy_deg"])
+        attrs["gravcomp"] = "1"          # IO/运动学验证不含重力效应（动力学保真归 gc 导入器）
         body = ET.SubElement(parent_el, "body", attrs)
         ph = c.get("physical") or {}
         if ph.get("mass"):
@@ -321,7 +438,16 @@ def build_scene(model, out_dir, resource_root):
             if ph.get("inertia"):
                 ia["fullinertia"] = ph["inertia"]
             ET.SubElement(body, "inertial", ia)
-        for j in joints_by_comp.get(c["id"], []):
+        node = body
+        for k, j in enumerate(joints_by_comp.get(c["id"], [])):
+            if k > 0:                    # 同组件多关节（DAE 溯源）→ 链式子 body
+                node = ET.SubElement(node, "body",
+                                     {"name": j["name"] + "_link", "pos": "0 0 0.35",
+                                      "gravcomp": "1"})
+                ET.SubElement(node, "geom", {"type": "capsule",
+                                             "fromto": "0 0 0 0 0 0.3", "size": "0.06",
+                                             "rgba": ".55 .6 .66 1",
+                                             "contype": "0", "conaffinity": "0"})
             ja = {"name": j["name"], "pos": " ".join("%g" % v for v in j["anchor"]),
                   "axis": " ".join("%g" % v for v in j["axis"])}
             if j["type"] == "slide":
@@ -333,17 +459,20 @@ def build_scene(model, out_dir, resource_root):
                 if j["range"]:
                     ja["range"] = "%g %g" % tuple(j["range"])
             ja["limited"] = "true" if j["range"] else "false"
-            ET.SubElement(body, "joint", ja)
+            ET.SubElement(node, "joint", ja)
+        chain_tail[c["id"]] = node
         if c["id"] in mesh_name:
             ET.SubElement(body, "geom", {"type": "mesh", "mesh": c["id"],
-                                         "rgba": ".78 .45 .18 1"})
+                                         "rgba": ".78 .45 .18 1",
+                                         "contype": "0", "conaffinity": "0"})
         elif c["parent"] is not None:               # 根组件的地面平面已存在
             ET.SubElement(body, "geom", {"type": "capsule", "fromto": "0 0 0 0 0 0.25",
-                                         "size": "0.05", "rgba": ".6 .6 .62 1"})
+                                         "size": "0.05", "rgba": ".6 .6 .62 1",
+                                         "contype": "0", "conaffinity": "0"})
         if c["signals"] or c["joints"]:             # IO 接口锚点 → site
             ET.SubElement(body, "site", {"name": "site_" + c["id"], "size": "0.008"})
         for ch in children.get(c["id"], []):
-            make_body(body, ch)
+            make_body(chain_tail.get(c["id"], body), ch)
 
     for c in roots:
         make_body(world, c)
@@ -352,7 +481,7 @@ def build_scene(model, out_dir, resource_root):
     for t in sorted(targets, key=lambda s: s["source_id"] or s["name"]):
         if t["source_id"] in joint_names:
             ET.SubElement(act, "position",
-                          {"name": t["name"], "joint": t["source_id"], "kp": "800"})
+                          {"name": t["name"], "joint": t["source_id"], "kp": "4000"})
     sen = ET.SubElement(m, "sensor")
     for t in sorted(targets, key=lambda s: s["source_id"] or s["name"]):
         a = actuals.get(t["name"].replace("target", "actual"))
@@ -623,7 +752,7 @@ def run_acceptance(session, out_json=None):
 def full_run(aml_path, out_dir, resource_root=None):
     """解析→装配→IO 测试 全链（Web/CLI/测试共用）。返回汇总 dict。"""
     resource_root = resource_root or os.path.dirname(os.path.abspath(aml_path))
-    model = parse_standard_aml(aml_path)
+    model = parse_standard_aml(aml_path, resource_root)
     os.makedirs(out_dir, exist_ok=True)
     stats = build_scene(model, out_dir, resource_root)
     meshes = mesh_payload(model, resource_root)

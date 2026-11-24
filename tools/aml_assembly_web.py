@@ -60,9 +60,9 @@ def parse_multipart(body, boundary):
     return files
 
 
-def _load_pipeline(aml_path, out_dir):
+def _load_pipeline(aml_path, out_dir, resource_root=None):
     """full_run + 建 IOSession，入 SESSIONS。返回前端摘要 dict。"""
-    r = asm.full_run(aml_path, out_dir)
+    r = asm.full_run(aml_path, out_dir, resource_root=resource_root)
     sid = os.path.basename(out_dir)
     ios = None
     if r["scene_stats"].get("compile"):
@@ -101,8 +101,17 @@ def api_upload(files):
     return _load_pipeline(os.path.join(d, "standard.aml"), d)
 
 
-def api_demo():
-    """一键示例：仓库六轴夹具 → 配置器现场组装标准 AML → 装配。"""
+def api_demo(mode="parts"):
+    """一键示例。parts=六轴散装夹具；robotcell=原 AmlDocument.aml 的标准 AML 版。"""
+    if mode == "robotcell":
+        sid = "rc_" + uuid.uuid4().hex[:8]
+        d = os.path.join(WORK_ROOT, sid)
+        os.makedirs(d, exist_ok=True)
+        src = os.path.join(REPO, "examples", "aml", "standard", "010RB_100_standard.aml")
+        shutil.copy(src, os.path.join(d, "standard.aml"))
+        return _load_pipeline(
+            os.path.join(d, "standard.aml"), d,
+            resource_root=os.path.join(REPO, "AML_RobotCell_en_public", "AML_RobotCell_en"))
     sid = "demo_" + uuid.uuid4().hex[:8]
     d = os.path.join(WORK_ROOT, sid)
     parts = os.path.join(REPO, "tools", "tests", "fixtures", "parts")
@@ -220,7 +229,11 @@ class Handler(BaseHTTPRequestHandler):
                 m = re.search(r'boundary=(\S+)', self.headers.get("Content-Type", ""))
                 self._send(200, api_upload(parse_multipart(body, m.group(1).encode())))
             elif p == "/api/demo":
-                self._send(200, api_demo())
+                try:
+                    payload = json.loads(body) if body else {}
+                except json.JSONDecodeError:
+                    payload = {}
+                self._send(200, api_demo(payload.get("mode", "parts")))
             elif p == "/api/step":
                 q = parse_qs(urlsplit(self.path).query)
                 self._send(200, api_step(q.get("sid", [""])[0], json.loads(body)))

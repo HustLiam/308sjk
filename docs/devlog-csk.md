@@ -795,3 +795,21 @@ venv(pymodbus 3.8.6 + usd-core)：`pytest runtime/tests/ -q` → 8 passed
 ### 文档
 - docs/标准AML配置器与四侧消费.md §5（装配适配版全说明）+ §6 迭代记录；changelog 登记；
 - 服务保持运行供用户查看：http://127.0.0.1:8767。
+
+## 2026-11-23（三） RobotCell 打包模式演示（用户指令：直接用原 AmlDocument.aml 演示）
+
+- 原 AmlDocument 无 IO 层（项目起点问题）→ 演示用其标准 AML 版 010RB_100_standard.aml
+  （同一文件+14 点 IO，几何装配 100% 原件）；前端加"RobotCell 示例"按钮。
+- 适配三件实事：①官方运动学在 COLLADA 1.5 DAE → 按信号溯源提取 library_joints
+  （183 关节池中取绑定的 6 个）；②同组件 6 关节 → 链式子 body（服务端 scene.xml 与
+  前端 three.js 同构 z=0.35k 链）；③Attachment_COLLADA fragment 引用甄别（不当几何）。
+- 规模治理：106 显式几何 224MB → 确定性 stride 降采样（编译 4000/前端 1000 面每网格
+  +60k 全局上限）+ sha1(mtime) 磁盘缓存 + 8 线程并行；COLLADA 1.5 Product 读不出网格
+  → 胶囊占位记待确认。
+- 物性三连修：真实工位几何互穿把伺服顶死 → 全部 geom contype/conaffinity=0；
+  gravcomp=1 全 body（IO/运动学验证不含重力，如实记录）；j2 极限环振荡（kp4000 配
+  damping3 阻尼不足）→ damping=50 后 6/6。散装模式回归 6/6 不受影响。
+- 浏览器实测：302 组件真实工厂单元渲染（围栏/工位/机械臂/自动取景）+ j1 滑杆
+  cmd400→反馈收敛；HTTP/CLI/浏览器三路全绿。
+- 测试 18/18（新增打包模式：组件 290+/DAE 关节断言/网格 60+/降采样记录/验收 6/6）。
+- 坑：测试断言 full_run 内部 model 的 pending 却用外层 parse 的 m（两个对象）。

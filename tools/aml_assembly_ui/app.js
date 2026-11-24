@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const S = {
   sid: null, model: null, meshes: null, stats: null,
-  objects: {}, selected: null, autoTimer: null,
+  objects: {}, pivots: {}, selected: null, autoTimer: null,
   pendingStep: null, actualEls: {},
 };
 
@@ -40,7 +40,7 @@ function clear3D() {
     o.root.parent && o.root.parent.remove(o.root);
     o.mesh && o.mesh.geometry.dispose();
   }
-  S.objects = {}; S.selected = null;
+  S.objects = {}; S.pivots = {}; S.selected = null;
 }
 
 function buildAssembly() {
@@ -52,17 +52,20 @@ function buildAssembly() {
     const root = new THREE.Object3D(); root.name = c.id;
     root.position.fromArray(c.frame.pos);
     if (c.frame.quat) root.quaternion.fromArray(c.frame.quat);
-    let payload = root, pivot = null;
+    // 同组件多关节（打包模式 DAE 溯源）→ 链式 pivot（第 k 级沿 z 提升 0.35k，与 scene.xml 一致）
     const jl = jointsByComp[c.id] || [];
-    if (jl.length) {
-      const j = jl[0];
-      pivot = new THREE.Object3D(); pivot.position.fromArray(j.anchor);
-      payload = new THREE.Object3D(); payload.position.fromArray(j.anchor.map(v => -v));
-      root.add(pivot); pivot.add(payload);
+    let node = root;
+    jl.forEach((j, k) => {
+      const pivot = new THREE.Object3D();
+      pivot.position.fromArray(j.anchor.map((v, i) => v + (k > 0 && i === 2 ? 0.35 * k : 0)));
+      const payload = new THREE.Object3D();
+      payload.position.copy(pivot.position).multiplyScalar(-1);
+      node.add(pivot); pivot.add(payload);
+      S.pivots[j.name] = pivot;
       const ax = new THREE.Vector3().fromArray(j.axis).normalize();
-      const g = new THREE.ArrowHelper(ax, new THREE.Vector3(), 0.12, 0x37b3ff, 0.03, 0.015);
-      root.add(g);
-    }
+      node.add(new THREE.ArrowHelper(ax, new THREE.Vector3(), 0.12, 0x37b3ff, 0.03, 0.015));
+      node = payload;
+    });
     let mesh = null;
     const md = S.meshes && S.meshes[c.id];
     if (md && md.vertices.length) {
@@ -73,13 +76,13 @@ function buildAssembly() {
       mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
         color: 0xc8734d, metalness: .35, roughness: .55,
         emissive: 0x000000 }));
-      payload.add(mesh);
+      node.add(mesh);
     } else if (c.parent !== null) {
       mesh = new THREE.Mesh(new THREE.CapsuleGeometry(.05, .22, 4, 12),
         new THREE.MeshStandardMaterial({ color: 0x6a7280, metalness: .3, roughness: .6 }));
-      mesh.position.y = .12; payload.add(mesh);
+      mesh.position.y = .12; node.add(mesh);
     }
-    S.objects[c.id] = { root, payload, pivot, mesh, comp: c };
+    S.objects[c.id] = { root, payload: node, mesh, comp: c };
     byId[c.id] = S.objects[c.id];
   }
   for (const c of comps) {
@@ -106,10 +109,10 @@ function buildAssembly() {
 function applyState(state) {
   if (!state) return;
   for (const j of S.model.joints) {
-    const o = S.objects[j.component];
-    if (o && o.pivot && state.qpos_deg && state.qpos_deg[j.name] !== undefined) {
+    const pivot = S.pivots[j.name];
+    if (pivot && state.qpos_deg && state.qpos_deg[j.name] !== undefined) {
       const ax = new THREE.Vector3().fromArray(j.axis).normalize();
-      o.pivot.quaternion.setFromAxisAngle(ax, THREE.MathUtils.degToRad(state.qpos_deg[j.name]));
+      pivot.quaternion.setFromAxisAngle(ax, THREE.MathUtils.degToRad(state.qpos_deg[j.name]));
     }
   }
   document.getElementById('seq').textContent = state.seq;
@@ -253,6 +256,20 @@ function queueStep(targets, steps) {
   }, 60);
 }
 
+async function runDemo(mode) {
+  const rc = mode === 'robotcell';
+  setStatus(rc
+    ? 'RobotCell 装配中（106 个真实 DAE 网格，首次需构建缓存，约 1-3 分钟）…'
+    : '示例组装中（配置器 → 装配 → 闭环）…');
+  try {
+    const r = await fetch('/api/demo', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode }) }).then(r => r.json());
+    if (r.ok) await loadModel(r.sid, r.summary);
+    else setStatus('示例失败: ' + r.errors.join('; '), true);
+  } catch (e) { setStatus('示例失败: ' + e.message, true); }
+}
+
 async function loadModel(sid, summary) {
   S.sid = sid;
   const r = await fetch('/api/model?sid=' + sid).then(r => r.json());
@@ -294,14 +311,8 @@ function initUI() {
     b.classList.add('on');
     document.getElementById('tab-' + b.dataset.tab).classList.add('on');
   }));
-  document.getElementById('btnDemo').addEventListener('click', async () => {
-    setStatus('示例组装中（配置器 → 装配 → 闭环）…');
-    try {
-      const r = await fetch('/api/demo', { method: 'POST' }).then(r => r.json());
-      if (r.ok) await loadModel(r.sid, r.summary);
-      else setStatus('示例失败: ' + r.errors.join('; '), true);
-    } catch (e) { setStatus('示例失败: ' + e.message, true); }
-  });
+  document.getElementById('btnDemo').addEventListener('click', () => runDemo('parts'));
+  document.getElementById('btnDemoRc').addEventListener('click', () => runDemo('robotcell'));
   document.getElementById('fileInput').addEventListener('change', async e => {
     if (!e.target.files.length) return;
     const fd = new FormData();
