@@ -1,3 +1,42 @@
+## 2026-11-24 标准 AML 配置器（五件套 → 标准 AML → 四侧下游）
+
+### 任务（负责人指令）
+
+AML 输入不统一（几何在资源包、IO 在 io.json、通讯在 adapter、运动在 motion、验证在
+requirements 五处分裂）——做配置器自动组装为标准 AML，并实验验证下游四侧用途。
+
+### 交付（tools/ 三件 + 测试 + 标准产物）
+
+1. **aml_configurator.py** 四阶段：audit（引用存在性/地址冲突/%QD 禁用/枚举/scale·range
+   落 16 位域等 8 类规则，errors 阻断 warnings 登记）→ normalize（无 scale 补 word 域、
+   有 scale 补 INT16 满域、三可选件默认值，逐项登记）→ assemble（信号挂 component_id
+   组件、端子模块 PortInterface、InternalLink 接线、PLC 通讯/运动属性、
+   SimulationRequirements）→ verify（well-formed + 包内 CAEX 2.15 XSD + gc ⓪ 解析器
+   回读与 io.json 逐字比对）。确定性：同输入 byte 级同输出；
+2. **aml_to_mjcf.py**（仿真侧）：source_id → DAE library_joints 取轴向（J1=(0,0,-1)…）→
+   六轴 hinge 链 + range 限位 → **actuator/sensor 命名 = AML 变量名**（rb100_j1_target/
+   actual）；mujoco 4.0 真实编译 + 位置伺服闭环：raw=1500×0.02°/LSB=30° → 收敛 30.0°
+   （误差 0.0°）；
+3. **aml_export.py**（PLC/通讯侧）：ST 定位变量声明（14 变量，名称≡AML 信号名≡io.json，
+   即 ②a 的 R1~R5 对齐锚）+ Modbus 通道表（FC03/06/16、地址/scale/range/role）；
+4. test_aml_configurator.py 4 项全绿（负测试 8 类/缺省/确定性+XSD+回读/MJCF+导出）；
+   全量回归 1071 过（28 失败为 master 自带 gc web 环境依赖，与纯基线一致）。
+
+### 技术坑（CAEX 2.15 XSD）
+
+- **子元素严格 sequence 且 xs:extension 追加在基类之后**：InternalElement 实际顺序 =
+  Attribute→ExternalInterface→InternalElement→SupportedRoleClass→MappingObject→
+  InternalLink→RoleRequirements（RoleRequirements 在最后！）——append 会全部打乱，
+  必须按序插入（_insert_ordered）；
+- **InstanceHierarchy 只允许 InternalElement 子元素**（CAEXObject 基类无元素子项）：
+  SimulationRequirements 不能挂 IH（gc 文档写法），改挂 Station 才过 XSD；
+- 基座文件本身过 XSD 是校验前提——先验证基座再谈产物。
+
+### 验证汇总
+
+配置器 OK（XSD 过 + ⓪回读 14/14 逐字一致）；仿真侧编译+闭环 0.0° 误差；PLC 侧 14 变量
+名称统一；通讯侧 14 通道表齐。标准产物：examples/aml/standard/010RB_100_standard.aml。
+
 ## 2026-11-23 (2) AmlDocument_io.aml 改为 io.json 事实源驱动（负责人指正）
 
 - **指正**：io_list 应以 `examples/robotcell/010RB_100.io.json` 为准（gc 侧 2026-11-17

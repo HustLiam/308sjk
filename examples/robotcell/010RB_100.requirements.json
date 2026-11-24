@@ -1,0 +1,14 @@
+{
+  "format": "308sjk.simulation_requirements/1",
+  "description": "010RB_100 六轴定位验证：指令响应与实际反馈",
+  "position_tolerance_m": 0.002,
+  "angle_tolerance_rad": 0.001,
+  "response_timeout_s": 3,
+  "allowed_simplifications": {
+    "visual": "可省略外壳纹理，保留碰撞与检测尺寸"
+  },
+  "checks": [
+    { "kind": "mechanical_joint", "target": "*", "description": "六轴逐关节运动范围与初值" },
+    { "kind": "io_binding", "target": "*", "description": "逐通道验证绑定和实际响应（target/actual/enable/feedback_seq）" }
+  ]
+}
