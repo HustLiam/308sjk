@@ -1,0 +1,122 @@
+[
+  {
+    "name": "rb_joint1",
+    "component": "rb_link1",
+    "type": "hinge",
+    "axis": [
+      0,
+      0,
+      -1
+    ],
+    "anchor": [
+      0,
+      0,
+      0
+    ],
+    "range": [
+      -185,
+      185
+    ],
+    "velocity": 30
+  },
+  {
+    "name": "rb_joint2",
+    "component": "rb_link2",
+    "type": "hinge",
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "anchor": [
+      0,
+      0,
+      0
+    ],
+    "range": [
+      -185,
+      185
+    ],
+    "velocity": 30
+  },
+  {
+    "name": "rb_joint3",
+    "component": "rb_link3",
+    "type": "hinge",
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "anchor": [
+      0,
+      0,
+      0
+    ],
+    "range": [
+      -185,
+      185
+    ],
+    "velocity": 30
+  },
+  {
+    "name": "rb_joint4",
+    "component": "rb_link4",
+    "type": "hinge",
+    "axis": [
+      -1,
+      0,
+      0
+    ],
+    "anchor": [
+      0,
+      0,
+      0
+    ],
+    "range": [
+      -185,
+      185
+    ],
+    "velocity": 30
+  },
+  {
+    "name": "rb_joint5",
+    "component": "rb_link5",
+    "type": "hinge",
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "anchor": [
+      0,
+      0,
+      0
+    ],
+    "range": [
+      -185,
+      185
+    ],
+    "velocity": 30
+  },
+  {
+    "name": "rb_joint6",
+    "component": "rb_link6",
+    "type": "hinge",
+    "axis": [
+      -1,
+      0,
+      0
+    ],
+    "anchor": [
+      0,
+      0,
+      0
+    ],
+    "range": [
+      -185,
+      185
+    ],
+    "velocity": 30
+  }
+]

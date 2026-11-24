@@ -1,0 +1,22 @@
+{
+  "rb_link1": {
+    "file": "rb_link1.stl",
+    "unit": "mm"
+  },
+  "rb_link2": {
+    "file": "rb_link2.stl",
+    "unit": "mm"
+  },
+  "rb_link3": {
+    "file": "rb_link3.stl",
+    "unit": "mm"
+  },
+  "rb_link4": {
+    "file": "rb_link4.stl",
+    "unit": "mm"
+  },
+  "rb_link5": {
+    "file": "rb_link5.stl",
+    "unit": "mm"
+  }
+}

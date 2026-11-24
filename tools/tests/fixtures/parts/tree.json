@@ -1,0 +1,37 @@
+[
+  {
+    "id": "rb_base",
+    "name": "RobotBase",
+    "parent": null
+  },
+  {
+    "id": "rb_link1",
+    "name": "Link1",
+    "parent": "rb_base"
+  },
+  {
+    "id": "rb_link2",
+    "name": "Link2",
+    "parent": "rb_link1"
+  },
+  {
+    "id": "rb_link3",
+    "name": "Link3",
+    "parent": "rb_link2"
+  },
+  {
+    "id": "rb_link4",
+    "name": "Link4",
+    "parent": "rb_link3"
+  },
+  {
+    "id": "rb_link5",
+    "name": "Link5",
+    "parent": "rb_link4"
+  },
+  {
+    "id": "rb_link6",
+    "name": "Link6",
+    "parent": "rb_link5"
+  }
+]

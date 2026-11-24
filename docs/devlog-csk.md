@@ -1,3 +1,50 @@
+## 2026-11-24 (2) Agent 前置层 + 散装几何完整替代路径（负责人方案评审后实现）
+
+### 方案（负责人确认）
+
+三层：L1 确定性快查（毫秒，硬错误拒）→ L2 Agent 审查问答（真实 LLM=deepseek 通道，
+无 key 自动降级 Mock 规则引擎；产物=结构化 questions/supplement.json，LLM 不写 AML 文本）
+→ L3 固定组装器（不变，确定性）。散装四件（关系树 tree.json + STL/DAE geometry.json +
+位姿 poses.json + 关节 joints.json）完整替代基座 AML。
+
+### 交付
+
+- tools/aml_parts.py：四件 → CAEX 2.15 基座树（STL→DAE 转换 trimesh+pycollada、单位 mm→m
+  归一、Frame 属性照 AmlDocument 原生格式、关节挂组件 Kinematics:* 属性——按序插入）；
+- tools/aml_configurator.py 扩展 --parts-dir（散装模式：PLC_Main/锚点自动创建、DAE 落
+  assets/、XSD 用包内或显式 --xsd）；
+- tools/aml_agent_configurator.py：L1 快查（树/io 交叉引用/单位未知/位姿缺失/可选件缺失）
+  → LLM 出题（.env DEEPSEEK_API_KEY，questions JSON schema 固定）→ CLI 问答（--batch 取默认）
+  → supplement 应用到工作副本（不动用户原文件）→ 调 L3；
+- aml_to_mjcf.py 散装回退：source_file 为空/DAE 无 kinematics 时关节 axis/range 取 AML
+  组件 Kinematics 属性；
+- 夹具 tools/tests/fixtures/parts/（六轴：tree 7 节点 + 5 个 mm 制 STL + poses(故意缺 link6)
+  + joints 6 + io 14）——"缺位姿/缺几何/缺三可选件"都真实触发 L2 出题。
+
+### 实验结果
+
+- 散装全链（--mock --batch）：标准 AML XSD 通过、⓪回读 14/14 逐字一致 pending 0、
+  PLC 自动创建、6 关节属性、5 DAE 引用；
+- 单位换算：120mm STL → DAE 0.12m（±1e-3）；
+- mujoco 散装回退闭环：轴向取 AML 属性（J1=(0,0,-1)），编译+伺服闭环 0.0° 误差，
+  actuator 名=rb_j1_target；
+- L1 拒绝：io component_id 不在树 → 非零退出+提示；
+- 测试 8/8 绿（Agent 层 4 + 配置器 4），全量回归 1075 过（28 失败仍为 master 自带 web
+  环境依赖，与基线一致）。
+
+### 技术坑
+
+- CAEX sequence 再次咬人：关节 Attribute 追加在 COLLADAInterface 之后即违反顺序
+  （Attribute 须在 ExternalInterface 前）——散装构建也要按序插入；
+- agent 工作副本必须整目录复制（含 STL），只拷 json 会让 geometry 引用断链；
+- trimesh 法线计算依赖 scipy（缺失时告警降级），装上即净。
+
+### 待办
+
+- 真实 LLM 联调：.env 无 DEEPSEEK_API_KEY——代码就绪（_llm_questions），填 key 即启用；
+- 前端页面（用户下一步意向）：基于现有 src.agent.web 加"标准 AML 配置器"页
+  （上传区+问答卡片+产物下载），后端=本 CLI 的 web 化。
+
 ## 2026-11-24 标准 AML 配置器（五件套 → 标准 AML → 四侧下游）
 
 ### 任务（负责人指令）

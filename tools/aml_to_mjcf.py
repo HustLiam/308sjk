@@ -22,6 +22,26 @@ import os
 import xml.etree.ElementTree as ET
 
 
+def extract_aml_joints(aml_path):
+    """标准 AML 组件 Kinematics:* 属性 → {关节名: {type/axis/anchor/range/velocity}}。"""
+    root = ET.parse(aml_path).getroot()
+    joints = {}
+    for a in root.iter("Attribute"):
+        name = a.get("Name") or ""
+        if not name.startswith("Kinematics:"):
+            continue
+        attrs = {x.get("Name"): x.findtext(".//Value") for x in a.iter("Attribute")}
+        jn = name.split(":", 1)[1]
+        joints[jn] = {
+            "type": attrs.get("type", "hinge"),
+            "axis": [float(x) for x in attrs["axis"].split()] if attrs.get("axis") else [0, 0, 1],
+            "range": ([float(attrs["range_min"]), float(attrs["range_max"])]
+                      if attrs.get("range_min") is not None else None),
+            "velocity": float(attrs["velocity"]) if attrs.get("velocity") else None,
+        }
+    return joints
+
+
 def extract_io(aml_path):
     """标准 AML → 信号表（name/dir/address/scale/range/source_file/source_id/role）。"""
     root = ET.parse(aml_path).getroot()
@@ -63,7 +83,7 @@ def dae_joint_axis(resource_root, source_file, source_id):
     return None
 
 
-def build_mjcf(io_items, resource_root):
+def build_mjcf(io_items, resource_root, aml_joints=None):
     """六轴串联链 MJCF：hinge 轴向=DAE、限位=AML range、命名=target/actual 变量名。"""
     targets = [it for it in io_items if it.get("role") == "target"]
     actuals = {it["name"]: it for it in io_items if it.get("role") == "actual"}
@@ -81,7 +101,11 @@ def build_mjcf(io_items, resource_root):
     parent, zoff = w, 0.0
     axes_note = []
     for i, t in enumerate(targets, 1):
-        jinfo = dae_joint_axis(resource_root, t["source_file"], t["source_id"])
+        jinfo = dae_joint_axis(resource_root, t["source_file"], t["source_id"])             if t.get("source_file") else None
+        if jinfo is None and aml_joints:                      # 散装模式回退：AML 关节属性
+            jinfo = aml_joints.get(t.get("source_id"))
+            if jinfo:
+                jinfo = {"type": jinfo["type"], "axis": jinfo["axis"]}
         axis = jinfo["axis"] if jinfo else [0, 0, 1]
         axes_note.append({"target": t["name"], "source_id": t["source_id"],
                           "dae_type": jinfo["type"] if jinfo else "?",
@@ -160,7 +184,8 @@ def main(argv=None):
     args = p.parse_args(argv)
 
     io_items = extract_io(args.aml)
-    mjcf, axes_note = build_mjcf(io_items, args.resource_root)
+    mjcf, axes_note = build_mjcf(io_items, args.resource_root,
+                                 aml_joints=extract_aml_joints(args.aml))
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     ET.ElementTree(mjcf).write(args.out, encoding="utf-8", xml_declaration=True)
     print(f"OK 组装 {args.out}（{len(axes_note)} 关节，轴向均取自 DAE）")

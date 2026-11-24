@@ -7,6 +7,9 @@ adapter.json、运动约束在 motion.json、验证要求在 requirements.json�
 使下游三方（⓪解析→io_list→PLC 变量、通讯层地址表、③b 仿真组装）从同一份文件
 取数、名称天然统一。
 
+输入形态二选一：--aml（打包基座）或 --parts-dir（散装四件：tree/geometry/poses/joints.json，
+STL 自动转 DAE、单位归一 m——与基座 AML 等价，见 aml_parts.py）。
+
 四阶段（确定性：同输入同输出，可 diff、可回归）：
   1. audit    审查五件套：引用存在性（component_id/source_file）、地址冲突、
               类型/方向枚举、换算/量程落 16 位域（契约①②）、字段完备性；
@@ -269,14 +272,21 @@ def _requirements_el(requirements):
 
 
 def assemble(base_tree, io_items, adapter, motion, requirements, inputs_meta):
-    root = base_tree.getroot()
-    station = next(e for e in root.iter()
-                   if e.tag == "InternalElement" and e.get("Name") == "Station")
+    root = base_tree.getroot() if hasattr(base_tree, "getroot") else base_tree
+    station = next((e for e in root.iter()
+                    if e.tag == "InternalElement" and e.get("Name") == "Station"), None)
     ih = root.find("InstanceHierarchy")
     if ih is None:
         ih = station
-    sps = next(e for e in root.iter()
-               if e.tag == "InternalElement" and e.get("Name") == "Dummy_SPS")
+    if station is None:                      # 散装模式：锚点=IH 下首个根组件
+        station = ih.find("InternalElement")
+        if station is None:
+            raise RuntimeError("基座无任何组件（tree 为空？）")
+    sps = next((e for e in root.iter()
+                if e.tag == "InternalElement" and e.get("Name") == "Dummy_SPS"), None)
+    if sps is None:                          # 散装模式：自动创建 PLC 组件
+        sps = _insert_ordered(ih, ET.Element("InternalElement",
+                                             {"ID": "plc_main", "Name": "PLC_Main"}))
     by_id = {e.get("ID"): e for e in root.iter() if e.tag == "InternalElement"}
 
     stats = {"signals": 0, "links": 0, "terminals": 0}
@@ -396,7 +406,9 @@ def verify(out_path, io_items, xsd_path=None):
 
 def main(argv=None):
     p = argparse.ArgumentParser(description="标准 AML 配置器（五件套 → 标准 AML）")
-    p.add_argument("--aml", required=True, help="资源基座 AML（几何/装配）")
+    p.add_argument("--aml", help="资源基座 AML（打包形态，几何/装配）")
+    p.add_argument("--parts-dir", dest="parts_dir",
+                   help="散装四件目录（tree/geometry/poses/joints.json，细颗粒形态）")
     p.add_argument("--io", required=True, help="io.json（IO 事实源）")
     p.add_argument("--adapter", help="adapter.json（通讯）")
     p.add_argument("--motion", help="motion.json（运动约束）")
@@ -404,25 +416,41 @@ def main(argv=None):
     p.add_argument("-o", "--out", required=True, help="标准 AML 输出路径")
     p.add_argument("--report", help="组装报告 report.json 输出路径")
     p.add_argument("--xsd", help="CAEX XSD（缺省取基座同目录 CAEX_ClassModel_V2.15.xsd）")
+    p.add_argument("--assets-dir", default=None,
+                   help="散装模式 DAE 输出目录（缺省为输出 AML 同级 assets/）")
     args = p.parse_args(argv)
+    if not (args.aml or args.parts_dir):
+        p.error("--aml 与 --parts-dir 二选一")
 
     def _load(path):
         return json.load(open(path, encoding="utf-8")) if path else None
 
     io_items = _load(args.io)["io_list"]
     adapter, motion, requirements = _load(args.adapter), _load(args.motion), _load(args.requirements)
-    base_tree = ET.parse(args.aml)
-    base_root = base_tree.getroot()
-    if base_root.get("SchemaVersion") != "2.15":
-        print(f"FAIL：基座 SchemaVersion={base_root.get('SchemaVersion')}，本配置器约定 2.15")
-        return 1
+
+    if args.parts_dir:                       # 散装四件 → 基座树（含 STL→DAE）
+        import aml_parts
+        parts = aml_parts.load_parts(args.parts_dir)
+        assets = args.assets_dir or os.path.join(
+            os.path.dirname(os.path.abspath(args.out)) or ".", "assets")
+        dae_refs = aml_parts.convert_geometries(parts, args.parts_dir, assets)
+        base_root = aml_parts.build_base(parts, dae_refs)
+        base_tree = base_root
+        aml_for_audit = os.path.join(assets, "..")       # source_file 相对资产目录
+    else:
+        base_tree = ET.parse(args.aml)
+        base_root = base_tree.getroot()
+        if base_root.get("SchemaVersion") != "2.15":
+            print(f"FAIL：基座 SchemaVersion={base_root.get('SchemaVersion')}，本配置器约定 2.15")
+            return 1
+        aml_for_audit = args.aml
 
     report = {"format": STD_FORMAT, "inputs": {
         "aml": _rel(args.aml), "io": _rel(args.io), "adapter": _rel(args.adapter),
         "motion": _rel(args.motion), "requirements": _rel(args.requirements)}}
 
     # ① audit
-    errors, warnings = audit(base_root, io_items, adapter, motion, requirements, args.aml)
+    errors, warnings = audit(base_root, io_items, adapter, motion, requirements, aml_for_audit)
     report["audit"] = {"errors": errors, "warnings": warnings}
     if errors:
         report["ok"] = False
@@ -441,16 +469,18 @@ def main(argv=None):
 
     # ③ assemble
     stats = assemble(base_tree, io2, adapter2, motion2, req2, {
-        "aml": args.aml, "io": args.io, "adapter": args.adapter,
+        "aml": args.parts_dir or args.aml, "io": args.io, "adapter": args.adapter,
         "motion": args.motion, "requirements": args.requirements})
     report["assembly"] = stats
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
-    ET.indent(base_tree, space="\t")
-    base_tree.write(args.out, encoding="utf-8", xml_declaration=True)
+    tree_out = base_tree if hasattr(base_tree, "write") else ET.ElementTree(base_tree)
+    ET.indent(tree_out, space="	")
+    tree_out.write(args.out, encoding="utf-8", xml_declaration=True)
 
     # ④ verify
-    xsd = args.xsd or os.path.join(os.path.dirname(os.path.abspath(args.aml)),
-                                   "CAEX_ClassModel_V2.15.xsd")
+    xsd = args.xsd or os.path.join(
+        os.path.dirname(os.path.abspath(args.parts_dir if args.parts_dir else args.aml)),
+        "CAEX_ClassModel_V2.15.xsd")
     v = verify(args.out, io2, xsd_path=xsd)
     report["verify"] = v
     rt_ok = v["roundtrip"]["ok"] if v.get("roundtrip") else False
