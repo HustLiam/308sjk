@@ -33,7 +33,10 @@ QUESTIONS_SCHEMA_HINT = (
     "你是工业 AML 数据审查员。根据输入清单与发现，产出缺失/歧义问题列表（JSON 数组），"
     "每条：{id, ask(中文问题), options(可选答案数组，可空), default(默认值，尽量给), "
     "apply(应用目标: geometry_unit:{组件id} | default_pose:{组件id} | io_component:{信号名} | "
-    "tree_infer:按几何文件名生成平铺关系树 | param:{adapter|motion|requirements}:{字段路径})}。"
+    "tree_infer:按几何文件名生成平铺关系树 | component_rename:{推断出的组件id}:{用户语义id}"
+    " | param:{adapter|motion|requirements}:{字段路径})}。"
+    "当信号引用的 component_id 不在关系树、但其语义明显对应某个几何组件时，优先建议"
+    "component_rename（把推断 id 重命名为用户 id），而不是 io_component 反向映射。"
     "只问真正缺失或歧义的；能从上下文推断的给 default 不问。"
     "答案/default 必须是机器可直接使用的原子值：io_component 答=关系树中的组件 id 原文"
     "（如 column）；geometry_unit 答 mm 或 m；是非题答 是 或 否；param:default 答 是。"
@@ -88,6 +91,31 @@ def _quick_check(inputs, parts):
         if not inputs.get(k):
             findings.append({"kind": "optional_missing", "file": f})
     return errors, findings
+
+
+def _prefill_from_geometry(base_dir, io_items):
+    """几何文件 → 平铺树 + io 引用确定性配对 rename。返回 (tree, geo, renames)。"""
+    ids = []
+    for f in sorted(os.listdir(base_dir)):
+        if f.lower().endswith((".stl", ".dae", ".obj")):
+            ids.append(os.path.splitext(f)[0])
+    geo = {i: {"file": f"{i}.stl", "unit": "?"} for i in ids}   # "?"=未知单位，强制问答
+    tree = [{"id": i, "name": i, "parent": None} for i in ids]
+    io_refs = [it.get("component_id") for it in io_items]
+    known = {n["id"] for n in tree}
+    unknown_refs, seen = [], set()
+    for r in io_refs:
+        if r and r not in known and r not in seen:
+            unknown_refs.append(r); seen.add(r)
+    unreferenced = [n["id"] for n in tree if n["id"] not in set(io_refs)]
+    renames = []
+    for old_id, new_id in zip(unreferenced, unknown_refs):
+        for n in tree:
+            if n["id"] == old_id:
+                n["id"] = n["name"] = new_id
+        geo[new_id] = geo.pop(old_id)
+        renames.append((old_id, new_id))
+    return tree, geo, renames
 
 
 # ================================================================ L2 LLM / Mock
@@ -183,18 +211,14 @@ def _apply_supplement(work_dir, answers, io_path):
     geo = load(os.path.join(work_dir, "geometry.json"), {})
     poses = load(os.path.join(work_dir, "poses.json"), {})
     tree = load(os.path.join(work_dir, "tree.json"), [])
-    if not tree:                          # tree_infer 兜底：目录内几何文件 → 平铺树
-        ids = []
-        for f in sorted(os.listdir(work_dir)):
-            if f.lower().endswith((".stl", ".dae", ".obj")):
-                ids.append(os.path.splitext(f)[0])
-        if not geo:
-            geo = {i: {"file": f"{i}.stl", "unit": "m"} for i in ids}
-        tree = [{"id": i, "name": i, "parent": None} for i in ids]
+    io = json.load(open(io_path, encoding="utf-8"))
+    if not tree:                          # tree_infer 兜底（与出题前预填同逻辑）
+        tree, geo, renames = _prefill_from_geometry(work_dir, io["io_list"])
+        for _o, _n in renames:
+            applied.append(f"rename: {_o} → {_n}（io 引用配对）")
         save(work_dir, tree, "tree.json")
         save(work_dir, geo, "geometry.json")
         applied.append(f"tree_infer: {len(tree)} 组件（平铺）")
-    io = json.load(open(io_path, encoding="utf-8"))
     for a in answers.values():
         ans, apply = a["answer"], a.get("apply") or ""
         if apply.startswith("geometry_unit:") and ans in ("mm", "m"):
@@ -203,6 +227,22 @@ def _apply_supplement(work_dir, answers, io_path):
         elif apply.startswith("default_pose:") and ans in ("是", "yes", "true", "True"):
             poses.setdefault(apply.split(":", 1)[1], {"pos": [0, 0, 0], "rpy_deg": [0, 0, 0]})
             applied.append(f"poses[{apply.split(':',1)[1]}]=origin")
+        elif apply.startswith("component_rename:") and ans:
+            _, old, new = (apply.split(":", 2) + [ans, ans])[:3]
+            new = ans if ans not in ("是", "否") else new      # 答案可能直接给新 id
+            if new and new not in ("是", "否"):
+                ren = {n["id"]: (new if n["id"] == old else n["id"]) for n in tree}
+                for n in tree:
+                    n["id"] = ren[n["id"]]
+                    if n.get("parent") in ren:
+                        n["parent"] = ren[n["parent"]]
+                geo2 = {ren.get(k, k): v for k, v in geo.items()}
+                poses2 = {ren.get(k, k): v for k, v in poses.items()}
+                geo.clear(); geo.update(geo2)
+                poses.clear(); poses.update(poses2)
+                for j in json.load(open(os.path.join(work_dir, "joints.json"), encoding="utf-8"))                         if os.path.isfile(os.path.join(work_dir, "joints.json")) else []:
+                    pass
+                applied.append(f"rename: {old} → {new}")
         elif apply.startswith("io_component:") and ans:
             name = apply.split(":", 1)[1]
             # 防御：LLM/用户答案若含解释文字，从中提取已知组件 id（树 + 几何文件名主干）
@@ -249,6 +289,10 @@ def main(argv=None):
     if args.parts_dir:
         from aml_parts import load_parts
         parts = load_parts(args.parts_dir)
+        if not parts["tree"]:                      # 预填：几何→平铺树+io 配对（单位?待问）
+            io_items = json.load(open(args.io, encoding="utf-8"))["io_list"]
+            t, g, _rn = _prefill_from_geometry(args.parts_dir, io_items)
+            parts["tree"], parts["geometry"] = t, g
 
     # L1
     errors, findings = _quick_check(vars(args), parts)

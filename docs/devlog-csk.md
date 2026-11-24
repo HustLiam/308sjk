@@ -1,3 +1,35 @@
+## 2026-11-24 (6) 野生 STL 实测 + gc 导入器互操作验证
+
+### 野生数据全链（用户要求"网上随便扒 STL"）
+
+- 下载 3DBenchy（jsDelivr 镜像，11MB/22.5万面，60×31×48——经典 mm 尺度）+ 自造工作台，
+  模拟"视觉检测站"：3 条 io（boat_present/conveyor_run/boat_x_pos），无 tree/poses/joints；
+- **真实缺口 1（组件命名）**：文件名推断 id=3DBenchy vs io 引用 benchy_boat——LLM 语义
+  正确但缺通道。修：① component_rename:{旧}:{新} apply 类型；② tree_infer 确定性配对
+  （未知引用按声明顺序 rename 到未被引用组件——2 组件 2 引用一配一）；
+- **真实缺口 2（单位）**：兜底几何默认 m → Benchy 变 60 米！修：兜底单位标 "?"（未知），
+  且把 tree 预填从"问答后 work 兜底"提前到"L1 出题前"（预填函数 main/_apply 共用）——
+  单位必须经问答；Mock default 启发（包围盒>10 → 建议 mm）。修后 Benchy=0.06m ✓；
+- 全链：真实 LLM 1 题（tree_infer 含单位题）→ 3/3 逐字一致，产物几何引用
+  COLLADAInterface→assets/*.dae（STL 已转 DAE）。
+
+### gc 侧互操作（"其他 agent 能否理解"）
+
+`python -m src.agent.scene_agent import-package --aml wild_standard.aml` 成功：
+- 网格：m0=Benchy（112569 顶点，dimensions=0.06m——单位被正确理解）、m1=worktable；
+- 装配：10 body，body_mapping 的 component_id **逐字**=我们的语义 id（benchy_boat——
+  rename 结果传导到 gc 侧）；
+- 全套报告（mesh_manifest/body_mapping/assembly_checks/data_destinations/
+  mechanical_definitions/logic_models）+ scene.xml(MuJoCo)；
+- gc 闸门如实报缺项（collision_geometry_unreviewed/runtime_behavior_mapping_missing
+  → simulation_acceptance=blocked）——冻结语义被正确理解，不冒充通过。
+
+### 残留
+
+- rename/io 配对为"数量一致时按序配对"，多义时仍靠 LLM 出题（io_component/rename）；
+- 野生 STL 大网格（22.5万面）导入 m0.obj 顺利但 visual_only（碰撞未验收是 gc 闸门
+  的正确行为，需走其审批流程）。
+
 ## 2026-11-24 (5) Web 前端（独立服务 :8766）
 
 ### 架构

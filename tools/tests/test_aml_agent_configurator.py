@@ -142,6 +142,11 @@ def test_minimal_subset_two_stl_only():
                        capture_output=True, text=True)
     assert r.returncode == 0, r.stdout[-600:]
     assert "2/2 逐字一致=True" in r.stdout
+    # 单位强制问答：兜底生成的几何单位为 "?"，出题必须问（野生 STL 的 60 单位是 mm 不是 m）
+    sup = json.load(open(os.path.join(d, "work", "supplement.json"), encoding="utf-8"))
+    unit_qs = [a for a in sup["answers"].values() if "geometry_unit" in (a.get("apply") or "")]
+    assert unit_qs, "兜底几何单位未知必须出题"
+    assert all(a["answer"] in ("mm", "m") for a in unit_qs)
     import xml.etree.ElementTree as ET
     root = ET.parse(out).getroot()
     names = [e.get("Name") for e in root.iter("InternalElement")]
