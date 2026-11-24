@@ -49,7 +49,15 @@ def convert_geometries(parts, parts_dir, out_dir):
     os.makedirs(out_dir, exist_ok=True)
     conv = {}
     for cid, g in parts["geometry"].items():
-        f = g["file"]
+        f = g.get("file")
+        if not f:                      # L2 补充的条目可能只有 unit——按 id 找同名几何
+            for ext in (".stl", ".dae", ".obj"):
+                cand = os.path.join(parts_dir, cid + ext)
+                if os.path.isfile(cand):
+                    f = cid + ext
+                    break
+        if not f:                      # 目录里也没有 → 该组件无几何（可选），跳过
+            continue
         base, ext = os.path.splitext(os.path.basename(f))
         if ext.lower() == ".dae":
             conv[cid] = f

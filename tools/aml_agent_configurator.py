@@ -34,7 +34,10 @@ QUESTIONS_SCHEMA_HINT = (
     "每条：{id, ask(中文问题), options(可选答案数组，可空), default(默认值，尽量给), "
     "apply(应用目标: geometry_unit:{组件id} | default_pose:{组件id} | io_component:{信号名} | "
     "tree_infer:按几何文件名生成平铺关系树 | param:{adapter|motion|requirements}:{字段路径})}。"
-    "只问真正缺失或歧义的；能从上下文推断的给 default 不问。输出纯 JSON。"
+    "只问真正缺失或歧义的；能从上下文推断的给 default 不问。"
+    "答案/default 必须是机器可直接使用的原子值：io_component 答=关系树中的组件 id 原文"
+    "（如 column）；geometry_unit 答 mm 或 m；是非题答 是 或 否；param:default 答 是。"
+    "禁止把解释性文字放进答案或 default。输出纯 JSON。"
 )
 
 
@@ -202,10 +205,22 @@ def _apply_supplement(work_dir, answers, io_path):
             applied.append(f"poses[{apply.split(':',1)[1]}]=origin")
         elif apply.startswith("io_component:") and ans:
             name = apply.split(":", 1)[1]
-            for it in io["io_list"]:
-                if it["name"] == name:
-                    it["component_id"] = ans
-                    applied.append(f"io[{name}].component_id={ans}")
+            # 防御：LLM/用户答案若含解释文字，从中提取已知组件 id（树 + 几何文件名主干）
+            known = {n["id"] for n in tree} if tree else set()
+            if not tree:
+                known |= {os.path.splitext(f)[0] for f in os.listdir(work_dir)
+                          if f.lower().endswith((".stl", ".dae", ".obj"))}
+            cand = next((k for k in sorted(known, key=len, reverse=True)
+                         if k and k in str(ans)), None)
+            val = cand if cand else (ans if ans in known else None)
+            if val:
+                for it in io["io_list"]:
+                    if it["name"] == name:
+                        it["component_id"] = val
+                        applied.append(f"io[{name}].component_id={val}"
+                                       + ("（从答案提取）" if cand and cand != ans else ""))
+            else:
+                applied.append(f"io[{name}]:component_id 答案 {ans!r} 无法解析为已知组件，未应用")
     save(work_dir, geo, "geometry.json")
     save(work_dir, poses, "poses.json")
     io_out = os.path.join(work_dir, "io.json")

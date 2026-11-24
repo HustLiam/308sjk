@@ -1,3 +1,19 @@
+## 2026-11-24 (4) 真实 LLM 通道接通（deepseek-flash）+ 两个 LLM 协作缺陷修复
+
+- .env 写入 key（gitignore 确认不入库）；第一个 key 402 余额不足（降级机制按设计兜住），
+  换 key 后直连 200；
+- 真实 LLM 出题质量优于 Mock：极简子集 7→3 题（语义合并"column 不在树但可同名推断"）、
+  六轴 5 题全带合理选项与默认；
+- **缺陷 1（被闸门正确拦截）**：LLM 答案是自然语言句子（"映射到同名几何组件 column
+  （不存在则补建）"）而 apply 期望原子值 → 直接写进 component_id → 组装器 audit 拒绝
+  （三层架构按设计工作，无静默错产物）。修复：prompt 强化"答案/default 必须是机器可用的
+  原子值（组件 id 原文/mm/m/是/否）"+ 应用端防御（答案含解释文字时从已知组件 id 集合
+  提取，提取不到则不应用并登记）；
+- **缺陷 2**：LLM 的 geometry_unit 补充条目无 file 字段 → convert_geometries KeyError。
+  修复：无 file 时按组件 id 在 parts 目录找同名 .stl/.dae/.obj（rb_base.stl 即命中），
+  找不到则视为无几何跳过（几何本可选）；
+- 验证：极简子集 3/3 + 六轴 14/14 逐字一致，全走真实 LLM 通道；tools/tests 5/5 绿。
+
 ## 2026-11-24 (3) 任意子集容忍 + 两个 BOOL 量程 bug 修复
 
 - 需求：用户可能直接丢子集（连 tree.json 都没有）——L1 对缺 tree 从硬拒改为 finding，
