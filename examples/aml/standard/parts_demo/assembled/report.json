@@ -1,0 +1,84 @@
+{
+  "format": "308sjk.io_acceptance/1",
+  "mode": "扫描替身（MuJoCo 真实伺服；OpenPLC 未接入时）",
+  "tolerances": {
+    "angle_deg": 0.0573,
+    "timeout_s": 3.0
+  },
+  "joints": [
+    {
+      "signal": "rb_j1_target",
+      "joint": "rb_joint1",
+      "cmd_raw": -131,
+      "cmd_deg": -2.62,
+      "reached_deg": -2.616,
+      "error_deg": 0.0039,
+      "tolerance_deg": 0.0573,
+      "settle_s": 0.144,
+      "feedback_raw": -131,
+      "pass": true
+    },
+    {
+      "signal": "rb_j2_target",
+      "joint": "rb_joint2",
+      "cmd_raw": -131,
+      "cmd_deg": -2.62,
+      "reached_deg": -2.566,
+      "error_deg": 0.0543,
+      "tolerance_deg": 0.0573,
+      "settle_s": 0.234,
+      "feedback_raw": -128,
+      "pass": true
+    },
+    {
+      "signal": "rb_j3_target",
+      "joint": "rb_joint3",
+      "cmd_raw": -131,
+      "cmd_deg": -2.62,
+      "reached_deg": -2.647,
+      "error_deg": 0.0275,
+      "tolerance_deg": 0.0573,
+      "settle_s": 0.034,
+      "feedback_raw": -132,
+      "pass": true
+    },
+    {
+      "signal": "rb_j4_target",
+      "joint": "rb_joint4",
+      "cmd_raw": -131,
+      "cmd_deg": -2.62,
+      "reached_deg": -2.596,
+      "error_deg": 0.0237,
+      "tolerance_deg": 0.0573,
+      "settle_s": 0.07,
+      "feedback_raw": -130,
+      "pass": true
+    },
+    {
+      "signal": "rb_j5_target",
+      "joint": "rb_joint5",
+      "cmd_raw": -131,
+      "cmd_deg": -2.62,
+      "reached_deg": -2.569,
+      "error_deg": 0.0515,
+      "tolerance_deg": 0.0573,
+      "settle_s": 0.032,
+      "feedback_raw": -128,
+      "pass": true
+    },
+    {
+      "signal": "rb_j6_target",
+      "joint": "rb_joint6",
+      "cmd_raw": -131,
+      "cmd_deg": -2.62,
+      "reached_deg": -2.641,
+      "error_deg": 0.0208,
+      "tolerance_deg": 0.0573,
+      "settle_s": 0.086,
+      "feedback_raw": -132,
+      "pass": true
+    }
+  ],
+  "ok": true,
+  "final_seq": 300
+}

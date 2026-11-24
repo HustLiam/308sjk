@@ -1,0 +1,80 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mujoco model="standard_aml_assembly">
+  <compiler angle="degree" coordinate="local" meshdir="meshes" />
+  <option timestep="0.002" gravity="0 0 -9.81" integrator="implicitfast" />
+  <default>
+    <joint damping="3" armature="0.1" />
+  </default>
+  <asset>
+    <mesh name="rb_link1" file="rb_link1.obj" />
+    <mesh name="rb_link2" file="rb_link2.obj" />
+    <mesh name="rb_link3" file="rb_link3.obj" />
+    <mesh name="rb_link4" file="rb_link4.obj" />
+    <mesh name="rb_link5" file="rb_link5.obj" />
+  </asset>
+  <worldbody>
+    <geom type="plane" size="4 4 0.1" rgba=".92 .92 .92 1" />
+    <light pos="0 0 4" dir="0 0 -1" directional="true" />
+    <body name="rb_base" pos="0 0 0">
+      <site name="site_rb_base" size="0.008" />
+      <body name="rb_link1" pos="0 0 0.35">
+        <inertial mass="12.5" pos="0.0 0.0 0.15" fullinertia="0.35 0.28 0.12 0.0 0.0 0.0" />
+        <joint name="rb_joint1" pos="0 0 0" axis="0 0 -1" type="hinge" range="-185 185" limited="true" />
+        <geom type="mesh" mesh="rb_link1" rgba=".78 .45 .18 1" />
+        <site name="site_rb_link1" size="0.008" />
+        <body name="rb_link2" pos="0 0 0.35">
+          <joint name="rb_joint2" pos="0 0 0" axis="0 1 0" type="hinge" range="-185 185" limited="true" />
+          <geom type="mesh" mesh="rb_link2" rgba=".78 .45 .18 1" />
+          <site name="site_rb_link2" size="0.008" />
+          <body name="rb_link3" pos="0 0 0.35">
+            <joint name="rb_joint3" pos="0 0 0" axis="0 1 0" type="hinge" range="-185 185" limited="true" />
+            <geom type="mesh" mesh="rb_link3" rgba=".78 .45 .18 1" />
+            <site name="site_rb_link3" size="0.008" />
+            <body name="rb_link4" pos="0 0 0.35">
+              <joint name="rb_joint4" pos="0 0 0" axis="-1 0 0" type="hinge" range="-185 185" limited="true" />
+              <geom type="mesh" mesh="rb_link4" rgba=".78 .45 .18 1" />
+              <site name="site_rb_link4" size="0.008" />
+              <body name="rb_link5" pos="0 0 0.35">
+                <joint name="rb_joint5" pos="0 0 0" axis="0 1 0" type="hinge" range="-185 185" limited="true" />
+                <geom type="mesh" mesh="rb_link5" rgba=".78 .45 .18 1" />
+                <site name="site_rb_link5" size="0.008" />
+                <body name="rb_link6" pos="0 0 0">
+                  <joint name="rb_joint6" pos="0 0 0" axis="-1 0 0" type="hinge" range="-185 185" limited="true" />
+                  <geom type="capsule" fromto="0 0 0 0 0 0.25" size="0.05" rgba=".6 .6 .62 1" />
+                  <site name="site_rb_link6" size="0.008" />
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+    <body name="plc_main" pos="0 0 0">
+      <body name="AO_Module" pos="0 0 0">
+        <geom type="capsule" fromto="0 0 0 0 0 0.25" size="0.05" rgba=".6 .6 .62 1" />
+      </body>
+      <body name="AI_Module" pos="0 0 0">
+        <geom type="capsule" fromto="0 0 0 0 0 0.25" size="0.05" rgba=".6 .6 .62 1" />
+      </body>
+      <body name="DO_Module" pos="0 0 0">
+        <geom type="capsule" fromto="0 0 0 0 0 0.25" size="0.05" rgba=".6 .6 .62 1" />
+      </body>
+    </body>
+  </worldbody>
+  <actuator>
+    <position name="rb_j1_target" joint="rb_joint1" kp="800" />
+    <position name="rb_j2_target" joint="rb_joint2" kp="800" />
+    <position name="rb_j3_target" joint="rb_joint3" kp="800" />
+    <position name="rb_j4_target" joint="rb_joint4" kp="800" />
+    <position name="rb_j5_target" joint="rb_joint5" kp="800" />
+    <position name="rb_j6_target" joint="rb_joint6" kp="800" />
+  </actuator>
+  <sensor>
+    <jointpos name="rb_j1_actual" joint="rb_joint1" />
+    <jointpos name="rb_j2_actual" joint="rb_joint2" />
+    <jointpos name="rb_j3_actual" joint="rb_joint3" />
+    <jointpos name="rb_j4_actual" joint="rb_joint4" />
+    <jointpos name="rb_j5_actual" joint="rb_joint5" />
+    <jointpos name="rb_j6_actual" joint="rb_joint6" />
+  </sensor>
+</mujoco>

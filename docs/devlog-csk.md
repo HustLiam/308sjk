@@ -758,3 +758,40 @@ venv(pymodbus 3.8.6 + usd-core)：`pytest runtime/tests/ -q` → 8 passed
 ### 文档
 - 新增 docs/标准AML配置器与四侧消费.md（应然形态/符合度矩阵/输入获取审查/四侧流转图/
   迭代记录）；changelog 登记（跨侧产物格式增强，冻结契约不变）。
+
+## 2026-11-23（二） 装配功能适配标准 AML + 前端
+
+### 输入侧改造（用户指令：原装配说明适配含 IO 的标准 AML，实现全部功能+前端）
+- 读《复杂仿真模型装配与IO绑定说明.docx》（zip+regex 抽段落）：四段功能=解析装配/
+  MuJoCo 生成+映射/IO 绑定（io_list+binding 三元组经适配器）/固定规则 PLCopen+通信测试。
+- 适配核心：这些输入现在全内嵌标准 AML（信号带 address/range/scale/role/溯源，
+  树带 Frame，几何在 assets）→ 单文件输入，独立 io.json/binding 不再需要。
+- tools/aml_assembly.py：parse_standard_aml（世界位姿累积/待确认项）、build_scene
+  （mesh OBJ 化/胶囊降级/site/actuator+sensor 命名=信号名/mapping.json）、IOSession
+  （raw×deg_per_count 双向换算/seq 扫描计数）、gen_plcopen_test（固定规则，localVars
+  address 属性+xhtml 包 ST 本体——照 xml2st.parse 约定逐条对齐）、gen_contract、
+  modbus_channels、run_acceptance（按 requirements 容差）。
+- tools/aml_assembly_web.py :8767 + aml_assembly_ui（three.js importmap CDN）：
+  3D 装配链/组件树/信号表/滑杆 raw 指令实时反馈/一键验收/七类产物下载。
+
+### 坑与修复
+- 8767 被早前会话的 aml_configurator_web --port 8767 残留进程双绑（Windows 复用地址），
+  API 全 404 → wmic 查明身份后 taskkill；
+- mesh JSON numpy 标量（int64）不可序列化 → int()/float() 显式转换；
+- mujoco light 属性拼写 directional；PLCopen ST 本体 xhtml 前缀未绑定 → 照样例
+  <xhtml xmlns> 包裹；
+- P 伺服 kp=120 重力负载下 j3 摆到 179°（另一稳定盆地）j4 偏 2.6° → kp=800+
+  implicitfast+damping3 后 6/6 收敛到 0.057° 容差；
+- 夹具位姿 5.0（米）→ 3D 里 25m 链满屏碎屑 → 修 0.35m（顺带暴露该夹具从未被可视化
+  验证过的事实）；3D 自动取景（Box3 对准装配包络）。
+
+### 验证
+- 浏览器实测（IAB）：一键示例→装配完成→3D 链渲染（四面体+胶囊+轴向箭头+居中）→
+  滑杆 cmd600→反馈收敛→IO 表 15 行→验收 badge 过（逐关节 err/settle/raw→feedback）→
+  下载 io_test.st 内容正确；
+- tools/tests 17/17（新增 5 项：解析/编译+占位降级/PLCopen 过 xml2st 闸门+ST 含全部
+  AT 地址/闭环验收 6 关节 raw 回读 ≤5/服务级 demo+step+下载）。
+
+### 文档
+- docs/标准AML配置器与四侧消费.md §5（装配适配版全说明）+ §6 迭代记录；changelog 登记；
+- 服务保持运行供用户查看：http://127.0.0.1:8767。

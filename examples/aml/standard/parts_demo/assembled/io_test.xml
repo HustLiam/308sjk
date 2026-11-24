@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0201">
+  <fileHeader companyName="308sjk" productName="aml_assembly" productVersion="1.0" creationDateTime="2026-11-23T00:00:00" description="io_test: fixed-rule IO binding test program generated from standard AML signals" />
+  <contentHeader name="io_test.project" modificationDateTime="2026-11-23T00:00:00">
+    <coordinateInfo><fbd><scaling x="1" y="1" /></fbd><ld><scaling x="1" y="1" /></ld><sfc><scaling x="1" y="1" /></sfc></coordinateInfo>
+  </contentHeader>
+  <types><dataTypes />
+    <pous>
+      <pou name="IO_TEST" pouType="program">
+        <interface>
+          <localVars>
+        <variable name="rb_enable" address="%QW120">
+          <type><INT /></type>
+          <initialValue><simpleValue value="0" /></initialValue>
+        </variable>
+        <variable name="rb_j1_target" address="%QW100">
+          <type><INT /></type>
+          <initialValue><simpleValue value="0" /></initialValue>
+        </variable>
+        <variable name="rb_j2_target" address="%QW101">
+          <type><INT /></type>
+          <initialValue><simpleValue value="0" /></initialValue>
+        </variable>
+        <variable name="rb_j3_target" address="%QW102">
+          <type><INT /></type>
+          <initialValue><simpleValue value="0" /></initialValue>
+        </variable>
+        <variable name="rb_j4_target" address="%QW103">
+          <type><INT /></type>
+          <initialValue><simpleValue value="0" /></initialValue>
+        </variable>
+        <variable name="rb_j5_target" address="%QW104">
+          <type><INT /></type>
+          <initialValue><simpleValue value="0" /></initialValue>
+        </variable>
+        <variable name="rb_j6_target" address="%QW105">
+          <type><INT /></type>
+          <initialValue><simpleValue value="0" /></initialValue>
+        </variable>
+        <variable name="rb_feedback_seq" address="%QW121">
+          <type><INT /></type>
+          <initialValue><simpleValue value="0" /></initialValue>
+        </variable>
+        <variable name="rb_j1_actual" address="%QW110">
+          <type><INT /></type>
+          <initialValue><simpleValue value="0" /></initialValue>
+        </variable>
+        <variable name="rb_j2_actual" address="%QW111">
+          <type><INT /></type>
+          <initialValue><simpleValue value="0" /></initialValue>
+        </variable>
+        <variable name="rb_j3_actual" address="%QW112">
+          <type><INT /></type>
+          <initialValue><simpleValue value="0" /></initialValue>
+        </variable>
+        <variable name="rb_j4_actual" address="%QW113">
+          <type><INT /></type>
+          <initialValue><simpleValue value="0" /></initialValue>
+        </variable>
+        <variable name="rb_j5_actual" address="%QW114">
+          <type><INT /></type>
+          <initialValue><simpleValue value="0" /></initialValue>
+        </variable>
+        <variable name="rb_j6_actual" address="%QW115">
+          <type><INT /></type>
+          <initialValue><simpleValue value="0" /></initialValue>
+        </variable>
+        <variable name="prog_id" address="%QW20">
+          <type><INT /></type>
+          <initialValue><simpleValue value="260" /></initialValue>
+        </variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST xmlns="http://www.plcopen.org/xml/tc6_0201"><xhtml xmlns="http://www.w3.org/1999/xhtml"><![CDATA[(* 固定生成：io_test —— 接收目标→输出指令→读取反馈→确认扫描 *)
+prog_id := 260; (* 程序身份：io_test v1 *)
+
+IF rb_enable THEN (* 使能门控：失能时指令清零 *)
+    (* rb_j1_target 由测试驱动经 Modbus 写入，透传至适配器 *)
+    (* rb_j2_target 由测试驱动经 Modbus 写入，透传至适配器 *)
+    (* rb_j3_target 由测试驱动经 Modbus 写入，透传至适配器 *)
+    (* rb_j4_target 由测试驱动经 Modbus 写入，透传至适配器 *)
+    (* rb_j5_target 由测试驱动经 Modbus 写入，透传至适配器 *)
+    (* rb_j6_target 由测试驱动经 Modbus 写入，透传至适配器 *)
+ELSE
+    rb_j1_target := 0;
+    rb_j2_target := 0;
+    rb_j3_target := 0;
+    rb_j4_target := 0;
+    rb_j5_target := 0;
+    rb_j6_target := 0;
+END_IF
+
+(* 反馈通道由适配器回写：actual_* / feedback_seq，此处仅声明 *)]]></xhtml></ST>
+        </body>
+      </pou>
+    </pous></types>
+  <instances><configurations /></instances>
+</project>

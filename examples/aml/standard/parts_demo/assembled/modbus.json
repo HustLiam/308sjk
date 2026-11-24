@@ -1,0 +1,243 @@
+{
+  "format": "308sjk.modbus_channels/1",
+  "channels": [
+    {
+      "plc_var": "rb_j1_target",
+      "dir": "output",
+      "address": "%QW100",
+      "offset": 100,
+      "raw_to_eng": 0.02,
+      "range": [
+        -655.0,
+        655.0
+      ],
+      "fc_write": "06",
+      "binding": {
+        "component_id": "rb_link1",
+        "source_file": "",
+        "source_id": "rb_joint1"
+      }
+    },
+    {
+      "plc_var": "rb_j2_target",
+      "dir": "output",
+      "address": "%QW101",
+      "offset": 101,
+      "raw_to_eng": 0.02,
+      "range": [
+        -655.0,
+        655.0
+      ],
+      "fc_write": "06",
+      "binding": {
+        "component_id": "rb_link2",
+        "source_file": "",
+        "source_id": "rb_joint2"
+      }
+    },
+    {
+      "plc_var": "rb_j3_target",
+      "dir": "output",
+      "address": "%QW102",
+      "offset": 102,
+      "raw_to_eng": 0.02,
+      "range": [
+        -655.0,
+        655.0
+      ],
+      "fc_write": "06",
+      "binding": {
+        "component_id": "rb_link3",
+        "source_file": "",
+        "source_id": "rb_joint3"
+      }
+    },
+    {
+      "plc_var": "rb_j4_target",
+      "dir": "output",
+      "address": "%QW103",
+      "offset": 103,
+      "raw_to_eng": 0.02,
+      "range": [
+        -655.0,
+        655.0
+      ],
+      "fc_write": "06",
+      "binding": {
+        "component_id": "rb_link4",
+        "source_file": "",
+        "source_id": "rb_joint4"
+      }
+    },
+    {
+      "plc_var": "rb_j5_target",
+      "dir": "output",
+      "address": "%QW104",
+      "offset": 104,
+      "raw_to_eng": 0.02,
+      "range": [
+        -655.0,
+        655.0
+      ],
+      "fc_write": "06",
+      "binding": {
+        "component_id": "rb_link5",
+        "source_file": "",
+        "source_id": "rb_joint5"
+      }
+    },
+    {
+      "plc_var": "rb_j6_target",
+      "dir": "output",
+      "address": "%QW105",
+      "offset": 105,
+      "raw_to_eng": 0.02,
+      "range": [
+        -655.0,
+        655.0
+      ],
+      "fc_write": "06",
+      "binding": {
+        "component_id": "rb_link6",
+        "source_file": "",
+        "source_id": "rb_joint6"
+      }
+    },
+    {
+      "plc_var": "rb_j1_actual",
+      "dir": "input",
+      "address": "%QW110",
+      "offset": 110,
+      "raw_to_eng": 0.02,
+      "range": [
+        -655.0,
+        655.0
+      ],
+      "fc_write": "06",
+      "binding": {
+        "component_id": "rb_link1",
+        "source_file": "",
+        "source_id": "rb_joint1"
+      }
+    },
+    {
+      "plc_var": "rb_j2_actual",
+      "dir": "input",
+      "address": "%QW111",
+      "offset": 111,
+      "raw_to_eng": 0.02,
+      "range": [
+        -655.0,
+        655.0
+      ],
+      "fc_write": "06",
+      "binding": {
+        "component_id": "rb_link2",
+        "source_file": "",
+        "source_id": "rb_joint2"
+      }
+    },
+    {
+      "plc_var": "rb_j3_actual",
+      "dir": "input",
+      "address": "%QW112",
+      "offset": 112,
+      "raw_to_eng": 0.02,
+      "range": [
+        -655.0,
+        655.0
+      ],
+      "fc_write": "06",
+      "binding": {
+        "component_id": "rb_link3",
+        "source_file": "",
+        "source_id": "rb_joint3"
+      }
+    },
+    {
+      "plc_var": "rb_j4_actual",
+      "dir": "input",
+      "address": "%QW113",
+      "offset": 113,
+      "raw_to_eng": 0.02,
+      "range": [
+        -655.0,
+        655.0
+      ],
+      "fc_write": "06",
+      "binding": {
+        "component_id": "rb_link4",
+        "source_file": "",
+        "source_id": "rb_joint4"
+      }
+    },
+    {
+      "plc_var": "rb_j5_actual",
+      "dir": "input",
+      "address": "%QW114",
+      "offset": 114,
+      "raw_to_eng": 0.02,
+      "range": [
+        -655.0,
+        655.0
+      ],
+      "fc_write": "06",
+      "binding": {
+        "component_id": "rb_link5",
+        "source_file": "",
+        "source_id": "rb_joint5"
+      }
+    },
+    {
+      "plc_var": "rb_j6_actual",
+      "dir": "input",
+      "address": "%QW115",
+      "offset": 115,
+      "raw_to_eng": 0.02,
+      "range": [
+        -655.0,
+        655.0
+      ],
+      "fc_write": "06",
+      "binding": {
+        "component_id": "rb_link6",
+        "source_file": "",
+        "source_id": "rb_joint6"
+      }
+    },
+    {
+      "plc_var": "rb_enable",
+      "dir": "output",
+      "address": "%QW120",
+      "offset": 120,
+      "raw_to_eng": 1.0,
+      "range": [
+        0.0,
+        65535.0
+      ],
+      "fc_write": "06",
+      "binding": {
+        "component_id": "rb_base",
+        "source_file": "",
+        "source_id": ""
+      }
+    },
+    {
+      "plc_var": "rb_feedback_seq",
+      "dir": "input",
+      "address": "%QW121",
+      "offset": 121,
+      "raw_to_eng": 1.0,
+      "range": [
+        0.0,
+        65535.0
+      ],
+      "fc_write": "06",
+      "binding": {
+        "component_id": "rb_base",
+        "source_file": "",
+        "source_id": ""
+      }
+    }
+  ]
+}

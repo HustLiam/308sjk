@@ -96,8 +96,35 @@ flowchart TD
 是 IO 层（名称/地址/量程三重统一）；仿真侧消费 AML 的信号语义命名，故 PLC 变量、
 Modbus 寄存器、MuJoCo 执行器/传感器三者名称天然一致。
 
-## 5. 迭代记录
+## 5. 装配与 IO 绑定页（原《复杂仿真模型装配与IO绑定说明》的适配版，2026-11-23）
+
+原说明的输入是"AML + DAE + 独立 IO 配置文件"；适配后收敛为**单份标准 AML**：
+`tools/aml_assembly.py`（核心）+ `tools/aml_assembly_web.py`（:8767）+ `aml_assembly_ui/`。
+
+- **解析装配**：InternalElement 层级 + Frame 逐层累积世界位姿；COLLADAInterface(explicit)
+  → DAE 几何；Kinematics 属性 → 关节（含 torque）；InternalLink → 电气接线；
+  关系不明确项记入**待确认项**（原说明 1.2(3) 同法，如 link6 无显式几何）。
+- **MuJoCo 生成**：层级→body、Frame→pos/euler、可动→joint、几何→geom(mesh OBJ，
+  不可解析降级胶囊)、IO 接口锚点→site、target/actual→actuator/sensor（命名=信号名）；
+  保存 mapping.json（AML 组件 ↔ 仿真节点）。伺服 kp=800 + implicitfast
+  （重力负载下 6/6 收敛到 angle_tolerance 0.057°）。
+- **IO 绑定**：信号自带 binding 三元组（component_id/source_file/source_id），
+  适配器 `IOSession` 双向读写 + raw×deg_per_count 换算；%QWn→Modbus offset n 通道表。
+- **IO 测试**：固定规则 → io_test.xml（过 xml2st 结构闸门并转 ST，变量声明含全部
+  AT 地址 + prog_id%QW20 辅助寄存器）+ plc_test_contract.json；验收按
+  SimulationRequirements 容差逐关节裁定（目标→伺服→反馈→扫描确认），OpenPLC 未接入时
+  如实标注"扫描替身"。
+- **前端**（http://127.0.0.1:8767）：three.js 3D 装配链（含关节轴向箭头/自动取景/选中
+  高亮）、组件树+详情、信号绑定表+接线、raw 滑杆发指令实时看反馈与 feedback_seq、
+  一键验收报告、七类产物下载。浏览器实测通过（滑杆闭环/验收 6/6/3D 渲染）。
+- 输入样例：`examples/aml/standard/parts_demo/`（散装六轴 → 标准产物 → assembled/ 全套）。
+  测试：`tools/tests/test_aml_assembly.py` 5 项（解析/编译/PLCopen+ST/闭环验收/服务级）。
+
+## 6. 迭代记录
 
 - 2026-11-23：对照官方实例复查 IEC 62714 符合度，实锤三大缺口（运动学载体/自包含/
   WriterHeader）并修复；新增物理属性与扭矩通道（AML→MJCF）；verify 新增自包含与
   kin DAE 审查；测试 12/12；打包产物重生成。证据：本文矩阵 + `tools/tests/`。
+- 2026-11-23（二）：原装配功能适配标准 AML——单输入全链（解析装配/MuJoCo 生成/IO
+  绑定/固定规则 PLCopen+ST/闭环验收）+ Web 前端（:8767）；夹具位姿修正（5m→0.35m）；
+  测试 17/17。见 §5。

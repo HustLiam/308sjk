@@ -1,0 +1,167 @@
+<?xml version='1.0' encoding='utf-8'?>
+<COLLADA xmlns="http://www.collada.org/2008/03/COLLADASchema" version="1.5.0">
+	<asset>
+		<contributor>
+			<authoring_tool>308sjk aml_configurator</authoring_tool>
+		</contributor>
+		<created>1970-01-01T00:00:00+00:00</created>
+		<modified>1970-01-01T00:00:00+00:00</modified>
+		<unit meter="1" name="m" />
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_joints>
+		<joint id="kinematics_model_rb_joint1" name="rb_joint1">
+			<revolute sid="axis">
+				<axis>0 0 -1</axis>
+				<limits>
+					<min>-185</min>
+					<max>185</max>
+				</limits>
+			</revolute>
+		</joint>
+		<joint id="kinematics_model_rb_joint2" name="rb_joint2">
+			<revolute sid="axis">
+				<axis>0 1 0</axis>
+				<limits>
+					<min>-185</min>
+					<max>185</max>
+				</limits>
+			</revolute>
+		</joint>
+		<joint id="kinematics_model_rb_joint3" name="rb_joint3">
+			<revolute sid="axis">
+				<axis>0 1 0</axis>
+				<limits>
+					<min>-185</min>
+					<max>185</max>
+				</limits>
+			</revolute>
+		</joint>
+		<joint id="kinematics_model_rb_joint4" name="rb_joint4">
+			<revolute sid="axis">
+				<axis>-1 0 0</axis>
+				<limits>
+					<min>-185</min>
+					<max>185</max>
+				</limits>
+			</revolute>
+		</joint>
+		<joint id="kinematics_model_rb_joint5" name="rb_joint5">
+			<revolute sid="axis">
+				<axis>0 1 0</axis>
+				<limits>
+					<min>-185</min>
+					<max>185</max>
+				</limits>
+			</revolute>
+		</joint>
+		<joint id="kinematics_model_rb_joint6" name="rb_joint6">
+			<revolute sid="axis">
+				<axis>-1 0 0</axis>
+				<limits>
+					<min>-185</min>
+					<max>185</max>
+				</limits>
+			</revolute>
+		</joint>
+	</library_joints>
+	<library_kinematics_models>
+		<kinematics_model id="kinematics_model" name="standard">
+			<technique_common>
+				<instance_joint sid="rb_joint1" url="#kinematics_model_rb_joint1" />
+				<instance_joint sid="rb_joint2" url="#kinematics_model_rb_joint2" />
+				<instance_joint sid="rb_joint3" url="#kinematics_model_rb_joint3" />
+				<instance_joint sid="rb_joint4" url="#kinematics_model_rb_joint4" />
+				<instance_joint sid="rb_joint5" url="#kinematics_model_rb_joint5" />
+				<instance_joint sid="rb_joint6" url="#kinematics_model_rb_joint6" />
+				<link name="rb_base" sid="rb_base">
+					<attachment_full joint="kinematics_model/rb_joint1">
+						<translate>0 0 0.35</translate>
+						<link name="rb_link1" sid="rb_link1">
+							<attachment_full joint="kinematics_model/rb_joint2">
+								<translate>0 0 0.35</translate>
+								<link name="rb_link2" sid="rb_link2">
+									<attachment_full joint="kinematics_model/rb_joint3">
+										<translate>0 0 0.35</translate>
+										<link name="rb_link3" sid="rb_link3">
+											<attachment_full joint="kinematics_model/rb_joint4">
+												<translate>0 0 0.35</translate>
+												<link name="rb_link4" sid="rb_link4">
+													<attachment_full joint="kinematics_model/rb_joint5">
+														<translate>0 0 0.35</translate>
+														<link name="rb_link5" sid="rb_link5">
+															<attachment_full joint="kinematics_model/rb_joint6">
+																<link name="rb_link6" sid="rb_link6" />
+															</attachment_full>
+														</link>
+													</attachment_full>
+												</link>
+											</attachment_full>
+										</link>
+									</attachment_full>
+								</link>
+							</attachment_full>
+						</link>
+					</attachment_full>
+				</link>
+			</technique_common>
+		</kinematics_model>
+	</library_kinematics_models>
+	<library_articulated_systems>
+		<articulated_system id="kinematics_model_art">
+			<kinematics>
+				<technique_common>
+					<instance_kinematics_model sid="inst_kinematics_model" url="#kinematics_model">
+						<newparam sid="kinematics_model_art_inst_kinematics_model_rb_joint1_axis">
+							<SIDREF>kinematics_model_art/inst_kinematics_model/rb_joint1/axis</SIDREF>
+						</newparam>
+						<newparam sid="kinematics_model_art_inst_kinematics_model_rb_joint2_axis">
+							<SIDREF>kinematics_model_art/inst_kinematics_model/rb_joint2/axis</SIDREF>
+						</newparam>
+						<newparam sid="kinematics_model_art_inst_kinematics_model_rb_joint3_axis">
+							<SIDREF>kinematics_model_art/inst_kinematics_model/rb_joint3/axis</SIDREF>
+						</newparam>
+						<newparam sid="kinematics_model_art_inst_kinematics_model_rb_joint4_axis">
+							<SIDREF>kinematics_model_art/inst_kinematics_model/rb_joint4/axis</SIDREF>
+						</newparam>
+						<newparam sid="kinematics_model_art_inst_kinematics_model_rb_joint5_axis">
+							<SIDREF>kinematics_model_art/inst_kinematics_model/rb_joint5/axis</SIDREF>
+						</newparam>
+						<newparam sid="kinematics_model_art_inst_kinematics_model_rb_joint6_axis">
+							<SIDREF>kinematics_model_art/inst_kinematics_model/rb_joint6/axis</SIDREF>
+						</newparam>
+					</instance_kinematics_model>
+				</technique_common>
+			</kinematics>
+		</articulated_system>
+	</library_articulated_systems>
+	<library_kinematics_scenes>
+		<kinematics_scene id="kinematics_model_scene">
+			<technique_common>
+				<instance_articulated_system sid="inst_kinematics_model_art" url="#kinematics_model_art">
+					<bind symbol="kinematics_model_scene_inst_kinematics_model_art_inst_kinematics_model_rb_joint1_axis">
+						<param ref="kinematics_model_art_inst_kinematics_model_rb_joint1_axis" />
+					</bind>
+					<bind symbol="kinematics_model_scene_inst_kinematics_model_art_inst_kinematics_model_rb_joint2_axis">
+						<param ref="kinematics_model_art_inst_kinematics_model_rb_joint2_axis" />
+					</bind>
+					<bind symbol="kinematics_model_scene_inst_kinematics_model_art_inst_kinematics_model_rb_joint3_axis">
+						<param ref="kinematics_model_art_inst_kinematics_model_rb_joint3_axis" />
+					</bind>
+					<bind symbol="kinematics_model_scene_inst_kinematics_model_art_inst_kinematics_model_rb_joint4_axis">
+						<param ref="kinematics_model_art_inst_kinematics_model_rb_joint4_axis" />
+					</bind>
+					<bind symbol="kinematics_model_scene_inst_kinematics_model_art_inst_kinematics_model_rb_joint5_axis">
+						<param ref="kinematics_model_art_inst_kinematics_model_rb_joint5_axis" />
+					</bind>
+					<bind symbol="kinematics_model_scene_inst_kinematics_model_art_inst_kinematics_model_rb_joint6_axis">
+						<param ref="kinematics_model_art_inst_kinematics_model_rb_joint6_axis" />
+					</bind>
+				</instance_articulated_system>
+			</technique_common>
+		</kinematics_scene>
+	</library_kinematics_scenes>
+	<scene>
+		<instance_kinematics_scene url="#kinematics_model_scene" />
+	</scene>
+</COLLADA>

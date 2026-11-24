@@ -1,0 +1,30 @@
+{
+  "format": "308sjk.plc_test_contract/1",
+  "program": "IO_TEST",
+  "source": "standard AML signals",
+  "prog_id": {
+    "address": "%QW20",
+    "value": 260
+  },
+  "aux_registers": [
+    {
+      "name": "prog_id",
+      "address": "%QW20",
+      "init": 260,
+      "purpose": "程序身份（契约②）"
+    }
+  ],
+  "scan_logic": "receive target → gate by enable → read feedback → confirm scan (feedback_seq + prog_id)",
+  "signals_hash": "6fca1b221ff992fe",
+  "scene": {
+    "scene": "examples/aml/standard/parts_demo/assembled\\scene.xml",
+    "meshes": 5,
+    "actuators": 6,
+    "sensors": 6,
+    "compile": true,
+    "nbody": 12,
+    "njnt": 6,
+    "nu": 6,
+    "nsensor": 6
+  }
+}

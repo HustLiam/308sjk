@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>标准 AML 装配与 IO 绑定</title>
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{"imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+</head>
+<body>
+<header>
+  <div class="brand">标准 AML 装配与 IO 绑定<span class="sub">308sjk.standard_aml/1 → MuJoCo + PLCopen</span></div>
+  <div class="actions">
+    <button id="btnDemo" class="primary">一键示例（六轴）</button>
+    <label class="upload">上传标准 AML<input id="fileInput" type="file" multiple
+      accept=".aml,.dae,.obj,.stl"></label>
+  </div>
+  <div id="chips" class="chips"></div>
+</header>
+
+<main>
+  <aside id="left">
+    <nav class="tabs">
+      <button data-tab="tree" class="on">组件树</button>
+      <button data-tab="io">信号 / IO 绑定</button>
+      <button data-tab="pending">待确认 <span id="pendingBadge" class="badge"></span></button>
+    </nav>
+    <div id="tab-tree" class="tab on"><div id="tree"></div></div>
+    <div id="tab-io" class="tab">
+      <table class="iotable" id="ioTable"></table>
+      <h4>电气接线（AML InternalLink）</h4>
+      <div id="links" class="links"></div>
+    </div>
+    <div id="tab-pending" class="tab"><ul id="pendingList" class="pending"></ul></div>
+    <div id="detail" class="detail">点击组件查看详情</div>
+  </aside>
+
+  <section id="center">
+    <div id="viewport"></div>
+    <div id="hud" class="hud"></div>
+  </section>
+
+  <aside id="right">
+    <h3>关节控制（PLC 变量 raw 指令）</h3>
+    <div id="controls" class="controls"><div class="empty">装配后可用</div></div>
+    <label class="autorun"><input type="checkbox" id="autoRun"> 自动运行（伺服实时）</label>
+    <div class="seq">扫描 feedback_seq：<b id="seq">-</b>　t=<b id="tsim">-</b>s</div>
+
+    <h3>IO 验收测试</h3>
+    <div class="testrow">
+      <button id="btnTest" class="primary" disabled>运行验收（逐关节目标→反馈）</button>
+      <span id="testBadge" class="badge"></span>
+    </div>
+    <div id="testResult" class="testresult"></div>
+
+    <h3>产物下载</h3>
+    <div id="downloads" class="downloads"></div>
+  </aside>
+</main>
+<footer id="status">就绪 —— 上传含 IO 的标准 AML，或点击「一键示例」。</footer>
+<script type="module" src="app.js"></script>
+</body>
+</html>

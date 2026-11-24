@@ -4,6 +4,7 @@
 
 | 版本 | 日期 | 类型 | 提出方 | 内容 | 状态 |
 |---|---|---|---|---|---|
+| 装配功能适配标准 AML | 2026-11-23 | 独立装配/IO 绑定工具链 + 前端；冻结契约不变 | csk | 原《复杂仿真模型装配与IO绑定说明》输入改为单份含 IO 标准 AML：解析装配（层级/Frame/几何/接线/待确认项）→MuJoCo scene.xml+映射→IO 绑定（信号自带 binding）→固定规则 PLCopen io_test.xml+ST（过 xml2st 闸门）+plc_test_contract→闭环验收（SimulationRequirements 容差）；Web 前端 :8767（three.js 3D/组件树/raw 滑杆实时反馈/一键验收/产物下载） | tools/tests 17/17；浏览器实测（滑杆闭环/验收 6/6/3D 渲染）；证据 docs/标准AML配置器与四侧消费.md §5 + examples/aml/standard/parts_demo |
 | 标准 AML 符合性整改 | 2026-11-23 | 标准产物格式增强（308sjk.standard_aml/1 向后兼容）；冻结契约不变 | csk | 对照官方 RobotCell 实例复查 IEC 62714：运动学补标准载体 kinematics.dae（COLLADA 1.5，refType=implicit 不影响 gc 显式几何加载）、产物内联类库自包含（含信号类 AnalogInput 等）、WriterHeader 声明实际写出工具、RoleRequirements/物理属性（mass/com/inertia/torque→MJCF）通道；verify 新增自包含与 kin DAE 审查 | tools/tests 12/12；打包产物重生成 XSD/⓪回读14/14/自包含101类；MJCF 回归闭环 0.0°；证据 docs/标准AML配置器与四侧消费.md |
 | 设备导入与场景记录浮窗 | 2026-11-18 | 前端布局与交互；冻结契约不变 | gc | 原资源装配预览位置改为浮窗入口，保留AML导入、场景需求和历史记录；新建打开、提交成功收起，支持窄屏、Esc及嵌套历史管理 | 全量1098项、Chrome13项通过；证据workspace/2026-11-18-settings-popup |
 | 渐进式装配动画 | 2026-11-18 | 导入预览及前端显示；冻结契约不变 | gc | 实际资源导入快照、完整网格分批显示、组件依次归位，最终编译模型接管；动画不写模型或IO，加载中禁止控制，版本取消与缓存释放 | 全量1098、专项43通过；真实RobotCell导入/加载浏览器验证，证据workspace/2026-11-18-assembly-animation |

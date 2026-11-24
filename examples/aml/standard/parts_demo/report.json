@@ -1,0 +1,95 @@
+{
+  "format": "308sjk.standard_aml/1",
+  "inputs": {
+    "aml": "-",
+    "io": "io.json",
+    "adapter": "-",
+    "motion": "-",
+    "requirements": "-"
+  },
+  "audit": {
+    "errors": [],
+    "warnings": [
+      "io[rb_j1_target]: 无 range，将按 scale/word 域自动补充（见 normalized）",
+      "io[rb_j1_actual]: 无 range，将按 scale/word 域自动补充（见 normalized）",
+      "io[rb_j2_target]: 无 range，将按 scale/word 域自动补充（见 normalized）",
+      "io[rb_j2_actual]: 无 range，将按 scale/word 域自动补充（见 normalized）",
+      "io[rb_j3_target]: 无 range，将按 scale/word 域自动补充（见 normalized）",
+      "io[rb_j3_actual]: 无 range，将按 scale/word 域自动补充（见 normalized）",
+      "io[rb_j4_target]: 无 range，将按 scale/word 域自动补充（见 normalized）",
+      "io[rb_j4_actual]: 无 range，将按 scale/word 域自动补充（见 normalized）",
+      "io[rb_j5_target]: 无 range，将按 scale/word 域自动补充（见 normalized）",
+      "io[rb_j5_actual]: 无 range，将按 scale/word 域自动补充（见 normalized）",
+      "io[rb_j6_target]: 无 range，将按 scale/word 域自动补充（见 normalized）",
+      "io[rb_j6_actual]: 无 range，将按 scale/word 域自动补充（见 normalized）",
+      "io[rb_enable]: 无 range，将按 scale/word 域自动补充（见 normalized）",
+      "io[rb_feedback_seq]: 无 range，将按 scale/word 域自动补充（见 normalized）",
+      "adapter 未提供，通讯参数用默认值（见 normalized）",
+      "motion 未提供，运动约束用默认值（见 normalized）",
+      "requirements 未提供，将注入模板默认（见 normalized）"
+    ]
+  },
+  "normalized": [
+    "io[rb_j1_target]: 按 scale=0.02 补 INT16 满域 range [-655,655]",
+    "io[rb_j1_actual]: 按 scale=0.02 补 INT16 满域 range [-655,655]",
+    "io[rb_j2_target]: 按 scale=0.02 补 INT16 满域 range [-655,655]",
+    "io[rb_j2_actual]: 按 scale=0.02 补 INT16 满域 range [-655,655]",
+    "io[rb_j3_target]: 按 scale=0.02 补 INT16 满域 range [-655,655]",
+    "io[rb_j3_actual]: 按 scale=0.02 补 INT16 满域 range [-655,655]",
+    "io[rb_j4_target]: 按 scale=0.02 补 INT16 满域 range [-655,655]",
+    "io[rb_j4_actual]: 按 scale=0.02 补 INT16 满域 range [-655,655]",
+    "io[rb_j5_target]: 按 scale=0.02 补 INT16 满域 range [-655,655]",
+    "io[rb_j5_actual]: 按 scale=0.02 补 INT16 满域 range [-655,655]",
+    "io[rb_j6_target]: 按 scale=0.02 补 INT16 满域 range [-655,655]",
+    "io[rb_j6_actual]: 按 scale=0.02 补 INT16 满域 range [-655,655]",
+    "io[rb_enable]: 无 scale 字量补 word 域 range [0,65535]",
+    "io[rb_feedback_seq]: 无 scale 字量补 word 域 range [0,65535]",
+    "adapter 用默认（cycle_hz=30, timeout=2s）",
+    "motion 用默认（max_speed_deg_s=30）",
+    "requirements 注入模板默认（容差/检查范围来自模板，测试页须标注非 AML 声明）"
+  ],
+  "assembly": {
+    "signals": 14,
+    "links": 14,
+    "terminals": 14,
+    "kinematics_dae": {
+      "rel": "assets/kinematics.dae",
+      "model_id": "kinematics_model",
+      "joints": 6
+    }
+  },
+  "verify": {
+    "well_formed": true,
+    "xsd": {
+      "ok": true,
+      "schema": "CAEX_ClassModel_V2.15.xsd"
+    },
+    "roundtrip": {
+      "ok": true,
+      "io_readback": 14,
+      "expected": 14,
+      "mismatches": [],
+      "missing": [],
+      "pending": [],
+      "injected_problems": []
+    },
+    "stats": {
+      "components": 11,
+      "interfaces": 34,
+      "links": 14,
+      "dae_refs": 5
+    },
+    "self_contained": {
+      "ok": true,
+      "declared_classes": 19,
+      "unresolved": []
+    },
+    "kinematics": {
+      "ok": true,
+      "rel": "assets/kinematics.dae",
+      "dae_joints": 6,
+      "model_found": true
+    }
+  },
+  "ok": true
+}

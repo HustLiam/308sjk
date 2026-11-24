@@ -1,0 +1,39 @@
+{
+  "component_to_body": {
+    "rb_base": "rb_base",
+    "rb_link1": "rb_link1",
+    "rb_link2": "rb_link2",
+    "rb_link3": "rb_link3",
+    "rb_link4": "rb_link4",
+    "rb_link5": "rb_link5",
+    "rb_link6": "rb_link6",
+    "plc_main": "plc_main",
+    "AO_Module": "AO_Module",
+    "AI_Module": "AI_Module",
+    "DO_Module": "DO_Module"
+  },
+  "joint_to_body": {
+    "rb_joint1": "rb_link1",
+    "rb_joint2": "rb_link2",
+    "rb_joint3": "rb_link3",
+    "rb_joint4": "rb_link4",
+    "rb_joint5": "rb_link5",
+    "rb_joint6": "rb_link6"
+  },
+  "signal_to_actuator": {
+    "rb_j1_target": "rb_joint1",
+    "rb_j2_target": "rb_joint2",
+    "rb_j3_target": "rb_joint3",
+    "rb_j4_target": "rb_joint4",
+    "rb_j5_target": "rb_joint5",
+    "rb_j6_target": "rb_joint6"
+  },
+  "signal_to_sensor": {
+    "rb_j1_actual": "rb_joint1",
+    "rb_j2_actual": "rb_joint2",
+    "rb_j3_actual": "rb_joint3",
+    "rb_j4_actual": "rb_joint4",
+    "rb_j5_actual": "rb_joint5",
+    "rb_j6_actual": "rb_joint6"
+  }
+}
