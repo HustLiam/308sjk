@@ -177,6 +177,10 @@ def normalize(io_items, adapter, motion, requirements):
     io2 = []
     for it in io_items:
         it = dict(it)
+        if it["type"] == "BOOL":
+            it.pop("range", None)          # BOOL 无量程（带量程会被 ⓪ 拒）
+            io2.append(it)
+            continue
         dpc = it.get("deg_per_count")
         if dpc:
             if "range" not in it:

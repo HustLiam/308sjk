@@ -1,3 +1,15 @@
+## 2026-11-24 (3) 任意子集容忍 + 两个 BOOL 量程 bug 修复
+
+- 需求：用户可能直接丢子集（连 tree.json 都没有）——L1 对缺 tree 从硬拒改为 finding，
+  L2 出题"按几何文件名推断平铺结构"，supplement 应用时目录内 STL/DAE → 平铺 tree +
+  默认 poses（tree_infer 兜底）；极简子集（2 STL+3 条 io）全链验证 3/3 逐字一致+XSD 过，
+  固化为 test_minimal_subset_two_stl_only；
+- bug×2（test_minimal 复验暴露）：① normalize 给 BOOL 补量程——⓪ 解析器"BOOL 点位不
+  允许带量程"拒绝；② 修复①时 continue 又跳过 io2.append 致 BOOL 信号整条丢失、且 pop 后
+  掉进 else 分支把 range 补回——最终修为 BOOL 分支 pop+append+continue 完整结构。
+  教训：verify 的 roundtrip.ok False 一定要看 mismatches/pending/injected_problems 全量
+  （这次问题藏在 injected_problems 里，逐字比对本身全对）。
+
 ## 2026-11-24 (2) Agent 前置层 + 散装几何完整替代路径（负责人方案评审后实现）
 
 ### 方案（负责人确认）

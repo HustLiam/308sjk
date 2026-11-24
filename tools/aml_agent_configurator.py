@@ -33,7 +33,7 @@ QUESTIONS_SCHEMA_HINT = (
     "你是工业 AML 数据审查员。根据输入清单与发现，产出缺失/歧义问题列表（JSON 数组），"
     "每条：{id, ask(中文问题), options(可选答案数组，可空), default(默认值，尽量给), "
     "apply(应用目标: geometry_unit:{组件id} | default_pose:{组件id} | io_component:{信号名} | "
-    "param:{adapter|motion|requirements}:{字段路径})}。"
+    "tree_infer:按几何文件名生成平铺关系树 | param:{adapter|motion|requirements}:{字段路径})}。"
     "只问真正缺失或歧义的；能从上下文推断的给 default 不问。输出纯 JSON。"
 )
 
@@ -51,7 +51,9 @@ def _quick_check(inputs, parts):
 
     if inputs.get("parts_dir"):
         if not parts["tree"]:
-            errors.append("parts 目录缺 tree.json（关系树为散装模式必需）")
+            # 任意子集容忍：无关系树 → 交 L2 出题（可按几何文件名推断平铺结构）
+            findings.append({"kind": "tree_missing",
+                             "detail": "可按几何文件名推断平铺组件结构"})
         ids = {n["id"] for n in parts["tree"]}
         for j in parts["joints"]:
             if j.get("component") not in ids:
@@ -118,7 +120,12 @@ def _mock_questions(findings):
     """Mock 规则引擎：findings → 同结构问题（离线可全链）。"""
     qs = []
     for i, f in enumerate(findings):
-        if f["kind"] == "unit_unknown":
+        if f["kind"] == "tree_missing":
+            qs.append({"id": f"q{i}",
+                       "ask": "未提供关系树 tree.json：按几何文件名自动生成平铺结构"
+                              "（每个 STL/DAE 一个组件，组件 id=文件名主干）？",
+                       "options": ["是", "否"], "default": "是", "apply": "tree_infer"})
+        elif f["kind"] == "unit_unknown":
             qs.append({"id": f"q{i}", "ask": f"组件 {f['component']} 的几何单位是？",
                        "options": ["mm", "m"], "default": "mm",
                        "apply": f"geometry_unit:{f['component']}"})
@@ -172,6 +179,18 @@ def _apply_supplement(work_dir, answers, io_path):
 
     geo = load(os.path.join(work_dir, "geometry.json"), {})
     poses = load(os.path.join(work_dir, "poses.json"), {})
+    tree = load(os.path.join(work_dir, "tree.json"), [])
+    if not tree:                          # tree_infer 兜底：目录内几何文件 → 平铺树
+        ids = []
+        for f in sorted(os.listdir(work_dir)):
+            if f.lower().endswith((".stl", ".dae", ".obj")):
+                ids.append(os.path.splitext(f)[0])
+        if not geo:
+            geo = {i: {"file": f"{i}.stl", "unit": "m"} for i in ids}
+        tree = [{"id": i, "name": i, "parent": None} for i in ids]
+        save(work_dir, tree, "tree.json")
+        save(work_dir, geo, "geometry.json")
+        applied.append(f"tree_infer: {len(tree)} 组件（平铺）")
     io = json.load(open(io_path, encoding="utf-8"))
     for a in answers.values():
         ans, apply = a["answer"], a.get("apply") or ""

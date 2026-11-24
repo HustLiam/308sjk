@@ -120,3 +120,31 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+def test_minimal_subset_two_stl_only():
+    """任意子集容忍：只给 2 个 STL + 3 条 io.json（无 tree/poses/joints）→ 全链出标准 AML。"""
+    import trimesh
+    d = tempfile.mkdtemp(prefix="agent_e_")
+    trimesh.creation.box((0.2, 0.2, 0.1)).export(os.path.join(d, "bracket.stl"))
+    trimesh.creation.cylinder(0.05, 0.3).export(os.path.join(d, "column.stl"))
+    json.dump({"io_list": [
+        {"name": "col_cmd", "role": "target", "dir": "output", "type": "INT",
+         "address": "%QW1", "deg_per_count": 0.05, "component_id": "column",
+         "source_file": "", "source_id": "col_joint"},
+        {"name": "bracket_present", "role": "actual", "dir": "input", "type": "BOOL",
+         "address": "%QX0.0", "component_id": "bracket"}]},
+        open(os.path.join(d, "io.json"), "w", encoding="utf-8"), ensure_ascii=False)
+    out = os.path.join(d, "std.aml")
+    r = subprocess.run([sys.executable, AGENT, "--parts-dir", d,
+                        "--io", os.path.join(d, "io.json"), "-o", out,
+                        "--mock", "--batch", "--keep-work", os.path.join(d, "work")],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, r.stdout[-600:]
+    assert "2/2 逐字一致=True" in r.stdout
+    import xml.etree.ElementTree as ET
+    root = ET.parse(out).getroot()
+    names = [e.get("Name") for e in root.iter("InternalElement")]
+    assert "bracket" in names and "column" in names        # tree 自动推断
+    import xmlschema
+    xmlschema.XMLSchema(XSD).validate(out)
